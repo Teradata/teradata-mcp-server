@@ -1,0 +1,11 @@
+############################################
+DATABASE_URI=teradata://username:password@host:1025/databasename
+
+############################################
+aws_access_key_id=
+aws_secret_access_key=
+aws_session_token=
+aws_region_name=
+
+############################################
+OPENAI_API_KEY=
