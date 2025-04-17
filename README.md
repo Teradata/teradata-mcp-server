@@ -17,6 +17,7 @@ uv sync
 ```
 
 Step 3 - You need to update the .env file
+- Rename env file to .env 
 - The database URI will have the following format  teradata:/username:password@host:1025/databasename
     - the usename needs updating
     - the password needs updating
