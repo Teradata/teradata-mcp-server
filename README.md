@@ -44,4 +44,10 @@ Step 2 - Open the MCP Inspector
 Test the other three tools, each should have a successful outcome
 
 ### Adding your sever to an Agent
-Step 1 -  
+Step 1 - run the driver.py script, this will create an interactive session with the agent who has access to the MCP server
+
+- Ask the agent to list the databases
+- Ask the agent to list the table in a database
+- Ask the agent to show all the objects in a database
+- Ask the agent a question that requires SQL to run against a table
+- This is running in a loop, you will need to Control-C to break the loop.
