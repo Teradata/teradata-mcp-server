@@ -32,7 +32,7 @@ Step 3 - You need to update the .env file
 ### Testing your server
 Step 1 - Start the server, typer the following in your terminal
 ```
-mcp dev ./teradata_mcp/server.py
+mcp dev ./teradata_mcp/src/server.py
 ```
 
 Step 2 - Open the MCP Inspector
@@ -47,10 +47,12 @@ Test the other three tools, each should have a successful outcome
 Control+c to stop the server in the terminal
 
 ### Adding your sever to an Agent
-Step 1 - run the driver.py script, this will create an interactive session with the agent who has access to the MCP server.  From a terminal.
+Step 1 - run the test script, this will create an interactive session with the agent who has access to the MCP server.  
+
+From a terminal.
 ```
 cd mcp-server
-python driver.py
+python test/pydanticai.py
 ```
 
 - Ask the agent to list the databases
