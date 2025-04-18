@@ -13,6 +13,7 @@ Step 2 - Clone the mcp-server repository with
 mkdir MCP
 cd MCP
 git clone https://github.com/Teradata/mcp-server.git
+cd mcp-server
 uv sync
 source .venv/bin/activate
 ```
@@ -29,7 +30,7 @@ Step 3 - You need to update the .env file
 - LLM Credentials need to be available for pydantic-ai-example.ipynb code to work
 
 ### Testing your server
-Step 1 - Start the server
+Step 1 - Start the server, typer the following in your terminal
 ```
 mcp dev ./teradata_mcp/server.py
 ```
@@ -43,8 +44,14 @@ Step 2 - Open the MCP Inspector
 
 Test the other three tools, each should have a successful outcome
 
+Control+c to stop the server in the terminal
+
 ### Adding your sever to an Agent
-Step 1 - run the driver.py script, this will create an interactive session with the agent who has access to the MCP server
+Step 1 - run the driver.py script, this will create an interactive session with the agent who has access to the MCP server.  From a terminal.
+```
+cd mcp-server
+python driver.py
+```
 
 - Ask the agent to list the databases
 - Ask the agent to list the table in a database
