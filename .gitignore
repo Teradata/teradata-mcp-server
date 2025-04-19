@@ -8,3 +8,4 @@ teradata_mcp/src/tdsql/__pycache__/__init__.cpython-313.pyc
 teradata_mcp/src/tdsql/__pycache__/tdsql.cpython-313.pyc
 logs/teradata_mcp.log
 teradata_mcp/test/__pycache__/prompt.cpython-313.pyc
+teradata_mcp/test/lc.py
