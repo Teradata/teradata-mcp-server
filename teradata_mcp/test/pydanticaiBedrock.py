@@ -6,6 +6,7 @@ from pydantic_ai.models.bedrock import BedrockConverseModel
 from pydantic_ai.providers.bedrock import BedrockProvider
 from pydantic_ai.mcp import MCPServerStdio
 import asyncio
+from prompt import PROMPT_TEMPL
 
 
 load_dotenv(override=True)
@@ -38,9 +39,9 @@ model = BedrockConverseModel(
     provider=BedrockProvider(bedrock_client=bedrock_client),
 )
 
-td_server = MCPServerStdio('python', ["-m", "teradata_mcp.server"])
+td_server = MCPServerStdio('python', ["-m", "teradata_mcp.src.server"])
 
-agent = Agent(model, instrument=True, system_prompt='Be a helpful assistant.', mcp_servers=[td_server])
+agent = Agent(model, instrument=True, system_prompt=PROMPT_TEMPL, mcp_servers=[td_server])
 
 
 async def main():

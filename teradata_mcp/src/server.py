@@ -5,17 +5,27 @@ import signal
 from typing import Any
 from typing import List
 from pydantic import Field
-from teradata_mcp.tdsql import TDConn
+from teradata_mcp.src.tdsql import TDConn
 import mcp.types as types
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 
 load_dotenv()
-logger = logging.getLogger(__name__)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],
+)
+logger = logging.getLogger("teradata_mcp")
+
 
 # Connect to MCP server
 mcp = FastMCP("teradata-mcp")
 ResponseType = List[types.TextContent | types.ImageContent | types.EmbeddedResource]
+
+#global shutdown flag
+shutdown_in_progress = False
 
 # Initiate connection to Teradata
 _tdconn = TDConn()
@@ -31,7 +41,7 @@ def format_error_response(error: str) -> ResponseType:
     return format_text_response(f"Error: {error}")
 
 
-#------------------ Tool Definitions (this will change) ------------------#
+#------------------ Tool Definitions (these can change) ------------------#
 
 # SQL execution tool
 #     Arguments: sql (str) - SQL query to execute
@@ -41,7 +51,6 @@ def format_error_response(error: str) -> ResponseType:
 #         If an error occurs, it logs the error and returns an error message.
 #         The function uses a global connection object (_tdconn) to interact with the database.
 #         The SQL query can be any valid SQL statement supported by Teradata.
-shutdown_in_progress = False
 @mcp.tool(description=f"Execute any SQL query")
 async def execute_sql(
     sql: str = Field(description="SQL to run", default="all"),
@@ -177,6 +186,121 @@ async def get_object_details(
         logger.error(f"Error listing schemas: {e}")
         return format_error_response(str(e))
 
+# finds the top features with missing values in a table
+#     Arguments: table_name (str) - name of the table to analyze
+#     Returns: ResponseType - formatted response with missing value counts or error message
+#     Description: Lists the top features (columns) with missing values in a specified table.
+@mcp.tool(description="What are the top features with missing values in a table")
+async def list_missing_val(
+    table_name: str = Field(description="table name"),
+) -> ResponseType:
+    """List of columns with count of null values."""
+    try:
+        global _tdconn
+        cur = _tdconn.cursor()
+        rows = cur.execute(f"select ColumnName, NullCount, NullPercentage from TD_ColumnSummary ( on {table_name} as InputTable using TargetColumns ('[:]')) as dt ORDER BY NullCount desc")
+        return format_text_response(list([row for row in rows.fetchall()]))
+    except Exception as e:
+        logger.error(f"Error evaluating features: {e}")
+        return format_error_response(str(e))
+
+# finds the top features with negative values in a table
+#   Arguments: table_name (str) - name of the table to analyze
+#   Returns: ResponseType - formatted response with negative value counts or error message
+#   Description: Lists the top features (columns) with negative values in a specified table.    
+@mcp.tool(description="How many features have negative values in a table")
+async def list_negative_val(
+    table_name: str = Field(description="table name"),
+) -> ResponseType:
+    """List of columns with count of negative values."""
+    try:
+        global _tdconn
+        cur = _tdconn.cursor()
+        rows = cur.execute(f"select ColumnName, NegativeCount from TD_ColumnSummary ( on {table_name} as InputTable using TargetColumns ('[:]')) as dt ORDER BY NegativeCount desc")
+        return format_text_response(list([row for row in rows.fetchall()]))
+    except Exception as e:
+        logger.error(f"Error evaluating features: {e}")
+        return format_error_response(str(e))
+
+# finds the top features with distinct categories in a table
+#   Arguments: table_name (str) - name of the table to analyze
+#   col_name (str) - name of the column to analyze
+#   Returns: ResponseType - formatted response with distinct category counts or error message
+#   Description: Lists the top features (columns) with distinct categories in a specified table.
+#     It uses the TD_CategoricalSummary function to analyze the specified column and returns the results.
+@mcp.tool(description="How many distinct categories are there for column in the table")
+async def list_dist_cat(
+    table_name: str = Field(description="table name"),
+    col_name: str = Field(description="column name"),
+) -> ResponseType:
+    """List distinct categories in the column."""
+    try:
+        global _tdconn
+        cur = _tdconn.cursor()
+        rows = cur.execute(f"select * from TD_CategoricalSummary ( on {table_name} as InputTable using TargetColumns ('{col_name}')) as dt")
+        return format_text_response(list([row for row in rows.fetchall()]))
+    except Exception as e:
+        logger.error(f"Error evaluating features: {e}")
+        return format_error_response(str(e))
+
+# finds the mean and standard deviation for a column in a table
+#   Arguments: table_name (str) - name of the table to analyze
+#   col_name (str) - name of the column to analyze
+#   Returns: ResponseType - formatted response with mean and standard deviation or error message
+#   Description: Calculates the mean and standard deviation for a specified column in a table.
+#     It uses the TD_UnivariateStatistics function to perform the analysis and returns the results.
+@mcp.tool(description="What is the mean and standard deviation for column in table? Does it follow normal distribution?")
+async def stnd_dev(
+    table_name: str = Field(description="table name"),
+    col_name: str = Field(description="column name"),
+) -> ResponseType:
+    """Display standard deviation for column."""
+    try:
+        global _tdconn
+        cur = _tdconn.cursor()
+        rows = cur.execute(f"select * from TD_UnivariateStatistics ( on {table_name} as InputTable using TargetColumns ('{col_name}') Stats('MEAN','STD')) as dt ORDER BY 1,2")
+        return format_text_response(list([row for row in rows.fetchall()]))
+    except Exception as e:
+        logger.error(f"Error evaluating features: {e}")
+        return format_error_response(str(e))
+
+# Returns the show table definition for a given table
+#   Arguments: db_name (str) - name of the database
+#   table_name (str) - name of the table to get the definition for
+#   Returns: ResponseType - formatted response with table definition or error message
+#   Description: Retrieves the show table definition for a specified table in a database.
+@mcp.tool(description="What is the show table definition?")
+async def show_table_definition(
+    db_name: str = Field(description="Database name"),
+    table_name: str = Field(description="table name"),
+) -> ResponseType:
+    """Display table definition."""
+    try:
+        global _tdconn
+        cur = _tdconn.cursor()
+        rows = cur.execute(f"show table {db_name}.{table_name}")
+        return format_text_response(list([row for row in rows.fetchall()]))
+    except Exception as e:
+        logger.error(f"Error evaluating features: {e}")
+        return format_error_response(str(e))
+    
+
+#------------------ Prompt Definitions (this will change) ------------------#
+
+@mcp.prompt()
+def sql_query() -> str:
+    """Create a SQL query against the database"""
+    return "Please help me write a Teradata SQL query for the following question:\n\n"
+
+@mcp.prompt()
+def explain_query(query: str) -> str:
+    """Explain what a SQL query does"""
+    return f"Can you explain what the following Teradata SQL query does?\n\n```sql\n{query}\n```"
+
+@mcp.prompt()
+def optimize_query(query: str) -> str:
+    """Optimize a SQL query for better performance"""
+    return f"Can you optimize the following Teradata SQL query for better performance?\n\n```sql\n{query}\n```"
 
 #------------------ Main ------------------#
 
@@ -187,6 +311,12 @@ async def get_object_details(
 #         If an error occurs during initialization, it logs a warning message.
 async def main():
     global _tdconn
+
+    # Setup logging
+    os.makedirs("logs", exist_ok=True)
+    logger.handlers.append(logging.FileHandler(os.path.join("logs", "teradata_mcp.log")))
+    logger.info("Starting Teradata MCP server")
+    
     # Initialize database connection pool
     try:
         _tdconn = TDConn()
