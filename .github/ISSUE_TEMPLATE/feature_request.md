@@ -1,6 +1,6 @@
 ---
-name: Feature request
-about: Suggest an idea for this project
+name: Parse TD Connection string
+about: Need to add back in the ability to read the TD Connection string from arguments, this is required so that we can add it to Claud config file
 title: ''
 labels: ''
 assignees: ''
