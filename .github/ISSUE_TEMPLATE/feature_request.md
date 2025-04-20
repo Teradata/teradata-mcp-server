@@ -8,13 +8,12 @@ assignees: ''
 ---
 
 **Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+To be able to add the teradata_mcp server into existing environments like VS Code or Claude then you need to use a server config file, this file needs to parse the Teradata connection string to the server.
 
 **Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+Get the code from Artur's example and put it back in
 
 **Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
 
 **Additional context**
-Add any other context or screenshots about the feature request here.
+
