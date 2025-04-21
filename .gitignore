@@ -35,3 +35,7 @@ logs/teradata_datainsight_mcp.log
 logs/teradata_dataquality_mcp.log
 logs/teradata_objectinsight_mcp.log
 teradata_businessinsight_mcp/src/logs/teradata_mcp.log
+teradata_datainsight_mcp/src/logs/teradata_datainsight_mcp.log
+teradata_dataquality_mcp/src/logs/teradata_dataquality_mcp.log
+teradata_objectinsight_mcp/src/logs/teradata_objectinsight_mcp.log
+teradata_businessinsight_mcp/src/logs/teradata_businessisight_mcp.log
