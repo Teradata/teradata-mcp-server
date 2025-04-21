@@ -8,7 +8,6 @@ from pydantic_ai.mcp import MCPServerStdio
 import asyncio
 from prompt import PROMPT_TEMPL
 
-
 load_dotenv(override=True)
 
 # connecting to AWS requires a client be created
@@ -50,6 +49,8 @@ async def main():
         while True:
             print(f"\n{result.data}")
             user_input = input("\n> ")
+            if user_input.lower() in ["exit", "quit"]:
+                break
             result = await agent.run(user_input, 
                                      message_history=result.new_messages())
 

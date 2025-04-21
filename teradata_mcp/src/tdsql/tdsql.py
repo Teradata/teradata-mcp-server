@@ -19,8 +19,7 @@ class TDConn:
     # Constructor
     #     It will read the connection URL from the environment variable DATABASE_URI
     #     It will parse the connection URL and create a connection to the database
-    def __init__(self):
-        connection_url = os.getenv("DATABASE_URI")
+    def __init__(self, connection_url: Optional[str] = None):
 
         if connection_url is None:
             self.conn = None
