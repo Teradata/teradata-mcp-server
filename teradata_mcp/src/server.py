@@ -1,14 +1,18 @@
 import asyncio
+import argparse
 import logging
 import os
 import signal
 from typing import Any
 from typing import List
 from pydantic import Field
-from teradata_mcp.src.tdsql import TDConn
 import mcp.types as types
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
+
+from tdsql.tdsql import TDConn
+# Use this when running the test script:  from teradata_mcp.src.tdsql.tdsql import TDConn
+# Use this when running the mcp inspect:  from tdsql.tdsql import TDConn
 
 load_dotenv()
 
@@ -18,7 +22,6 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()],
 )
 logger = logging.getLogger("teradata_mcp")
-
 
 # Connect to MCP server
 mcp = FastMCP("teradata-mcp")
@@ -41,8 +44,8 @@ def format_error_response(error: str) -> ResponseType:
     return format_text_response(f"Error: {error}")
 
 
-#------------------ Tool Definitions (these can change) ------------------#
-
+#------------------ Tool  ------------------#
+################### Tool ##########################
 # SQL execution tool
 #     Arguments: sql (str) - SQL query to execute
 #     Returns: ResponseType - formatted response with query results or error message
@@ -67,6 +70,7 @@ async def execute_sql(
         logger.error(f"Error executing query: {e}")
         return format_error_response(str(e))
 
+################### Tool ##########################
 # List all databases in the Teradata system tool
 #     Arguments: None
 #     Returns: ResponseType - formatted response with database names and types or error message
@@ -86,6 +90,7 @@ async def list_db() -> ResponseType:
         logger.error(f"Error listing schemas: {e}")
         return format_error_response(str(e))
 
+################### Tool ##########################
 # List all objects in a database tool
 #     Arguments: db_name (str) - name of the database to list objects from
 #     Returns: ResponseType - formatted response with object names and types or error message
@@ -107,6 +112,7 @@ async def list_objects(
         logger.error(f"Error listing schemas: {e}")
         return format_error_response(str(e))
 
+################### Tool ##########################
 # Get detailed information about a database table tool
 #     Arguments: db_name (str) - name of the database
 #                obj_name (str) - name of the table to get details for
@@ -186,6 +192,7 @@ async def get_object_details(
         logger.error(f"Error listing schemas: {e}")
         return format_error_response(str(e))
 
+################### Tool ##########################
 # finds the top features with missing values in a table
 #     Arguments: table_name (str) - name of the table to analyze
 #     Returns: ResponseType - formatted response with missing value counts or error message
@@ -204,6 +211,7 @@ async def list_missing_val(
         logger.error(f"Error evaluating features: {e}")
         return format_error_response(str(e))
 
+################### Tool ##########################
 # finds the top features with negative values in a table
 #   Arguments: table_name (str) - name of the table to analyze
 #   Returns: ResponseType - formatted response with negative value counts or error message
@@ -222,6 +230,7 @@ async def list_negative_val(
         logger.error(f"Error evaluating features: {e}")
         return format_error_response(str(e))
 
+################### Tool ##########################
 # finds the top features with distinct categories in a table
 #   Arguments: table_name (str) - name of the table to analyze
 #   col_name (str) - name of the column to analyze
@@ -243,6 +252,7 @@ async def list_dist_cat(
         logger.error(f"Error evaluating features: {e}")
         return format_error_response(str(e))
 
+################### Tool ##########################
 # finds the mean and standard deviation for a column in a table
 #   Arguments: table_name (str) - name of the table to analyze
 #   col_name (str) - name of the column to analyze
@@ -264,6 +274,7 @@ async def stnd_dev(
         logger.error(f"Error evaluating features: {e}")
         return format_error_response(str(e))
 
+################### Tool ##########################
 # Returns the show table definition for a given table
 #   Arguments: db_name (str) - name of the database
 #   table_name (str) - name of the table to get the definition for
@@ -286,24 +297,27 @@ async def show_table_definition(
     
 
 #------------------ Prompt Definitions (this will change) ------------------#
-
+################### Prompt ##########################
 @mcp.prompt()
 def sql_query() -> str:
     """Create a SQL query against the database"""
     return "Please help me write a Teradata SQL query for the following question:\n\n"
 
+################### Prompt ##########################
 @mcp.prompt()
 def explain_query(query: str) -> str:
     """Explain what a SQL query does"""
     return f"Can you explain what the following Teradata SQL query does?\n\n```sql\n{query}\n```"
 
+################### Prompt ##########################
 @mcp.prompt()
 def optimize_query(query: str) -> str:
     """Optimize a SQL query for better performance"""
     return f"Can you optimize the following Teradata SQL query for better performance?\n\n```sql\n{query}\n```"
 
-#------------------ Main ------------------#
 
+#------------------ Main ------------------#
+################### Main ##########################
 # Main function to start the MCP server
 #     Description: Initializes the MCP server and sets up signal handling for graceful shutdown.
 #         It creates a connection to the Teradata database and starts the server to listen for incoming requests.
@@ -317,9 +331,15 @@ async def main():
     logger.handlers.append(logging.FileHandler(os.path.join("logs", "teradata_mcp.log")))
     logger.info("Starting Teradata MCP server")
     
+    # Load environment variables
+    parser = argparse.ArgumentParser(description="Teradata MCP Server")
+    parser.add_argument("database_url", help="Database connection URL", nargs="?")
+    args = parser.parse_args()
+    connection_url = os.getenv("DATABASE_URI", args.database_url)
+
     # Initialize database connection pool
     try:
-        _tdconn = TDConn()
+        _tdconn = TDConn(connection_url)
         logger.info("Successfully connected to database and initialized connection")
     except Exception as e:
         logger.warning(
@@ -340,6 +360,7 @@ async def main():
     # Start the MCP server
     await mcp.run_stdio_async()
 
+################### Shutdown ##########################
 # Shutdown function to handle cleanup and exit
 #     Arguments: sig (signal.Signals) - signal received for shutdown
 #     Description: Cleans up resources and exits the server gracefully.

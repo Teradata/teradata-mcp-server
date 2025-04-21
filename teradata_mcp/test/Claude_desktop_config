@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "teradata_mcp": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/Users/Daniel.Tehan/Code/MCP/mcp-server/teradata_mcp/src",
+        "run",
+        "server.py"
+      ]
+    }
+  }
+}
