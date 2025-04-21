@@ -1,0 +1,44 @@
+{
+  "mcpServers": {
+    "teradata_businessisight_mcp": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/Users/Daniel.Tehan/Code/MCP/mcp-server/teradata_businessisight_mcp/src",
+        "run",
+        "server.py"
+      ]
+    },
+    "teradata_dataisight_mcp": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/Users/Daniel.Tehan/Code/MCP/mcp-server/teradata_dataisight_mcp/src",
+        "run",
+        "server.py"
+      ]
+    },
+    "teradata_dataquality_mcp": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/Users/Daniel.Tehan/Code/MCP/mcp-server/teradata_dataquality_mcp/src",
+        "run",
+        "server.py"
+      ]
+    },
+    "teradata_objectinsight_mcp": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/Users/Daniel.Tehan/Code/MCP/mcp-server/teradata_objectinsight_mcp/src",
+        "run",
+        "server.py"
+      ]
+    }
+  }
+}

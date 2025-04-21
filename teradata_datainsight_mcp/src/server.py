@@ -78,6 +78,18 @@ def sql_query() -> str:
     """Create a SQL query against the database"""
     return "Please help me write a Teradata SQL query for the following question:\n\n"
 
+################### Prompt ##########################
+@mcp.prompt()
+def explain_query(query: str) -> str:
+    """Explain what a SQL query does"""
+    return f"Can you explain what the following Teradata SQL query does?\n\n```sql\n{query}\n```"
+
+################### Prompt ##########################
+@mcp.prompt()
+def optimize_query(query: str) -> str:
+    """Optimize a SQL query for better performance"""
+    return f"Can you optimize the following Teradata SQL query for better performance?\n\n```sql\n{query}\n```"
+
 
 #------------------ Main ------------------#
 ################### Main ##########################
@@ -91,7 +103,7 @@ async def main():
 
     # Setup logging
     os.makedirs("logs", exist_ok=True)
-    logger.handlers.append(logging.FileHandler(os.path.join("logs", "teradata_mcp.log")))
+    logger.handlers.append(logging.FileHandler(os.path.join("logs", "teradata_datainsight_mcp.log")))
     logger.info("Starting Teradata MCP server")
     
     # Load environment variables
