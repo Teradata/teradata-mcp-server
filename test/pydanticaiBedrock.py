@@ -38,10 +38,15 @@ model = BedrockConverseModel(
     provider=BedrockProvider(bedrock_client=bedrock_client),
 )
 
-td_businessinsight_server = MCPServerStdio('python', ["-m", "teradata_businessinsight_mcp.src.server"])
-td_datainsight_server = MCPServerStdio('python', ["-m", "teradata_datainsight_mcp.src.server"])
-td_dataquality_server = MCPServerStdio('python', ["-m", "teradata_dataquality_mcp.src.server"])
-td_objectinsight_server = MCPServerStdio('python', ["-m", "teradata_objectinsight_mcp.src.server"])
+# td_businessinsight_server = MCPServerStdio('python', ["-m", "teradata_businessinsight_mcp.src.server"])
+# td_datainsight_server = MCPServerStdio('python', ["-m", "teradata_datainsight_mcp.src.server"])
+# td_dataquality_server = MCPServerStdio('python', ["-m", "teradata_dataquality_mcp.src.server"])
+# td_objectinsight_server = MCPServerStdio('python', ["-m", "teradata_objectinsight_mcp.src.server"])
+
+td_businessinsight_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/mcp-server/teradata_businessinsight_mcp/src", "run", "server.py"])
+td_datainsight_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/mcp-server/teradata_datainsight_mcp/src", "run", "server.py"])
+td_dataquality_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/mcp-server/teradata_dataquality_mcp/src", "run", "server.py"])
+td_objectinsight_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/mcp-server/teradata_objectinsight_mcp/src", "run", "server.py"])
 
 agent = Agent(model, instrument=True, system_prompt=PROMPT_TEMPL, mcp_servers=[td_businessinsight_server,td_datainsight_server,td_dataquality_server, td_objectinsight_server])
 
