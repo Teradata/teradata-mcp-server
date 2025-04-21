@@ -11,7 +11,8 @@ from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 
 from .tdsql.tdsql import TDConn
-
+# when running as a standalone server: from tdsql.tdsql import TDConn
+# when running with pydanticaiBedrock script: from .tdsql.tdsql import TDConn
 
 load_dotenv()
 
