@@ -10,7 +10,9 @@ import mcp.types as types
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 
+
 from tdsql.tdsql import TDConn
+
 
 
 load_dotenv()
