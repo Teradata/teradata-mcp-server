@@ -12,7 +12,6 @@ from dotenv import load_dotenv
 
 from .tdsql.tdsql import TDConn
 
-
 load_dotenv()
 
 logging.basicConfig(
@@ -44,39 +43,30 @@ def format_error_response(error: str) -> ResponseType:
 
 
 #------------------ Tool  ------------------#
+
 ################### Tool ##########################
-# SQL execution tool
-#     Arguments: sql (str) - SQL query to execute
-#     Returns: ResponseType - formatted response with query results or error message
-#     Description: Executes a SQL query against the Teradata database and returns the results.
-#         If the query is successful, it returns the results as a list of text content.
-#         If an error occurs, it logs the error and returns an error message.
-#         The function uses a global connection object (_tdconn) to interact with the database.
-#         The SQL query can be any valid SQL statement supported by Teradata.
-@mcp.tool(description=f"Execute any SQL query")
-async def execute_sql(
-    sql: str = Field(description="SQL to run", default="all"),
-    ) -> ResponseType:
-    """Executes a SQL query against the database."""
-    global _tdconn
+# Returns the show table definition for a given table
+#   Arguments: db_name (str) - name of the database
+#   table_name (str) - name of the table to get the definition for
+#   Returns: ResponseType - formatted response with table definition or error message
+#   Description: Retrieves the show table definition for a specified table in a database.
+@mcp.tool(description="What is the show table definition?")
+async def show_table_definition(
+    db_name: str = Field(description="Database name"),
+    table_name: str = Field(description="table name"),
+) -> ResponseType:
+    """Display table definition."""
     try:
+        global _tdconn
         cur = _tdconn.cursor()
-        rows = cur.execute(sql)  # type: ignore
-        if rows is None:
-            return format_text_response("No results")
+        rows = cur.execute(f"show table {db_name}.{table_name}")
         return format_text_response(list([row for row in rows.fetchall()]))
     except Exception as e:
-        logger.error(f"Error executing query: {e}")
+        logger.error(f"Error evaluating features: {e}")
         return format_error_response(str(e))
-
-
+    
 
 #------------------ Prompt Definitions (this will change) ------------------#
-################### Prompt ##########################
-@mcp.prompt()
-def sql_query() -> str:
-    """Create a SQL query against the database"""
-    return "Please help me write a Teradata SQL query for the following question:\n\n"
 
 
 #------------------ Main ------------------#
@@ -91,7 +81,7 @@ async def main():
 
     # Setup logging
     os.makedirs("logs", exist_ok=True)
-    logger.handlers.append(logging.FileHandler(os.path.join("logs", "teradata_mcp.log")))
+    logger.handlers.append(logging.FileHandler(os.path.join("logs", "teradata_businessisight_mcp.log")))
     logger.info("Starting Teradata MCP server")
     
     # Load environment variables
