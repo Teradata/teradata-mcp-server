@@ -81,7 +81,7 @@ async def list_objects(
     try:
         global _tdconn
         cur = _tdconn.cursor()
-        rows = cur.execute("select TableName from dbc.TablesV tv where UPPER(tv.DatabaseName) = UPPER(?) and tv.TableKind in ('T','V');", [db_name])
+        rows = cur.execute("select TableName from dbc.TablesV tv where UPPER(tv.DatabaseName) = UPPER(?) and tv.TableKind in ('T','V', 'O', 'Q');", [db_name])
         return format_text_response(list([row for row in rows.fetchall()]))
     except Exception as e:
         logger.error(f"Error listing schemas: {e}")

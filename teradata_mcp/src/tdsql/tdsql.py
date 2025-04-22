@@ -21,10 +21,10 @@ class TDConn:
     #     It will parse the connection URL and create a connection to the database
     def __init__(self, connection_url: Optional[str] = None):
 
-        if connection_url is None:
+        if os.getenv("DATABASE_URI") is None:
             self.conn = None
         else:
-            parsed_url = urlparse(connection_url)
+            parsed_url = urlparse(os.getenv("DATABASE_URI"))
             user = parsed_url.username
             password = parsed_url.password
             host = parsed_url.hostname
