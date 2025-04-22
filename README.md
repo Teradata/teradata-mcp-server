@@ -29,7 +29,7 @@ source .venv/bin/activate
 
 Step 3 - You need to update the .env file
 - Rename env file to .env 
-- The database URI will have the following format  teradata:/username:password@host:1025/databasename, use a ClearScape Analytics Experience https://www.teradata.com/getting-started/demos/clearscape-analytics
+- The database URI will have the following format  teradata://username:password@host:1025/databasename, use a ClearScape Analytics Experience https://www.teradata.com/getting-started/demos/clearscape-analytics
     - the usename needs updating
     - the password needs updating
     - the Teradata host needs updating
