@@ -42,6 +42,7 @@ Step 1 - Start the server, typer the following in your terminal
 ```
 mcp dev ./teradata_objectinsight_mcp/src/server.py
 ```
+NOTE: If you are running this on a Windows machine and get npx, npm or node.js errors, install the required node.js software from here: https://github.com/nodists/nodist
 
 Step 2 - Open the MCP Inspector
 - You should open the inspector tool, go to http://127.0.0.1:6274 
