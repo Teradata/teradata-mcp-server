@@ -3,13 +3,8 @@
 
 This code will form the basis for building Teradata MCP servers.
 
-We have provided a base code under the /teradata_mcp directory that can be modified for the development of custom tools
+We have provided a base code under the /teradata_mcp_server directory that can be modified for the development of custom tools
 
-We have also provided 4 servers:
-1. teradata_businessinsight_mcp - this server will provide business descriptions for objects
-2. teradata_datainsight_mcp - this server will enable the execution of DDL and SQL
-3. teradata_dataquality_mcp - this server will provide data quality information for objects within Teradata
-4. teradata_objectinsight_mcp - this server will provide object information
 
 
 ### Environment Set Up
@@ -94,7 +89,7 @@ python /test/pydanticaiBedrock.py
                 "command": "uv",
                 "args": [
                     "--directory",
-                    "/Users/Daniel.Tehan/Code/MCP/mcp-server/teradata_datainsights_mcp/src",
+                    "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/teradata_mcp_server/src",
                     "run",
                     "server.py"
                 ]
