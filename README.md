@@ -45,7 +45,7 @@ Step 3 - You need to update the .env file
 ### Testing your server
 Step 1 - Start the server, typer the following in your terminal
 ```
-mcp dev ./teradata_mcp_server/src/server.py
+uv run mcp dev teradata_mcp_server/src/server.py
 ```
 NOTE: If you are running this on a Windows machine and get npx, npm or node.js errors, install the required node.js software from here: https://github.com/nodists/nodist
 
@@ -61,7 +61,11 @@ Test the other tools, each should have a successful outcome
 Control+c to stop the server in the terminal
 
 ### Adding your sever to an Agent
-Step 1 - run the test script, this will create an interactive session with the agent who has access to the MCP server.  
+Step 1 - Modify the script to point to where you installed the server, you will need to modify the following line
+    td_mcp_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/teradata_mcp_server/src", "run", "server.py"])
+
+
+Step 2 - run the test script, this will create an interactive session with the agent who has access to the MCP server.  
 
 From a terminal.
 ```
@@ -82,6 +86,7 @@ python /test/pydanticaiBedrock.py
 - enter "uv" at command to run
 - enter name of the server for the id
 - the settings.json file should open
+- modify the directory path and ensure it is pointing to where you have the server installed
 - add the args so that it looks like:
 ```
  "teradata_dataisights_mcp": {
