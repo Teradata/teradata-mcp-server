@@ -70,8 +70,7 @@ Step 2 - run the test script, this will create an interactive session with the a
 
 From a terminal.
 ```
-cd mcp-server
-python /test/pydanticaiBedrock.py
+uv run ./test/pydanticaiBedrock.py
 ```
 
 - Ask the agent to list the databases
