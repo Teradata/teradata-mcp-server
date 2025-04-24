@@ -17,15 +17,25 @@ Step 1 - The environment has been put together assuming you have the uv package 
 
 Step 2 - Clone the mcp-server repository with 
 
+On Windows
 ```
 mkdir MCP
 cd MCP
-git clone https://github.com/Teradata/mcp-server.git
-cd mcp-server
+git clone https://github.com/Teradata/teradata-mcp-server.git
+cd teradata-mcp-server
 uv sync
 source .venv/Scripts/activate
 ```
 
+On Mac
+```
+mkdir MCP
+cd MCP
+git clone https://github.com/Teradata/teradata-mcp-server.git
+cd teradata-mcp-server
+uv sync
+source .venv/bin/activate
+```
 
 Step 3 - You need to update the .env file
 - Rename env file to .env 
@@ -40,7 +50,7 @@ Step 3 - You need to update the .env file
 ### Testing your server
 Step 1 - Start the server, typer the following in your terminal
 ```
-mcp dev ./teradata_objectinsight_mcp/src/server.py
+mcp dev ./teradata_mcp_server/src/server.py
 ```
 NOTE: If you are running this on a Windows machine and get npx, npm or node.js errors, install the required node.js software from here: https://github.com/nodists/nodist
 
