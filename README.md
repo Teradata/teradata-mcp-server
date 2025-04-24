@@ -45,7 +45,7 @@ Step 3 - You need to update the .env file
 ### Testing your server
 Step 1 - Start the server, typer the following in your terminal
 ```
-uv run mcp dev teradata_mcp_server/src/server.py
+uv run mcp dev ./src/teradata_mcp_server/server.py
 ```
 NOTE: If you are running this on a Windows machine and get npx, npm or node.js errors, install the required node.js software from here: https://github.com/nodists/nodist
 

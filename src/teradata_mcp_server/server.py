@@ -9,8 +9,8 @@ from pydantic import Field
 import mcp.types as types
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
-from td_connect.td_connect import TDConn
-from td_connect.prompt import PROMPT_TEMPL
+from td_connect import TDConn
+from prompt import PROMPT_TEMPL
 
 load_dotenv()
 
