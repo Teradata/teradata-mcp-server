@@ -34,3 +34,4 @@ teradata_mcp_server/src/td_connect/__pycache__/__init__.cpython-313.pyc
 teradata_mcp_server/src/td_connect/__pycache__/td_connect.cpython-313.pyc
 teradata_mcp_server/src/td_connect/__pycache__/tdsql.cpython-313.pyc
 logs/teradata_mcp_server.log
+teradata_mcp_server/src/logs/teradata_mcp_server.log

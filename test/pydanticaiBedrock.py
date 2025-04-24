@@ -38,12 +38,10 @@ model = BedrockConverseModel(
     provider=BedrockProvider(bedrock_client=bedrock_client),
 )
 
-td_businessinsight_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/mcp-server/teradata_businessinsight_mcp/src", "run", "server.py"])
-td_datainsight_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/mcp-server/teradata_datainsight_mcp/src", "run", "server.py"])
-td_dataquality_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/mcp-server/teradata_dataquality_mcp/src", "run", "server.py"])
-td_objectinsight_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/mcp-server/teradata_objectinsight_mcp/src", "run", "server.py"])
+td_mcp_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/teradata_mcp_server/src", "run", "server.py"])
 
-agent = Agent(model, instrument=True, system_prompt=PROMPT_TEMPL, mcp_servers=[td_businessinsight_server,td_datainsight_server,td_dataquality_server, td_objectinsight_server])
+
+agent = Agent(model, instrument=True, system_prompt=PROMPT_TEMPL, mcp_servers=[td_mcp_server])
 
 
 async def main():
