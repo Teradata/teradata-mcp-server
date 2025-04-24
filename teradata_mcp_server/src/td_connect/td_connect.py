@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("teradata_mcp_server")
 
 # This class is used to connect to Teradata database using teradatasql library
 #     It uses the connection URL from the environment variable DATABASE_URI from a .env file
@@ -20,6 +20,7 @@ class TDConn:
     #     It will read the connection URL from the environment variable DATABASE_URI
     #     It will parse the connection URL and create a connection to the database
     def __init__(self, connection_url: Optional[str] = None):
+
         if os.getenv("DATABASE_URI") is None:
             self.conn = None
         else:
