@@ -63,7 +63,7 @@ Control+c to stop the server in the terminal
 ### Adding your sever to an Agent
 Step 1 - Modify the script to point to where you installed the server, you will need to modify the following line
 ```
-    td_mcp_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/teradata_mcp_server/src", "run", "server.py"])
+    td_mcp_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server", "run", "server.py"])
 ```
 
 Step 2 - run the test script, this will create an interactive session with the agent who has access to the MCP server.  
