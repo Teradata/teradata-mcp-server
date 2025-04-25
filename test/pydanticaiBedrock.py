@@ -38,7 +38,7 @@ model = BedrockConverseModel(
     provider=BedrockProvider(bedrock_client=bedrock_client),
 )
 
-td_mcp_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/teradata_mcp_server/src", "run", "server.py"])
+td_mcp_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server", "run", "server.py"])
 
 
 agent = Agent(model, instrument=True, system_prompt=PROMPT_TEMPL, mcp_servers=[td_mcp_server])
@@ -48,7 +48,7 @@ async def main():
     async with agent.run_mcp_servers():
         result = await agent.run("hello!")
         while True:
-            print(f"\n{result.data}")
+            print(f"\n{result.output}")
             user_input = input("\n> ")
             if user_input.lower() in ["exit", "quit"]:
                 break
