@@ -101,7 +101,30 @@ uv run ./test/pydanticaiBedrock.py
             }
 ```
 - you can start the server from within the settings.json file or you can "MCP: Start Server"
-
   
+### Exposing tools as REST endpoints with mcpo
+You can use [mcpo](https://github.com/open-webui/mcpo) to expose this MCP tool as an OpenAPI-compatible HTTP server.
+
+For example, using uv:
+`uvx mcpo --port 8001 --api-key "top-secret" -- uv run src/teradata_mcp_server/server.py`
+
+Your Teradata tools are now available as local REST endpoints, view documentation and test it at http://localhost:8001/docs
+
+### Using the server with Open WebUI
+[Open WebUI](https://github.com/open-webui/open-webui) is user-friendly self-hosted AI platform designed to operate entirely offline, supporting various LLM runners like Ollama. It provides a convenient way to interact with LLMs and MCP servers from an intuitive GUI. It can be integrated with this MCP server using the [mcpo](https://github.com/open-webui/mcpo) component.
+
+First run mcpo as specified [in the section above](#exposing-tools-as-rest-endpoints-with-mcpo).
+
+```
+python -m venv ./env
+source ./env/bin/activate
+pip install open-webui   
+open-webui serve
+```
+
+Access the UI at http://localhost:8080.
+To add the MCP tools, navigate to Settings > Tools > Add Connection, and enter your mcpo server connection details (eg. `localhost:8001`, password = `top-secret` if you have executed the command line in the mcpo section).
+
+You should be able to see the tools in the Chat Control Valves section on the right and get your models to use it.
 
   
