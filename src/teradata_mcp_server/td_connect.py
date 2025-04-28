@@ -4,6 +4,8 @@ from urllib.parse import urlparse
 import logging
 import os
 from dotenv import load_dotenv
+from tabulate import tabulate
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -55,3 +57,40 @@ class TDConn:
     #     It will close the connection to the database
     def close(self):
         self.conn.close()
+
+    # Tools
+    # Standard methods to implement tool functionalities
+    def peek_table(self, tablename, databasename=None):
+        """
+        This function returns data sample and inferred structure from a database table or view.
+        """
+        if databasename is not None:
+            tablename = f"{databasename}.{tablename}"
+        with self.conn.cursor() as cur:
+            cur.execute(f'select top 5 * from {tablename}')
+            columns=cur.description
+            sample=cur.fetchall()
+
+            # Format the column name and descriptions
+            columns_desc=""
+            for c in columns:
+                columns_desc += f"- **{c[0]}**: {c[1].__name__} {f'({c[3]})' if c[3] else ''}\n"
+
+            # Format the data sample as a table
+            sample_tab=tabulate(sample, headers=[c[0] for c in columns], tablefmt='pipe')
+
+            # Put the result together as a nicely formatted doc
+            return \
+f'''
+# Database dataset description
+Object name: **{tablename}**
+
+## Object structure
+Column names, data types and internal representation length if available.
+{columns_desc}
+
+## Data sample
+This is a data sample:
+
+{sample_tab}
+'''

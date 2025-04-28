@@ -295,6 +295,18 @@ async def get_object_details(
         logger.error(f"Error listing schemas: {e}")
         return format_error_response(str(e))
 
+#------------------ Tool  ------------------#
+@mcp.tool(description="Get data samples and structure overview from a database table.")
+async def get_object_samples(
+    db_name: str = Field(description="Database name"),
+    obj_name: str = Field(description="table name"),
+    ) -> ResponseType:
+    """Get data samples and structure overview from a database table."""
+    try:
+        return format_text_response(_tdconn.peek_table(obj_name, db_name))
+    except Exception as e:
+        logger.error(f"Error sampling object: {e}")
+        return format_error_response(str(e))
 
 
 #------------------ Prompt Definitions  ------------------#
