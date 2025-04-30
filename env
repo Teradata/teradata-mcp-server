@@ -1,6 +1,7 @@
 ############################################
 DATABASE_URI=teradata://username:password@host:1025/databasename
-SSE_HOST=localhost
+SSE=False
+SSE_HOST=127.0.0.1
 SSE_PORT=8001
 
 ############################################

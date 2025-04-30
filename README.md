@@ -41,8 +41,32 @@ Step 3 - You need to update the .env file
     - the databasename needs updating
 
 - LLM Credentials need to be available for /test/pydanticaiBedrock.py code to work
+- SSE setting 
+    - SSE : Boolean to determine if your server will be using the SSE transport (SSE = True) or the stdio transport (SSE=False)
+    - SSE_HOST: IP address that the server can be found at, default should be 127.0.0.1
+    - SSE_PORT: Port address that the server can be fount at, default should be 8001
 
-### Testing your server
+Example .env file
+```
+############################################
+DATABASE_URI=teradata://username:password@host:1025/databasename
+SSE=False
+SSE_HOST=127.0.0.1
+SSE_PORT=8001
+
+############################################
+aws_access_key_id=
+aws_secret_access_key=
+aws_session_token=
+aws_region_name=
+
+############################################
+OPENAI_API_KEY=
+
+```
+
+
+### Testing your server with MCP Inspector
 Step 1 - Start the server, typer the following in your terminal
 ```
 uv run mcp dev ./src/teradata_mcp_server/server.py
@@ -53,24 +77,29 @@ Step 2 - Open the MCP Inspector
 - You should open the inspector tool, go to http://127.0.0.1:6274 
 - Click on tools
 - Click on list tools
-- Click on list_db
+- Click on read_database_list
 - Click on run
 
 Test the other tools, each should have a successful outcome
 
 Control+c to stop the server in the terminal
 
-### Adding your sever to an Agent
-Step 1 - Modify the script to point to where you installed the server, you will need to modify the following line
+### Adding your sever to an Agent using stdio
+step 1 - confirm the SSE flag in .env file has been set to False
+```
+SSE=False
+```
+
+Step 2 - Modify the ./test/ClientChatBot.py script to point to where you installed the server, you will need to modify the following line
 ```
     td_mcp_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server", "run", "server.py"])
 ```
 
-Step 2 - run the test script, this will create an interactive session with the agent who has access to the MCP server.  
+Step 2 - run the ./test/ClientChatBot.py script, this will create an interactive session with the agent who has access to the MCP server.  
 
 From a terminal.
 ```
-uv run ./test/pydanticaiBedrock.py
+uv run ./test/ClientChatBot.py
 ```
 
 - Ask the agent to list the databases
@@ -79,7 +108,11 @@ uv run ./test/pydanticaiBedrock.py
 - Ask the agent a question that requires SQL to run against a table
 - Type "quit" to exit.
 
-### Adding tools to Visual Studio Code Co-pilot
+### Adding tools using stdio to Visual Studio Code Co-pilot
+- confirm the SSE flag in .env file has been set to False
+```
+SSE=False
+```
 - In VS Code, "Show and Run Commands"
 - select "MCP: Add Server"
 - select "Command Stdio"
@@ -89,19 +122,52 @@ uv run ./test/pydanticaiBedrock.py
 - modify the directory path and ensure it is pointing to where you have the server installed
 - add the args so that it looks like:
 ```
- "teradata_dataisights_mcp": {
+    "mcp": {
+        "servers": {
+            "TeradataStdio": {
                 "type": "stdio",
                 "command": "uv",
                 "args": [
                     "--directory",
-                    "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/teradata_mcp_server/src",
+                    "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server",
                     "run",
                     "server.py"
                 ]
             }
+        }
+    }
 ```
 - you can start the server from within the settings.json file or you can "MCP: Start Server"
 
-  
+### Adding tools using SSE to Visual Studio Code Co-pilot
+- confirm the SSE flag in .env file has been set to False
+```
+SSE=True
+SSE_HOST=127.0.0.1
+SSE_PORT=8001
+```
+- you need to start the server from a terminal
+```
+uv run ./src/teradata_mcp_server/server.py
+```
+- In VS Code, "Show and Run Commands"
+- select "MCP: Add Server"
+- select "HTTP Server Sent Events"
+- enter URL for the location of the server e.g. http://127.0.0.1:8001/sse
+- enter name of the server for the id
+- select user space
+- the settings.json file should open
+- add the args so that it looks like:
+```
+   "mcp": {
+        "servers": {
+            "TeradataSSE": {
+                "type": "sse",
+                "url": "http://127.0.0.1:8001/sse"
+            }
+        }
+    }
+```
+- within the settings.json file or you can "MCP: Start Server"  
 
   
