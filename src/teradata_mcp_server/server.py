@@ -29,6 +29,7 @@ logger.info("Starting Teradata MCP server")
 
 # Connect to MCP server
 mcp = FastMCP("teradata-mcp")
+
 ResponseType = List[types.TextContent | types.ImageContent | types.EmbeddedResource]
 
 #global shutdown flag
@@ -117,6 +118,9 @@ async def main():
     parser.add_argument("database_url", help="Database connection URL", nargs="?")
     args = parser.parse_args()
     connection_url = os.getenv("DATABASE_URI", args.database_url)
+    sse = os.getenv("SSE", False)
+
+    logger.info(f"SSE: {sse}")
 
     # Initialize database connection pool
     try:
@@ -139,7 +143,15 @@ async def main():
         pass
     
     # Start the MCP server
-    await mcp.run_stdio_async()
+    # await mcp.run_stdio_async()
+    if sse == "True":
+        mcp.settings.host = os.getenv("SSE_HOST")
+        mcp.settings.port = int(os.getenv("SSE_PORT"))
+        logger.info(f"Starting MCP server on {mcp.settings.host}:{mcp.settings.port}")
+        await mcp.run_sse_async()
+    else:
+        logger.info("Starting MCP server on stdin/stdout")
+        await mcp.run_stdio_async()    
 
 #------------------ Shutdown ------------------#
 # Shutdown function to handle cleanup and exit

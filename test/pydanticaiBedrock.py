@@ -1,3 +1,8 @@
+
+#  This script uses stdio to connect to a Teradata MCP server and interact with it using the Pydantic AI library.
+#  Ensure that the .env file SSE=False
+#
+
 import os
 import boto3
 from dotenv import load_dotenv
@@ -39,7 +44,6 @@ model = BedrockConverseModel(
 )
 
 td_mcp_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server", "run", "server.py"])
-
 
 agent = Agent(model, instrument=True, system_prompt=PROMPT_TEMPL, mcp_servers=[td_mcp_server])
 
