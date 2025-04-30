@@ -9,6 +9,10 @@
         "run",
         "server.py"
       ]
+    },
+    "teradata_mcp_server_sse": {
+      "url": "http://localhost:8000/sse",
+      "env" :{}
     }
   }
 }

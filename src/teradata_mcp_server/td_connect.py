@@ -24,6 +24,7 @@ class TDConn:
     def __init__(self, connection_url: Optional[str] = None):
 
         if os.getenv("DATABASE_URI") is None:
+            logger.error(f"DATABASE_URI is None: {e}")
             self.conn = None
         else:
             parsed_url = urlparse(os.getenv("DATABASE_URI"))
@@ -50,6 +51,7 @@ class TDConn:
     #     The cursor can be used to execute SQL queries
     def cursor(self):
         if self.conn is None:
+            logger.error(f"Error cursor is None: {e}")
             raise Exception("No connection to database")
         return self.conn.cursor()
 
