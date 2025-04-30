@@ -40,7 +40,8 @@ class TDConn:
                     password=password,
                     database=database,
                 )
-            
+                logger.info(f"Connected to database: {host}")
+
             except Exception as e:
                 logger.error(f"Error connecting to database: {e}")
                 self.conn = None
@@ -58,6 +59,7 @@ class TDConn:
     # Destructor
     #     It will close the connection to the database
     def close(self):
+        logger.info("Closing connection to database")   
         self.conn.close()
 
     # Tools
@@ -66,6 +68,8 @@ class TDConn:
         """
         This function returns data sample and inferred structure from a database table or view.
         """
+        logger.debug(f"Peek table: {tablename}")
+
         if databasename is not None:
             tablename = f"{databasename}.{tablename}"
         with self.conn.cursor() as cur:
@@ -81,9 +85,7 @@ class TDConn:
             # Format the data sample as a table
             sample_tab=tabulate(sample, headers=[c[0] for c in columns], tablefmt='pipe')
 
-            # Put the result together as a nicely formatted doc
-            return \
-f'''
+            returnstring = f'''
 # Database dataset description
 Object name: **{tablename}**
 
@@ -96,3 +98,7 @@ This is a data sample:
 
 {sample_tab}
 '''
+            
+            logger.debug(f"Peek table return string: {returnstring} done")
+            # Put the result together as a nicely formatted doc
+            return returnstring

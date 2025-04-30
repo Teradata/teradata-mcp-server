@@ -51,6 +51,7 @@ async def execute_read_query(
     ) -> ResponseType:
     """Executes a SQL query to read from the database."""
     global _tdconn, _tdbasetools
+    logger.debug(f"Tool: execute_read_query: Args: sql: {sql}")
     cur = _tdconn.cursor()
     return _tdbasetools.execute_read_query(cur, sql)
 
@@ -62,6 +63,7 @@ async def read_table_ddl(
     ) -> ResponseType:
     """Display table DDL definition."""
     global _tdconn, _tdbasetools
+    logger.debug(f"Tool: read_table_ddl: Args: db_name: {db_name}, table_name: {table_name}")
     cur = _tdconn.cursor()
     return _tdbasetools.read_table_ddl(cur, db_name, table_name)
 
@@ -70,6 +72,7 @@ async def read_table_ddl(
 async def read_database_list() -> ResponseType:
     """List all databases in the Teradata System."""
     global _tdconn, _tdbasetools
+    logger.debug(f"Tool: read_database_list: Args:")
     cur = _tdconn.cursor()
     return _tdbasetools.read_database_list(cur)
 
@@ -80,6 +83,7 @@ async def read_table_list(
     ) -> ResponseType:
     """List objects of in a database of the given name."""
     global _tdconn, _tdbasetools
+    logger.debug(f"Tool: read_table_list: Args: db_name: {db_name}")
     cur = _tdconn.cursor()
     return _tdbasetools.read_table_list(cur, db_name)
 
@@ -91,17 +95,27 @@ async def read_column_description(
     ) -> ResponseType:
     """Show detailed column information about a database table."""
     global _tdconn, _tdbasetools
+    logger.debug(f"Tool: read_column_description: Args: db_name: {db_name}, obj_name: {obj_name}")
     cur = _tdconn.cursor()
     return _tdbasetools.read_column_description(cur, db_name, obj_name)
 
 
 #------------------ Tool  ------------------#
+def format_text_response(text: Any) -> ResponseType:
+    """Format a text response."""
+    return [types.TextContent(type="text", text=str(text))]
+
+def format_error_response(error: str) -> ResponseType:
+    """Format an error response."""
+    return self.format_text_response(f"Error: {error}")
+
 @mcp.tool(description="Get data samples and structure overview from a database table.")
 async def get_object_samples(
     db_name: str = Field(description="Database name"),
     obj_name: str = Field(description="table name"),
     ) -> ResponseType:
     """Get data samples and structure overview from a database table."""
+    global _tdconn
     try:
         return format_text_response(_tdconn.peek_table(obj_name, db_name))
     except Exception as e:
@@ -125,29 +139,15 @@ def sql_prompt() -> str:
 async def main():
     global _tdconn, _tdbasetools
     
-    # Load environment variables
-    parser = argparse.ArgumentParser(description="Teradata MCP Server")
-    parser.add_argument("database_url", help="Database connection URL", nargs="?")
-    args = parser.parse_args()
-    connection_url = os.getenv("DATABASE_URI", args.database_url)
     sse = os.getenv("SSE", "false").lower()
-
     logger.info(f"SSE: {sse}")
-
-    # Initialize database connection pool
-    try:
-        _tdconn = TDConn(connection_url)
-        logger.info("Successfully connected to database and initialized connection")
-    except Exception as e:
-        logger.warning(
-            "The MCP server will start but database operations will fail until a valid connection is established.",
-        )
 
     # Set up proper shutdown handling
     try:
         loop = asyncio.get_running_loop()
         signals = (signal.SIGTERM, signal.SIGINT)
         for s in signals:
+            logger.info(f"Registering signal handler for {s.name}")
             loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown(s)))
     except NotImplementedError:
         # Windows doesn't support signals properly
@@ -174,11 +174,14 @@ async def main():
 #         The function uses os._exit to terminate the process with a specific exit code.
 async def shutdown(sig=None):
     """Clean shutdown of the server."""
-    global shutdown_in_progress
-
+    global shutdown_in_progress, _tdconn
+    
+    logger.info("Shutting down server")
     if shutdown_in_progress:
-        logger.warning("Forcing immediate exit")
+        logger.info("Forcing immediate exit")
         os._exit(1)  # Use immediate process termination instead of sys.exit
+    
+    _tdconn.close()
     shutdown_in_progress = True
     if sig:
         logger.info(f"Received exit signal {sig.name}")
