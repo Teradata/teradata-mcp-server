@@ -11,7 +11,8 @@
       ]
     },
     "teradata_mcp_server_sse": {
-      "url": "http://localhost:8000/sse",
+      "type": "sse",
+      "url": "http://localhost:8001/sse",
       "env" :{}
     }
   }
