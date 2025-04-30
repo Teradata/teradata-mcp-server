@@ -1,3 +1,7 @@
+#  This script uses stdio to connect to a Teradata MCP server and interact with it using the Pydantic AI library.
+#  Ensure that the .env file SSE=False
+#
+
 from mcp import ClientSession, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
 
