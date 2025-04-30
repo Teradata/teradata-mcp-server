@@ -118,7 +118,7 @@ async def main():
     parser.add_argument("database_url", help="Database connection URL", nargs="?")
     args = parser.parse_args()
     connection_url = os.getenv("DATABASE_URI", args.database_url)
-    sse = os.getenv("SSE", False)
+    sse = os.getenv("SSE", "false").lower()
 
     logger.info(f"SSE: {sse}")
 
@@ -144,7 +144,7 @@ async def main():
     
     # Start the MCP server
     # await mcp.run_stdio_async()
-    if sse == "True":
+    if sse == "true":
         mcp.settings.host = os.getenv("SSE_HOST")
         mcp.settings.port = int(os.getenv("SSE_PORT"))
         logger.info(f"Starting MCP server on {mcp.settings.host}:{mcp.settings.port}")
