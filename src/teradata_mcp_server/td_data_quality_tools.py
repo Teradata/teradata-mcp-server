@@ -1,8 +1,4 @@
 import logging
-from typing import Any
-from typing import List
-from pydantic import Field
-import mcp.types as types
 from teradatasql import TeradataConnection 
 
 
