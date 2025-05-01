@@ -37,7 +37,8 @@ class TDConn:
                     password=password,
                     database=database,
                 )
-            
+                logger.info(f"Connected to database: {host}")
+
             except Exception as e:
                 logger.error(f"Error connecting to database: {e}")
                 self.conn = None
@@ -56,3 +57,4 @@ class TDConn:
     #     It will close the connection to the database
     def close(self):
         self.conn.close()
+
