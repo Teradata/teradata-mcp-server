@@ -1,6 +1,5 @@
 import os
 import asyncio
-import argparse
 import logging
 import signal
 from typing import Any
@@ -11,8 +10,14 @@ from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 
 from td_connect import TDConn
-from td_base_tools import TDBaseTools, peek_table
-from td_data_quality_tools import TDDataQualityTools
+from td_base_tools import (
+    handle_execute_read_query,
+    handle_execute_write_query,
+    handle_read_table_ddl,
+    handle_read_database_list,
+    handle_read_table_preview, 
+    handle_read_column_description, 
+    handle_read_table_list)
 from prompt import PROMPT_TEMPL
 
 load_dotenv()
@@ -30,18 +35,11 @@ logger.info("Starting Teradata MCP server")
 # Connect to MCP server
 mcp = FastMCP("teradata-mcp")
 
-ResponseType = List[types.TextContent | types.ImageContent | types.EmbeddedResource]
-
 #global shutdown flag
 shutdown_in_progress = False
 
 # Initiate connection to Teradata
 _tdconn = TDConn()
-
-# Load tools class
-_tdbasetools = TDBaseTools()
-# _tddataqualitytools = TDDataQualityTools()
-
 
 #------------------ Tool utilies  ------------------#
 ResponseType = List[types.TextContent | types.ImageContent | types.EmbeddedResource]
@@ -64,69 +62,59 @@ def execute_db_tool(conn, tool, *args, **kwargs):
     
 #------------------ Tools  ------------------#
 
-@mcp.tool()
+@mcp.tool(description="Executes a SQL query to read from the database.")
 async def execute_read_query(
     sql: str = Field(description="SQL that reads from the database to run", default="all"),
     ) -> ResponseType:
     """Executes a SQL query to read from the database."""
-    global _tdconn, _tdbasetools
-    logger.debug(f"Tool: execute_read_query: Args: sql: {sql}")
-    cur = _tdconn.cursor()
-    return _tdbasetools.execute_read_query(cur, sql)
+    global _tdconn
+    return execute_db_tool(_tdconn, handle_execute_read_query, sql) 
 
 
-@mcp.tool()
+@mcp.tool(description="Executes a SQL query to write to the database.")
+async def execute_write_query(
+    sql: str = Field(description="SQL that writes to the database to run", default="all"),
+    ) -> ResponseType:
+    """Executes a SQL query to write to the database."""
+    global _tdconn
+    return execute_db_tool(_tdconn, handle_execute_write_query, sql) 
+
+
+@mcp.tool(description="Display table DDL definition.")
 async def read_table_ddl(
     db_name: str = Field(description="Database name"),
     table_name: str = Field(description="table name"),
     ) -> ResponseType:
     """Display table DDL definition."""
-    global _tdconn, _tdbasetools
-    logger.debug(f"Tool: read_table_ddl: Args: db_name: {db_name}, table_name: {table_name}")
-    cur = _tdconn.cursor()
-    return _tdbasetools.read_table_ddl(cur, db_name, table_name)
-
+    global _tdconn
+    return execute_db_tool(_tdconn, handle_read_table_ddl, db_name, table_name)    
+ 
     
-@mcp.tool()
+@mcp.tool(description="List all databases in the Teradata System.")
 async def read_database_list() -> ResponseType:
     """List all databases in the Teradata System."""
-    global _tdconn, _tdbasetools
-    logger.debug(f"Tool: read_database_list: Args:")
-    cur = _tdconn.cursor()
-    return _tdbasetools.read_database_list(cur)
+    global _tdconn
+    return execute_db_tool(_tdconn, handle_read_database_list)
 
 
-@mcp.tool()
+@mcp.tool(description="List objects in a database.")
 async def read_table_list(
     db_name: str = Field(description="database name"),
     ) -> ResponseType:
-    """List objects of in a database of the given name."""
-    global _tdconn, _tdbasetools
-    logger.debug(f"Tool: read_table_list: Args: db_name: {db_name}")
-    cur = _tdconn.cursor()
-    return _tdbasetools.read_table_list(cur, db_name)
+    """List objects in a database."""
+    global _tdconn
+    return execute_db_tool(_tdconn, handle_read_table_list, db_name)
 
 
-@mcp.tool()
+@mcp.tool(description="Show detailed column information about a database table.")
 async def read_column_description(
     db_name: str = Field(description="Database name"),
     obj_name: str = Field(description="table name"),
     ) -> ResponseType:
     """Show detailed column information about a database table."""
-    global _tdconn, _tdbasetools
-    logger.debug(f"Tool: read_column_description: Args: db_name: {db_name}, obj_name: {obj_name}")
-    cur = _tdconn.cursor()
-    return _tdbasetools.read_column_description(cur, db_name, obj_name)
+    global _tdconn
+    return execute_db_tool(_tdconn, handle_read_column_description, db_name, obj_name)
 
-
-#------------------ Tool  ------------------#
-def format_text_response(text: Any) -> ResponseType:
-    """Format a text response."""
-    return [types.TextContent(type="text", text=str(text))]
-
-def format_error_response(error: str) -> ResponseType:
-    """Format an error response."""
-    return self.format_text_response(f"Error: {error}")
 
 @mcp.tool(description="Get data samples and structure overview from a database table.")
 async def read_table_preview(
@@ -135,7 +123,7 @@ async def read_table_preview(
     ) -> ResponseType:
     """Get data samples and structure overview from a database table."""
     global _tdconn
-    return execute_db_tool(_tdconn, peek_table, obj_name, db_name)
+    return execute_db_tool(_tdconn, handle_read_table_preview, obj_name, db_name)
 
 
 

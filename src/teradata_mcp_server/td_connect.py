@@ -49,12 +49,21 @@ class TDConn:
     #     The cursor can be used to execute SQL queries
     def cursor(self):
         if self.conn is None:
-            logger.error(f"Error cursor is None: {e}")
+            logger.error(f"Error cursor is None")
             raise Exception("No connection to database")
         return self.conn.cursor()
 
     # Destructor
     #     It will close the connection to the database
     def close(self):
-        self.conn.close()
+        self.conn.cursor().close()
+        if self.conn is not None:
+            try:
+                self.conn.close()
+                logger.info(f"Connection to database closed")
+            except Exception as e:
+                logger.error(f"Error closing connection to database: {e}")
+        else:
+            logger.warning(f"Connection to database is already closed")
+        
 
