@@ -11,7 +11,7 @@ from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 
 from td_connect import TDConn
-from td_base_tools import TDBaseTools
+from td_base_tools import TDBaseTools, peek_table
 from td_data_quality_tools import TDDataQualityTools
 from prompt import PROMPT_TEMPL
 
@@ -43,6 +43,25 @@ _tdbasetools = TDBaseTools()
 # _tddataqualitytools = TDDataQualityTools()
 
 
+#------------------ Tool utilies  ------------------#
+ResponseType = List[types.TextContent | types.ImageContent | types.EmbeddedResource]
+
+def format_text_response(text: Any) -> ResponseType:
+    """Format a text response."""
+    return [types.TextContent(type="text", text=str(text))]
+
+def format_error_response(error: str) -> ResponseType:
+    """Format an error response."""
+    return format_text_response(f"Error: {error}")
+
+def execute_db_tool(conn, tool, *args, **kwargs):
+    """Execute a database tool with the given connection and arguments."""
+    try:
+        return format_text_response(tool(conn, *args, **kwargs))
+    except Exception as e:
+        logger.error(f"Error sampling object: {e}")
+        return format_error_response(str(e))
+    
 #------------------ Tools  ------------------#
 
 @mcp.tool()
@@ -110,17 +129,14 @@ def format_error_response(error: str) -> ResponseType:
     return self.format_text_response(f"Error: {error}")
 
 @mcp.tool(description="Get data samples and structure overview from a database table.")
-async def get_object_samples(
+async def read_table_preview(
     db_name: str = Field(description="Database name"),
     obj_name: str = Field(description="table name"),
     ) -> ResponseType:
     """Get data samples and structure overview from a database table."""
     global _tdconn
-    try:
-        return format_text_response(_tdconn.peek_table(obj_name, db_name))
-    except Exception as e:
-        logger.error(f"Error sampling object: {e}")
-        return format_error_response(str(e))
+    return execute_db_tool(_tdconn, peek_table, obj_name, db_name)
+
 
 
 #------------------ Prompt Definitions  ------------------#

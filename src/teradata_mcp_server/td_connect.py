@@ -3,11 +3,7 @@ import teradatasql
 from urllib.parse import urlparse
 import logging
 import os
-from dotenv import load_dotenv
 from tabulate import tabulate
-
-# Load environment variables from .env file
-load_dotenv()
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -23,11 +19,12 @@ class TDConn:
     #     It will parse the connection URL and create a connection to the database
     def __init__(self, connection_url: Optional[str] = None):
 
-        if os.getenv("DATABASE_URI") is None:
-            logger.error(f"DATABASE_URI is None: {e}")
+        if connection_url is None and os.getenv("DATABASE_URI") is None:
+            logger.warning(f"DATABASE_URI is not specified, database connection will not be established.")
             self.conn = None
         else:
-            parsed_url = urlparse(os.getenv("DATABASE_URI"))
+            connection_url = connection_url or os.getenv("DATABASE_URI")
+            parsed_url = urlparse(connection_url)
             user = parsed_url.username
             password = parsed_url.password
             host = parsed_url.hostname
@@ -59,46 +56,5 @@ class TDConn:
     # Destructor
     #     It will close the connection to the database
     def close(self):
-        logger.info("Closing connection to database")   
         self.conn.close()
 
-    # Tools
-    # Standard methods to implement tool functionalities
-    def peek_table(self, tablename, databasename=None):
-        """
-        This function returns data sample and inferred structure from a database table or view.
-        """
-        logger.debug(f"Peek table: {tablename}")
-
-        if databasename is not None:
-            tablename = f"{databasename}.{tablename}"
-        with self.conn.cursor() as cur:
-            cur.execute(f'select top 5 * from {tablename}')
-            columns=cur.description
-            sample=cur.fetchall()
-
-            # Format the column name and descriptions
-            columns_desc=""
-            for c in columns:
-                columns_desc += f"- **{c[0]}**: {c[1].__name__} {f'({c[3]})' if c[3] else ''}\n"
-
-            # Format the data sample as a table
-            sample_tab=tabulate(sample, headers=[c[0] for c in columns], tablefmt='pipe')
-
-            returnstring = f'''
-# Database dataset description
-Object name: **{tablename}**
-
-## Object structure
-Column names, data types and internal representation length if available.
-{columns_desc}
-
-## Data sample
-This is a data sample:
-
-{sample_tab}
-'''
-            
-            logger.debug(f"Peek table return string: {returnstring} done")
-            # Put the result together as a nicely formatted doc
-            return returnstring
