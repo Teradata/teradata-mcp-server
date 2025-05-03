@@ -1,10 +1,45 @@
 import logging
-from typing import Optional
+from typing import Optional, Any, Dict, List
 from teradatasql import TeradataConnection
+import json
+from datetime import date, datetime
+from decimal import Decimal
 
 
 logger = logging.getLogger("teradata_mcp_server")
 
+
+def serialize_teradata_types(obj: Any) -> Any:
+    """Convert Teradata-specific types to JSON serializable formats"""
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    if isinstance(obj, Decimal):
+        return float(obj)
+    return str(obj)
+
+def rows_to_json(cursor_description: Any, rows: List[Any]) -> List[Dict[str, Any]]:
+    """Convert database rows to JSON objects using column names as keys"""
+    if not cursor_description or not rows:
+        return []
+    
+    columns = [col[0] for col in cursor_description]
+    return [
+        {
+            col: serialize_teradata_types(value)
+            for col, value in zip(columns, row)
+        }
+        for row in rows
+    ]
+
+def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str:
+    """Create a standardized JSON response structure"""
+    response = {
+        "status": "success",
+        "results": data
+    }
+    if metadata:
+        response["metadata"] = metadata
+    return json.dumps(response, default=serialize_teradata_types)
 
 
 #------------------ Tool  ------------------#
@@ -19,8 +54,18 @@ def handle_execute_read_query(conn: TeradataConnection, sql: str, *args, **kwarg
     with conn.cursor() as cur:    
         rows = cur.execute(sql)  # type: ignore
         if rows is None:
-            return "No results"
-        return list([row for row in rows.fetchall()])
+            return create_response([])
+            
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "sql": sql,
+            "columns": [
+                {"name": col[0], "type": col[1].__name__ if hasattr(col[1], '__name__') else str(col[1])}
+                for col in cur.description
+            ] if cur.description else [],
+            "row_count": len(data)
+        }
+        return create_response(data, metadata)
 
         
 #------------------ Tool  ------------------#
@@ -35,9 +80,15 @@ def handle_execute_write_query(conn: TeradataConnection, sql: str, *args, **kwar
     with conn.cursor() as cur:   
         rows = cur.execute(sql)  # type: ignore
         if rows is None:
-            return "No results"
-        return list([row for row in rows.fetchall()])
-   
+            return create_response([])
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "sql": sql,
+            "affected_rows": cur.rowcount if hasattr(cur, 'rowcount') else None,
+            "row_count": len(data)
+        }
+        return create_response(data, metadata)
+
         
 #------------------ Tool  ------------------#
 # Read SQL execution tool
@@ -55,7 +106,12 @@ def handle_read_table_ddl(conn: TeradataConnection, db_name: str, table_name: st
         table_name = "%"
     with conn.cursor() as cur:
         rows = cur.execute(f"show table {db_name}.{table_name}")
-        return list([row for row in rows.fetchall()])
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "database": db_name,
+            "table": table_name
+        }
+        return create_response(data, metadata)
         
 
 #------------------ Tool  ------------------#
@@ -67,8 +123,14 @@ def handle_read_database_list(conn: TeradataConnection, *args, **kwargs):
     logger.debug(f"Tool: handle_read_database_list: Args:")
 
     with conn.cursor() as cur:
-        rows = cur.execute("select DataBaseName, DECODE(DBKind, 'U', 'User', 'D','DataBase') as DBType , CommentString from dbc.DatabasesV dv where OwnerName <> 'PDCRADM'")
-        return list([row for row in rows.fetchall()])
+        rows = cur.execute("select DataBaseName, DECODE(DBKind, 'U', 'User', 'D','DataBase') as DBType, CommentString from dbc.DatabasesV dv where OwnerName <> 'PDCRADM'")
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "total_count": len(data),
+            "databases": len([d for d in data if d.get("DBType") == "DataBase"]),
+            "users": len([d for d in data if d.get("DBType") == "User"])
+        }
+        return create_response(data, metadata)
 
         
 #------------------ Tool  ------------------#
@@ -84,7 +146,12 @@ def handle_read_table_list(conn: TeradataConnection, db_name: str, *args, **kwar
         db_name = "%"
     with conn.cursor() as cur:
         rows = cur.execute("select TableName from dbc.TablesV tv where UPPER(tv.DatabaseName) = UPPER(?) and tv.TableKind in ('T','V', 'O', 'Q');", [db_name])
-        return list([row for row in rows.fetchall()])
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "database": db_name,
+            "table_count": len(data)
+        }
+        return create_response(data, metadata)
         
 #------------------ Tool  ------------------#
 # Read column description tool
@@ -101,8 +168,7 @@ def handle_read_column_description(conn: TeradataConnection, db_name: str, obj_n
     if len(obj_name) == 0:
         obj_name = "%"
     with conn.cursor() as cur:
-        rows = cur.execute(
-            """
+        query = """
             sel TableName, ColumnName, CASE ColumnType
                 WHEN '++' THEN 'TD_ANYTYPE'
                 WHEN 'A1' THEN 'UDT'
@@ -150,8 +216,15 @@ def handle_read_column_description(conn: TeradataConnection, db_name: str, obj_n
                 WHEN '??' THEN 'STGEOMETRY''ANY_TYPE'
                 END as CType
             from DBC.ColumnsVX where upper(tableName) like upper(?) and upper(DatabaseName) like upper(?)
-            """ , [obj_name,db_name])
-        return list([row for row in rows.fetchall()])
+        """
+        rows = cur.execute(query, [obj_name, db_name])
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "database": db_name,
+            "object": obj_name,
+            "column_count": len(data)
+        }
+        return create_response(data, metadata)
 
 
 #------------------ Tool  ------------------#
@@ -161,7 +234,6 @@ def handle_read_column_description(conn: TeradataConnection, db_name: str, obj_n
 #       db_name (str) - name of the database to list objects from
 #       table_name (str) - name of the table to list columns from     
 #     Returns: formatted response string or error message
-from tabulate import tabulate
 def handle_read_table_preview(conn: TeradataConnection, tablename: str, databasename: Optional[str] = None, *args, **kwargs):
     """
     This function returns data sample and inferred structure from a database table or view.
@@ -172,29 +244,19 @@ def handle_read_table_preview(conn: TeradataConnection, tablename: str, database
         tablename = f"{databasename}.{tablename}"
     with conn.cursor() as cur:
         cur.execute(f'select top 5 * from {tablename}')
-        columns=cur.description
-        sample=cur.fetchall()
+        columns = cur.description
+        sample = rows_to_json(cur.description, cur.fetchall())
 
-        # Format the column name and descriptions
-        columns_desc=""
-        for c in columns:
-            columns_desc += f"- **{c[0]}**: {c[1].__name__} {f'({c[3]})' if c[3] else ''}\n"
-
-        # Format the data sample as a table
-        sample_tab=tabulate(sample, headers=[c[0] for c in columns], tablefmt='pipe')
-
-        # Put the result together as a nicely formatted doc
-        return \
-f'''
-# Database dataset description
-Object name: **{tablename}**
-
-## Object structure
-Column names, data types and internal representation length if available.
-{columns_desc}
-
-## Data sample
-This is a data sample:
-
-{sample_tab}
-'''    
+        metadata = {
+            "tablename": tablename,
+            "columns": [
+                {
+                    "name": c[0],
+                    "type": c[1].__name__ if hasattr(c[1], '__name__') else str(c[1]),
+                    "length": c[3]
+                }
+                for c in columns
+            ],
+            "sample_size": len(sample)
+        }
+        return create_response(sample, metadata)
