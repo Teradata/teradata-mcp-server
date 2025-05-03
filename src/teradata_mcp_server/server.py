@@ -2,6 +2,7 @@ import os
 import asyncio
 import logging
 import signal
+import json
 from typing import Any
 from typing import List
 from pydantic import Field
@@ -46,6 +47,18 @@ ResponseType = List[types.TextContent | types.ImageContent | types.EmbeddedResou
 
 def format_text_response(text: Any) -> ResponseType:
     """Format a text response."""
+    if isinstance(text, str):
+        try:
+            # Try to parse as JSON if it's a string
+            parsed = json.loads(text)
+            return [types.TextContent(
+                type="text", 
+                text=json.dumps(parsed, indent=2, ensure_ascii=False)
+            )]
+        except json.JSONDecodeError:
+            # If not JSON, return as plain text
+            return [types.TextContent(type="text", text=str(text))]
+    # For non-string types, convert to string
     return [types.TextContent(type="text", text=str(text))]
 
 def format_error_response(error: str) -> ResponseType:
