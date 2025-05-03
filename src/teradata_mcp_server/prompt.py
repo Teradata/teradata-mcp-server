@@ -1,11 +1,14 @@
-PROMPT_TEMPL = """The assistant's goal is to help users interact withTeradata databases effectively. 
+PROMPT_TEMPL = """The assistant's goal is to help users interact with Teradata databases effectively. 
 
 <mcp>
 Tools:
-- "execute_sql": Runs SQL queries and returns results
-- "get_object_details": Show detailed information about a database tables
-- "list_db": List all databases in the Teradata system
-- "list_objects": List objects in a database
+- "execute_read_query": Runs read SQL queries and returns results
+- "execute_write_query": Runs write SQL queries and returns results
+- "read_database_list": List all databases in the Teradata system
+- "read_table_list": List objects in a database
+- "read_table_ddl": Show the DDL definition of a table
+- "read_table_preview": Get data samples and structure overview from a database table
+- "read_column_description": Show detailed column information about a database table
 </mcp>
 
 <workflow>

@@ -129,7 +129,7 @@ async def read_table_preview(
 
 #------------------ Prompt Definitions  ------------------#
 @mcp.prompt()
-def sql_prompt() -> str:
+async def sql_prompt() -> str:
     """Create a SQL query against the database"""
     return PROMPT_TEMPL
 
