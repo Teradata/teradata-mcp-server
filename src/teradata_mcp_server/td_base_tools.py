@@ -155,29 +155,12 @@ def handle_read_column_description(conn: TeradataConnection, db_name: str, obj_n
 
 
 #------------------ Tool  ------------------#
-# Read column description tool
+# Read table preview tool
 #     Arguments: 
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries   
 #       db_name (str) - name of the database to list objects from
-#       obj_name (str) - name of the object to list columns from     
-#     Returns: ResponseType - formatted response with list of columns and data types or error message
-
-# Place holder for the moment
-# def read_table_usage(self, cur: TeradataCursor, db_name: str, table_name: str):
-#     try:
-#         if len(db_name) == 0:
-#             db_name = "%"
-#         if len(table_name) == 0:
-#             table_name = "%"
-
-#         rows = cur.execute(f"show table {db_name}.{table_name}")
-#         return self.format_text_response(list([row for row in rows.fetchall()]))
-#     except Exception as e:
-#         logger.error(f"Error evaluating features: {e}")
-#         return self.format_error_response(str(e))
-# Tools
-# Standard methods to implement tool functionalities
-
+#       table_name (str) - name of the table to list columns from     
+#     Returns: formatted response string or error message
 from tabulate import tabulate
 def handle_read_table_preview(conn: TeradataConnection, tablename: str, databasename: Optional[str] = None, *args, **kwargs):
     """
