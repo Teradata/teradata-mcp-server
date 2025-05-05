@@ -10,15 +10,8 @@ import mcp.types as types
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 
-from td_connect import TDConn
-from td_base_tools import (
-    handle_execute_read_query,
-    handle_execute_write_query,
-    handle_read_table_ddl,
-    handle_read_database_list,
-    handle_read_table_preview, 
-    handle_read_column_description, 
-    handle_read_table_list)
+import teradata_aitools as td
+
 from prompt import PROMPT_TEMPL
 
 load_dotenv()
@@ -40,7 +33,7 @@ mcp = FastMCP("teradata-mcp")
 shutdown_in_progress = False
 
 # Initiate connection to Teradata
-_tdconn = TDConn()
+_tdconn = td.TDConn()
 
 #------------------ Tool utilies  ------------------#
 ResponseType = List[types.TextContent | types.ImageContent | types.EmbeddedResource]
@@ -81,7 +74,7 @@ async def execute_read_query(
     ) -> ResponseType:
     """Executes a SQL query to read from the database."""
     global _tdconn
-    return execute_db_tool(_tdconn, handle_execute_read_query, sql) 
+    return execute_db_tool(_tdconn, td.handle_execute_read_query, sql) 
 
 
 @mcp.tool(description="Executes a SQL query to write to the database.")
@@ -90,7 +83,7 @@ async def execute_write_query(
     ) -> ResponseType:
     """Executes a SQL query to write to the database."""
     global _tdconn
-    return execute_db_tool(_tdconn, handle_execute_write_query, sql) 
+    return execute_db_tool(_tdconn, td.handle_execute_write_query, sql) 
 
 
 @mcp.tool(description="Display table DDL definition.")
@@ -100,14 +93,14 @@ async def read_table_ddl(
     ) -> ResponseType:
     """Display table DDL definition."""
     global _tdconn
-    return execute_db_tool(_tdconn, handle_read_table_ddl, db_name, table_name)    
+    return execute_db_tool(_tdconn, td.handle_read_table_ddl, db_name, table_name)    
  
     
 @mcp.tool(description="List all databases in the Teradata System.")
 async def read_database_list() -> ResponseType:
     """List all databases in the Teradata System."""
     global _tdconn
-    return execute_db_tool(_tdconn, handle_read_database_list)
+    return execute_db_tool(_tdconn, td.handle_read_database_list)
 
 
 @mcp.tool(description="List objects in a database.")
@@ -116,7 +109,7 @@ async def read_table_list(
     ) -> ResponseType:
     """List objects in a database."""
     global _tdconn
-    return execute_db_tool(_tdconn, handle_read_table_list, db_name)
+    return execute_db_tool(_tdconn, td.handle_read_table_list, db_name)
 
 
 @mcp.tool(description="Show detailed column information about a database table.")
@@ -126,7 +119,7 @@ async def read_column_description(
     ) -> ResponseType:
     """Show detailed column information about a database table."""
     global _tdconn
-    return execute_db_tool(_tdconn, handle_read_column_description, db_name, obj_name)
+    return execute_db_tool(_tdconn, td.handle_read_column_description, db_name, obj_name)
 
 
 @mcp.tool(description="Get data samples and structure overview from a database table.")
@@ -136,7 +129,7 @@ async def read_table_preview(
     ) -> ResponseType:
     """Get data samples and structure overview from a database table."""
     global _tdconn
-    return execute_db_tool(_tdconn, handle_read_table_preview, obj_name, db_name)
+    return execute_db_tool(_tdconn, td.handle_read_table_preview, obj_name, db_name)
 
 
 
