@@ -234,21 +234,21 @@ def handle_read_column_description(conn: TeradataConnection, db_name: str, obj_n
 #       db_name (str) - name of the database to list objects from
 #       table_name (str) - name of the table to list columns from     
 #     Returns: formatted response string or error message
-def handle_read_table_preview(conn: TeradataConnection, tablename: str, databasename: Optional[str] = None, *args, **kwargs):
+def handle_read_table_preview(conn: TeradataConnection, table_name: str, db_name: Optional[str] = None, *args, **kwargs):
     """
     This function returns data sample and inferred structure from a database table or view.
     """
-    logger.debug(f"Tool: handle_read_table_preview: Args: tablename: {tablename}, databasename: {databasename}")
+    logger.debug(f"Tool: handle_read_table_preview: Args: tablename: {table_name}, databasename: {db_name}")
 
-    if databasename is not None:
-        tablename = f"{databasename}.{tablename}"
+    if db_name is not None:
+        table_name = f"{db_name}.{table_name}"
     with conn.cursor() as cur:
-        cur.execute(f'select top 5 * from {tablename}')
+        cur.execute(f'select top 5 * from {table_name}')
         columns = cur.description
         sample = rows_to_json(cur.description, cur.fetchall())
 
         metadata = {
-            "tablename": tablename,
+            "tablename": table_name,
             "columns": [
                 {
                     "name": c[0],

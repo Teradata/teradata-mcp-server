@@ -3,8 +3,7 @@ import asyncio
 import logging
 import signal
 import json
-from typing import Any
-from typing import List
+from typing import Any, List, Optional
 from pydantic import Field
 import mcp.types as types
 from mcp.server.fastmcp import FastMCP
@@ -18,7 +17,7 @@ load_dotenv()
 
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler(),
               logging.FileHandler(os.path.join("logs", "teradata_mcp_server.log"))],
@@ -70,30 +69,30 @@ def execute_db_tool(conn, tool, *args, **kwargs):
 
 @mcp.tool(description="Executes a SQL query to read from the database.")
 async def execute_read_query(
-    sql: str = Field(description="SQL that reads from the database to run", default="all"),
+    sql: str = Field(description="SQL that reads from the database to run", default=""),
     ) -> ResponseType:
     """Executes a SQL query to read from the database."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_execute_read_query, sql) 
+    return execute_db_tool(_tdconn, td.handle_execute_read_query, sql=sql) 
 
 
 @mcp.tool(description="Executes a SQL query to write to the database.")
 async def execute_write_query(
-    sql: str = Field(description="SQL that writes to the database to run", default="all"),
+    sql: str = Field(description="SQL that writes to the database to run", default=""),
     ) -> ResponseType:
     """Executes a SQL query to write to the database."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_execute_write_query, sql) 
+    return execute_db_tool(_tdconn, td.handle_execute_write_query, sql=sql) 
 
 
 @mcp.tool(description="Display table DDL definition.")
 async def read_table_ddl(
-    db_name: str = Field(description="Database name"),
-    table_name: str = Field(description="table name"),
+    db_name: str = Field(description="Database name", default=""),
+    table_name: str = Field(description="table name", default=""),
     ) -> ResponseType:
     """Display table DDL definition."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_table_ddl, db_name, table_name)    
+    return execute_db_tool(_tdconn, td.handle_read_table_ddl, db_name=db_name, table_name=table_name)    
  
     
 @mcp.tool(description="List all databases in the Teradata System.")
@@ -105,33 +104,62 @@ async def read_database_list() -> ResponseType:
 
 @mcp.tool(description="List objects in a database.")
 async def read_table_list(
-    db_name: str = Field(description="database name"),
+    db_name: str = Field(description="database name", default=""),
     ) -> ResponseType:
     """List objects in a database."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_table_list, db_name)
+    return execute_db_tool(_tdconn, td.handle_read_table_list, db_name=db_name)
 
 
 @mcp.tool(description="Show detailed column information about a database table.")
 async def read_column_description(
-    db_name: str = Field(description="Database name"),
-    obj_name: str = Field(description="table name"),
+    db_name: str = Field(description="Database name", default=""),
+    obj_name: str = Field(description="table name", default=""),
     ) -> ResponseType:
     """Show detailed column information about a database table."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_column_description, db_name, obj_name)
+    return execute_db_tool(_tdconn, td.handle_read_column_description, db_name=db_name, obj_name=obj_name)
 
 
 @mcp.tool(description="Get data samples and structure overview from a database table.")
 async def read_table_preview(
-    db_name: str = Field(description="Database name"),
-    obj_name: str = Field(description="table name"),
+    db_name: str = Field(description="Database name", default=""),
+    table_name: str = Field(description="table name", default=""),
     ) -> ResponseType:
     """Get data samples and structure overview from a database table."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_table_preview, obj_name, db_name)
+    return execute_db_tool(_tdconn, td.handle_read_table_preview, table_name=table_name, db_name=db_name)
 
+@mcp.tool(description="List SQL run by a user.")
+async def read_SQL_list(
+    user_name: str = Field(description="user name", default=""),
+    ) -> ResponseType:
+    """Get a list of SQL run by a user."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_read_sql_list, user_name=user_name)
 
+@mcp.tool(description="Get table space used.")
+async def read_table_space(
+    db_name: str = Field(description="Database name", default=""),
+    table_name: str = Field(description="table name", default=""),
+    ) -> ResponseType:
+    """Get table space used"""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_read_table_space, db_name=db_name, table_name=table_name)
+
+@mcp.tool(description="Get database space allocations.")
+async def read_database_space(
+    db_name: str = Field(description="Database name", default=""),
+    ) -> ResponseType:
+    """Get database space"""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_read_database_space, db_name=db_name)
+
+@mcp.tool(description="Get Teradata database version information.")
+async def read_database_version() -> ResponseType:
+    """Get database space"""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_read_database_version)
 
 #------------------ Prompt Definitions  ------------------#
 @mcp.prompt()

@@ -6,3 +6,4 @@ test/__pycache__/
 test/lc.py
 .env
 .DS_Store
+test/daniel.ipynb
