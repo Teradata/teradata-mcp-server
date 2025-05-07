@@ -17,7 +17,7 @@ load_dotenv()
 
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler(),
               logging.FileHandler(os.path.join("logs", "teradata_mcp_server.log"))],
@@ -130,34 +130,35 @@ async def read_table_preview(
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_read_table_preview, table_name=table_name, db_name=db_name)
 
-@mcp.tool(description="List SQL run by a user.")
+@mcp.tool(description="Get a list of SQL run by a user in the last number of days if a user name is provided, otherwise get list of all SQL in the last number of days.")
 async def read_SQL_list(
     user_name: str = Field(description="user name", default=""),
+    no_days: int = Field(description="number of days to look back", default=7),
     ) -> ResponseType:
     """Get a list of SQL run by a user."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_sql_list, user_name=user_name)
+    return execute_db_tool(_tdconn, td.handle_read_sql_list, user_name=user_name, no_days=no_days)
 
-@mcp.tool(description="Get table space used.")
+@mcp.tool(description="Get table space used for a table if table name is provided or get table space for all tables in a database if a database name is provided.")
 async def read_table_space(
     db_name: str = Field(description="Database name", default=""),
     table_name: str = Field(description="table name", default=""),
     ) -> ResponseType:
-    """Get table space used"""
+    """Get table space used for a table if table name is provided or get table space for all tables in a database if a database name is provided."""
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_read_table_space, db_name=db_name, table_name=table_name)
 
-@mcp.tool(description="Get database space allocations.")
+@mcp.tool(description="Get database space if database name is provided, otherwise get all databases space allocations.")
 async def read_database_space(
     db_name: str = Field(description="Database name", default=""),
     ) -> ResponseType:
-    """Get database space"""
+    """Get database space if database name is provided, otherwise get all databases space allocations."""
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_read_database_space, db_name=db_name)
 
 @mcp.tool(description="Get Teradata database version information.")
 async def read_database_version() -> ResponseType:
-    """Get database space"""
+    """Get Teradata database version information."""
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_read_database_version)
 
