@@ -45,16 +45,27 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       user_name (str) - name of the user 
 #     Returns: formatted response with list of QueryText and UserIDs or error message    
-def handle_read_sql_list(conn: TeradataConnection, user_name: Optional[str] | None, *args, **kwargs):
+def handle_read_sql_list(conn: TeradataConnection, user_name: Optional[str] | None, no_days: Optional[int],  *args, **kwargs):
     logger.debug(f"Tool: handle_read_sql_list: Args: user_name: {user_name}")
     
     with conn.cursor() as cur:   
         if user_name == "":
             logger.debug("No user name provided, returning all SQL queries.")
-            rows = cur.execute(f"SELECT t1.QueryID, t1.ProcID, t1.CollectTimeStamp, t1.SqlTextInfo, t2.UserName FROM DBC.QryLogSqlV t1 JOIN DBC.QryLogV t2 ON t1.QueryID = t2.QueryID ORDER BY t1.CollectTimeStamp DESC;")
+            rows = cur.execute(f"""SELECT t1.QueryID, t1.ProcID, t1.CollectTimeStamp, t1.SqlTextInfo, t2.UserName 
+            FROM DBC.QryLogSqlV t1 
+            JOIN DBC.QryLogV t2 
+            ON t1.QueryID = t2.QueryID 
+            WHERE t1.CollectTimeStamp >= CURRENT_TIMESTAMP - INTERVAL '{no_days}' DAY
+            ORDER BY t1.CollectTimeStamp DESC;""")
         else:
             logger.debug(f"User name provided: {user_name}, returning SQL queries for this user.")
-            rows = cur.execute(f"SELECT t1.QueryID, t1.ProcID, t1.CollectTimeStamp, t1.SqlTextInfo, t2.UserName FROM DBC.QryLogSqlV t1 JOIN DBC.QryLogV t2 ON t1.QueryID = t2.QueryID WHERE t2.UserName = '{user_name}' ORDER BY t1.CollectTimeStamp DESC;")
+            rows = cur.execute(f"""SELECT t1.QueryID, t1.ProcID, t1.CollectTimeStamp, t1.SqlTextInfo, t2.UserName 
+            FROM DBC.QryLogSqlV t1 
+            JOIN DBC.QryLogV t2 
+            ON t1.QueryID = t2.QueryID 
+            WHERE t1.CollectTimeStamp >= CURRENT_TIMESTAMP - INTERVAL '{no_days}' DAY
+            AND t2.UserName = '{user_name}'
+            ORDER BY t1.CollectTimeStamp DESC;""")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
             "user_name": user_name,
@@ -75,16 +86,31 @@ def handle_read_table_space(conn: TeradataConnection, db_name: Optional[str] | N
     with conn.cursor() as cur:   
         if (db_name == "") and (table_name == ""):
             logger.debug("No database or table name provided, returning all tables and space information.")
-            rows = cur.execute(f"SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm FROM DBC.AllSpaceV GROUP BY DatabaseName, TableName ORDER BY CurrentPerm1 desc")
+            rows = cur.execute(f"""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm 
+            FROM DBC.AllSpaceV 
+            GROUP BY DatabaseName, TableName 
+            ORDER BY CurrentPerm1 desc;""")
         elif (db_name == ""):
-            logger.debug(f"No database name provided, returning all tables and space information for table: {table_name}.")
-            rows = cur.execute(f"SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm FROM DBC.AllSpaceV WHERE TableName = '{table_name}' GROUP BY DatabaseName, TableName ORDER BY CurrentPerm1 desc")
+            logger.debug(f"No database name provided, returning all space information for table: {table_name}.")
+            rows = cur.execute(f"""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm 
+            FROM DBC.AllSpaceV 
+            WHERE TableName = '{table_name}' 
+            GROUP BY DatabaseName, TableName 
+            ORDER BY CurrentPerm1 desc;""")
         elif (table_name == ""):
             logger.debug(f"No table name provided, returning all tables and space information for database: {db_name}.")
-            rows = cur.execute(f"SELECT cTableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm FROM DBC.AllSpaceV WHERE DatabaseName = '{db_name}' GROUP BY TableName ORDER BY CurrentPerm1 desc")  
+            rows = cur.execute(f"""SELECT TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm 
+            FROM DBC.AllSpaceV 
+            WHERE DatabaseName = '{db_name}' 
+            GROUP BY TableName 
+            ORDER BY CurrentPerm1 desc;""")  
         else:
             logger.debug(f"Database name: {db_name}, Table name: {table_name}, returning space information for this table.")
-            rows = cur.execute(f"SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm FROM DBC.AllSpaceV WHERE DatabaseName = '{db_name}' AND TableName = '{table_name}' GROUP BY DatabaseName, TableName ORDER BY CurrentPerm1 desc")
+            rows = cur.execute(f"""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm 
+            FROM DBC.AllSpaceV 
+            WHERE DatabaseName = '{db_name}' AND TableName = '{table_name}' 
+            GROUP BY DatabaseName, TableName 
+            ORDER BY CurrentPerm1 desc;""")
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
@@ -100,20 +126,42 @@ def handle_read_table_space(conn: TeradataConnection, db_name: Optional[str] | N
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       db_name (str) - name of the database 
 #     Returns: formatted response with list of databases and space information or error message    
-def handle_read_database_space(conn: TeradataConnection, db_name: Optional[str] | None , *args, **kwargs):
+def handle_read_database_space(conn: TeradataConnection, db_name: Optional[str] | None, *args, **kwargs):
     logger.debug(f"Tool: handle_read_database_space: Args: db_name: {db_name}")
     
     with conn.cursor() as cur:   
         if (db_name == ""):
             logger.debug("No database name provided, returning all databases and space information.")
-            rows = cur.execute(f"SELECT DatabaseName, SUM(MaxPerm)/1024/1024/1024 AS SpaceAllocated_GB, SUM(CurrentPerm)/1024/1024/1024 AS SpaceUsed_GB, (SUM(MaxPerm) - SUM(CurrentPerm))/1024/1024/1024 AS FreeSpace_GB, (SUM(CurrentPerm) * 100 / SUM(MaxPerm)) AS PercentUsed FROM DBC.DiskSpaceV WHERE MaxPerm > 0 GROUP BY 1;")
+            rows = cur.execute("""
+                SELECT 
+                    DatabaseName,
+                    CAST(SUM(MaxPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceAllocated_GB,
+                    CAST(SUM(CurrentPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceUsed_GB,
+                    CAST((SUM(MaxPerm) - SUM(CurrentPerm))/1024/1024/1024 AS DECIMAL(10,2)) AS FreeSpace_GB,
+                    CAST((SUM(CurrentPerm) * 100.0 / NULLIF(SUM(MaxPerm),0)) AS DECIMAL(10,2)) AS PercentUsed
+                FROM DBC.DiskSpaceV 
+                WHERE MaxPerm > 0 
+                GROUP BY 1
+                ORDER BY 5 DESC;
+            """)
         else:
-            logger.debug(f"Database name: {db_name}, returning space information for this table.")
-            rows = cur.execute(f"SELECT DatabaseName, SUM(MaxPerm)/1024/1024/1024 AS SpaceAllocated_GB, SUM(CurrentPerm)/1024/1024/1024 AS SpaceUsed_GB, (SUM(MaxPerm) - SUM(CurrentPerm))/1024/1024/1024 AS FreeSpace_GB, (SUM(CurrentPerm) * 100 / SUM(MaxPerm)) AS PercentUsed FROM DBC.DiskSpaceV WHERE MaxPerm > 0 AND DatabaseName = '{db_name}' GROUP BY 1;")
+            logger.debug(f"Database name: {db_name}, returning space information for this database.")
+            rows = cur.execute(f"""
+                SELECT 
+                    DatabaseName,
+                    CAST(SUM(MaxPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceAllocated_GB,
+                    CAST(SUM(CurrentPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceUsed_GB,
+                    CAST((SUM(MaxPerm) - SUM(CurrentPerm))/1024/1024/1024 AS DECIMAL(10,2)) AS FreeSpace_GB,
+                    CAST((SUM(CurrentPerm) * 100.0 / NULLIF(SUM(MaxPerm),0)) AS DECIMAL(10,2)) AS PercentUsed
+                FROM DBC.DiskSpaceV 
+                WHERE MaxPerm > 0 
+                AND DatabaseName = '{db_name}'
+                GROUP BY 1;
+            """)
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "db_name": db_name,
+            "db_name": db_name
         }
         return create_response(data, metadata)
 

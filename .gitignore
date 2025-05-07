@@ -3,7 +3,8 @@ src/__pycache__/
 src/teradata_aitools/__pycache__/
 logs/
 test/__pycache__/
-test/lc.py
+working/
 .env
 .DS_Store
-test/daniel.ipynb
+.vscode/
+.venv/
