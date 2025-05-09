@@ -31,12 +31,18 @@ def rows_to_json(cursor_description: Any, rows: List[Any]) -> List[Dict[str, Any
 
 def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str:
     """Create a standardized JSON response structure"""
-    response = {
-        "status": "success",
-        "results": data
-    }
     if metadata:
-        response["metadata"] = metadata
+        response = {
+            "status": "success",
+            "metadata": metadata,
+            "results": data
+        }
+    else:
+        response = {
+            "status": "success",
+            "results": data
+        }
+
     return json.dumps(response, default=serialize_teradata_types)
 
 #------------------ Do not make changes above  ------------------#
@@ -60,6 +66,7 @@ def handle_name_of_tool(conn: TeradataConnection, argument: Optional[str], *args
             rows = cur.execute(f"Teradata query goes here with argument {argument};")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
+            "tool_name": "name_of_tool",
             "argument": argument,
         }
         return create_response(data, metadata)

@@ -65,7 +65,7 @@ def execute_db_tool(conn, tool, *args, **kwargs):
         logger.error(f"Error sampling object: {e}")
         return format_error_response(str(e))
     
-#------------------ Tools  ------------------#
+#------------------ Base Tools  ------------------#
 
 @mcp.tool(description="Executes a SQL query to read from the database.")
 async def execute_read_query(
@@ -130,6 +130,8 @@ async def read_table_preview(
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_read_table_preview, table_name=table_name, db_name=db_name)
 
+#------------------ DBA Tools  ------------------#
+
 @mcp.tool(description="Get a list of SQL run by a user in the last number of days if a user name is provided, otherwise get list of all SQL in the last number of days.")
 async def read_SQL_list(
     user_name: str = Field(description="user name", default=""),
@@ -161,6 +163,47 @@ async def read_database_version() -> ResponseType:
     """Get Teradata database version information."""
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_read_database_version)
+
+#------------------ Data Quality Tools  ------------------#
+
+@mcp.tool(description="Get the column names that having missing values in a table.")
+async def read_missing_columns(
+    table_name: str = Field(description="table name", default=""),
+    ) -> ResponseType:
+    """Get the column names that having missing values in a table."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_missing_values, table_name=table_name)
+
+
+@mcp.tool(description="Get the column names that having negative values in a table.")
+async def read_negative_columns(
+    table_name: str = Field(description="table name", default=""),
+    ) -> ResponseType:
+    """Get the column names that having negative values in a table."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_negative_values, table_name=table_name)
+
+@mcp.tool(description="Get the destinct categories from column in a table.")
+async def read_destinct_categories(
+    table_name: str = Field(description="table name", default=""),
+    col_name: str = Field(description="column name", default=""),
+    ) -> ResponseType:
+    """Get the destinct categories from column in a table."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_destinct_categories, table_name=table_name, col_name=col_name)    
+
+@mcp.tool(description="Get the standard deviation from column in a table.")
+async def read_standard_deviation(
+    table_name: str = Field(description="table name", default=""),
+    col_name: str = Field(description="column name", default=""),
+    ) -> ResponseType:
+    """Get the standard deviation from column in a table."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_standard_deviation, table_name=table_name, col_name=col_name)  
+
+#------------------ Custom Tools  ------------------#
+
+
 
 #------------------ Prompt Definitions  ------------------#
 @mcp.prompt()

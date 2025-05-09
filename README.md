@@ -1,11 +1,34 @@
 
 # Teradata MCP Server Template
 
-This code will form the basis for building Teradata MCP servers.
+### Overview
+The Teradata MCP server is a open source project, we welcome contributions via pull requests.
 
-We have provided a base code under the /teradata_mcp_server directory that can be modified for the development of custom tools
+We are providing three sets of tools
+1. td_base_tools:
+    - execute_read_query - runs a read query
+    - execute_write_query - runs a write query
+    - read_table_DDL - returns the show table results
+    - read_database_list - returns a list of all databases
+    - read_table_list - returns a list of tables in a database
+    - read_column_description - returns description of columns in a table
+    - read_table_preview - returns column information and 5 rows from the table
 
+2. td_dba_tools:
+    - read_sql_list - returns a list of recently executed SQL for a user
+    - read_table_space - returns CurrentPerm table space 
+    - read_database_space - returns Space allocated, space used and percentage used for a database
+    - read_database_version - returns the database version information
 
+3. td_data_quality_tools:
+    - missing_values - returns a list of column names with missing values
+    - negative_values - returns a list of column names with negative values
+    - distinct_categories - returns a list of categories within a column
+    - standard_deviation - returns the mean and standard deviation for a column
+
+We have also created a custom_tools section that will allow for the development of customer tools to be easily added.
+
+The Test directory contains a simple ClientChatBot tool for testing tools.
 
 ### Environment Set Up
 Step 1 - The environment has been put together assuming you have the uv package installed on your local machine.  Installation instructions for uv can be found at https://github.com/astral-sh/uv 
@@ -129,7 +152,7 @@ SSE=False
                 "command": "uv",
                 "args": [
                     "--directory",
-                    "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server",
+                    "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server/,
                     "run",
                     "server.py"
                 ]
