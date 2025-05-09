@@ -31,12 +31,18 @@ def rows_to_json(cursor_description: Any, rows: List[Any]) -> List[Dict[str, Any
 
 def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str:
     """Create a standardized JSON response structure"""
-    response = {
-        "status": "success",
-        "results": data
-    }
     if metadata:
-        response["metadata"] = metadata
+        response = {
+            "status": "success",
+            "metadata": metadata,
+            "results": data
+        }
+    else:
+        response = {
+            "status": "success",
+            "results": data
+        }
+
     return json.dumps(response, default=serialize_teradata_types)
 
 #------------------ Tool  ------------------#
@@ -68,7 +74,10 @@ def handle_read_sql_list(conn: TeradataConnection, user_name: Optional[str] | No
             ORDER BY t1.CollectTimeStamp DESC;""")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "user_name": user_name,
+            "tool_name": "read_sql_list",
+            "user_name": user_name, 
+            "no_days": no_days,
+            "total_queries": len(data)
         }
         return create_response(data, metadata)
 
@@ -114,8 +123,10 @@ def handle_read_table_space(conn: TeradataConnection, db_name: Optional[str] | N
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
+            "tool_name": "read_table_space",
             "db_name": db_name,
             "table_name": table_name,
+            "total_tables": len(data)
         }
         return create_response(data, metadata)
 
@@ -161,7 +172,9 @@ def handle_read_database_space(conn: TeradataConnection, db_name: Optional[str] 
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "db_name": db_name
+            "tool_name": "read_database_space",
+            "db_name": db_name,
+            "total_databases": len(data)
         }
         return create_response(data, metadata)
 
@@ -179,5 +192,7 @@ def handle_read_database_version(conn: TeradataConnection, *args, **kwargs):
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
+            "tool_name": "read_database_version",
+            "total_rows": len(data) 
         }
         return create_response(data, metadata)

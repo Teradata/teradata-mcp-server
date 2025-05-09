@@ -31,12 +31,18 @@ def rows_to_json(cursor_description: Any, rows: List[Any]) -> List[Dict[str, Any
 
 def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str:
     """Create a standardized JSON response structure"""
-    response = {
-        "status": "success",
-        "results": data
-    }
     if metadata:
-        response["metadata"] = metadata
+        response = {
+            "status": "success",
+            "metadata": metadata,
+            "results": data
+        }
+    else:
+        response = {
+            "status": "success",
+            "results": data
+        }
+
     return json.dumps(response, default=serialize_teradata_types)
 
 #------------------ Tool  ------------------#
@@ -52,9 +58,8 @@ def handle_missing_values(conn: TeradataConnection, table_name: str, *args, **kw
         rows = cur.execute(f"select ColumnName, NullCount, NullPercentage from TD_ColumnSummary ( on {table_name} as InputTable using TargetColumns ('[:]')) as dt ORDER BY NullCount desc")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "table": table_name,
-            "total_columns": len(data),
-            "columns_with_nulls": len([d for d in data if d.get("NullCount", 0) > 0])
+            "tool_name": "missing_values",
+            "table_name": table_name,
         }
         return create_response(data, metadata)
 
@@ -71,9 +76,8 @@ def handle_negative_values(conn: TeradataConnection, table_name: str, *args, **k
         rows = cur.execute(f"select ColumnName, NegativeCount from TD_ColumnSummary ( on {table_name} as InputTable using TargetColumns ('[:]')) as dt ORDER BY NegativeCount desc")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "table": table_name,
-            "total_columns": len(data),
-            "columns_with_negatives": len([d for d in data if d.get("NegativeCount", 0) > 0])
+            "tool_name": "negative_values",
+            "table_name": table_name,
         }
         return create_response(data, metadata)
 
@@ -91,8 +95,9 @@ def handle_destinct_categories(conn: TeradataConnection, table_name: str, col_na
         rows = cur.execute(f"select * from TD_CategoricalSummary ( on {table_name} as InputTable using TargetColumns ('{col_name}')) as dt")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "table": table_name,
-            "column": col_name,
+            "tool_name": "distinct_categories",
+            "table_name": table_name,
+            "col_name": col_name,
             "distinct_categories": len(data)
         }
         return create_response(data, metadata)
@@ -111,8 +116,9 @@ def handle_standard_deviation(conn: TeradataConnection, table_name: str, col_nam
         rows = cur.execute(f"select * from TD_UnivariateStatistics ( on {table_name} as InputTable using TargetColumns ('{col_name}') Stats('MEAN','STD')) as dt ORDER BY 1,2")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "table": table_name,
-            "column": col_name,
+            "tool_name": "standard_deviation",
+            "table_name": table_name,
+            "col_name": col_name,
             "stats_calculated": ["MEAN", "STD"]
         }
         return create_response(data, metadata)

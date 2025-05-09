@@ -33,12 +33,18 @@ def rows_to_json(cursor_description: Any, rows: List[Any]) -> List[Dict[str, Any
 
 def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str:
     """Create a standardized JSON response structure"""
-    response = {
-        "status": "success",
-        "results": data
-    }
     if metadata:
-        response["metadata"] = metadata
+        response = {
+            "status": "success",
+            "metadata": metadata,
+            "results": data
+        }
+    else:
+        response = {
+            "status": "success",
+            "results": data
+        }
+
     return json.dumps(response, default=serialize_teradata_types)
 
 
@@ -58,6 +64,7 @@ def handle_execute_read_query(conn: TeradataConnection, sql: str, *args, **kwarg
             
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
+            "tool_name": "execute_read_query",
             "sql": sql,
             "columns": [
                 {"name": col[0], "type": col[1].__name__ if hasattr(col[1], '__name__') else str(col[1])}
@@ -83,6 +90,7 @@ def handle_execute_write_query(conn: TeradataConnection, sql: str, *args, **kwar
             return create_response([])
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
+            "tool_name": "execute_write_query",
             "sql": sql,
             "affected_rows": cur.rowcount if hasattr(cur, 'rowcount') else None,
             "row_count": len(data)
@@ -108,6 +116,7 @@ def handle_read_table_ddl(conn: TeradataConnection, db_name: str, table_name: st
         rows = cur.execute(f"show table {db_name}.{table_name}")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
+            "tool_name": "read_table_ddl",
             "database": db_name,
             "table": table_name
         }
@@ -126,6 +135,7 @@ def handle_read_database_list(conn: TeradataConnection, *args, **kwargs):
         rows = cur.execute("select DataBaseName, DECODE(DBKind, 'U', 'User', 'D','DataBase') as DBType, CommentString from dbc.DatabasesV dv where OwnerName <> 'PDCRADM'")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
+            "tool_name": "read_database_list",
             "total_count": len(data),
             "databases": len([d for d in data if d.get("DBType") == "DataBase"]),
             "users": len([d for d in data if d.get("DBType") == "User"])
@@ -148,6 +158,7 @@ def handle_read_table_list(conn: TeradataConnection, db_name: str, *args, **kwar
         rows = cur.execute("select TableName from dbc.TablesV tv where UPPER(tv.DatabaseName) = UPPER(?) and tv.TableKind in ('T','V', 'O', 'Q');", [db_name])
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
+            "tool_name": "read_table_list",
             "database": db_name,
             "table_count": len(data)
         }
@@ -220,6 +231,7 @@ def handle_read_column_description(conn: TeradataConnection, db_name: str, obj_n
         rows = cur.execute(query, [obj_name, db_name])
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
+            "tool_name": "read_column_description",
             "database": db_name,
             "object": obj_name,
             "column_count": len(data)
@@ -248,7 +260,9 @@ def handle_read_table_preview(conn: TeradataConnection, table_name: str, db_name
         sample = rows_to_json(cur.description, cur.fetchall())
 
         metadata = {
-            "tablename": table_name,
+            "tool_name": "read_table_preview",
+            "database": db_name,
+            "table_name": table_name,
             "columns": [
                 {
                     "name": c[0],
