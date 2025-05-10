@@ -17,7 +17,7 @@ load_dotenv()
 
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.ERROR,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler(),
               logging.FileHandler(os.path.join("logs", "teradata_mcp_server.log"))],
