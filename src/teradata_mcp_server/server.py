@@ -130,6 +130,26 @@ async def read_table_preview(
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_read_table_preview, table_name=table_name, db_name=db_name)
 
+@mcp.tool(description="Get tables commonly used together by database users, this is helpful to infer relationships between tables.")
+async def read_table_affinity(
+    db_name: str = Field(description="Database name", default=""),
+    obj_name: str = Field(description="Table or view name", default=""),
+    ) -> ResponseType:
+    """Get tables commonly used together by database users, this is helpful to infer relationships between tables."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_read_table_affinity, obj_name=obj_name, db_name=db_name)
+
+
+@mcp.tool(description="Measure the usage of a table and views by users in a given schema, this is helpful to infer what database objects are most actively used or drive most value.")
+async def read_table_usage(
+    db_name: str = Field(description="Database name", default=""),
+    ) -> ResponseType:
+    """Measure the usage of a table and views by users in a given schema, this is helpful to infer what database objects are most actively used or drive most value."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_read_table_usage, db_name=db_name)
+
+
+
 #------------------ DBA Tools  ------------------#
 
 @mcp.tool(description="Get a list of SQL run by a user in the last number of days if a user name is provided, otherwise get list of all SQL in the last number of days.")
