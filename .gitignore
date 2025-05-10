@@ -3,6 +3,7 @@ src/__pycache__/
 src/teradata_aitools/__pycache__/
 logs/
 test/__pycache__/
+test/td_agent/__pycache__/
 working/
 .env
 .DS_Store

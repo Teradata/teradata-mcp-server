@@ -12,3 +12,11 @@ aws_region_name=
 
 ############################################
 OPENAI_API_KEY=
+
+############################################
+GOOGLE_GENAI_USE_VERTEXAI=FALSE
+GOOGLE_API_KEY=
+
+############################################
+azure_api_key=
+azure_gpt-4o-mini=
