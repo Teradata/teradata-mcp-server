@@ -184,6 +184,13 @@ async def read_database_version() -> ResponseType:
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_read_database_version)
 
+@mcp.tool(description="Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.")
+async def read_resusage_summary() -> ResponseType:
+    """Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_read_resusage_summary)
+
+
 #------------------ Data Quality Tools  ------------------#
 
 @mcp.tool(description="Get the column names that having missing values in a table.")
