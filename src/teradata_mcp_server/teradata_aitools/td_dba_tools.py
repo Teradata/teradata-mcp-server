@@ -318,5 +318,55 @@ def handle_read_resusage_summary(conn: TeradataConnection,
         return create_response(data, metadata)
 
 
+#------------------ Tool  ------------------#
+# Get Flow Control tool
+#     Arguments: 
+#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
+#     Returns: formatted response with database flow control information or error message    
+def handle_read_flow_control(conn: TeradataConnection, *args, **kwargs):
+    logger.debug(f"Tool: handle_read_flow_control: Args: ")
+    
+    with conn.cursor() as cur:   
+        logger.debug("Database version information requested.")
+        rows = cur.execute(f"""
+                SELECT A.THEDATE AS "Date"  
+                , A.THETIME (FORMAT '99:99:99') AS "Time"      
+                , CASE  
+                    WHEN DAY_OF_WEEK = 1 THEN 'Sun'
+                    WHEN DAY_OF_WEEK = 2 THEN 'Mon'
+                    WHEN DAY_OF_WEEK = 3 THEN 'Tue'
+                    WHEN DAY_OF_WEEK = 4 THEN 'Wed'
+                    WHEN DAY_OF_WEEK = 5 THEN 'Thr'
+                    WHEN DAY_OF_WEEK = 6 THEN 'Fri'
+                    WHEN DAY_OF_WEEK = 7 THEN 'Sat'
+                    END AS DAY_OF_WEEK
+                , A.FLOWCTLTIME AS "Flow Control Time" 
+                , (A.FLOWCTLTIME / 1000) / A.SECS AS "FlowControl%" 
+                , C.CPUUEXEC + C.CPUUSERV AS "CPUBusy"  
+                , CPUIOWAIT AS "CPUWaitForIO"    
+                , ((C.CPUUEXEC) / (C.CENTISECS * C.NCPUS)) * 100 AS "CPUEXEC%" 
+                , ((C.CPUUSERV) / (C.CENTISECS * C.NCPUS)) * 100 AS "CPUSERV%" 
+                , ((C.CPUIOWAIT) / (C.CENTISECS * C.NCPUS)) * 100 AS "WAITIO%"  
+                , ((C.CPUIDLE) / (C.CENTISECS * C.NCPUS)) * 100 AS "IDLE%"  
+                FROM DBC.RESUSAGESAWT A 
+                INNER JOIN DBC.RESUSAGESVPR B   
+                    ON A.VPRID = B.VPRID
+                    AND A.THETIME = B.THETIME
+                INNER JOIN DBC.RESUSAGESPMA C   
+                    ON A.NODEID = C.NODEID
+                    AND A.THETIME = C.THETIME
+                    AND A.THEDATE = C.THEDATE
+                INNER JOIN SYS_CALENDAR.CALENDAR D  
+                    ON C.THEDATE = D.CALENDAR_DATE
+                --WHERE A.THEDATE BETWEEN '2019-03-25' AND '2018-03-31'
+                WHERE A.THEDATE > DATE - 7
+                GROUP BY 1,2,3,4,5,6,7,8,9,10,11;    
+                           """)
 
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "tool_name": "read_flow_control",
+            "total_rows": len(data) 
+        }
+        return create_response(data, metadata)
     

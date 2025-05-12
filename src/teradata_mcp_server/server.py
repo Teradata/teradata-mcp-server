@@ -9,8 +9,11 @@ import mcp.types as types
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 
-from teradata_mcp_server import teradata_aitools as td
-from teradata_mcp_server.prompt import PROMPT_TEMPL
+
+import teradata_aitools as td
+
+from teradata_mcp_server.teradata_aitools.prompt import PROMPT_TEMPL
+
 
 load_dotenv()
 
@@ -147,7 +150,10 @@ async def read_table_usage(
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_read_table_usage, db_name=db_name)
 
-
+@mcp.prompt()
+async def sql_prompt() -> str:
+    """Create a SQL query against the database"""
+    return td.prompt_general
 
 #------------------ DBA Tools  ------------------#
 
@@ -187,6 +193,7 @@ async def read_database_version() -> ResponseType:
 async def read_resusage_summary() -> ResponseType:
     """Get the Teradata system usage summary metrics by weekday and hour."""
     global _tdconn
+
     return execute_db_tool(_tdconn, td.handle_read_resusage_summary, dimensions=["hourOfDay", "dayOfWeek"])
 
 @mcp.tool(description="Get the Teradata system usage summary metrics by user on a specified date, or day of week and hour of day.")
@@ -199,6 +206,11 @@ async def read_resusage_user_summary(
     """Get the Teradata system usage summary metrics by user on a specified date, or day of week and hour of day."""
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_read_resusage_summary, dimensions=["UserName", "hourOfDay", "dayOfWeek"], user_name=user_name, date=date, dayOfWeek=dayOfWeek, hourOfDay=hourOfDay)
+
+@mcp.prompt()
+async def table_archive() -> str:
+    """Create a table archive strategy for database tables."""
+    return td.prompt_table_archive
 
 #------------------ Data Quality Tools  ------------------#
 
@@ -240,12 +252,6 @@ async def read_standard_deviation(
 #------------------ Custom Tools  ------------------#
 
 
-
-#------------------ Prompt Definitions  ------------------#
-@mcp.prompt()
-async def sql_prompt() -> str:
-    """Create a SQL query against the database"""
-    return PROMPT_TEMPL
 
 
 #------------------ Main ------------------#

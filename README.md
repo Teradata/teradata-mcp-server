@@ -4,7 +4,7 @@
 ### Overview
 The Teradata MCP server is a open source project, we welcome contributions via pull requests.
 
-We are providing three sets of tools
+We are providing three sets of tools and associated helpful prompts
 1. td_base_tools:
     - execute_read_query - runs a read query
     - execute_write_query - runs a write query
@@ -13,12 +13,20 @@ We are providing three sets of tools
     - read_table_list - returns a list of tables in a database
     - read_column_description - returns description of columns in a table
     - read_table_preview - returns column information and 5 rows from the table
+    - read_table_affinity - gets tables commonly used together
+    - read_table_usage - Measure the usage of a table and views by users in a given schema
+
+    - prompt_general - Create a SQL query against the database
 
 2. td_dba_tools:
     - read_sql_list - returns a list of recently executed SQL for a user
     - read_table_space - returns CurrentPerm table space 
     - read_database_space - returns Space allocated, space used and percentage used for a database
     - read_database_version - returns the database version information
+    - read_resuage_summary - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.
+    - read_flow_control - Get the Teradata system flow control metrics by day and hour
+
+    - prompt_table_archive - Create a table archive strategy for database tables.
 
 3. td_data_quality_tools:
     - missing_values - returns a list of column names with missing values
@@ -108,11 +116,11 @@ Test the other tools, each should have a successful outcome
 Control+c to stop the server in the terminal
 
 ### Adding your sever to an Agent using stdio
+#### Option 1 - pydanticai chatbot
 step 1 - confirm the SSE flag in .env file has been set to False
 ```
 SSE=False
 ```
-
 Step 2 - Modify the ./test/ClientChatBot.py script to point to where you installed the server, you will need to modify the following line
 ```
     td_mcp_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server", "run", "server.py"])
@@ -130,6 +138,19 @@ uv run ./test/ClientChatBot.py
 - Ask the agent to show all the objects in a database
 - Ask the agent a question that requires SQL to run against a table
 - Type "quit" to exit.
+
+#### Option 2 - ADK Chatbot
+step 1 - confirm the SSE flag in .env file has been set to False
+```
+SSE=False
+```
+Step 2 - move into teradata_mcp_server/test directory From a terminal.
+```
+adk web
+```
+Step 3 - open [ADK Web Server ](http://0.0.0.0:8000) 
+
+Step 4 - chat with the td_agent
 
 ### Adding tools using stdio to Visual Studio Code Co-pilot
 - confirm the SSE flag in .env file has been set to False
