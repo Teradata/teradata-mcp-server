@@ -9,9 +9,11 @@ import mcp.types as types
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 
+
 import teradata_aitools as td
 
 from teradata_mcp_server.teradata_aitools.prompt import PROMPT_TEMPL
+
 
 load_dotenv()
 
@@ -26,7 +28,7 @@ logger = logging.getLogger("teradata_mcp_server")
 logger.info("Starting Teradata MCP server")
 
 # Connect to MCP server
-mcp = FastMCP("teradata-mcp")
+mcp = FastMCP("teradata-mcp-server")
 
 #global shutdown flag
 shutdown_in_progress = False
@@ -189,15 +191,21 @@ async def read_database_version() -> ResponseType:
 
 @mcp.tool(description="Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.")
 async def read_resusage_summary() -> ResponseType:
-    """Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket."""
+    """Get the Teradata system usage summary metrics by weekday and hour."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_resusage_summary)
 
-@mcp.tool(description="Get the Teradata system flow control metrics by day and hour.")
-async def read_flow_control() -> ResponseType:
-    """Get the Teradata system flow control metrics by day and hour."""
+    return execute_db_tool(_tdconn, td.handle_read_resusage_summary, dimensions=["hourOfDay", "dayOfWeek"])
+
+@mcp.tool(description="Get the Teradata system usage summary metrics by user on a specified date, or day of week and hour of day.")
+async def read_resusage_user_summary(
+    user_name: str = Field(description="Database user name", default=""),
+    date: str = Field(description="Date to analyze, formatted as `YYYY-MM-DD`", default=""),
+    dayOfWeek: str = Field(description="Day of week to analyze", default=""),
+    hourOfDay: str = Field(description="Hour of day to analyze", default=""),
+    ) -> ResponseType:
+    """Get the Teradata system usage summary metrics by user on a specified date, or day of week and hour of day."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_flow_control)
+    return execute_db_tool(_tdconn, td.handle_read_resusage_summary, dimensions=["UserName", "hourOfDay", "dayOfWeek"], user_name=user_name, date=date, dayOfWeek=dayOfWeek, hourOfDay=hourOfDay)
 
 @mcp.prompt()
 async def table_archive() -> str:

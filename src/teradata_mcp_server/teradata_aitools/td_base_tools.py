@@ -342,13 +342,19 @@ def handle_read_table_affinity(conn: TeradataConnection, db_name: str, obj_name:
     }
     return create_response(data, metadata)
 
-def handle_read_table_usage(conn: TeradataConnection, db_name: str, *args, **kwargs):
+def handle_read_table_usage(conn: TeradataConnection, db_name: Optional[str] = None, *args, **kwargs):
     """
     Measure the usage of a table and views by users in a given schema, this is helpful to infer what database objects are most actively used or drive most value.
     """
+    if db_name:
+        database_name_filter=f"AND objectdatabasename = '{db_name}'"
+    else:
+        database_name_filter=""
     table_usage_sql="""
     LOCKING ROW for ACCESS
-    sel "TableName"
+    sel 
+    DatabaseName
+    ,TableName
     ,Weight as "QueryCount"
     ,100*"Weight" / sum("Weight") over(partition by 1) PercentTotal
     ,case 
@@ -372,7 +378,7 @@ def handle_read_table_usage(conn: TeradataConnection, db_name: str, *args, **kwa
                                 , QueryId
                             FROM DBC.DBQLObjTbl /* uncomment for DBC */
                             WHERE Objecttype in ('Tab', 'Viw')
-                            AND objectdatabasename = '{database_name}'
+                            {database_name_filter}
                             AND ObjectTableName IS NOT NULL
                             AND ObjectColumnName IS NULL
                             -- AND LogDate BETWEEN '2017-01-01' AND '2017-08-01' /* uncomment for PDCR */
@@ -393,7 +399,7 @@ def handle_read_table_usage(conn: TeradataConnection, db_name: str, *args, **kwa
 
 
     with conn.cursor() as cur:
-        rows = cur.execute(table_usage_sql.format(database_name=db_name))
+        rows = cur.execute(table_usage_sql.format(database_name_filter=database_name_filter))
         data = rows_to_json(cur.description, rows.fetchall())
     if len(data):
         info=f'This data contains the list of tables most frequently queried objects in database schema {db_name}'

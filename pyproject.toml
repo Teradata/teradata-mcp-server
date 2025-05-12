@@ -22,3 +22,6 @@ dependencies = [
     "google-adk>=0.5.0",
     "litellm>=1.68.2",
 ]
+
+[project.scripts]
+teradata-mcp-server = "teradata_mcp_server:main"
