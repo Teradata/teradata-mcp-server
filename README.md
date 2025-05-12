@@ -197,7 +197,7 @@ uv run ./src/teradata_mcp_server/server.py
 You can use [mcpo](https://github.com/open-webui/mcpo) to expose this MCP tool as an OpenAPI-compatible HTTP server.
 
 For example, using uv:
-`uvx mcpo --port 8001 --api-key "top-secret" -- uv run teradata-mcp-server
+`uvx mcpo --port 8001 --api-key "top-secret" -- uv run teradata-mcp-server`
 
 Your Teradata tools are now available as local REST endpoints, view documentation and test it at http://localhost:8001/docs
 
