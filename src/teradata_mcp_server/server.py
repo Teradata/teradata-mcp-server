@@ -12,9 +12,6 @@ from dotenv import load_dotenv
 
 import teradata_aitools as td
 
-from teradata_mcp_server.teradata_aitools.prompt import PROMPT_TEMPL
-
-
 load_dotenv()
 
 os.makedirs("logs", exist_ok=True)
