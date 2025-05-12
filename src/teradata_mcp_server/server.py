@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 import teradata_aitools as td
 
-from prompt import PROMPT_TEMPL
+from teradata_mcp_server.teradata_aitools.prompt import PROMPT_TEMPL
 
 load_dotenv()
 
@@ -148,7 +148,10 @@ async def read_table_usage(
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_read_table_usage, db_name=db_name)
 
-
+@mcp.prompt()
+async def sql_prompt() -> str:
+    """Create a SQL query against the database"""
+    return td.prompt_general
 
 #------------------ DBA Tools  ------------------#
 
@@ -190,6 +193,16 @@ async def read_resusage_summary() -> ResponseType:
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_read_resusage_summary)
 
+@mcp.tool(description="Get the Teradata system flow control metrics by day and hour.")
+async def read_flow_control() -> ResponseType:
+    """Get the Teradata system flow control metrics by day and hour."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_read_flow_control)
+
+@mcp.prompt()
+async def table_archive() -> str:
+    """Create a table archive strategy for database tables."""
+    return td.prompt_table_archive
 
 #------------------ Data Quality Tools  ------------------#
 
@@ -231,12 +244,6 @@ async def read_standard_deviation(
 #------------------ Custom Tools  ------------------#
 
 
-
-#------------------ Prompt Definitions  ------------------#
-@mcp.prompt()
-async def sql_prompt() -> str:
-    """Create a SQL query against the database"""
-    return PROMPT_TEMPL
 
 
 #------------------ Main ------------------#
