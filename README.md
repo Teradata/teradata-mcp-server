@@ -192,7 +192,31 @@ uv run ./src/teradata_mcp_server/server.py
     }
 ```
 - within the settings.json file or you can "MCP: Start Server"  
-  
+
+### Adding the MCP server to Claude Desktop
+You can add this server Claude desktop adding this entry to your `claude_desktop_config.json` config file:
+
+```
+{
+  "mcpServers": {
+    "teradata": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/path_to_code_directory/teradata-mcp-server",
+        "run",
+        "teradata-mcp-server"
+      ],
+      "env": {
+        "DATABASE_URI": "teradata://demo_user:teradata-demo@test-vikzqtnd0db0nglk.env.clearscape.teradata.com:1025/demo_user"
+      }
+    }
+  }
+}
+```
+
+Note: this requires that `uv` is available to Claude in your system path or installed globally on your system (eg. uv installed with `brew` for Mac OS users).
+
 ### Exposing tools as REST endpoints with mcpo
 You can use [mcpo](https://github.com/open-webui/mcpo) to expose this MCP tool as an OpenAPI-compatible HTTP server.
 
