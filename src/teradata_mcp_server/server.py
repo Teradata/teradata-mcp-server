@@ -9,9 +9,8 @@ import mcp.types as types
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 
-import teradata_aitools as td
-
-from prompt import PROMPT_TEMPL
+from teradata_mcp_server import teradata_aitools as td
+from teradata_mcp_server.prompt import PROMPT_TEMPL
 
 load_dotenv()
 
@@ -26,7 +25,7 @@ logger = logging.getLogger("teradata_mcp_server")
 logger.info("Starting Teradata MCP server")
 
 # Connect to MCP server
-mcp = FastMCP("teradata-mcp")
+mcp = FastMCP("teradata-mcp-server")
 
 #global shutdown flag
 shutdown_in_progress = False

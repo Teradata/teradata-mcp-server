@@ -1,0 +1,2 @@
+[console_scripts]
+teradata-mcp-server = teradata_mcp_server:main
