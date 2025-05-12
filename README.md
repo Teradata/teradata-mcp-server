@@ -1,4 +1,3 @@
-
 # Teradata MCP Server Template
 
 ### Overview
@@ -37,6 +36,10 @@ We are providing three sets of tools and associated helpful prompts
 We have also created a custom_tools section that will allow for the development of customer tools to be easily added.
 
 The Test directory contains a simple ClientChatBot tool for testing tools.
+
+<a href="https://glama.ai/mcp/servers/@Teradata/teradata-mcp-server">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@Teradata/teradata-mcp-server/badge" alt="Teradata Server MCP server" />
+</a>
 
 ### Environment Set Up
 Step 1 - The environment has been put together assuming you have the uv package installed on your local machine.  Installation instructions for uv can be found at https://github.com/astral-sh/uv 
@@ -173,7 +176,7 @@ SSE=False
                 "command": "uv",
                 "args": [
                     "--directory",
-                    "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server/,
+                    "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server/",
                     "run",
                     "server.py"
                 ]
@@ -262,5 +265,3 @@ Access the UI at http://localhost:8080.
 To add the MCP tools, navigate to Settings > Tools > Add Connection, and enter your mcpo server connection details (eg. `localhost:8001`, password = `top-secret` if you have executed the command line in the mcpo section).
 
 You should be able to see the tools in the Chat Control Valves section on the right and get your models to use it.
-
-  
