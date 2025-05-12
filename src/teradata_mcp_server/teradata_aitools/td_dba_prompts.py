@@ -28,5 +28,4 @@ prompt_table_archive = """
 
             ## Final output guidelines:
                 - will be a SQL script only
-
         """

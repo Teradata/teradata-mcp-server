@@ -7,6 +7,7 @@ from typing import Any, List, Optional
 from pydantic import Field
 import mcp.types as types
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.prompts.base import Message, UserMessage, TextContent
 from dotenv import load_dotenv
 
 
@@ -147,10 +148,10 @@ async def read_table_usage(
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_read_table_usage, db_name=db_name)
 
-@mcp.prompt()
-async def sql_prompt() -> str:
+@mcp.prompt(name="sql_prompt", description="Create a SQL query against the database.")
+async def sql_prompt() -> UserMessage:
     """Create a SQL query against the database"""
-    return td.prompt_general
+    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_general))
 
 #------------------ DBA Tools  ------------------#
 
@@ -204,10 +205,17 @@ async def read_resusage_user_summary(
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_read_resusage_summary, dimensions=["UserName", "hourOfDay", "dayOfWeek"], user_name=user_name, date=date, dayOfWeek=dayOfWeek, hourOfDay=hourOfDay)
 
-@mcp.prompt()
-async def table_archive() -> str:
+@mcp.tool(description="Get the Teradata flow control metrics.")
+async def read_flow_control() -> ResponseType:
+    """Get the Teradata flow control metrics."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_read_flow_control)
+
+@mcp.prompt(name="table_archive", description="Create a table archive strategy for database tables.")
+async def table_archive() -> UserMessage:
     """Create a table archive strategy for database tables."""
-    return td.prompt_table_archive
+    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_table_archive))
+
 
 #------------------ Data Quality Tools  ------------------#
 
