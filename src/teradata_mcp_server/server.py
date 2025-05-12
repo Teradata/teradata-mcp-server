@@ -185,10 +185,20 @@ async def read_database_version() -> ResponseType:
 
 @mcp.tool(description="Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.")
 async def read_resusage_summary() -> ResponseType:
-    """Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket."""
+    """Get the Teradata system usage summary metrics by weekday and hour."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_resusage_summary)
+    return execute_db_tool(_tdconn, td.handle_read_resusage_summary, dimensions=["hourOfDay", "dayOfWeek"])
 
+@mcp.tool(description="Get the Teradata system usage summary metrics by user on a specified date, or day of week and hour of day.")
+async def read_resusage_user_summary(
+    user_name: str = Field(description="Database user name", default=""),
+    date: str = Field(description="Date to analyze, formatted as `YYYY-MM-DD`", default=""),
+    dayOfWeek: str = Field(description="Day of week to analyze", default=""),
+    hourOfDay: str = Field(description="Hour of day to analyze", default=""),
+    ) -> ResponseType:
+    """Get the Teradata system usage summary metrics by user on a specified date, or day of week and hour of day."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_read_resusage_summary, dimensions=["UserName", "hourOfDay", "dayOfWeek"], user_name=user_name, date=date, dayOfWeek=dayOfWeek, hourOfDay=hourOfDay)
 
 #------------------ Data Quality Tools  ------------------#
 
