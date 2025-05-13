@@ -23,13 +23,12 @@ Requires-Dist: google-adk>=0.5.0
 Requires-Dist: litellm>=1.68.2
 Dynamic: license-file
 
-
 # Teradata MCP Server Template
 
 ### Overview
 The Teradata MCP server is a open source project, we welcome contributions via pull requests.
 
-We are providing three sets of tools
+We are providing three sets of tools and associated helpful prompts
 1. td_base_tools:
     - execute_read_query - runs a read query
     - execute_write_query - runs a write query
@@ -38,12 +37,20 @@ We are providing three sets of tools
     - read_table_list - returns a list of tables in a database
     - read_column_description - returns description of columns in a table
     - read_table_preview - returns column information and 5 rows from the table
+    - read_table_affinity - gets tables commonly used together
+    - read_table_usage - Measure the usage of a table and views by users in a given schema
+
+    - prompt_general - Create a SQL query against the database
 
 2. td_dba_tools:
     - read_sql_list - returns a list of recently executed SQL for a user
     - read_table_space - returns CurrentPerm table space 
     - read_database_space - returns Space allocated, space used and percentage used for a database
     - read_database_version - returns the database version information
+    - read_resuage_summary - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.
+    - read_flow_control - Get the Teradata system flow control metrics by day and hour
+
+    - prompt_table_archive - Create a table archive strategy for database tables.
 
 3. td_data_quality_tools:
     - missing_values - returns a list of column names with missing values
@@ -54,6 +61,10 @@ We are providing three sets of tools
 We have also created a custom_tools section that will allow for the development of customer tools to be easily added.
 
 The Test directory contains a simple ClientChatBot tool for testing tools.
+
+<a href="https://glama.ai/mcp/servers/@Teradata/teradata-mcp-server">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@Teradata/teradata-mcp-server/badge" alt="Teradata Server MCP server" />
+</a>
 
 ### Environment Set Up
 Step 1 - The environment has been put together assuming you have the uv package installed on your local machine.  Installation instructions for uv can be found at https://github.com/astral-sh/uv 
@@ -133,11 +144,11 @@ Test the other tools, each should have a successful outcome
 Control+c to stop the server in the terminal
 
 ### Adding your sever to an Agent using stdio
+#### Option 1 - pydanticai chatbot
 step 1 - confirm the SSE flag in .env file has been set to False
 ```
 SSE=False
 ```
-
 Step 2 - Modify the ./test/ClientChatBot.py script to point to where you installed the server, you will need to modify the following line
 ```
     td_mcp_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server", "run", "server.py"])
@@ -155,6 +166,19 @@ uv run ./test/ClientChatBot.py
 - Ask the agent to show all the objects in a database
 - Ask the agent a question that requires SQL to run against a table
 - Type "quit" to exit.
+
+#### Option 2 - ADK Chatbot
+step 1 - confirm the SSE flag in .env file has been set to False
+```
+SSE=False
+```
+Step 2 - move into teradata_mcp_server/test directory From a terminal.
+```
+adk web
+```
+Step 3 - open [ADK Web Server ](http://0.0.0.0:8000) 
+
+Step 4 - chat with the td_agent
 
 ### Adding tools using stdio to Visual Studio Code Co-pilot
 - confirm the SSE flag in .env file has been set to False
@@ -177,7 +201,7 @@ SSE=False
                 "command": "uv",
                 "args": [
                     "--directory",
-                    "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server/,
+                    "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server/",
                     "run",
                     "server.py"
                 ]
@@ -217,12 +241,36 @@ uv run ./src/teradata_mcp_server/server.py
     }
 ```
 - within the settings.json file or you can "MCP: Start Server"  
-  
+
+### Adding the MCP server to Claude Desktop
+You can add this server Claude desktop adding this entry to your `claude_desktop_config.json` config file:
+
+```
+{
+  "mcpServers": {
+    "teradata": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/path_to_code_directory/teradata-mcp-server",
+        "run",
+        "teradata-mcp-server"
+      ],
+      "env": {
+        "DATABASE_URI": "teradata://demo_user:teradata-demo@test-vikzqtnd0db0nglk.env.clearscape.teradata.com:1025/demo_user"
+      }
+    }
+  }
+}
+```
+
+Note: this requires that `uv` is available to Claude in your system path or installed globally on your system (eg. uv installed with `brew` for Mac OS users).
+
 ### Exposing tools as REST endpoints with mcpo
 You can use [mcpo](https://github.com/open-webui/mcpo) to expose this MCP tool as an OpenAPI-compatible HTTP server.
 
 For example, using uv:
-`uvx mcpo --port 8001 --api-key "top-secret" -- uv run src/teradata_mcp_server/server.py`
+`uvx mcpo --port 8001 --api-key "top-secret" -- uv run teradata-mcp-server`
 
 Your Teradata tools are now available as local REST endpoints, view documentation and test it at http://localhost:8001/docs
 
@@ -242,5 +290,3 @@ Access the UI at http://localhost:8080.
 To add the MCP tools, navigate to Settings > Tools > Add Connection, and enter your mcpo server connection details (eg. `localhost:8001`, password = `top-secret` if you have executed the command line in the mcpo section).
 
 You should be able to see the tools in the Chat Control Valves section on the right and get your models to use it.
-
-  

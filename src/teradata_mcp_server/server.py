@@ -11,7 +11,11 @@ from mcp.server.fastmcp.prompts.base import Message, UserMessage, TextContent
 from dotenv import load_dotenv
 
 
-import teradata_aitools as td
+# Import the ai_tools module, clone-and-run friendly
+try:
+    from teradata_mcp_server import teradata_aitools as td
+except ImportError:
+    import teradata_aitools as td
 
 load_dotenv()
 

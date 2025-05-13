@@ -96,12 +96,14 @@ def handle_read_table_space(conn: TeradataConnection, db_name: Optional[str] | N
         if (db_name == "") and (table_name == ""):
             logger.debug("No database or table name provided, returning all tables and space information.")
             rows = cur.execute(f"""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm 
+            ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
             FROM DBC.AllSpaceV 
             GROUP BY DatabaseName, TableName 
             ORDER BY CurrentPerm1 desc;""")
         elif (db_name == ""):
             logger.debug(f"No database name provided, returning all space information for table: {table_name}.")
             rows = cur.execute(f"""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm 
+            ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
             FROM DBC.AllSpaceV 
             WHERE TableName = '{table_name}' 
             GROUP BY DatabaseName, TableName 
@@ -109,6 +111,7 @@ def handle_read_table_space(conn: TeradataConnection, db_name: Optional[str] | N
         elif (table_name == ""):
             logger.debug(f"No table name provided, returning all tables and space information for database: {db_name}.")
             rows = cur.execute(f"""SELECT TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm 
+            ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
             FROM DBC.AllSpaceV 
             WHERE DatabaseName = '{db_name}' 
             GROUP BY TableName 
@@ -116,6 +119,7 @@ def handle_read_table_space(conn: TeradataConnection, db_name: Optional[str] | N
         else:
             logger.debug(f"Database name: {db_name}, Table name: {table_name}, returning space information for this table.")
             rows = cur.execute(f"""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm 
+            ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
             FROM DBC.AllSpaceV 
             WHERE DatabaseName = '{db_name}' AND TableName = '{table_name}' 
             GROUP BY DatabaseName, TableName 
