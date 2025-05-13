@@ -16,6 +16,8 @@ We are providing three sets of tools and associated helpful prompts
     - read_table_usage - Measure the usage of a table and views by users in a given schema
 
     - prompt_general - Create a SQL query against the database
+    - prompt_table_business_description - generates a business description of a table
+    - prompt_database_business_description - generates a business description of a databases based on the tables
 
 2. td_dba_tools:
     - read_user_sql_list - returns a list of recently executed SQL for a user
