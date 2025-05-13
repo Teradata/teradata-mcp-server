@@ -46,13 +46,44 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
     return json.dumps(response, default=serialize_teradata_types)
 
 #------------------ Tool  ------------------#
-# Get SQL tool
+# Get table SQL tool
 #     Arguments: 
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       user_name (str) - name of the user 
 #     Returns: formatted response with list of QueryText and UserIDs or error message    
-def handle_read_sql_list(conn: TeradataConnection, user_name: Optional[str] | None, no_days: Optional[int],  *args, **kwargs):
-    logger.debug(f"Tool: handle_read_sql_list: Args: user_name: {user_name}")
+def handle_read_table_sql_list(conn: TeradataConnection, table_name: str, no_days: Optional[int],  *args, **kwargs):
+    logger.debug(f"Tool: handle_read_table_sql_list: Args: table_name: {table_name}")
+    
+    with conn.cursor() as cur:   
+        if table_name == "":
+            logger.debug("No table name provided")
+        else:
+            logger.debug(f"Table name provided: {table_name}, returning SQL queries for this table.")
+            rows = cur.execute(f"""SELECT t1.QueryID, t1.ProcID, t1.CollectTimeStamp, t1.SqlTextInfo, t2.UserName 
+            FROM DBC.QryLogSqlV t1 
+            JOIN DBC.QryLogV t2 
+            ON t1.QueryID = t2.QueryID 
+            WHERE t1.CollectTimeStamp >= CURRENT_TIMESTAMP - INTERVAL '{no_days}' DAY
+            AND t1.SqlTextInfo LIKE '%{table_name}%'
+            ORDER BY t1.CollectTimeStamp DESC;""")
+
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "tool_name": "read_table_sql_list",
+            "table_name": table_name, 
+            "no_days": no_days,
+            "total_queries": len(data)
+        }
+        return create_response(data, metadata)
+
+#------------------ Tool  ------------------#
+# Get user SQL tool
+#     Arguments: 
+#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
+#       user_name (str) - name of the user 
+#     Returns: formatted response with list of QueryText and UserIDs or error message    
+def handle_read_user_sql_list(conn: TeradataConnection, user_name: Optional[str] | None, no_days: Optional[int],  *args, **kwargs):
+    logger.debug(f"Tool: handle_read_user_sql_list: Args: user_name: {user_name}")
     
     with conn.cursor() as cur:   
         if user_name == "":
@@ -74,7 +105,7 @@ def handle_read_sql_list(conn: TeradataConnection, user_name: Optional[str] | No
             ORDER BY t1.CollectTimeStamp DESC;""")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "read_sql_list",
+            "tool_name": "read_user_sql_list",
             "user_name": user_name, 
             "no_days": no_days,
             "total_queries": len(data)
