@@ -275,10 +275,18 @@ def handle_read_table_preview(conn: TeradataConnection, table_name: str, db_name
         }
         return create_response(sample, metadata)
 
+#------------------ Tool  ------------------#
+# Read table affinity tool
+#     Arguments:
+#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
+#       db_name (str) - name of the database to list objects from
+#       obj_name (str) - name of the object to list columns from
+#     Returns: formatted response with list of tables and their usage or error message
 def handle_read_table_affinity(conn: TeradataConnection, db_name: str, obj_name: str, *args, **kwargs):
     """
     Get tables commonly used together by database users, this is helpful to infer relationships between tables.
     """
+    logger.debug(f"Tool: handle_read_table_affinity: Args: db_name, obj_name")
     table_affiity_sql="""
     LOCKING ROW for ACCESS
     SELECT   TRIM(QTU2.DatabaseName)  AS "DatabaseName"
@@ -324,8 +332,6 @@ def handle_read_table_affinity(conn: TeradataConnection, db_name: str, obj_name:
     ;
     
     """
-
-
     with conn.cursor() as cur:
         rows = cur.execute(table_affiity_sql.format(table_name=obj_name, database_name=db_name))
         data = rows_to_json(cur.description, rows.fetchall())
@@ -342,10 +348,18 @@ def handle_read_table_affinity(conn: TeradataConnection, db_name: str, obj_name:
     }
     return create_response(data, metadata)
 
+
+#------------------ Tool  ------------------#
+# Read table usage tool
+#     Arguments:
+#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
+#       db_name (str) - name of the database to list objects from
+#     Returns: formatted response with list of tables and their usage or error message
 def handle_read_table_usage(conn: TeradataConnection, db_name: Optional[str] = None, *args, **kwargs):
     """
     Measure the usage of a table and views by users in a given schema, this is helpful to infer what database objects are most actively used or drive most value.
     """
+    logger.debug(f"Tool: handle_read_table_usage: Args: db_name:")
     if db_name:
         database_name_filter=f"AND objectdatabasename = '{db_name}'"
     else:
@@ -413,11 +427,17 @@ def handle_read_table_usage(conn: TeradataConnection, db_name: Optional[str] = N
     }
     return create_response(data, metadata)
 
-
+#------------------ Tool  ------------------#
+# Read table weight tool
+#     Arguments:
+#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
+#       db_name (str) - name of the database to list objects from
+#     Returns: formatted response with list of tables and their usage or error message
 def get_table_weight(db) -> str:
     """Get tables commonly used together by database users.
 
     """
+    logger.debug(f"Tool: get_table_weight: Args:")
     table_weight_sql="""
     LOCKING ROW for ACCESS
     sel "TableName"

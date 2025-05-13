@@ -404,11 +404,18 @@ def handle_read_flow_control(conn: TeradataConnection, *args, **kwargs):
             "total_rows": len(data) 
         }
         return create_response(data, metadata)    
-    
+
+#------------------ Tool  ------------------#
+# Get table usage impact tool
+#     Arguments:
+#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
+#       db_name (str) - name of the database
+#       user_name (str) - name of the user    
 def handle_read_table_usage_impact(conn: TeradataConnection, db_name: Optional[str] = None, user_name: Optional[str] = None, *args, **kwargs):
     """
     Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time.
     """
+    logger.debug(f"Tool: handle_read_usage_impact: Args: ")
     if db_name:
         database_name_filter=f"AND objectdatabasename = '{db_name}'"
     else:
@@ -470,8 +477,8 @@ def handle_read_table_usage_impact(conn: TeradataConnection, db_name: Optional[s
     
     """
 
-
     with conn.cursor() as cur:
+        logger.debug("Database version information requested.")
         rows = cur.execute(table_usage_sql.format(database_name_filter=database_name_filter, user_name_filter=user_name_filter))
         data = rows_to_json(cur.description, rows.fetchall())
     if len(data):

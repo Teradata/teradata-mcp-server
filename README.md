@@ -18,7 +18,8 @@ We are providing three sets of tools and associated helpful prompts
     - prompt_general - Create a SQL query against the database
 
 2. td_dba_tools:
-    - read_sql_list - returns a list of recently executed SQL for a user
+    - read_user_sql_list - returns a list of recently executed SQL for a user
+    - read_table_sql_list - returns a list of recently executed SQL for a table
     - read_table_space - returns CurrentPerm table space 
     - read_database_space - returns Space allocated, space used and percentage used for a database
     - read_database_version - returns the database version information
@@ -26,6 +27,7 @@ We are providing three sets of tools and associated helpful prompts
     - read_flow_control - Get the Teradata system flow control metrics by day and hour
 
     - prompt_table_archive - Create a table archive strategy for database tables.
+    - prompt_database_lineage - Creates a directed lineage map of tables in a database.
 
 3. td_data_quality_tools:
     - missing_values - returns a list of column names with missing values
@@ -37,10 +39,7 @@ We have also created a custom_tools section that will allow for the development 
 
 The Test directory contains a simple ClientChatBot tool for testing tools.
 
-<a href="https://glama.ai/mcp/servers/@Teradata/teradata-mcp-server">
-  <img width="380" height="200" src="https://glama.ai/mcp/servers/@Teradata/teradata-mcp-server/badge" alt="Teradata Server MCP server" />
-</a>
-
+--------------------------------------------------------------------------------------
 ### Environment Set Up
 Step 1 - The environment has been put together assuming you have the uv package installed on your local machine.  Installation instructions for uv can be found at https://github.com/astral-sh/uv 
 
@@ -99,7 +98,7 @@ OPENAI_API_KEY=
 
 ```
 
-
+--------------------------------------------------------------------------------------
 ### Testing your server with MCP Inspector
 Step 1 - Start the server, typer the following in your terminal
 ```
@@ -265,3 +264,9 @@ Access the UI at http://localhost:8080.
 To add the MCP tools, navigate to Settings > Tools > Add Connection, and enter your mcpo server connection details (eg. `localhost:8001`, password = `top-secret` if you have executed the command line in the mcpo section).
 
 You should be able to see the tools in the Chat Control Valves section on the right and get your models to use it.
+
+---------------------------------------------------------------------
+## Certification
+<a href="https://glama.ai/mcp/servers/@Teradata/teradata-mcp-server">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@Teradata/teradata-mcp-server/badge" alt="Teradata Server MCP server" />
+</a>
