@@ -25,3 +25,6 @@ dependencies = [
 
 [project.scripts]
 teradata-mcp-server = "teradata_mcp_server:main"
+
+[tool.uv.scripts]
+teradata-mcp-server = "PYTHONPATH=src python -m teradata_mcp_server.server"
