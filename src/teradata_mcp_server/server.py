@@ -160,13 +160,22 @@ async def sql_prompt() -> UserMessage:
 #------------------ DBA Tools  ------------------#
 
 @mcp.tool(description="Get a list of SQL run by a user in the last number of days if a user name is provided, otherwise get list of all SQL in the last number of days.")
-async def read_SQL_list(
+async def read_user_SQL_list(
     user_name: str = Field(description="user name", default=""),
     no_days: int = Field(description="number of days to look back", default=7),
     ) -> ResponseType:
     """Get a list of SQL run by a user."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_sql_list, user_name=user_name, no_days=no_days)
+    return execute_db_tool(_tdconn, td.handle_read_user_sql_list, user_name=user_name, no_days=no_days)
+
+@mcp.tool(description="Get a list of SQL run against a table in the last number of days ")
+async def read_table_SQL_list(
+    table_name: str = Field(description="table name", default=""),
+    no_days: int = Field(description="number of days to look back", default=7),
+    ) -> ResponseType:
+    """Get a list of SQL run by a user."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_read_table_sql_list, table_name=table_name, no_days=no_days)
 
 @mcp.tool(description="Get table space used for a table if table name is provided or get table space for all tables in a database if a database name is provided.")
 async def read_table_space(
@@ -220,6 +229,10 @@ async def table_archive() -> UserMessage:
     """Create a table archive strategy for database tables."""
     return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_table_archive))
 
+@mcp.prompt(name="database_lineage", description="Create a database lineage map for tables in a database.")
+async def table_archive() -> UserMessage:
+    """Create a database lineage map for tables in a database."""
+    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_database_lineage))
 
 #------------------ Data Quality Tools  ------------------#
 

@@ -99,7 +99,7 @@ def handle_execute_write_query(conn: TeradataConnection, sql: str, *args, **kwar
 
         
 #------------------ Tool  ------------------#
-# Read SQL execution tool
+# Read table DDL tool
 #     Arguments: 
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries         
 #       db_name (str) - name of the database
