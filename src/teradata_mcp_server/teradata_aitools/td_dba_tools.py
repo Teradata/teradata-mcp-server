@@ -372,5 +372,85 @@ def handle_read_flow_control(conn: TeradataConnection, *args, **kwargs):
             "tool_name": "read_flow_control",
             "total_rows": len(data) 
         }
-        return create_response(data, metadata)
+        return create_response(data, metadata)    
     
+def handle_read_table_usage_impact(conn: TeradataConnection, db_name: Optional[str] = None, user_name: Optional[str] = None, *args, **kwargs):
+    """
+    Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time.
+    """
+    if db_name:
+        database_name_filter=f"AND objectdatabasename = '{db_name}'"
+    else:
+        database_name_filter=""
+
+    if user_name:
+        user_name_filter=f"AND username = '{user_name}'"
+    else:
+        user_name_filter=""
+
+
+    table_usage_sql="""
+    LOCKING ROW for ACCESS
+    sel 
+    DatabaseName
+    ,TableName
+    ,UserName
+    ,Weight as "QueryCount"
+    ,100*"Weight" / sum("Weight") over(partition by 1) PercentTotal
+    ,case 
+        when PercentTotal >=10 then 'High'
+        when PercentTotal >=5 then 'Medium'
+        else 'Low'
+    end (char(6)) usage_freq
+    ,FirstQueryDaysAgo
+    ,LastQueryDaysAgo
+        
+    from
+    (
+        SELECT   TRIM(QTU1.TableName)  AS "TableName"
+                , TRIM(QTU1.DatabaseName)  AS "DatabaseName"
+                ,UserName as "UserName"
+                ,max((current_timestamp - CollectTimeStamp) day(4)) as "FirstQueryDaysAgo"
+                ,min((current_timestamp - CollectTimeStamp) day(4)) as "LastQueryDaysAgo"
+                , COUNT(DISTINCT QTU1.QueryID) as "Weight"
+        FROM    (
+                    SELECT   objectdatabasename AS DatabaseName
+                        , ObjectTableName AS TableName
+                        , ob.QueryId
+                    FROM DBC.DBQLObjTbl ob /* uncomment for DBC */
+                    WHERE Objecttype in ('Tab', 'Viw')
+                    {database_name_filter}
+                    AND ObjectTableName IS NOT NULL
+                    AND ObjectColumnName IS NULL
+                    -- AND LogDate BETWEEN '2017-01-01' AND '2017-08-01' /* uncomment for PDCR */
+                    --	AND LogDate BETWEEN current_date - 90 AND current_date - 1 /* uncomment for PDCR */
+                    GROUP BY 1,2,3
+                        ) AS QTU1
+        INNER JOIN DBC.DBQLogTbl QU /* uncomment for DBC */
+        ON QTU1.QueryID=QU.QueryID
+        AND (QU.AMPCPUTime + QU.ParserCPUTime) > 0 
+        {user_name_filter}
+
+        GROUP BY 1,2, 3
+    ) a
+    order by PercentTotal desc
+    qualify PercentTotal>0
+    ;
+    
+    """
+
+
+    with conn.cursor() as cur:
+        rows = cur.execute(table_usage_sql.format(database_name_filter=database_name_filter, user_name_filter=user_name_filter))
+        data = rows_to_json(cur.description, rows.fetchall())
+    if len(data):
+        info=f'This data contains the list of tables most frequently queried objects in database schema {db_name}'
+    else:
+        info=f'No tables have recently been queried in the database schema {db_name}.'
+    metadata = {
+        "tool_name": "handle_read_table_usage",
+        "database": db_name,
+        "table_count": len(data),
+        "comment": info
+    }
+    return create_response(data, metadata)

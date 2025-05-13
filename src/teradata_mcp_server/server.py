@@ -258,6 +258,15 @@ async def read_standard_deviation(
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_standard_deviation, table_name=table_name, col_name=col_name)  
 
+@mcp.tool(description="Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time.")
+async def read_table_usage_impact(
+    db_name: str = Field(description="Database name", default=""),
+    user_name: str = Field(description="User name", default=""),    
+    ) -> ResponseType:
+    """Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_read_table_usage_impact, db_name=db_name,  user_name=user_name)
+
 #------------------ Custom Tools  ------------------#
 
 
