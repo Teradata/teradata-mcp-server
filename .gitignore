@@ -9,3 +9,4 @@ working/
 .DS_Store
 .vscode/
 .venv/
+*.egg-info/
