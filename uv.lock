@@ -1608,6 +1608,15 @@ wheels = [
 ]
 
 [[package]]
+name = "nest-asyncio"
+version = "1.6.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/83/f8/51569ac65d696c8ecbee95938f89d4abf00f47d58d48f6fbabfe8f0baefe/nest_asyncio-1.6.0.tar.gz", hash = "sha256:6f172d5449aca15afd6c646851f4e31e02c598d553a667e38cafa997cfec55fe", size = 7418 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a0/c4/c2971a3ba4c6103a3d10c4b0f24f461ddc027f0f09763220cf35ca1401b3/nest_asyncio-1.6.0-py3-none-any.whl", hash = "sha256:87af6efd6b5e897c81050477ef65c62e2b2f35d51703cae01aff2905b1852e1c", size = 5195 },
+]
+
+[[package]]
 name = "numpy"
 version = "2.2.5"
 source = { registry = "https://pypi.org/simple" }
@@ -2627,6 +2636,7 @@ dependencies = [
     { name = "langgraph" },
     { name = "litellm" },
     { name = "mcp", extra = ["cli"] },
+    { name = "nest-asyncio" },
     { name = "openai" },
     { name = "pip" },
     { name = "pydantic" },
@@ -2647,6 +2657,7 @@ requires-dist = [
     { name = "langgraph", specifier = ">=0.3.31" },
     { name = "litellm", specifier = ">=1.68.2" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.6.0" },
+    { name = "nest-asyncio", specifier = ">=1.6.0" },
     { name = "openai", specifier = ">=1.75.0" },
     { name = "pip", specifier = ">=25.0.1" },
     { name = "pydantic", specifier = ">=2.11.3" },

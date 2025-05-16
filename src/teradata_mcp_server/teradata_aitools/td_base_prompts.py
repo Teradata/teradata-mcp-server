@@ -36,34 +36,6 @@ prompt_general = """The assistant's goal is to help users interact with Teradata
       - Ensure visualizations enhance understanding of results
    </workflow>
 
-   <conversation-flow>
-   1. Start with: "Hi! What query would you like to run on your database?"
-
-   2. After connection:
-      - Acknowledge success/failure
-      - List available databases if relevant
-      - Guide user toward data exploration
-
-   3. For each analytical question:
-      - Confirm target database
-      - Check/fetch schema if needed
-      - Generate and execute appropriate queries
-      - Present results clearly
-      - Visualize data when helpful
-
-   4. Maintain awareness of:
-      - Previously fetched schemas
-      - Current database context
-      - Query history and insights
-   </conversation-flow>
-
-   <error-handling>
-   - Connection failures: Suggest alternative connection type
-   - Schema errors: Verify database/table names
-   - Query errors: Provide clear explanation and correction steps
-   </error-handling>
-
-   Start interaction with connection type question, maintain context throughout conversation, and adapt queries based on user needs.
 
    Remember:
    - Use artifacts for visualizations
@@ -154,6 +126,9 @@ prompt_general = """The assistant's goal is to help users interact with Teradata
    `IN`: The `IN` keyword is used in SQL to specify a list of discrete values for a column to match against, typically in a `WHERE` clause, allowing for multiple specific conditions to be evaluated at once., Examples: ["SELECT * FROM employees WHERE department IN ('HR', 'Engineering', 'Marketing');", 'SELECT id, name FROM students WHERE grade IN (10, 11, 12);', "DELETE FROM orders WHERE order_status IN ('Cancelled', 'Returned');", "UPDATE items SET status = 'Unavailable' WHERE item_id IN (1001, 1002, 1003);", "SELECT * FROM logs WHERE severity IN ('ERROR', 'CRITICAL') ORDER BY timestamp DESC;"]
    `ALL`: The `ALL` keyword in SQL specifies that operations should retain all duplicate rows, as seen in commands like `UNION ALL`, `INTERSECT ALL`, and `EXCEPT ALL`, which follow bag semantics instead of eliminating duplicates., Examples: ['UNION ALL\n\n```sql\nSELECT * FROM range(2) t1(x)\nUNION ALL\nSELECT * FROM range(3) t2(x);\n```\nThis example demonstrates using `UNION ALL` to combine rows from two queries without eliminating duplicates.', 'INTERSECT ALL\n\n```sql\nSELECT unnest([5, 5, 6, 6, 6, 6, 7, 8]) AS x\nINTERSECT ALL\nSELECT unnest([5, 6, 6, 7, 7, 9]);\n```\nThis example shows using `INTERSECT ALL` to select rows that are present in both result sets, keeping duplicate values.', 'EXCEPT ALL\n\n```sql\nSELECT unnest([5, 5, 6, 6, 6, 6, 7, 8]) AS x\nEXCEPT ALL\nSELECT unnest([5, 6, 6, 7, 7, 9]);\n```\nThis example illustrates `EXCEPT ALL`, which selects all rows present in the first query but not in the second, without removing duplicates.', 'ORDER BY ALL\n\n```sql\nSELECT *\nFROM addresses\nORDER BY ALL;\n```\nThis SQL command uses `ORDER BY ALL` to sort the result set by all columns sequentially from left to right.']
    `LIKE`: The `LIKE` expression is used to determine if a string matches a specified pattern, allowing wildcard characters such as `_` to represent any single character and `%` to match any sequence of characters., Examples: ["SELECT 'abc' LIKE 'abc'; -- true", "SELECT 'abc' LIKE 'a%'; -- true", "SELECT 'abc' LIKE '_b_'; -- true", "SELECT 'abc' LIKE 'c'; -- false", "SELECT 'abc' LIKE 'c%'; -- false", "SELECT 'abc' LIKE '%c'; -- true", "SELECT 'abc' NOT LIKE '%c'; -- false", "SELECT 'abc' ILIKE '%C'; -- true"]
+
+   Your task is to solve the following problem: {qry}.
+   
    """
 
 
@@ -164,8 +139,8 @@ prompt_table_business_description = """
    Perform the phases in order, and do not skip any phase.
    
    ## Phase 0 - Get the table name and database name
-   - Get the database name from the user. The database name should be a single word, and it should not contain any spaces or special characters.
-   - Get the table name from the user. The table name should be a single word, and it should not contain any spaces or special characters.
+   - The table name is {table_name}
+   - The database name is {database_name}
 
    ## Phase 1 - Get the table DDL
    - Get the table DDL from the user. The DDL should be a single string, and it should not contain any new lines or special characters. Use the get_table_ddl function to get the DDL.
@@ -202,7 +177,7 @@ prompt_database_business_description = """
    Perform the phases in order, and do not skip any phase.
    
    ## Phase 0 - Get the database name from the user
-   - Get the database name from the user. The database name should be a single word, and it should not contain any spaces or special characters.
+   - the database name is {database_name}
 
    ## Phase 1 - get the list of tables
    - Get the list of tables in the database. Use the get_table_list function to get the list.

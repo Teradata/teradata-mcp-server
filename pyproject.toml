@@ -21,6 +21,7 @@ dependencies = [
     "tabulate",
     "google-adk>=0.5.0",
     "litellm>=1.68.2",
+    "nest-asyncio>=1.6.0",
 ]
 
 [project.scripts]

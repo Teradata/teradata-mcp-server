@@ -152,10 +152,20 @@ async def read_table_usage(
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_read_table_usage, db_name=db_name)
 
-@mcp.prompt(name="sql_prompt", description="Create a SQL query against the database.")
-async def sql_prompt() -> UserMessage:
+@mcp.prompt()
+async def sql_prompt(qry: str) -> UserMessage:
     """Create a SQL query against the database"""
-    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_general))
+    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_general.format(qry=qry)))
+
+@mcp.prompt()
+async def table_business_description(database_name: str, table_name: str) -> UserMessage:
+    """Create a business description of the table and columns."""
+    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_table_business_description.format(database_name=database_name, table_name=table_name)))
+
+@mcp.prompt()
+async def database_business_description(database_name: str) -> UserMessage:
+    """Create a business description of the database."""
+    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_database_business_description.format(database_name=database_name)))
 
 #------------------ DBA Tools  ------------------#
 
@@ -224,15 +234,20 @@ async def read_flow_control() -> ResponseType:
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_read_flow_control)
 
-@mcp.prompt(name="table_archive", description="Create a table archive strategy for database tables.")
+@mcp.prompt()
 async def table_archive() -> UserMessage:
     """Create a table archive strategy for database tables."""
     return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_table_archive))
 
-@mcp.prompt(name="database_lineage", description="Create a database lineage map for tables in a database.")
-async def table_archive() -> UserMessage:
+@mcp.prompt()
+async def database_lineage(database_name: str) -> UserMessage:
     """Create a database lineage map for tables in a database."""
-    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_database_lineage))
+    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_database_lineage.format(database_name=database_name)))
+
+@mcp.prompt()
+async def table_drop_impact(database_name: str, table_name: str) -> UserMessage:
+    """Assess the impact of dropping a table."""
+    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_table_drop_impact.format(database_name=database_name, table_name=table_name)))
 
 #------------------ Data Quality Tools  ------------------#
 
