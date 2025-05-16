@@ -121,18 +121,16 @@ Control+c to stop the server in the terminal
 
 ### Adding your sever to an Agent using stdio
 #### Option 1 - pydanticai chatbot
-step 1 - confirm the SSE flag in .env file has been set to False
+&nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the SSE flag in .env file has been set to False
 ```
 SSE=False
 ```
-Step 2 - Modify the ./test/ClientChatBot.py script to point to where you installed the server, you will need to modify the following line
+&nbsp;&nbsp;&nbsp;&nbsp; Step 2 - Modify the ./test/ClientChatBot.py script to point to where you installed the server, you will need to modify the following line
 ```
     td_mcp_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server", "run", "server.py"])
 ```
 
-Step 2 - run the ./test/ClientChatBot.py script, this will create an interactive session with the agent who has access to the MCP server.  
-
-From a terminal.
+&nbsp;&nbsp;&nbsp;&nbsp; Step 3 - run the ./test/ClientChatBot.py script, this will create an interactive session with the agent who has access to the MCP server.  From a terminal.
 ```
 uv run ./test/ClientChatBot.py
 ```
@@ -144,17 +142,38 @@ uv run ./test/ClientChatBot.py
 - Type "quit" to exit.
 
 #### Option 2 - ADK Chatbot
-step 1 - confirm the SSE flag in .env file has been set to False
+&nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the SSE flag in .env file has been set to False
 ```
 SSE=False
 ```
-Step 2 - move into teradata_mcp_server/test directory From a terminal.
+&nbsp;&nbsp;&nbsp;&nbsp; Step 2 - move into teradata_mcp_server/test directory From a terminal.
 ```
 adk web
 ```
-Step 3 - open [ADK Web Server ](http://0.0.0.0:8000) 
+&nbsp;&nbsp;&nbsp;&nbsp; Step 3 - open [ADK Web Server ](http://0.0.0.0:8000) 
 
-Step 4 - chat with the td_agent
+&nbsp;&nbsp;&nbsp;&nbsp; Step 4 - chat with the td_agent
+
+#### Option 3 - mcp_chatbot
+
+&nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the SSE flag in .env file has been set to False
+```
+SSE=False
+```
+&nbsp;&nbsp;&nbsp;&nbsp;Step 2 - move into teradata_mcp_server directory From a terminal and run the mcp_chatbot
+```
+uv run test/mcp_chatbot.py
+```
+&nbsp;&nbsp;&nbsp;&nbsp;Step 3 - list the prompts by typing /prompts
+```
+Query: /prompts
+```
+&nbsp;&nbsp;&nbsp;&nbsp;Step 4 - running a prompt to describe a database
+```
+Query: /prompt database_business_description database_name=demo_user
+```
+
+
 
 ### Adding tools using stdio to Visual Studio Code Co-pilot
 - confirm the SSE flag in .env file has been set to False
@@ -169,6 +188,8 @@ SSE=False
 - the settings.json file should open
 - modify the directory path and ensure it is pointing to where you have the server installed
 - add the args so that it looks like:
+
+Note: you will need to modify the directory path in the args for your system
 ```
     "mcp": {
         "servers": {
@@ -220,6 +241,8 @@ uv run ./src/teradata_mcp_server/server.py
 
 ### Adding the MCP server to Claude Desktop
 You can add this server Claude desktop adding this entry to your `claude_desktop_config.json` config file:
+
+Note: you will need to modify the directory path in the arg & the DATABASE_URI for your environment
 
 ```
 {
