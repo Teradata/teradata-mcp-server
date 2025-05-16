@@ -281,7 +281,24 @@ async def read_table_usage_impact(
     return execute_db_tool(_tdconn, td.handle_read_table_usage_impact, db_name=db_name,  user_name=user_name)
 
 #------------------ Custom Tools  ------------------#
+# Custom tools are defined as SQL queries in a YAML file and loaded at startup.
+import yaml
 
+with open("custom_tools.yaml") as f:
+    query_defs = yaml.safe_load(f)  # List[dict]
+
+def make_custom_query_tool(sql_text: str, tool_name: str, desc: str):
+    async def _dynamic_tool():
+        # SQL is closed over without parameters
+        return execute_db_tool(_tdconn, td.handle_execute_read_query, sql=sql_text)
+    _dynamic_tool.__name__ = tool_name
+    return mcp.tool(description=desc)(_dynamic_tool)
+
+# Instantiate custom query tools from YAML
+for q in query_defs:
+    fn = make_custom_query_tool(q["sql"], q["name"], q.get("description", ""))
+    globals()[q["name"]] = fn
+    logger.info(f"Created custom tool: {q["name"]}")
 
 
 
