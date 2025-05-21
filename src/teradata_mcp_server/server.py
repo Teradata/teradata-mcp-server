@@ -315,8 +315,6 @@ for q in query_defs:
     globals()[q["name"]] = fn
     logger.info(f"Created custom tool: {q["name"]}")
 
-
-
 #------------------ Main ------------------#
 # Main function to start the MCP server
 #     Description: Initializes the MCP server and sets up signal handling for graceful shutdown.

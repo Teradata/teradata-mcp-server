@@ -189,7 +189,7 @@ SSE=False
 - modify the directory path and ensure it is pointing to where you have the server installed
 - add the args so that it looks like:
 
-Note: you will need to modify the directory path in the args for your system
+Note: you will need to modify the directory path in the args for your system, this needs to be a complete path.  You may also need to have a complete path to uv in the command as well.
 ```
     "mcp": {
         "servers": {
@@ -242,7 +242,9 @@ uv run ./src/teradata_mcp_server/server.py
 ### Adding the MCP server to Claude Desktop
 You can add this server Claude desktop adding this entry to your `claude_desktop_config.json` config file:
 
-Note: you will need to modify the directory path in the arg & the DATABASE_URI for your environment
+Note: you will need to modify the directory path in the args for your system, this needs to be a complete path.  You may also need to have a complete path to uv in the command as well.
+
+Note: this requires that `uv` is available to Claude in your system path or installed globally on your system (eg. uv installed with `brew` for Mac OS users).
 
 ```
 {
@@ -251,9 +253,9 @@ Note: you will need to modify the directory path in the arg & the DATABASE_URI f
       "command": "uv",
       "args": [
         "--directory",
-        "/path_to_code_directory/teradata-mcp-server",
+        "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server/",
         "run",
-        "teradata-mcp-server"
+        "server.py"
       ],
       "env": {
         "DATABASE_URI": "teradata://demo_user:teradata-demo@test-vikzqtnd0db0nglk.env.clearscape.teradata.com:1025/demo_user"
@@ -263,7 +265,7 @@ Note: you will need to modify the directory path in the arg & the DATABASE_URI f
 }
 ```
 
-Note: this requires that `uv` is available to Claude in your system path or installed globally on your system (eg. uv installed with `brew` for Mac OS users).
+
 
 ### Exposing tools as REST endpoints with mcpo
 You can use [mcpo](https://github.com/open-webui/mcpo) to expose this MCP tool as an OpenAPI-compatible HTTP server.
