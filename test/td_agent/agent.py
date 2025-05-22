@@ -17,9 +17,9 @@ async def create_agent():
             command='uv',
             args=[
                 "--directory",
-                "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server/",
+                "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server",
                 "run",
-                "server.py"
+                "teradata-mcp-server"
             ],
         )
     )

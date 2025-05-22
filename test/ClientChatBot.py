@@ -43,7 +43,7 @@ model = BedrockConverseModel(
     provider=BedrockProvider(bedrock_client=bedrock_client),
 )
 
-td_mcp_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server", "run", "server.py"])
+td_mcp_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server", "run", "teradata-mcp-server"])
 
 system_prompt = """Help user with Teradata tasks"""
 agent = Agent(model, instrument=True, system_prompt=system_prompt, mcp_servers=[td_mcp_server])
