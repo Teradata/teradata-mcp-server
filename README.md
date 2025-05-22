@@ -260,9 +260,9 @@ Note: this requires that `uv` is available to Claude in your system path or inst
       "command": "uv",
       "args": [
         "--directory",
-        "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server/",
+        "/path_to_code/teradata-mcp-server",
         "run",
-        "server.py"
+        "teradata-mcp-server"
       ],
       "env": {
         "DATABASE_URI": "teradata://demo_user:teradata-demo@test-vikzqtnd0db0nglk.env.clearscape.teradata.com:1025/demo_user"
