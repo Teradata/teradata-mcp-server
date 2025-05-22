@@ -362,7 +362,7 @@ def handle_read_flow_control(conn: TeradataConnection, *args, **kwargs):
     logger.debug(f"Tool: handle_read_flow_control: Args: ")
     
     with conn.cursor() as cur:   
-        logger.debug("Database version information requested.")
+        logger.debug("Database flow control information requested.")
         rows = cur.execute(f"""
                 SELECT A.THEDATE AS "Date"  
                 , A.THETIME (FORMAT '99:99:99') AS "Time"      
@@ -492,3 +492,91 @@ def handle_read_table_usage_impact(conn: TeradataConnection, db_name: Optional[s
         "comment": info
     }
     return create_response(data, metadata)
+
+
+#------------------ Tool  ------------------#
+# Get Feature Usage tool
+#     Arguments: 
+#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
+#     Returns: formatted response with database feature usage information or error message    
+def handle_read_feature_usage(conn: TeradataConnection, *args, **kwargs):
+    logger.debug(f"Tool: handle_read_feature_usage: Args: ")
+
+    with conn.cursor() as cur:
+        logger.debug("Database feature usage information requested.")
+        rows = cur.execute(f"""
+            SELECT 
+                CAST(A.Starttime as Date)  AS LogDate
+            ,A.USERNAME as Username
+            ,CAST(B.FEATURENAME AS VARCHAR(100)) AS FEATURENAME
+            ,SUM(GETBIT(A.FEATUREUSAGE,(2047 - B.FEATUREBITPOS))) AS FeatureUseCount
+            ,COUNT(*) AS RequestCount
+            ,SUM(AMPCPUTIME) AS AMPCPUTIME
+
+            FROM DBC.DBQLOGTBL A, 
+                DBC.QRYLOGFEATURELISTV B 
+            WHERE CAST(A.Starttime as Date) > DATE-30
+            GROUP BY 
+                LogDate,
+                USERNAME, 
+                FeatureName having FeatureUseCount > 0
+                ORDER BY 1,2,3;
+                           """)
+
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "tool_name": "read_feature_usage",
+            "total_rows": len(data) 
+        }
+        return create_response(data, metadata)    
+
+
+#------------------ Tool  ------------------#
+# Get User Delay Experience tool
+#     Arguments: 
+#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
+#     Returns: formatted response with database user delay experience information or error message    
+def handle_read_user_delay(conn: TeradataConnection, *args, **kwargs):
+    logger.debug(f"Tool: handle_read_user_delay: Args: ")
+
+    with conn.cursor() as cur:
+        logger.debug("Database user delay information requested.")
+        rows = cur.execute(f"""
+            Select
+                CAST(a.Starttime as DATE) AS "Log Date"
+                ,extract(hour from a.starttime) as "Log Hour"
+                ,Username
+                ,WDName
+                ,Starttime
+                ,a.firststeptime
+                ,a.FirstRespTime
+                ,Zeroifnull(DelayTime) as DelayTime
+                , (CAST(extract(hour
+                    From     ((a.firststeptime - a.StartTime) HOUR(2) TO SECOND(6) ) ) * 3600 + extract(minute
+                    From     ((a.firststeptime - a.StartTime) HOUR(2) TO SECOND(6) ) ) * 60 + extract(second
+                    From     ((a.firststeptime - a.StartTime) HOUR(2) TO SECOND(6) ) ) AS dec(8,2))) - zeroifnull(cast(delaytime as float)) (float)     as PrsDctnryTime
+
+                , Zeroifnull(CAST(extract(hour
+                    From     ((a.firstresptime - a.firststepTime) HOUR(2) TO SECOND(6) ) ) * 3600 + extract(minute
+                    From     ((a.firstresptime - a.firststepTime) HOUR(2) TO SECOND(6) ) ) * 60 + extract(second
+                    From     ((a.firstresptime - a.firststepTime) HOUR(2) TO SECOND(6) ) ) AS INTEGER) )  as QryRespTime
+
+                , Zeroifnull(CAST(extract(hour
+                    From     ((a.firstresptime - a.StartTime) HOUR(2) TO SECOND(6) ) ) * 3600 + extract(minute
+                    From     ((a.firstresptime - a.StartTime) HOUR(2) TO SECOND(6) ) ) * 60 + extract(second
+                    From     ((a.firstresptime - a.StartTime) HOUR(2) TO SECOND(6) ) ) AS INTEGER) )  as TotalTime
+                ,count(*) As NoOfQueries
+                from  DBC.DBQLogTbl a
+                
+                Where  DelayTime > 0
+                AND CAST(a.Starttime as DATE) between current_date - 30 and current_date - 1
+                Group By 1,2,3,4,5,6,7,8,9,10,11;
+                           """)
+
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "tool_name": "read_user_delay",
+            "total_rows": len(data) 
+        }
+        return create_response(data, metadata)    
+    
