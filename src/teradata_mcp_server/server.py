@@ -234,6 +234,19 @@ async def read_flow_control() -> ResponseType:
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_read_flow_control)
 
+@mcp.tool(description="Get the user feature usage metrics.")
+async def read_feature_usage() -> ResponseType:
+    """Get the user feature usage metrics.""" 
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_read_feature_usage)
+
+@mcp.tool(description="Get the Teradata user delay metrics.")
+async def read_user_delay() -> ResponseType:
+    """Get the Teradata user delay metrics."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_read_user_delay)
+
+
 @mcp.prompt()
 async def table_archive() -> UserMessage:
     """Create a table archive strategy for database tables."""

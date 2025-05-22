@@ -27,6 +27,8 @@ We are providing three sets of tools and associated helpful prompts
     - read_database_version - returns the database version information
     - read_resuage_summary - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.
     - read_flow_control - Get the Teradata system flow control metrics by day and hour
+    - read_feature_usage - Get the user feature usage metrics
+    - read_user_delay - Get the Teradata user delay metrics.
 
     - prompt_table_archive - Create a table archive strategy for database tables.
     - prompt_database_lineage - Creates a directed lineage map of tables in a database.
