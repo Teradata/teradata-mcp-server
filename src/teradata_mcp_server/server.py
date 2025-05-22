@@ -298,9 +298,16 @@ async def read_table_usage_impact(
 #------------------ Custom Tools  ------------------#
 # Custom tools are defined as SQL queries in a YAML file and loaded at startup.
 import yaml
+import glob
+import os
 
-with open("custom_tools.yaml") as f:
-    query_defs = yaml.safe_load(f)  # List[dict]
+query_defs = []
+custom_tool_files = [file for file in os.listdir() if file.endswith("_tools.yaml")]
+
+for file in custom_tool_files:
+    with open(file) as f:
+        query_defs.extend(yaml.safe_load(f))  # Concatenate all query definitions
+
 
 def make_custom_query_tool(sql_text: str, tool_name: str, desc: str):
     async def _dynamic_tool():

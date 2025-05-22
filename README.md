@@ -37,7 +37,8 @@ We are providing three sets of tools and associated helpful prompts
     - distinct_categories - returns a list of categories within a column
     - standard_deviation - returns the mean and standard deviation for a column
 
-We have also created a custom_tools section that will allow for the development of customer tools to be easily added.
+You may add define custom "query" tools in the `custom_tools.yaml` file or in any file ending with `_tools.yaml`. 
+Simply specify the tool name, description and SQL query to be executed. No parameters are supported at this point.
 
 The Test directory contains a simple ClientChatBot tool for testing tools.
 
@@ -57,7 +58,7 @@ uv sync
 source .venv/Scripts/activate
 ```
 
-On Mac
+On Mac/Linux
 ```
 mkdir MCP
 cd MCP
@@ -118,6 +119,10 @@ Step 2 - Open the MCP Inspector
 Test the other tools, each should have a successful outcome
 
 Control+c to stop the server in the terminal
+
+### Running the server
+You can simply run the server with:
+`uv run teradata-mcp-server`
 
 ### Adding your sever to an Agent using stdio
 #### Option 1 - pydanticai chatbot

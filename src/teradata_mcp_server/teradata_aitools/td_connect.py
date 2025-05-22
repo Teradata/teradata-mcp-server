@@ -56,7 +56,6 @@ class TDConn:
     # Destructor
     #     It will close the connection to the database
     def close(self):
-        self.conn.cursor().close()
         if self.conn is not None:
             try:
                 self.conn.close()
