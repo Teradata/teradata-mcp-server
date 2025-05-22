@@ -57,7 +57,7 @@ cd MCP
 git clone https://github.com/Teradata/teradata-mcp-server.git
 cd teradata-mcp-server
 uv sync
-source .venv/Scripts/activate
+.venv/Scripts/activate
 ```
 
 On Mac/Linux
