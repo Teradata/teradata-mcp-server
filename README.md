@@ -134,7 +134,7 @@ SSE=False
 ```
 &nbsp;&nbsp;&nbsp;&nbsp; Step 2 - Modify the ./test/ClientChatBot.py script to point to where you installed the server, you will need to modify the following line
 ```
-    td_mcp_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server", "run", "server.py"])
+    td_mcp_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server", "run", "teradata-mcp-server"])
 ```
 
 &nbsp;&nbsp;&nbsp;&nbsp; Step 3 - run the ./test/ClientChatBot.py script, this will create an interactive session with the agent who has access to the MCP server.  From a terminal.
@@ -155,6 +155,7 @@ SSE=False
 ```
 &nbsp;&nbsp;&nbsp;&nbsp; Step 2 - move into teradata_mcp_server/test directory From a terminal.
 ```
+cd test
 adk web
 ```
 &nbsp;&nbsp;&nbsp;&nbsp; Step 3 - open [ADK Web Server ](http://0.0.0.0:8000) 
@@ -162,6 +163,8 @@ adk web
 &nbsp;&nbsp;&nbsp;&nbsp; Step 4 - chat with the td_agent
 
 #### Option 3 - mcp_chatbot
+
+&nbsp;&nbsp;&nbsp;&nbsp; step 0 - Modify server_config.json in the test directory, ensure path is correct.
 
 &nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the SSE flag in .env file has been set to False
 ```
@@ -205,9 +208,9 @@ Note: you will need to modify the directory path in the args for your system, th
                 "command": "uv",
                 "args": [
                     "--directory",
-                    "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server/",
+                    "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server",
                     "run",
-                    "server.py"
+                    "teradata-mcp-server"
                 ]
             }
         }
@@ -224,7 +227,7 @@ SSE_PORT=8001
 ```
 - you need to start the server from a terminal
 ```
-uv run ./src/teradata_mcp_server/server.py
+uv run teradata-mcp-server
 ```
 - In VS Code, "Show and Run Commands"
 - select "MCP: Add Server"
