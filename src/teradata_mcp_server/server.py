@@ -152,19 +152,19 @@ async def get_td_base_tableUsage(
     return execute_db_tool(_tdconn, td.handle_get_td_base_tableUsage, db_name=db_name)
 
 @mcp.prompt()
-async def sql_prompt(qry: str) -> UserMessage:
+async def prompt_td_base_query(qry: str) -> UserMessage:
     """Create a SQL query against the database"""
-    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_general.format(qry=qry)))
+    return UserMessage(role="user", content=TextContent(type="text", text=td.handle_prompt_td_base_query.format(qry=qry)))
 
 @mcp.prompt()
-async def table_business_description(database_name: str, table_name: str) -> UserMessage:
+async def prompt_td_base_tableBusinessDesc(database_name: str, table_name: str) -> UserMessage:
     """Create a business description of the table and columns."""
-    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_table_business_description.format(database_name=database_name, table_name=table_name)))
+    return UserMessage(role="user", content=TextContent(type="text", text=td.handle_prompt_td_base_tableBusinessDesc.format(database_name=database_name, table_name=table_name)))
 
 @mcp.prompt()
-async def database_business_description(database_name: str) -> UserMessage:
+async def prompt_td_base_databaseBusinessDesc(database_name: str) -> UserMessage:
     """Create a business description of the database."""
-    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_database_business_description.format(database_name=database_name)))
+    return UserMessage(role="user", content=TextContent(type="text", text=td.handle_prompt_td_base_databaseBusinessDesc.format(database_name=database_name)))
 
 #------------------ DBA Tools  ------------------#
 
@@ -255,19 +255,19 @@ async def get_td_dba_tableUsageImpact(
     return execute_db_tool(_tdconn, td.handle_get_td_dba_tableUsageImpact, db_name=db_name,  user_name=user_name)
 
 @mcp.prompt()
-async def table_archive() -> UserMessage:
+async def prompt_td_dba_tableArchive() -> UserMessage:
     """Create a table archive strategy for database tables."""
-    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_table_archive))
+    return UserMessage(role="user", content=TextContent(type="text", text=td.handle_prompt_td_dba_tableArchive))
 
 @mcp.prompt()
-async def database_lineage(database_name: str) -> UserMessage:
+async def prompt_td_dba_databaseLineage(database_name: str) -> UserMessage:
     """Create a database lineage map for tables in a database."""
-    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_database_lineage.format(database_name=database_name)))
+    return UserMessage(role="user", content=TextContent(type="text", text=td.handle_prompt_td_dba_databaseLineage.format(database_name=database_name)))
 
 @mcp.prompt()
-async def table_drop_impact(database_name: str, table_name: str) -> UserMessage:
+async def prompt_td_dba_tableDropImpact(database_name: str, table_name: str) -> UserMessage:
     """Assess the impact of dropping a table."""
-    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_table_drop_impact.format(database_name=database_name, table_name=table_name)))
+    return UserMessage(role="user", content=TextContent(type="text", text=td.handle_prompt_td_dba_tableDropImpact.format(database_name=database_name, table_name=table_name)))
 
 #------------------ Data Quality Tools  ------------------#
 
