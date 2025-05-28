@@ -328,15 +328,13 @@ The server will be available on port 8080 (or the value of the `PORT` environmen
 
 ### Run the REST API server (mcpo) as an option
 
-To expose your tools as REST endpoints via mcpo, use the `rest` profile:
+To expose your tools as REST endpoints via mcpo, use the `rest` profile.
+
+You can set an API key using the environment variable `MCPO_API_KEY`. The default value is 'top-secret'.
 
 ```sh
 docker compose --profile rest up
 ```
-
-This will start both services:
-- `teradata-mcp-server` (core server, port 8080)
-- `teradata-rest-server` (REST API via mcpo, port 8001)
 
 You can now access the OpenAPI docs at: [http://localhost:8001/docs](http://localhost:8001/docs)
 
