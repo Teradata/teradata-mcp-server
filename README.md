@@ -302,6 +302,57 @@ To add the MCP tools, navigate to Settings > Tools > Add Connection, and enter y
 
 You should be able to see the tools in the Chat Control Valves section on the right and get your models to use it.
 
+---
+
+## Docker & Docker Compose Usage
+
+### Build the Docker image
+
+```sh
+docker compose build
+```
+
+The server expects the Teradata URI string via the `DATABASE_URI` environment variable. You may update the `docker-compose.yaml` file or setup the environment variable with your system's connection details:
+
+`export DATABASE_URI=teradata://username:password@host:1025/databasename`
+
+### Run the MCP server (default)
+
+This starts only the core Teradata MCP server (with stdio or SSE communication):
+
+```sh
+docker compose up
+```
+
+The server will be available on port 8080 (or the value of the `PORT` environment variable).
+
+### Run the REST API server (mcpo) as an option
+
+To expose your tools as REST endpoints via mcpo, use the `rest` profile:
+
+```sh
+docker compose --profile rest up
+```
+
+This will start both services:
+- `teradata-mcp-server` (core server, port 8080)
+- `teradata-rest-server` (REST API via mcpo, port 8001)
+
+You can now access the OpenAPI docs at: [http://localhost:8001/docs](http://localhost:8001/docs)
+
+#### Environment Variables
+- Set `DATABASE_URI` in your environment or in a `.env` file in the project root.
+- Only `DATABASE_URI` is required for the REST server.
+
+#### Example `.env` file
+```
+DATABASE_URI=teradata://username:password@host:1025/databasename
+```
+
+---
+
+For more details on mcpo, see: https://github.com/open-webui/mcpo
+
 ---------------------------------------------------------------------
 ## Certification
 <a href="https://glama.ai/mcp/servers/@Teradata/teradata-mcp-server">
