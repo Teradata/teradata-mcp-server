@@ -4,40 +4,43 @@
 The Teradata MCP server is a open source project, we welcome contributions via pull requests.
 
 We are providing three sets of tools and associated helpful prompts
-1. td_base_tools:
-    - execute_read_query - runs a read query
-    - execute_write_query - runs a write query
-    - read_table_DDL - returns the show table results
-    - read_database_list - returns a list of all databases
-    - read_table_list - returns a list of tables in a database
-    - read_column_description - returns description of columns in a table
-    - read_table_preview - returns column information and 5 rows from the table
-    - read_table_affinity - gets tables commonly used together
-    - read_table_usage - Measure the usage of a table and views by users in a given schema
+1. td_base tools / prompts / resources:
+    - get_td_base_readQuery - runs a read query
+    - write_td_base_writeQuery - runs a write query
+    - get_td_base_tableDDL - returns the show table results
+    - get_td_base_databaseList - returns a list of all databases
+    - get_td_base_tableList - returns a list of tables in a database
+    - get_td_base_columnDescription - returns description of columns in a table
+    - get_td_base_tablePreview - returns column information and 5 rows from the table
+    - get_td_base_tableAffinity - gets tables commonly used together
+    - get_td_base_tableUsage - Measure the usage of a table and views by users in a given schema
 
-    - prompt_general - Create a SQL query against the database
-    - prompt_table_business_description - generates a business description of a table
-    - prompt_database_business_description - generates a business description of a databases based on the tables
+    - prompt_td_base_query - Create a SQL query against the database
+    - prompt_td_base_tableBusinessDesc - generates a business description of a table
+    - prompt_td_base_databaseBusinessDesc - generates a business description of a databases based on the tables
 
-2. td_dba_tools:
-    - read_user_sql_list - returns a list of recently executed SQL for a user
-    - read_table_sql_list - returns a list of recently executed SQL for a table
-    - read_table_space - returns CurrentPerm table space 
-    - read_database_space - returns Space allocated, space used and percentage used for a database
-    - read_database_version - returns the database version information
-    - read_resuage_summary - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.
-    - read_flow_control - Get the Teradata system flow control metrics by day and hour
-    - read_feature_usage - Get the user feature usage metrics
-    - read_user_delay - Get the Teradata user delay metrics.
+2. td_dba tools / prompts / resources:
+    - get_td_dba_userSqlList - returns a list of recently executed SQL for a user
+    - get_td_dba_tableSqlList - returns a list of recently executed SQL for a table
+    - get_td_dba_tableSpace - returns CurrentPerm table space 
+    - get_td_dba_databaseSpace - returns Space allocated, space used and percentage used for a database
+    - get_td_dba_databaseVersion - returns the database version information
+    - get_td_dba_resusageSummary - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.
+    - get_td_dba_resusageUserSummary - Get the system usage for a user
+    - get_td_dba_flowControl - Get the Teradata system flow control metrics by day and hour
+    - get_td_dba_featureUsage - Get the user feature usage metrics
+    - get_td_dba_userDelay - Get the Teradata user delay metrics.
+    - get_td_dba_tableUsageImpact - measures the usage of a table / view by a user
 
-    - prompt_table_archive - Create a table archive strategy for database tables.
-    - prompt_database_lineage - Creates a directed lineage map of tables in a database.
+    - prompt_td_dba_tableArchive - Create a table archive strategy for database tables.
+    - prompt_td_dba_databaseLineage - Creates a directed lineage map of tables in a database.
+    - prompt_td_dba_tableDropImpact - assesses the impact of a table being dropped
 
-3. td_data_quality_tools:
-    - missing_values - returns a list of column names with missing values
-    - negative_values - returns a list of column names with negative values
-    - distinct_categories - returns a list of categories within a column
-    - standard_deviation - returns the mean and standard deviation for a column
+3. td_qlty tools / prompts / resources:
+    - get_td_qlty_missingValues - returns a list of column names with missing values
+    - get_td_qlty_negativeValues - returns a list of column names with negative values
+    - get_td_qlty_distinctCategories - returns a list of categories within a column
+    - get_td_qlty_standardDeviation - returns the mean and standard deviation for a column
 
 You may add define custom "query" tools in the `custom_tools.yaml` file or in any file ending with `_tools.yaml`. 
 Simply specify the tool name, description and SQL query to be executed. No parameters are supported at this point.
@@ -78,7 +81,8 @@ Step 3 - You need to update the .env file
     - the Teradata host needs updating
     - the databasename needs updating
 
-- LLM Credentials need to be available for /test/pydanticaiBedrock.py code to work
+- LLM Credentials need to be available for test code to work
+
 - SSE setting 
     - SSE : Boolean to determine if your server will be using the SSE transport (SSE = True) or the stdio transport (SSE=False)
     - SSE_HOST: IP address that the server can be found at, default should be 127.0.0.1

@@ -1,7 +1,7 @@
 
 
 # The following prompt is used to guide the Teradata DBA in finding opportunities for archiving data.
-prompt_table_archive = """
+handle_prompt_td_dba_tableArchive = """
     You are a Teradata DBA who is an expert in finding opportunities for archiving data.
 
     ## your role will work through the phases
@@ -31,7 +31,7 @@ prompt_table_archive = """
 """
 
 
-prompt_database_lineage = """
+handle_prompt_td_dba_databaseLineage = """
     You are a Teradata DBA who is an expert in finding the lineage of tables in a database.
 
     ## your role will work through the phases
@@ -64,7 +64,7 @@ prompt_database_lineage = """
         - do not return any explanation of results
 """
   
-prompt_table_drop_impact = """
+handle_prompt_td_dba_tableDropImpact = """
     You are a Teradata DBA who is an expert in finding the impact of dropping a table.
     ## your role will work through the phases
 

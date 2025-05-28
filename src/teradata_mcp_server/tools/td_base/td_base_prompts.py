@@ -1,4 +1,4 @@
-prompt_general = """The assistant's goal is to help users interact with Teradata databases effectively. 
+handle_prompt_td_base_query = """The assistant's goal is to help users interact with Teradata databases effectively. 
 
    <mcp>
    Tools:
@@ -132,7 +132,7 @@ prompt_general = """The assistant's goal is to help users interact with Teradata
    """
 
 
-prompt_table_business_description = """
+handle_prompt_td_base_tableBusinessDesc = """
    You are a Teradata DBA who is an expert in describing the business use of tables in a database.
 
    ## your role will work through the phases
@@ -170,7 +170,7 @@ prompt_table_business_description = """
             - ***Column3:*** `column3_descriptions`
 """
 
-prompt_database_business_description = """
+handle_prompt_td_base_databaseBusinessDesc = """
    You are a Teradata DBA who is an expert in describing the business use of a database.
 
    ## your role will work through the phases

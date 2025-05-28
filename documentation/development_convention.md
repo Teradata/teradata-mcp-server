@@ -82,9 +82,11 @@ The template code should be copied and prefixes for directory name and files sho
 ## Tool/Prompt/Resource Naming Convention
 To assist tool users we would like to align tool, prompt, and resources to a naming convention, this will assist MCP clients to group tools and understand its function.
 
-- tool/prompt/resource name starts with grouping identifier (e.g. td_base).
-- If the tool/prompt/resource returns data it will be a get function  (e.g.  get_td_base_)
-- If the tool/prompt/resource changes the state of data (e.g. write_td_base_)
+- tool/prompt/resource name starts with a verb and then the grouping identifier (e.g. get_td_base).
+- If the tool returns data it will be a get function  (e.g.  get_td_base_)
+- If the tool changes the state of data (e.g. write_td_base_)
+- If a prompt (e.g. prompt_td_base)
+- If a resource (e.g. resource_td_base)
 - The tool/prompt/resource should have a descriptive name that is short  (e.g. get_td_base_dbList, get_td_qlty_missingValues, write_td_dba_userGrant, write_td_dba_tableCreate)
 
 <br><br><br>
