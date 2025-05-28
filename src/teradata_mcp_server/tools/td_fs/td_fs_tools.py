@@ -54,10 +54,10 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       <arguments> - <description of arguments>
 #     Returns: <what it does> or error message    
-def handle_name_of_tool(conn: TeradataConnection, argument: Optional[str], *args, **kwargs):
-    logger.debug(f"Tool: handle_name_of_tool: Args: argument: {argument}")
-    
-    with conn.cursor() as cur:   
+def handle_get_td_fs_nameOfTool(conn: TeradataConnection, argument: Optional[str], *args, **kwargs):
+    logger.debug(f"Tool: handle_get_td_fs_nameOfTool: Args: argument: {argument}")
+
+    with conn.cursor() as cur:
         if argument == "":
             logger.debug("No argument provided")
             rows = cur.execute(f"Teradata query goes here;")
@@ -66,7 +66,7 @@ def handle_name_of_tool(conn: TeradataConnection, argument: Optional[str], *args
             rows = cur.execute(f"Teradata query goes here with argument {argument};")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "name_of_tool",
+            "tool_name": "get_td_fs_nameOfTool",
             "argument": argument,
         }
         return create_response(data, metadata)

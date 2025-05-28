@@ -143,7 +143,7 @@ prompt_table_business_description = """
    - The database name is {database_name}
 
    ## Phase 1 - Get the table DDL
-   - Get the table DDL from the user. The DDL should be a single string, and it should not contain any new lines or special characters. Use the get_table_ddl function to get the DDL.
+   - Get the table DDL from the user. The DDL should be a single string, and it should not contain any new lines or special characters. Use the get_td_base_tableDDL function to get the DDL.
 
    ## Phase 2 - Describe the table
    - Describe the table in a business context. The description should be a single string. 
@@ -180,11 +180,11 @@ prompt_database_business_description = """
    - the database name is {database_name}
 
    ## Phase 1 - get the list of tables
-   - Get the list of tables in the database. Use the get_table_list function to get the list.
+   - Get the list of tables in the database. Use the get_td_base_tableList function to get the list.
 
    ## Phase 2 - describe the tables
    For each table, you will:
-   - Get the table DDL from the user. Use the get_table_ddl function to get the DDL.
+   - Get the table DDL from the user. Use the get_td_base_tableDDL function to get the DDL.
    - Describe the table in a business context. The description should be a single string.
 
    ## Phase 3 - Describe the database

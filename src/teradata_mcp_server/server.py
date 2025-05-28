@@ -13,9 +13,9 @@ from dotenv import load_dotenv
 
 # Import the ai_tools module, clone-and-run friendly
 try:
-    from teradata_mcp_server import teradata_aitools as td
+    from teradata_mcp_server import tools as td
 except ImportError:
-    import teradata_aitools as td
+    import tools as td
 
 load_dotenv()
 
@@ -72,85 +72,84 @@ def execute_db_tool(conn, tool, *args, **kwargs):
 #------------------ Base Tools  ------------------#
 
 @mcp.tool(description="Executes a SQL query to read from the database.")
-async def execute_read_query(
+async def get_td_base_readQuery(
     sql: str = Field(description="SQL that reads from the database to run", default=""),
     ) -> ResponseType:
     """Executes a SQL query to read from the database."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_execute_read_query, sql=sql) 
+    return execute_db_tool(_tdconn, td.handle_get_td_base_readQuery, sql=sql) 
 
 
 @mcp.tool(description="Executes a SQL query to write to the database.")
-async def execute_write_query(
+async def write_td_base_writeQuery(
     sql: str = Field(description="SQL that writes to the database to run", default=""),
     ) -> ResponseType:
     """Executes a SQL query to write to the database."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_execute_write_query, sql=sql) 
+    return execute_db_tool(_tdconn, td.handle_write_td_base_writeQuery, sql=sql) 
 
 
 @mcp.tool(description="Display table DDL definition.")
-async def read_table_ddl(
+async def get_td_base_tableDDL(
     db_name: str = Field(description="Database name", default=""),
     table_name: str = Field(description="table name", default=""),
     ) -> ResponseType:
     """Display table DDL definition."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_table_ddl, db_name=db_name, table_name=table_name)    
- 
-    
+    return execute_db_tool(_tdconn, td.handle_get_td_base_tableDDL, db_name=db_name, table_name=table_name)    
+
 @mcp.tool(description="List all databases in the Teradata System.")
-async def read_database_list() -> ResponseType:
+async def get_td_base_databaseList() -> ResponseType:
     """List all databases in the Teradata System."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_database_list)
+    return execute_db_tool(_tdconn, td.handle_get_td_base_databaseList)
 
 
 @mcp.tool(description="List objects in a database.")
-async def read_table_list(
+async def get_td_base_tableList(
     db_name: str = Field(description="database name", default=""),
     ) -> ResponseType:
     """List objects in a database."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_table_list, db_name=db_name)
+    return execute_db_tool(_tdconn, td.handle_get_td_base_tableList, db_name=db_name)
 
 
 @mcp.tool(description="Show detailed column information about a database table.")
-async def read_column_description(
+async def get_td_base_columnDescription(
     db_name: str = Field(description="Database name", default=""),
     obj_name: str = Field(description="table name", default=""),
     ) -> ResponseType:
     """Show detailed column information about a database table."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_column_description, db_name=db_name, obj_name=obj_name)
+    return execute_db_tool(_tdconn, td.handle_get_td_base_columnDescription, db_name=db_name, obj_name=obj_name)
 
 
 @mcp.tool(description="Get data samples and structure overview from a database table.")
-async def read_table_preview(
+async def get_td_base_tablePreview(
     db_name: str = Field(description="Database name", default=""),
     table_name: str = Field(description="table name", default=""),
     ) -> ResponseType:
     """Get data samples and structure overview from a database table."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_table_preview, table_name=table_name, db_name=db_name)
+    return execute_db_tool(_tdconn, td.handle_get_td_base_tablePreview, table_name=table_name, db_name=db_name)
 
 @mcp.tool(description="Get tables commonly used together by database users, this is helpful to infer relationships between tables.")
-async def read_table_affinity(
+async def get_td_base_tableAffinity(
     db_name: str = Field(description="Database name", default=""),
     obj_name: str = Field(description="Table or view name", default=""),
     ) -> ResponseType:
     """Get tables commonly used together by database users, this is helpful to infer relationships between tables."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_table_affinity, obj_name=obj_name, db_name=db_name)
+    return execute_db_tool(_tdconn, td.handle_get_td_base_tableAffinity, obj_name=obj_name, db_name=db_name)
 
 
 @mcp.tool(description="Measure the usage of a table and views by users in a given schema, this is helpful to infer what database objects are most actively used or drive most value.")
-async def read_table_usage(
+async def get_td_base_tableUsage(
     db_name: str = Field(description="Database name", default=""),
     ) -> ResponseType:
     """Measure the usage of a table and views by users in a given schema, this is helpful to infer what database objects are most actively used or drive most value."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_table_usage, db_name=db_name)
+    return execute_db_tool(_tdconn, td.handle_get_td_base_tableUsage, db_name=db_name)
 
 @mcp.prompt()
 async def sql_prompt(qry: str) -> UserMessage:
@@ -170,55 +169,55 @@ async def database_business_description(database_name: str) -> UserMessage:
 #------------------ DBA Tools  ------------------#
 
 @mcp.tool(description="Get a list of SQL run by a user in the last number of days if a user name is provided, otherwise get list of all SQL in the last number of days.")
-async def read_user_SQL_list(
+async def get_td_dba_userSqlList(
     user_name: str = Field(description="user name", default=""),
     no_days: int = Field(description="number of days to look back", default=7),
     ) -> ResponseType:
     """Get a list of SQL run by a user."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_user_sql_list, user_name=user_name, no_days=no_days)
+    return execute_db_tool(_tdconn, td.handle_get_td_dba_userSqlList, user_name=user_name, no_days=no_days)
 
 @mcp.tool(description="Get a list of SQL run against a table in the last number of days ")
-async def read_table_SQL_list(
+async def get_td_dba_tableSqlList(
     table_name: str = Field(description="table name", default=""),
     no_days: int = Field(description="number of days to look back", default=7),
     ) -> ResponseType:
     """Get a list of SQL run by a user."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_table_sql_list, table_name=table_name, no_days=no_days)
+    return execute_db_tool(_tdconn, td.handle_get_td_dba_tableSqlList, table_name=table_name, no_days=no_days)
 
 @mcp.tool(description="Get table space used for a table if table name is provided or get table space for all tables in a database if a database name is provided.")
-async def read_table_space(
+async def get_td_dba_tableSpace(
     db_name: str = Field(description="Database name", default=""),
     table_name: str = Field(description="table name", default=""),
     ) -> ResponseType:
     """Get table space used for a table if table name is provided or get table space for all tables in a database if a database name is provided."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_table_space, db_name=db_name, table_name=table_name)
+    return execute_db_tool(_tdconn, td.handle_get_td_dba_tableSpace, db_name=db_name, table_name=table_name)
 
 @mcp.tool(description="Get database space if database name is provided, otherwise get all databases space allocations.")
-async def read_database_space(
+async def get_td_dba_databaseSpace(
     db_name: str = Field(description="Database name", default=""),
     ) -> ResponseType:
     """Get database space if database name is provided, otherwise get all databases space allocations."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_database_space, db_name=db_name)
+    return execute_db_tool(_tdconn, td.handle_get_td_dba_databaseSpace, db_name=db_name)
 
 @mcp.tool(description="Get Teradata database version information.")
-async def read_database_version() -> ResponseType:
+async def get_td_dba_databaseVersion() -> ResponseType:
     """Get Teradata database version information."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_database_version)
+    return execute_db_tool(_tdconn, td.handle_get_td_dba_databaseVersion)
 
 @mcp.tool(description="Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.")
-async def read_resusage_summary() -> ResponseType:
+async def get_td_dba_resusageSummary() -> ResponseType:
     """Get the Teradata system usage summary metrics by weekday and hour."""
     global _tdconn
 
-    return execute_db_tool(_tdconn, td.handle_read_resusage_summary, dimensions=["hourOfDay", "dayOfWeek"])
+    return execute_db_tool(_tdconn, td.handle_get_td_dba_resusageSummary, dimensions=["hourOfDay", "dayOfWeek"])
 
 @mcp.tool(description="Get the Teradata system usage summary metrics by user on a specified date, or day of week and hour of day.")
-async def read_resusage_user_summary(
+async def get_td_dba_resusageUserSummary(
     user_name: str = Field(description="Database user name", default=""),
     date: str = Field(description="Date to analyze, formatted as `YYYY-MM-DD`", default=""),
     dayOfWeek: str = Field(description="Day of week to analyze", default=""),
@@ -226,26 +225,34 @@ async def read_resusage_user_summary(
     ) -> ResponseType:
     """Get the Teradata system usage summary metrics by user on a specified date, or day of week and hour of day."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_resusage_summary, dimensions=["UserName", "hourOfDay", "dayOfWeek"], user_name=user_name, date=date, dayOfWeek=dayOfWeek, hourOfDay=hourOfDay)
+    return execute_db_tool(_tdconn, td.handle_get_td_dba_resusageSummary, dimensions=["UserName", "hourOfDay", "dayOfWeek"], user_name=user_name, date=date, dayOfWeek=dayOfWeek, hourOfDay=hourOfDay)
 
 @mcp.tool(description="Get the Teradata flow control metrics.")
-async def read_flow_control() -> ResponseType:
+async def get_td_dba_flowControl() -> ResponseType:
     """Get the Teradata flow control metrics."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_flow_control)
+    return execute_db_tool(_tdconn, td.handle_get_td_dba_flowControl)
 
 @mcp.tool(description="Get the user feature usage metrics.")
-async def read_feature_usage() -> ResponseType:
+async def get_td_dba_featureUsage() -> ResponseType:
     """Get the user feature usage metrics.""" 
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_feature_usage)
+    return execute_db_tool(_tdconn, td.handle_get_td_dba_featureUsage)
 
 @mcp.tool(description="Get the Teradata user delay metrics.")
-async def read_user_delay() -> ResponseType:
+async def get_td_dba_userDelay() -> ResponseType:
     """Get the Teradata user delay metrics."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_user_delay)
+    return execute_db_tool(_tdconn, td.handle_get_td_dba_userDelay)
 
+@mcp.tool(description="Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time.")
+async def get_td_dba_tableUsageImpact(
+    db_name: str = Field(description="Database name", default=""),
+    user_name: str = Field(description="User name", default=""),    
+    ) -> ResponseType:
+    """Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_get_td_dba_tableUsageImpact, db_name=db_name,  user_name=user_name)
 
 @mcp.prompt()
 async def table_archive() -> UserMessage:
@@ -265,48 +272,41 @@ async def table_drop_impact(database_name: str, table_name: str) -> UserMessage:
 #------------------ Data Quality Tools  ------------------#
 
 @mcp.tool(description="Get the column names that having missing values in a table.")
-async def read_missing_columns(
+async def get_td_qlty_missingValues(
     table_name: str = Field(description="table name", default=""),
     ) -> ResponseType:
     """Get the column names that having missing values in a table."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_missing_values, table_name=table_name)
+    return execute_db_tool(_tdconn, td.handle_get_td_qlty_missingValues, table_name=table_name)
 
 
 @mcp.tool(description="Get the column names that having negative values in a table.")
-async def read_negative_columns(
+async def get_td_qlty_negativeValues(
     table_name: str = Field(description="table name", default=""),
     ) -> ResponseType:
     """Get the column names that having negative values in a table."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_negative_values, table_name=table_name)
+    return execute_db_tool(_tdconn, td.handle_get_td_qlty_negativeValues, table_name=table_name)
 
 @mcp.tool(description="Get the destinct categories from column in a table.")
-async def read_destinct_categories(
+async def get_td_qlty_distinctCategories(
     table_name: str = Field(description="table name", default=""),
     col_name: str = Field(description="column name", default=""),
     ) -> ResponseType:
     """Get the destinct categories from column in a table."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_destinct_categories, table_name=table_name, col_name=col_name)    
+    return execute_db_tool(_tdconn, td.handle_get_td_qlty_distinctCategories, table_name=table_name, col_name=col_name)
 
 @mcp.tool(description="Get the standard deviation from column in a table.")
-async def read_standard_deviation(
+async def get_td_qlty_standardDeviation(
     table_name: str = Field(description="table name", default=""),
     col_name: str = Field(description="column name", default=""),
     ) -> ResponseType:
     """Get the standard deviation from column in a table."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_standard_deviation, table_name=table_name, col_name=col_name)  
+    return execute_db_tool(_tdconn, td.handle_get_td_qlty_standardDeviation, table_name=table_name, col_name=col_name)
 
-@mcp.tool(description="Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time.")
-async def read_table_usage_impact(
-    db_name: str = Field(description="Database name", default=""),
-    user_name: str = Field(description="User name", default=""),    
-    ) -> ResponseType:
-    """Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time."""
-    global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_table_usage_impact, db_name=db_name,  user_name=user_name)
+
 
 #------------------ Custom Tools  ------------------#
 # Custom tools are defined as SQL queries in a YAML file and loaded at startup.

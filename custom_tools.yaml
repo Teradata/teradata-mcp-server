@@ -1,7 +1,7 @@
 # Custom tool definitions here
 # This file is used to define custom tools for your application.
 # Below are two example tool definitions.
-- name: read_active_users
+- name: get_td_cust_activeUsers
   description: "Fetch currently active database users"
   sql: |
     SELECT UserName
@@ -10,7 +10,7 @@
     WHERE
       UserName IS NOT NULL
       group by UserName;
-- name: read_dbc_info
+- name: get_td_cust_dbcInfo
   description: "Aggregate order counts by status"
   sql: |
     sel * from dbc.dbcinfo;
