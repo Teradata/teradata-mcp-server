@@ -60,7 +60,7 @@ def handle_get_td_fs_nameOfTool(conn: TeradataConnection, argument: Optional[str
     with conn.cursor() as cur:
         if argument == "":
             logger.debug("No argument provided")
-            rows = cur.execute(f"Teradata query goes here;")
+            rows = cur.execute("Teradata query goes here;")
         else:
             logger.debug(f"Argument provided: {argument}")
             rows = cur.execute(f"Teradata query goes here with argument {argument};")
