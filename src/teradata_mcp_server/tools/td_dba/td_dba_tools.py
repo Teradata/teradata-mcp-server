@@ -126,7 +126,7 @@ def handle_get_td_dba_tableSpace(conn: TeradataConnection, db_name: Optional[str
     with conn.cursor() as cur:
         if (db_name == "") and (table_name == ""):
             logger.debug("No database or table name provided, returning all tables and space information.")
-            rows = cur.execute(f"""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm 
+            rows = cur.execute("""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm 
             ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
             FROM DBC.AllSpaceV 
             GROUP BY DatabaseName, TableName 
@@ -219,11 +219,11 @@ def handle_get_td_dba_databaseSpace(conn: TeradataConnection, db_name: Optional[
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #     Returns: formatted response with database version information or error message    
 def handle_get_td_dba_databaseVersion(conn: TeradataConnection, *args, **kwargs):
-    logger.debug(f"Tool: handle_get_td_dba_databaseVersion: Args: ")
+    logger.debug("Tool: handle_get_td_dba_databaseVersion: Args: ")
 
     with conn.cursor() as cur:
         logger.debug("Database version information requested.")
-        rows = cur.execute(f"select InfoKey, InfoData FROM DBC.DBCInfoV;")
+        rows = cur.execute("select InfoKey, InfoData FROM DBC.DBCInfoV;")
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
@@ -359,11 +359,11 @@ def handle_get_td_dba_resusageSummary(conn: TeradataConnection,
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #     Returns: formatted response with database flow control information or error message    
 def handle_get_td_dba_flowControl(conn: TeradataConnection, *args, **kwargs):
-    logger.debug(f"Tool: handle_get_td_dba_flowControl: Args: ")
+    logger.debug("Tool: handle_get_td_dba_flowControl: Args: ")
 
     with conn.cursor() as cur:
         logger.debug("Database flow control information requested.")
-        rows = cur.execute(f"""
+        rows = cur.execute("""
                 SELECT A.THEDATE AS "Date"  
                 , A.THETIME (FORMAT '99:99:99') AS "Time"      
                 , CASE  
@@ -415,7 +415,7 @@ def handle_get_td_dba_tableUsageImpact(conn: TeradataConnection, db_name: Option
     """
     Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time.
     """
-    logger.debug(f"Tool: handle_get_td_dba_tableUsageImpact: Args: ")
+    logger.debug("Tool: handle_get_td_dba_tableUsageImpact: Args: ")
     if db_name:
         database_name_filter=f"AND objectdatabasename = '{db_name}'"
     else:
@@ -500,11 +500,11 @@ def handle_get_td_dba_tableUsageImpact(conn: TeradataConnection, db_name: Option
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #     Returns: formatted response with database feature usage information or error message    
 def handle_get_td_dba_featureUsage(conn: TeradataConnection, *args, **kwargs):
-    logger.debug(f"Tool: handle_get_td_dba_featureUsage: Args: ")
+    logger.debug("Tool: handle_get_td_dba_featureUsage: Args: ")
 
     with conn.cursor() as cur:
         logger.debug("Database feature usage information requested.")
-        rows = cur.execute(f"""
+        rows = cur.execute("""
             SELECT 
                 CAST(A.Starttime as Date)  AS LogDate
             ,A.USERNAME as Username
@@ -537,11 +537,11 @@ def handle_get_td_dba_featureUsage(conn: TeradataConnection, *args, **kwargs):
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #     Returns: formatted response with database user delay experience information or error message    
 def handle_get_td_dba_userDelay(conn: TeradataConnection, *args, **kwargs):
-    logger.debug(f"Tool: handle_get_td_dba_userDelay: Args: ")
+    logger.debug("Tool: handle_get_td_dba_userDelay: Args: ")
 
     with conn.cursor() as cur:
         logger.debug("Database user delay information requested.")
-        rows = cur.execute(f"""
+        rows = cur.execute("""
             Select
                 CAST(a.Starttime as DATE) AS "Log Date"
                 ,extract(hour from a.starttime) as "Log Hour"

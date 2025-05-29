@@ -3,11 +3,12 @@ import asyncio
 import logging
 import signal
 import json
-from typing import Any, List, Optional
+import yaml
+from typing import Any, List
 from pydantic import Field
 import mcp.types as types
 from mcp.server.fastmcp import FastMCP
-from mcp.server.fastmcp.prompts.base import Message, UserMessage, TextContent
+from mcp.server.fastmcp.prompts.base import UserMessage, TextContent
 from dotenv import load_dotenv
 
 
@@ -310,9 +311,7 @@ async def get_td_qlty_standardDeviation(
 
 #------------------ Custom Tools  ------------------#
 # Custom tools are defined as SQL queries in a YAML file and loaded at startup.
-import yaml
-import glob
-import os
+
 
 query_defs = []
 custom_tool_files = [file for file in os.listdir() if file.endswith("_tools.yaml")]

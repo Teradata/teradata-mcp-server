@@ -129,7 +129,7 @@ def handle_get_td_base_tableDDL(conn: TeradataConnection, db_name: str, table_na
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries        
 #     Returns: ResponseType - formatted response with list of databases or error message
 def handle_get_td_base_databaseList(conn: TeradataConnection, *args, **kwargs):
-    logger.debug(f"Tool: handle_get_td_base_databaseList: Args:")
+    logger.debug("Tool: handle_get_td_base_databaseList: Args:")
 
     with conn.cursor() as cur:
         rows = cur.execute("select DataBaseName, DECODE(DBKind, 'U', 'User', 'D','DataBase') as DBType, CommentString from dbc.DatabasesV dv where OwnerName <> 'PDCRADM'")
@@ -359,7 +359,7 @@ def handle_get_td_base_tableUsage(conn: TeradataConnection, db_name: Optional[st
     """
     Measure the usage of a table and views by users in a given schema, this is helpful to infer what database objects are most actively used or drive most value.
     """
-    logger.debug(f"Tool: handle_get_td_base_tableUsage: Args: db_name:")
+    logger.debug("Tool: handle_get_td_base_tableUsage: Args: db_name:")
     if db_name:
         database_name_filter=f"AND objectdatabasename = '{db_name}'"
     else:
