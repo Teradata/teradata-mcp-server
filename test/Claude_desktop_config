@@ -13,7 +13,9 @@
     "teradata_mcp_server_sse": {
       "type": "sse",
       "url": "http://localhost:8001/sse",
-      "env" :{}
+      "env" :{
+         "DATABASE_URI": "teradata://username:password@host:1025/databasename"
+      }
     }
   }
 }

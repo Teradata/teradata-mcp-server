@@ -9,7 +9,7 @@
         "teradata-mcp-server"
       ],
       "env": {
-        "DATABASE_URI": "teradata://demo_user:teradata-demo@test-vikzqtnd0db0nglk.env.clearscape.teradata.com:1025/demo_user"
+         "DATABASE_URI": "teradata://username:password@host:1025/databasename"
       }
     }
   }
