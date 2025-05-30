@@ -19,26 +19,35 @@ class MCP_ChatBot:
         self.history_file = "logs/chat_history.json"
         self.history = self.load_history()
 
-        sts_client = boto3.client(
-            "sts",
-            aws_access_key_id=os.getenv("aws_access_key_id"),
-            aws_secret_access_key=os.getenv("aws_secret_access_key"),
-            aws_session_token=os.getenv("aws_session_token")
-        )
+        if os.getenv("aws_role_switch"):
+            sts_client = boto3.client(
+                "sts",
+                aws_access_key_id=os.getenv("aws_access_key_id"),
+                aws_secret_access_key=os.getenv("aws_secret_access_key"),
+                aws_session_token=os.getenv("aws_session_token")
+            )
 
-        # assume role with bedrock permissions, you will need to copy your ARN into the RoleArn field below
-        assumed_role = sts_client.assume_role(
-            RoleArn=os.getenv("aws_role_arn"), RoleSessionName=os.getenv("aws_role_name")
-        )
-        # get bedrock role credentials
-        temp_credentials = assumed_role["Credentials"]
-        # create bedrock runtime
-        self.anthropic = AnthropicBedrock(
-            aws_access_key=temp_credentials["AccessKeyId"],
-            aws_secret_key=temp_credentials["SecretAccessKey"],
-            aws_session_token=temp_credentials["SessionToken"],
-            aws_region='us-east-1'
-        )
+            # assume role with bedrock permissions, you will need to copy your ARN into the RoleArn field below
+            assumed_role = sts_client.assume_role(
+                RoleArn=os.getenv("aws_role_arn"), RoleSessionName=os.getenv("aws_role_name")
+            )
+            # get bedrock role credentials
+            temp_credentials = assumed_role["Credentials"]
+            # create bedrock runtime
+            self.anthropic = AnthropicBedrock(
+                aws_access_key=temp_credentials["AccessKeyId"],
+                aws_secret_key=temp_credentials["SecretAccessKey"],
+                aws_session_token=temp_credentials["SessionToken"],
+                aws_region=os.getenv("aws_region", 'us-east-1')
+            )
+        else:
+            self.anthropic = AnthropicBedrock(
+                aws_access_key=os.getenv("aws_access_key_id"),
+                aws_secret_key=os.getenv("aws_secret_access_key"),
+                aws_session_token=os.getenv("aws_session_token"),
+                aws_region=os.getenv("aws_region", 'us-east-1')
+            )
+
         # Tools list required for Anthropic API
         self.available_tools = []
         # Prompts list for quick display 
@@ -210,7 +219,7 @@ class MCP_ChatBot:
         for prompt in self.available_prompts:
             print(f"- {prompt['name']}: {prompt['description']}")
             if prompt['arguments']:
-                print(f"  Arguments:")
+                print("  Arguments:")
                 for arg in prompt['arguments']:
                     arg_name = arg.name if hasattr(arg, 'name') else arg.get('name', '')
                     print(f"    - {arg_name}")

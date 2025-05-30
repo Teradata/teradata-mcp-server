@@ -341,7 +341,7 @@ for q in query_defs:
 #         The function uses asyncio to manage asynchronous operations and handle signals for shutdown.
 #         If an error occurs during initialization, it logs a warning message.
 async def main():
-    global _tdconn, _tdbasetools
+    global _tdconn
     
     sse = os.getenv("SSE", "false").lower()
     logger.info(f"SSE: {sse}")

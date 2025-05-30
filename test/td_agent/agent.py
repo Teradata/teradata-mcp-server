@@ -51,33 +51,50 @@ async def create_agent():
     # return agent, exit_stack
 
     # Using Bedrock model
-    sts_client = boto3.client(
-        "sts",
-        aws_access_key_id=os.getenv("aws_access_key_id"),
-        aws_secret_access_key=os.getenv("aws_secret_access_key"),
-        aws_session_token=os.getenv("aws_session_token")
-    )
-    # assume role with bedrock permissions, you will need to copy your ARN into the RoleArn field below
-    assumed_role = sts_client.assume_role(
-        RoleArn=os.getenv("aws_role_arn"), RoleSessionName=os.getenv("aws_role_name")
-    )
-    # get bedrock role credentials
-    temp_credentials = assumed_role["Credentials"]
+    if os.getenv("aws_role_switch"):
+        # connecting to AWS requires a client be created
+        sts_client = boto3.client(
+            "sts",
+            aws_access_key_id=os.getenv("aws_access_key_id"),
+            aws_secret_access_key=os.getenv("aws_secret_access_key"),
+            aws_session_token=os.getenv("aws_session_token")
+        )
+        # assume role with bedrock permissions, you will need to copy your ARN into the RoleArn field below
+        assumed_role = sts_client.assume_role(
+            RoleArn=os.getenv("aws_role_arn"), RoleSessionName=os.getenv("aws_role_name")
+        )
+        # get bedrock role credentials
+        temp_credentials = assumed_role["Credentials"]
 
-    agent = LlmAgent(
-        model=LiteLlm(
-            model='bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0',  
-            aws_access_key_id=temp_credentials["AccessKeyId"],
-            aws_secret_access_key=temp_credentials["SecretAccessKey"],
-            aws_session_token=temp_credentials["SessionToken"],
-            region_name='us-west-2'  # I have to enable the same model in us-west-2, seems there is a hard coded feature 
+        agent = LlmAgent(
+            model=LiteLlm(
+                model='bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0',  
+                aws_access_key_id=temp_credentials["AccessKeyId"],
+                aws_secret_access_key=temp_credentials["SecretAccessKey"],
+                aws_session_token=temp_credentials["SessionToken"],
+                region_name=os.getenv("aws_region", "us-west-2")  # I have to enable the same model in us-west-2, seems there is a hard coded feature 
+                ),
+            name='td_agent',
+            instruction=(
+            'Help user with Teradata tasks'
             ),
-        name='td_agent',
-        instruction=(
-          'Help user with Teradata tasks'
-        ),
-        tools=tools,
-    )
+            tools=tools,
+        )
+    else:
+        agent = LlmAgent(
+            model=LiteLlm(
+                model='bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0',  
+                aws_access_key_id=os.getenv("aws_access_key_id"),
+                aws_secret_access_key=os.getenv("aws_secret_access_key"),
+                aws_session_token=os.getenv("aws_session_token"),
+                region_name=os.getenv("aws_region", "us-west-2")  # I have to enable the same model in us-west-2, seems there is a hard coded feature 
+            ),
+            name='td_agent',
+            instruction=(
+            'Help user with Teradata tasks'
+            ),
+            tools=tools,
+        )
     return agent, exit_stack
 
 root_agent = create_agent()

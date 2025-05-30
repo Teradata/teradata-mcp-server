@@ -3,7 +3,7 @@ import teradatasql
 from urllib.parse import urlparse
 import logging
 import os
-from tabulate import tabulate
+
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -20,7 +20,7 @@ class TDConn:
     def __init__(self, connection_url: Optional[str] = None):
 
         if connection_url is None and os.getenv("DATABASE_URI") is None:
-            logger.warning(f"DATABASE_URI is not specified, database connection will not be established.")
+            logger.warning("DATABASE_URI is not specified, database connection will not be established.")
             self.conn = None
         else:
             connection_url = connection_url or os.getenv("DATABASE_URI")
@@ -49,7 +49,7 @@ class TDConn:
     #     The cursor can be used to execute SQL queries
     def cursor(self):
         if self.conn is None:
-            logger.error(f"Error cursor is None")
+            logger.error("Error cursor is None")
             raise Exception("No connection to database")
         return self.conn.cursor()
 
@@ -59,10 +59,10 @@ class TDConn:
         if self.conn is not None:
             try:
                 self.conn.close()
-                logger.info(f"Connection to database closed")
+                logger.info("Connection to database closed")
             except Exception as e:
                 logger.error(f"Error closing connection to database: {e}")
         else:
-            logger.warning(f"Connection to database is already closed")
+            logger.warning("Connection to database is already closed")
         
 

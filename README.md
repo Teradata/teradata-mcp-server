@@ -97,6 +97,9 @@ SSE_HOST=127.0.0.1
 SSE_PORT=8001
 
 ############################################
+# These are only required for testing the server 
+############################################
+aws_role_switch=False
 aws_access_key_id=
 aws_secret_access_key=
 aws_session_token=
@@ -104,6 +107,14 @@ aws_region_name=
 
 ############################################
 OPENAI_API_KEY=
+
+############################################
+GOOGLE_GENAI_USE_VERTEXAI=FALSE
+GOOGLE_API_KEY=
+
+############################################
+azure_api_key=
+azure_gpt-4o-mini=
 
 ```
 

@@ -15,28 +15,38 @@ import asyncio
 
 load_dotenv(override=True)
 
-# connecting to AWS requires a client be created
-sts_client = boto3.client(
-    "sts",
-    aws_access_key_id=os.getenv("aws_access_key_id"),
-    aws_secret_access_key=os.getenv("aws_secret_access_key"),
-    aws_session_token=os.getenv("aws_session_token")
-)
+if os.getenv("aws_role_switch"):
+    # connecting to AWS requires a client be created
+    sts_client = boto3.client(
+        "sts",
+        aws_access_key_id=os.getenv("aws_access_key_id"),
+        aws_secret_access_key=os.getenv("aws_secret_access_key"),
+        aws_session_token=os.getenv("aws_session_token")
+    )
 
-# assume role with bedrock permissions, you will need to copy your ARN into the RoleArn field below
-assumed_role = sts_client.assume_role(
-    RoleArn=os.getenv("aws_role_arn"), RoleSessionName=os.getenv("aws_role_name")
-)
-# get bedrock role credentials
-temp_credentials = assumed_role["Credentials"]
+    # assume role with bedrock permissions, you will need to copy your ARN into the RoleArn field below
+    assumed_role = sts_client.assume_role(
+        RoleArn=os.getenv("aws_role_arn"), RoleSessionName=os.getenv("aws_role_name")
+    )
+    # get bedrock role credentials
+    temp_credentials = assumed_role["Credentials"]
 
-bedrock_client = boto3.client(
-    "bedrock-runtime",
-    aws_access_key_id=temp_credentials["AccessKeyId"],
-    aws_secret_access_key=temp_credentials["SecretAccessKey"],
-    aws_session_token=temp_credentials["SessionToken"],
-    region_name='us-east-1'
-)
+    bedrock_client = boto3.client(
+        "bedrock-runtime",
+        aws_access_key_id=temp_credentials["AccessKeyId"],
+        aws_secret_access_key=temp_credentials["SecretAccessKey"],
+        aws_session_token=temp_credentials["SessionToken"],
+        region_name=os.getenv("aws_region", "us-east-1")
+    )
+else:
+    # if you are not using a role, you can use the default boto3 client
+    bedrock_client = boto3.client(
+        "bedrock-runtime",
+        aws_access_key_id=os.getenv("aws_access_key_id"),
+        aws_secret_access_key=os.getenv("aws_secret_access_key"),
+        aws_session_token=os.getenv("aws_session_token"),
+        region_name=os.getenv("aws_region", "us-east-1")
+    )
 
 model = BedrockConverseModel(
     'anthropic.claude-3-5-sonnet-20240620-v1:0',
