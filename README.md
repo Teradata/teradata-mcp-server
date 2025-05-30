@@ -184,7 +184,7 @@ Query: /prompts
 ```
 &nbsp;&nbsp;&nbsp;&nbsp;Step 4 - running a prompt to describe a database
 ```
-Query: /prompt database_business_description database_name=demo_user
+Query: /prompt prompt_td_base_databaseBusinessDesc database_name=demo_user
 ```
 
 
@@ -207,7 +207,7 @@ Note: you will need to modify the directory path in the args for your system, th
 ```
     "mcp": {
         "servers": {
-            "TeradataStdio": {
+            "teradataStdio": {
                 "type": "stdio",
                 "command": "uv",
                 "args": [
@@ -215,7 +215,10 @@ Note: you will need to modify the directory path in the args for your system, th
                     "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server",
                     "run",
                     "teradata-mcp-server"
-                ]
+                ],
+                "env": {
+                    "DATABASE_URI": "teradata://username:password@host:1025/databasename"
+                }
             }
         }
     }
@@ -244,9 +247,12 @@ uv run teradata-mcp-server
 ```
    "mcp": {
         "servers": {
-            "TeradataSSE": {
+            "teradataSSE": {
                 "type": "sse",
-                "url": "http://127.0.0.1:8001/sse"
+                "url": "http://127.0.0.1:8001/sse",
+                "env": {
+                    "DATABASE_URI": "teradata://username:password@host:1025/databasename"
+                }
             }
         }
     }
@@ -263,7 +269,7 @@ Note: this requires that `uv` is available to Claude in your system path or inst
 ```
 {
   "mcpServers": {
-    "teradata": {
+    "teradataStdio": {
       "command": "uv",
       "args": [
         "--directory",
@@ -272,7 +278,7 @@ Note: this requires that `uv` is available to Claude in your system path or inst
         "teradata-mcp-server"
       ],
       "env": {
-        "DATABASE_URI": "teradata://demo_user:teradata-demo@test-vikzqtnd0db0nglk.env.clearscape.teradata.com:1025/demo_user"
+        "DATABASE_URI": "teradata://username:password@host:1025/databasename"
       }
     }
   }
