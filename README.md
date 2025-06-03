@@ -32,6 +32,8 @@ We are providing three sets of tools and associated helpful prompts
     - get_td_dba_userDelay - Get the Teradata user delay metrics.
     - get_td_dba_tableUsageImpact - measures the usage of a table / view by a user
 
+    - prompt_td_dba_databaseHealthAssessment - Create a database health assessment for a Teradata system
+    - prompt_td_dba_userActivityAnalysis - Create a user activity analysis for a Teradata system
     - prompt_td_dba_tableArchive - Create a table archive strategy for database tables.
     - prompt_td_dba_databaseLineage - Creates a directed lineage map of tables in a database.
     - prompt_td_dba_tableDropImpact - assesses the impact of a table being dropped
