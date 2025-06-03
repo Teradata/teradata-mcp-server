@@ -255,20 +255,31 @@ async def get_td_dba_tableUsageImpact(
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_get_td_dba_tableUsageImpact, db_name=db_name,  user_name=user_name)
 
+
+@mcp.prompt()
+async def prompt_td_dba_databaseHealthAssessment() -> UserMessage:
+    """Create a database health assessment for a Teradata system."""
+    return UserMessage(role="user", content=TextContent(type="text", text=td.handle_prompt_td_dba_databaseHealthAssessment))
+
+@mcp.prompt()
+async def prompt_td_dba_userActivityAnalysis() -> UserMessage:
+    """Create a user activity analysis for a Teradata system."""
+    return UserMessage(role="user", content=TextContent(type="text", text=td.handle_prompt_td_dba_userActivityAnalysis))
+
 @mcp.prompt()
 async def prompt_td_dba_tableArchive() -> UserMessage:
     """Create a table archive strategy for database tables."""
     return UserMessage(role="user", content=TextContent(type="text", text=td.handle_prompt_td_dba_tableArchive))
 
 @mcp.prompt()
-async def prompt_td_dba_databaseLineage(database_name: str) -> UserMessage:
+async def prompt_td_dba_databaseLineage(database_name: str, number_days: int) -> UserMessage:
     """Create a database lineage map for tables in a database."""
-    return UserMessage(role="user", content=TextContent(type="text", text=td.handle_prompt_td_dba_databaseLineage.format(database_name=database_name)))
+    return UserMessage(role="user", content=TextContent(type="text", text=td.handle_prompt_td_dba_databaseLineage.format(database_name=database_name, number_days=number_days)))
 
 @mcp.prompt()
-async def prompt_td_dba_tableDropImpact(database_name: str, table_name: str) -> UserMessage:
+async def prompt_td_dba_tableDropImpact(database_name: str, table_name: str, number_days: int) -> UserMessage:
     """Assess the impact of dropping a table."""
-    return UserMessage(role="user", content=TextContent(type="text", text=td.handle_prompt_td_dba_tableDropImpact.format(database_name=database_name, table_name=table_name)))
+    return UserMessage(role="user", content=TextContent(type="text", text=td.handle_prompt_td_dba_tableDropImpact.format(database_name=database_name, table_name=table_name, number_days=number_days)))
 
 #------------------ Data Quality Tools  ------------------#
 
@@ -306,6 +317,12 @@ async def get_td_qlty_standardDeviation(
     """Get the standard deviation from column in a table."""
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_get_td_qlty_standardDeviation, table_name=table_name, col_name=col_name)
+
+
+@mcp.prompt()
+async def prompt_td_qlty_databaseQuality(database_name: str) -> UserMessage:
+    """Assess the data quality of a database."""
+    return UserMessage(role="user", content=TextContent(type="text", text=td.handle_prompt_td_qlty_databaseQuality.format(database_name=database_name)))
 
 
 
