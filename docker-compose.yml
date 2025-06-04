@@ -4,15 +4,18 @@ services:
     image: teradata-mcp-server:latest
     environment:
       - DATABASE_URI=${DATABASE_URI}
+      - SSE=True
+      - SSE_HOST=127.0.0.1
+      - SSE_PORT=8001
     ports:
-      - "${PORT:-8080}:8080"
+      - "${PORT:-8001}:8001"
 
   teradata-rest-server:
     image: teradata-mcp-server:latest
-    entrypoint: sh -c 'mcpo --port 8001 --api-key "${VAR:-top-secret}" -- uv run teradata-mcp-server'
+    entrypoint: sh -c 'mcpo --port 8001 --api-key "$MCPO_API_KEY" -- uv run teradata-mcp-server'
     environment:
       - DATABASE_URI=${DATABASE_URI}
-      - MCPO_API_KEY=${MCPO_API_KEY}    
+      - MCPO_API_KEY
     ports:
       - "8001:8001"
     profiles: ["rest"]

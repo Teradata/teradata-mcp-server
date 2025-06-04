@@ -239,7 +239,7 @@ Note: you will need to modify the directory path in the args for your system, th
 - you can start the server from within the settings.json file or you can "MCP: Start Server"
 
 ### Adding tools using SSE to Visual Studio Code Co-pilot
-- confirm the SSE flag in .env file has been set to False
+- confirm the SSE flag in .env file has been set to True
 ```
 SSE=True
 SSE_HOST=127.0.0.1
@@ -262,10 +262,7 @@ uv run teradata-mcp-server
         "servers": {
             "teradataSSE": {
                 "type": "sse",
-                "url": "http://127.0.0.1:8001/sse",
-                "env": {
-                    "DATABASE_URI": "teradata://username:password@host:1025/databasename"
-                }
+                "url": "http://127.0.0.1:8001/sse"
             }
         }
     }
@@ -329,15 +326,15 @@ You should be able to see the tools in the Chat Control Valves section on the ri
 
 ## Docker & Docker Compose Usage
 
+The server expects the Teradata URI string via the `DATABASE_URI` environment variable. You may update the `docker-compose.yaml` file or setup the environment variable with your system's connection details:
+
+`export DATABASE_URI=teradata://username:password@host:1025/databasename`
+
 ### Build the Docker image
 
 ```sh
 docker compose build
 ```
-
-The server expects the Teradata URI string via the `DATABASE_URI` environment variable. You may update the `docker-compose.yaml` file or setup the environment variable with your system's connection details:
-
-`export DATABASE_URI=teradata://username:password@host:1025/databasename`
 
 ### Run the MCP server (default)
 
@@ -353,22 +350,16 @@ The server will be available on port 8080 (or the value of the `PORT` environmen
 
 To expose your tools as REST endpoints via mcpo, use the `rest` profile.
 
-You can set an API key using the environment variable `MCPO_API_KEY`. The default value is 'top-secret'.
+You can set an API key using the environment variable `MCPO_API_KEY`. 
+Caution: there is no default value, not no authorization needed by default.
 
 ```sh
+export MCPO_API_KEY=top-secret
 docker compose --profile rest up
 ```
 
 You can now access the OpenAPI docs at: [http://localhost:8001/docs](http://localhost:8001/docs)
 
-#### Environment Variables
-- Set `DATABASE_URI` in your environment or in a `.env` file in the project root.
-- Only `DATABASE_URI` is required for the REST server.
-
-#### Example `.env` file
-```
-DATABASE_URI=teradata://username:password@host:1025/databasename
-```
 
 ---
 
