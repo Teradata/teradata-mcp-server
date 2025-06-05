@@ -344,7 +344,7 @@ This starts only the core Teradata MCP server (with stdio or SSE communication):
 docker compose up
 ```
 
-The server will be available on port 8080 (or the value of the `PORT` environment variable).
+The server will be available on port 8001 (or the value of the `PORT` environment variable).
 
 ### Run the REST API server (mcpo) as an option
 
@@ -353,12 +353,14 @@ To expose your tools as REST endpoints via mcpo, use the `rest` profile.
 You can set an API key using the environment variable `MCPO_API_KEY`. 
 Caution: there is no default value, not no authorization needed by default.
 
+The default port is 8002.
+
 ```sh
 export MCPO_API_KEY=top-secret
 docker compose --profile rest up
 ```
 
-You can now access the OpenAPI docs at: [http://localhost:8001/docs](http://localhost:8001/docs)
+You can now access the OpenAPI docs at: [http://localhost:8002/docs](http://localhost:8002/docs)
 
 
 ---
