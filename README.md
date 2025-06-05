@@ -16,7 +16,7 @@ cd teradata-mcp-server
 docker compose up
 ```
 
-You now add it to clients supporting SSE such as [Visual Studio Code](#using-with-visual-studio-code-co-pilot).
+You can now use it with clients supporting SSE such as [Visual Studio Code](#using-with-visual-studio-code-co-pilot).
 
 ## Key features
 
@@ -74,7 +74,7 @@ If you do not have a Teradata system, get a sandbox for free and right away at [
 
 The two recommended ways to run this server are using uv and Docker. 
 
-Jump to next section for the docker option.
+[Jump to next section](#using-docker) for the docker option.
 
 ### Using uv
 
@@ -147,9 +147,9 @@ docker compose up
 
 The server will be available on port 8001 (or the value of the `PORT` environment variable).
 
-### Run the REST API server with REST
+### Run the MCP server with REST
 
-Alternatively, you can expose your tools and prompts as REST endpoints using the `rest` profile.
+Alternatively, you can expose your tools, prompts and resources as REST endpoints using the `rest` profile.
 
 You can set an API key using the environment variable `MCPO_API_KEY`. 
 Caution: there is no default value, not no authorization needed by default.
@@ -344,14 +344,23 @@ Query: /prompt prompt_td_base_databaseBusinessDesc database_name=demo_user
 You can use [mcpo](https://github.com/open-webui/mcpo) to expose this MCP tool as an OpenAPI-compatible HTTP server.
 
 For example, using uv:
-`uvx mcpo --port 8001 --api-key "top-secret" -- uv run teradata-mcp-server`
 
-Your Teradata tools are now available as local REST endpoints, view documentation and test it at http://localhost:8001/docs
+```
+uvx mcpo --port 8002 --api-key "top-secret" -- uv run teradata-mcp-server
+```
+
+TOr with Docker, using the "rest"  profile:
+```sh
+export MCPO_API_KEY=top-secret
+docker compose --profile rest up
+```
+
+Your Teradata tools are now available as local REST endpoints, view documentation and test it at http://localhost:8002/docs
 
 ## Using with Open WebUI
-[Open WebUI](https://github.com/open-webui/open-webui) is user-friendly self-hosted AI platform designed to operate entirely offline, supporting various LLM runners like Ollama. It provides a convenient way to interact with LLMs and MCP servers from an intuitive GUI. It can be integrated with this MCP server using the [mcpo](https://github.com/open-webui/mcpo) component.
+[Open WebUI](https://github.com/open-webui/open-webui) is user-friendly self-hosted AI platform designed to operate entirely offline, supporting various LLM runners like Ollama. It provides a convenient way to interact with LLMs and MCP servers from an intuitive GUI. It can be integrated with this MCP server using the REST endpoints.
 
-First run mcpo as specified [in the section above](#exposing-tools-as-rest-endpoints-with-mcpo).
+Run the MCP server as a REST server [in the section above](#using-with-any-tool-rest-interface).
 
 ```
 python -m venv ./env
