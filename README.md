@@ -5,44 +5,44 @@ The Teradata MCP server is a open source project, we welcome contributions via p
 
 We are providing three sets of tools and associated helpful prompts
 1. td_base tools / prompts / resources:
-    - get_td_base_readQuery - runs a read query
-    - write_td_base_writeQuery - runs a write query
-    - get_td_base_tableDDL - returns the show table results
-    - get_td_base_databaseList - returns a list of all databases
-    - get_td_base_tableList - returns a list of tables in a database
-    - get_td_base_columnDescription - returns description of columns in a table
-    - get_td_base_tablePreview - returns column information and 5 rows from the table
-    - get_td_base_tableAffinity - gets tables commonly used together
-    - get_td_base_tableUsage - Measure the usage of a table and views by users in a given schema
+    - get_base_readQuery - runs a read query
+    - write_base_writeQuery - runs a write query
+    - get_base_tableDDL - returns the show table results
+    - get_base_databaseList - returns a list of all databases
+    - get_base_tableList - returns a list of tables in a database
+    - get_base_columnDescription - returns description of columns in a table
+    - get_base_tablePreview - returns column information and 5 rows from the table
+    - get_base_tableAffinity - gets tables commonly used together
+    - get_base_tableUsage - Measure the usage of a table and views by users in a given schema
 
-    - prompt_td_base_query - Create a SQL query against the database
-    - prompt_td_base_tableBusinessDesc - generates a business description of a table
-    - prompt_td_base_databaseBusinessDesc - generates a business description of a databases based on the tables
+    - base_query - Create a SQL query against the database
+    - base_tableBusinessDesc - generates a business description of a table
+    - base_databaseBusinessDesc - generates a business description of a databases based on the tables
 
 2. td_dba tools / prompts / resources:
-    - get_td_dba_userSqlList - returns a list of recently executed SQL for a user
-    - get_td_dba_tableSqlList - returns a list of recently executed SQL for a table
-    - get_td_dba_tableSpace - returns CurrentPerm table space 
-    - get_td_dba_databaseSpace - returns Space allocated, space used and percentage used for a database
-    - get_td_dba_databaseVersion - returns the database version information
-    - get_td_dba_resusageSummary - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.
-    - get_td_dba_resusageUserSummary - Get the system usage for a user
-    - get_td_dba_flowControl - Get the Teradata system flow control metrics by day and hour
-    - get_td_dba_featureUsage - Get the user feature usage metrics
-    - get_td_dba_userDelay - Get the Teradata user delay metrics.
-    - get_td_dba_tableUsageImpact - measures the usage of a table / view by a user
+    - get_dba_userSqlList - returns a list of recently executed SQL for a user
+    - get_dba_tableSqlList - returns a list of recently executed SQL for a table
+    - get_dba_tableSpace - returns CurrentPerm table space 
+    - get_dba_databaseSpace - returns Space allocated, space used and percentage used for a database
+    - get_dba_databaseVersion - returns the database version information
+    - get_dba_resusageSummary - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.
+    - get_dba_resusageUserSummary - Get the system usage for a user
+    - get_dba_flowControl - Get the Teradata system flow control metrics by day and hour
+    - get_dba_featureUsage - Get the user feature usage metrics
+    - get_dba_userDelay - Get the Teradata user delay metrics.
+    - get_dba_tableUsageImpact - measures the usage of a table / view by a user
 
-    - prompt_td_dba_databaseHealthAssessment - Create a database health assessment for a Teradata system
-    - prompt_td_dba_userActivityAnalysis - Create a user activity analysis for a Teradata system
-    - prompt_td_dba_tableArchive - Create a table archive strategy for database tables.
-    - prompt_td_dba_databaseLineage - Creates a directed lineage map of tables in a database.
-    - prompt_td_dba_tableDropImpact - assesses the impact of a table being dropped
+    - dba_databaseHealthAssessment - Create a database health assessment for a Teradata system
+    - dba_userActivityAnalysis - Create a user activity analysis for a Teradata system
+    - dba_tableArchive - Create a table archive strategy for database tables.
+    - dba_databaseLineage - Creates a directed lineage map of tables in a database.
+    - dba_tableDropImpact - assesses the impact of a table being dropped
 
 3. td_qlty tools / prompts / resources:
-    - get_td_qlty_missingValues - returns a list of column names with missing values
-    - get_td_qlty_negativeValues - returns a list of column names with negative values
-    - get_td_qlty_distinctCategories - returns a list of categories within a column
-    - get_td_qlty_standardDeviation - returns the mean and standard deviation for a column
+    - get_qlty_missingValues - returns a list of column names with missing values
+    - get_qlty_negativeValues - returns a list of column names with negative values
+    - get_qlty_distinctCategories - returns a list of categories within a column
+    - get_qlty_standardDeviation - returns the mean and standard deviation for a column
 
 You may add define custom "query" tools in the `custom_tools.yaml` file or in any file ending with `_tools.yaml`. 
 Simply specify the tool name, description and SQL query to be executed. No parameters are supported at this point.
@@ -197,7 +197,7 @@ Query: /prompts
 ```
 &nbsp;&nbsp;&nbsp;&nbsp;Step 4 - running a prompt to describe a database
 ```
-Query: /prompt prompt_td_base_databaseBusinessDesc database_name=demo_user
+Query: /prompt _base_databaseBusinessDesc database_name=demo_user
 ```
 
 

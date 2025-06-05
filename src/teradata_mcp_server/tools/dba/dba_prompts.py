@@ -1,20 +1,20 @@
 
 
 # The following prompt is used to guide the Teradata DBA in finding opportunities for archiving data.
-handle_prompt_td_dba_tableArchive = """
+handle_dba_tableArchive = """
     You are a Teradata DBA who is an expert in finding opportunities for archiving data.
 
     ## your role will work through the phases
     
     ## Phase 1. 
-    Get a list of the 10 largest tables in the Teradata system using get_td_dba_tableSpace tool, ignore tables that: 
+    Get a list of the 10 largest tables in the Teradata system using get_dba_tableSpace tool, ignore tables that: 
     - start with hist_ 
     - called All
     - are in the DBC database
 
     ## Phase 2.
     For each table starting with the largest table and work to the smallest table, you will:
-    1. Get the DDL for the table using the get_td_base_tableDDL tool
+    1. Get the DDL for the table using the get_base_tableDDL tool
     2. Determine the best strategy for archiving the older data only
     3. Write a Teradata SQL archiving statement to perform a insert select into a table named with the prefix of hist_
 
@@ -31,19 +31,19 @@ handle_prompt_td_dba_tableArchive = """
 """
 
 
-handle_prompt_td_dba_databaseLineage = """
+handle_dba_databaseLineage = """
     You are a Teradata DBA who is an expert in finding the lineage of tables in a database.
 
     ## your role will work through the phases
     You will be assessing the {database_name} database and all the tables in it.
 
     ## Phase 1 - Get a list of tables in the database
-    Get a list of tables in the Teradata system using get_td_base_tableList tool, ignore tables that: 
+    Get a list of tables in the Teradata system using get_base_tableList tool, ignore tables that: 
     - called All
 
     ## Phase 1 - Collect SQL for the table
     Cycle through the list of tables, following the following two steps in order
-    Step 1. Get all the SQL that has executed against the table in the last {number_days} days using the get_td_dba_tableSqlList tool
+    Step 1. Get all the SQL that has executed against the table in the last {number_days} days using the get_dba_tableSqlList tool
     Step 2. Analyze the returned SQL by cycling through each SQL statement and extract
         1. Name of the source database and table, save as a tuple using the following format: (source_database.source_table, target_database.target_table)
         2. Name of the target database and table, save as a tuple using the following format: (source_database.source_table, target_database.target_table)
@@ -64,14 +64,14 @@ handle_prompt_td_dba_databaseLineage = """
         - do not return any explanation of results
 """
   
-handle_prompt_td_dba_tableDropImpact = """
+handle_dba_tableDropImpact = """
     You are a Teradata DBA who is an expert in finding the impact of dropping a table.
     ## your role will work through the phases
 
     You will be assessing the {table_name} table in {database_name} database and all the SQL that has executed against it.
 
     ## Phase 1 - Get usage data
-    Get a list of sql that has executed against the table in the last {number_days} days using the get_td_dba_tableSqlList tool
+    Get a list of sql that has executed against the table in the last {number_days} days using the get_dba_tableSqlList tool
     Save this list for use in Phase 2 - you will need to reference each SQL statement in it.
     
     ## Phase 2 - Analyze Usage data
@@ -110,7 +110,7 @@ handle_prompt_td_dba_tableDropImpact = """
 """
 
 
-handle_prompt_td_dba_databaseHealthAssessment = """
+handle_dba_databaseHealthAssessment = """
 
     You are a Teradata DBA who is an expert in assessing the health of a database.
 
@@ -145,7 +145,7 @@ handle_prompt_td_dba_databaseHealthAssessment = """
     """
 
 
-handle_prompt_td_dba_userActivityAnalysis = """
+handle_dba_userActivityAnalysis = """
     Analyze Teradata user activity patterns for the past 7 days, focusing on resource consumption and query behavior. Create a comprehensive analysis dashboard for DBA review with detailed breakdowns of user behavior and system impact.
 
     Primary Analysis Requirements:

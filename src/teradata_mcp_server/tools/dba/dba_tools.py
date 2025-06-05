@@ -51,8 +51,8 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       user_name (str) - name of the user 
 #     Returns: formatted response with list of QueryText and UserIDs or error message    
-def handle_get_td_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: Optional[int],  *args, **kwargs):
-    logger.debug(f"Tool: handle_get_td_dba_tableSqlList: Args: table_name: {table_name}")
+def handle_get_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: Optional[int],  *args, **kwargs):
+    logger.debug(f"Tool: handle_get_dba_tableSqlList: Args: table_name: {table_name}")
 
     with conn.cursor() as cur:
         if table_name == "":
@@ -69,7 +69,7 @@ def handle_get_td_dba_tableSqlList(conn: TeradataConnection, table_name: str, no
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_td_dba_tableSqlList",
+            "tool_name": "get_dba_tableSqlList",
             "table_name": table_name,
             "no_days": no_days,
             "total_queries": len(data)
@@ -82,8 +82,8 @@ def handle_get_td_dba_tableSqlList(conn: TeradataConnection, table_name: str, no
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       user_name (str) - name of the user 
 #     Returns: formatted response with list of QueryText and UserIDs or error message    
-def handle_get_td_dba_userSqlList(conn: TeradataConnection, user_name: Optional[str] | None, no_days: Optional[int],  *args, **kwargs):
-    logger.debug(f"Tool: handle_get_td_dba_userSqlList: Args: user_name: {user_name}")
+def handle_get_dba_userSqlList(conn: TeradataConnection, user_name: Optional[str] | None, no_days: Optional[int],  *args, **kwargs):
+    logger.debug(f"Tool: handle_get_dba_userSqlList: Args: user_name: {user_name}")
 
     with conn.cursor() as cur:
         if user_name == "":
@@ -105,7 +105,7 @@ def handle_get_td_dba_userSqlList(conn: TeradataConnection, user_name: Optional[
             ORDER BY t1.CollectTimeStamp DESC;""")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_td_dba_userSqlList",
+            "tool_name": "get_dba_userSqlList",
             "user_name": user_name, 
             "no_days": no_days,
             "total_queries": len(data)
@@ -120,8 +120,8 @@ def handle_get_td_dba_userSqlList(conn: TeradataConnection, user_name: Optional[
 #       table_name (str) - name of the table
 #       db_name (str) - name of the database 
 #     Returns: formatted response with list of tables and space information or database and space used or error message    
-def handle_get_td_dba_tableSpace(conn: TeradataConnection, db_name: Optional[str] | None , table_name: Optional[str] | None, *args, **kwargs):
-    logger.debug(f"Tool: handle_get_td_dba_tableSpace: Args: db_name: {db_name}, table_name: {table_name}")
+def handle_get_dba_tableSpace(conn: TeradataConnection, db_name: Optional[str] | None , table_name: Optional[str] | None, *args, **kwargs):
+    logger.debug(f"Tool: handle_get_dba_tableSpace: Args: db_name: {db_name}, table_name: {table_name}")
 
     with conn.cursor() as cur:
         if (db_name == "") and (table_name == ""):
@@ -158,7 +158,7 @@ def handle_get_td_dba_tableSpace(conn: TeradataConnection, db_name: Optional[str
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_td_dba_tableSpace",
+            "tool_name": "get_dba_tableSpace",
             "db_name": db_name,
             "table_name": table_name,
             "total_tables": len(data)
@@ -172,8 +172,8 @@ def handle_get_td_dba_tableSpace(conn: TeradataConnection, db_name: Optional[str
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       db_name (str) - name of the database 
 #     Returns: formatted response with list of databases and space information or error message    
-def handle_get_td_dba_databaseSpace(conn: TeradataConnection, db_name: Optional[str] | None, *args, **kwargs):
-    logger.debug(f"Tool: handle_get_td_dba_databaseSpace: Args: db_name: {db_name}")
+def handle_get_dba_databaseSpace(conn: TeradataConnection, db_name: Optional[str] | None, *args, **kwargs):
+    logger.debug(f"Tool: handle_get_dba_databaseSpace: Args: db_name: {db_name}")
 
     with conn.cursor() as cur:
         if (db_name == ""):
@@ -207,7 +207,7 @@ def handle_get_td_dba_databaseSpace(conn: TeradataConnection, db_name: Optional[
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_td_dba_databaseSpace",
+            "tool_name": "get_dba_databaseSpace",
             "db_name": db_name,
             "total_databases": len(data)
         }
@@ -218,8 +218,8 @@ def handle_get_td_dba_databaseSpace(conn: TeradataConnection, db_name: Optional[
 #     Arguments: 
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #     Returns: formatted response with database version information or error message    
-def handle_get_td_dba_databaseVersion(conn: TeradataConnection, *args, **kwargs):
-    logger.debug("Tool: handle_get_td_dba_databaseVersion: Args: ")
+def handle_get_dba_databaseVersion(conn: TeradataConnection, *args, **kwargs):
+    logger.debug("Tool: handle_get_dba_databaseVersion: Args: ")
 
     with conn.cursor() as cur:
         logger.debug("Database version information requested.")
@@ -227,7 +227,7 @@ def handle_get_td_dba_databaseVersion(conn: TeradataConnection, *args, **kwargs)
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_td_dba_databaseVersion",
+            "tool_name": "get_dba_databaseVersion",
             "total_rows": len(data)
         }
         return create_response(data, metadata)
@@ -238,7 +238,7 @@ def handle_get_td_dba_databaseVersion(conn: TeradataConnection, *args, **kwargs)
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       dimensions (List[str]) - list of dimensions to aggregate the resource usage summary. All dimensions are: ["LogDate", "hourOfDay", "dayOfWeek", "workloadType", "workloadComplexity", "UserName", "AppId", "StatementType"]
 #     Returns: formatted response with aggregated resource usage summary or error message
-def handle_get_td_dba_resusageSummary(conn: TeradataConnection, 
+def handle_get_dba_resusageSummary(conn: TeradataConnection, 
                                  dimensions: Optional[List[str]] = None,
                                  user_name: Optional[str] = None,
                                  date:  Optional[str] = None,
@@ -246,7 +246,7 @@ def handle_get_td_dba_resusageSummary(conn: TeradataConnection,
                                  hourOfDay:  Optional[str] = None,
                                  *args, **kwargs):
 
-    logger.debug(f"Tool: handle_get_td_dba_resusageSummary: Args: dimensions: {dimensions}")
+    logger.debug(f"Tool: handle_get_dba_resusageSummary: Args: dimensions: {dimensions}")
 
     comment="Total system resource usage summary."
 
@@ -346,7 +346,7 @@ def handle_get_td_dba_resusageSummary(conn: TeradataConnection,
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_td_dba_resusageSummary",
+            "tool_name": "get_dba_resusageSummary",
             "total_rows": len(data) ,
             "comment": comment
         }
@@ -358,8 +358,8 @@ def handle_get_td_dba_resusageSummary(conn: TeradataConnection,
 #     Arguments: 
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #     Returns: formatted response with database flow control information or error message    
-def handle_get_td_dba_flowControl(conn: TeradataConnection, *args, **kwargs):
-    logger.debug("Tool: handle_get_td_dba_flowControl: Args: ")
+def handle_get_dba_flowControl(conn: TeradataConnection, *args, **kwargs):
+    logger.debug("Tool: handle_get_dba_flowControl: Args: ")
 
     with conn.cursor() as cur:
         logger.debug("Database flow control information requested.")
@@ -400,7 +400,7 @@ def handle_get_td_dba_flowControl(conn: TeradataConnection, *args, **kwargs):
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_td_dba_flowControl",
+            "tool_name": "get_dba_flowControl",
             "total_rows": len(data) 
         }
         return create_response(data, metadata)    
@@ -411,11 +411,11 @@ def handle_get_td_dba_flowControl(conn: TeradataConnection, *args, **kwargs):
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       db_name (str) - name of the database
 #       user_name (str) - name of the user
-def handle_get_td_dba_tableUsageImpact(conn: TeradataConnection, db_name: Optional[str] = None, user_name: Optional[str] = None, *args, **kwargs):
+def handle_get_dba_tableUsageImpact(conn: TeradataConnection, db_name: Optional[str] = None, user_name: Optional[str] = None, *args, **kwargs):
     """
     Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time.
     """
-    logger.debug("Tool: handle_get_td_dba_tableUsageImpact: Args: ")
+    logger.debug("Tool: handle_get_dba_tableUsageImpact: Args: ")
     if db_name:
         database_name_filter=f"AND objectdatabasename = '{db_name}'"
     else:
@@ -486,7 +486,7 @@ def handle_get_td_dba_tableUsageImpact(conn: TeradataConnection, db_name: Option
     else:
         info=f'No tables have recently been queried in the database schema {db_name}.'
     metadata = {
-        "tool_name": "handle_get_td_dba_tableUsageImpact",
+        "tool_name": "handle_get_dba_tableUsageImpact",
         "database": db_name,
         "table_count": len(data),
         "comment": info
@@ -499,8 +499,8 @@ def handle_get_td_dba_tableUsageImpact(conn: TeradataConnection, db_name: Option
 #     Arguments: 
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #     Returns: formatted response with database feature usage information or error message    
-def handle_get_td_dba_featureUsage(conn: TeradataConnection, *args, **kwargs):
-    logger.debug("Tool: handle_get_td_dba_featureUsage: Args: ")
+def handle_get_dba_featureUsage(conn: TeradataConnection, *args, **kwargs):
+    logger.debug("Tool: handle_get_dba_featureUsage: Args: ")
 
     with conn.cursor() as cur:
         logger.debug("Database feature usage information requested.")
@@ -525,7 +525,7 @@ def handle_get_td_dba_featureUsage(conn: TeradataConnection, *args, **kwargs):
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_td_dba_featureUsage",
+            "tool_name": "get_dba_featureUsage",
             "total_rows": len(data) 
         }
         return create_response(data, metadata)    
@@ -536,8 +536,8 @@ def handle_get_td_dba_featureUsage(conn: TeradataConnection, *args, **kwargs):
 #     Arguments: 
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #     Returns: formatted response with database user delay experience information or error message    
-def handle_get_td_dba_userDelay(conn: TeradataConnection, *args, **kwargs):
-    logger.debug("Tool: handle_get_td_dba_userDelay: Args: ")
+def handle_get_dba_userDelay(conn: TeradataConnection, *args, **kwargs):
+    logger.debug("Tool: handle_get_dba_userDelay: Args: ")
 
     with conn.cursor() as cur:
         logger.debug("Database user delay information requested.")
@@ -575,7 +575,7 @@ def handle_get_td_dba_userDelay(conn: TeradataConnection, *args, **kwargs):
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_td_dba_userDelay",
+            "tool_name": "get_dba_userDelay",
             "total_rows": len(data)
         }
         return create_response(data, metadata)    

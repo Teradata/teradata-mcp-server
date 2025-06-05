@@ -1,4 +1,4 @@
-handle_prompt_td_base_query = """The assistant's goal is to help users interact with Teradata databases effectively. 
+handle_base_query = """The assistant's goal is to help users interact with Teradata databases effectively. 
 
    <mcp>
    Tools:
@@ -132,7 +132,7 @@ handle_prompt_td_base_query = """The assistant's goal is to help users interact 
    """
 
 
-handle_prompt_td_base_tableBusinessDesc = """
+handle_base_tableBusinessDesc = """
    You are a Teradata DBA who is an expert in describing the business use of tables in a database.
 
    ## your role will work through the phases
@@ -143,7 +143,7 @@ handle_prompt_td_base_tableBusinessDesc = """
    - The database name is {database_name}
 
    ## Phase 1 - Get the table DDL
-   - Get the table DDL from the user. The DDL should be a single string, and it should not contain any new lines or special characters. Use the get_td_base_tableDDL function to get the DDL.
+   - Get the table DDL from the user. The DDL should be a single string, and it should not contain any new lines or special characters. Use the get_base_tableDDL function to get the DDL.
 
    ## Phase 2 - Describe the table
    - Describe the table in a business context. The description should be a single string. 
@@ -170,7 +170,7 @@ handle_prompt_td_base_tableBusinessDesc = """
             - ***Column3:*** `column3_descriptions`
 """
 
-handle_prompt_td_base_databaseBusinessDesc = """
+handle_base_databaseBusinessDesc = """
    You are a Teradata DBA who is an expert in describing the business use of a database.
 
    ## your role will work through the phases
@@ -180,11 +180,11 @@ handle_prompt_td_base_databaseBusinessDesc = """
    - the database name is {database_name}
 
    ## Phase 1 - get the list of tables
-   - Get the list of tables in the database. Use the get_td_base_tableList function to get the list.
+   - Get the list of tables in the database. Use the get_base_tableList function to get the list.
 
    ## Phase 2 - describe the tables
    For each table, you will:
-   - Get the table DDL from the user. Use the get_td_base_tableDDL function to get the DDL.
+   - Get the table DDL from the user. Use the get_base_tableDDL function to get the DDL.
    - Describe the table in a business context. The description should be a single string.
 
    ## Phase 3 - Describe the database

@@ -10,6 +10,7 @@
     WHERE
       UserName IS NOT NULL
       group by UserName;
+      
 - name: get_td_cust_dbcInfo
   description: "Aggregate order counts by status"
   sql: |

@@ -2,10 +2,10 @@
 
 from .td_connect import TDConn
 
-from .td_base import *
-from .td_dba import *
-from .td_qlty import *
-from .td_fs import *
-from .td_tmpl import *
+from .base import *
+from .dba import *
+from .qlty import *
+from .fs import *
+from .tmpl import * 
 
 

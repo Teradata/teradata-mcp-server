@@ -1,4 +1,4 @@
-handle_prompt_td_qlty_databaseQuality = """
+handle_qlty_databaseQuality = """
 
 # Name:  Database data quality assessment
 
