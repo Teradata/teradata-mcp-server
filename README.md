@@ -1,7 +1,24 @@
-# Teradata MCP Server Template
+# Teradata MCP Server
 
-### Overview
-The Teradata MCP server is a open source project, we welcome contributions via pull requests.
+## Overview
+The Teradata MCP server provides a set of tools and prompts for interacting with Teradata databases, enabling AI agents and users to query, analyze, and manage their data efficiently. 
+
+This is an open project and we welcome contributions via pull requests.
+
+## TLDR; I want to try it locally now
+
+If you have Docker and a client that can connect MCP servers via SSE, copy the code below, update the connection string set in `DATABASE_URI` with your database connection details and run it:
+
+```
+export DATABASE_URI=teradata://username:password@host:1025
+git clone https://github.com/Teradata/teradata-mcp-server.git
+cd teradata-mcp-server
+docker compose up
+```
+
+You now add it to clients supporting SSE such as [Visual Studio Code](#using-with-visual-studio-code-co-pilot).
+
+## Key features
 
 We are providing three sets of tools and associated helpful prompts
 1. td_base tools / prompts / resources:
@@ -50,14 +67,20 @@ Simply specify the tool name, description and SQL query to be executed. No param
 The Test directory contains a simple ClientChatBot tool for testing tools.
 
 --------------------------------------------------------------------------------------
-### Environment Set Up
+## Environment Set Up
 
 If you do not have a Teradata system, get a sandbox for free and right away at [ClearScape Analytics Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics)!
 
 
-**Step 1** - The environment has been put together assuming you have the uv package installed on your local machine.  Installation instructions for uv can be found at https://github.com/astral-sh/uv 
+The two recommended ways to run this server are using uv and Docker. 
 
-**Step 2** - Clone the mcp-server repository with 
+Jump to next section for the docker option.
+
+### Using uv
+
+Make sure you have uv installed on your system, installation instructions can be found at https://github.com/astral-sh/uv .
+
+**Step 1** - Clone the mcp-server repository with 
 
 On Windows
 ```
@@ -75,7 +98,7 @@ uv sync
 source .venv/bin/activate
 ```
 
-**Step 3** - Configure the server
+**Step 2** - Configure the server
 
 The server will connect to your Teradata instance and to the clients over stdio (default) or server-sent events (SSE). To configure the connections set the following environment variables in your shell or in a .env file in the current directory (by updating and renaming the provided [env](./env) file).
 
@@ -97,9 +120,48 @@ export SSE_HOST=127.0.0.1
 export SSE_PORT=8001
 ```
 
---------------------------------------------------------------------------------------
+**Step 3** - Run the server with uv
 
-### Adding tools using stdio to Visual Studio Code Co-pilot
+`uv run teradata-mcp-server`
+
+--------------------------------------------------------------------------------------
+## Using Docker
+
+Clone this repository
+```
+git clone https://github.com/Teradata/teradata-mcp-server.git
+cd teradata-mcp-server
+```
+
+The server expects the Teradata URI string via the `DATABASE_URI` environment variable. You may update the `docker-compose.yaml` file or setup the environment variable with your system's connection details:
+
+`export DATABASE_URI=teradata://username:password@host:1025/databaseschema`
+
+### Run the MCP server with SSE (default)
+
+This starts only the core Teradata MCP server (with stdio or SSE communication):
+
+```sh
+docker compose up
+```
+
+The server will be available on port 8001 (or the value of the `PORT` environment variable).
+
+### Run the REST API server with REST
+
+Alternatively, you can expose your tools and prompts as REST endpoints using the `rest` profile.
+
+You can set an API key using the environment variable `MCPO_API_KEY`. 
+Caution: there is no default value, not no authorization needed by default.
+
+The default port is 8002.
+
+```sh
+export MCPO_API_KEY=top-secret
+docker compose --profile rest up
+```
+
+## Using with Visual Studio Code Co-pilot
 
 Visual Studio Code Co-pilot provides a simple and interactive way to test this server. 
 Follow the instructions below to run and configure the server, set co-pilot to Agent mode, and use it.
@@ -109,7 +171,7 @@ Follow the instructions below to run and configure the server, set co-pilot to A
 Detailed instructions on configuring MCP server with Visual Studio Code can be found [in Visual Studio Code documentation](https://code.visualstudio.com/docs/copilot/chat/mcp-servers).
 
 
-#### Using Server-Sent Events (SSE) (recommended)
+### Using Server-Sent Events (SSE) (recommended)
 
 You can use uv or Docker to start the server.
 
@@ -151,7 +213,7 @@ Add the server in VS Code:
 ```
 - within the settings.json file or you can "MCP: Start Server"  
  
-#### Using stdio
+### Using stdio
 To run the server with stdio set SSE flag to False in your .env file or via the `SSE` environment variable.
 
 ```
@@ -193,7 +255,7 @@ Note: you will need to modify the directory path in the args for your system, th
 - you can start the server from within the settings.json file or you can "MCP: Start Server"
 
 
-### Adding the MCP server to Claude Desktop
+## Using with Claude Desktop
 You can add this server Claude desktop adding this entry to your `claude_desktop_config.json` config file:
 
 Note: you will need to modify the directory path in the args for your system, this needs to be a complete path.  You may also need to have a complete path to uv in the command as well.
@@ -220,30 +282,8 @@ Note: this requires that `uv` is available to Claude in your system path or inst
 ```
 
 
-### Testing your server with MCP Inspector
-Step 1 - Start the server, typer the following in your terminal
-```
-uv run mcp dev ./src/teradata_mcp_server/server.py
-```
-NOTE: If you are running this on a Windows machine and get npx, npm or node.js errors, install the required node.js software from here: https://github.com/nodists/nodist
-
-Step 2 - Open the MCP Inspector
-- You should open the inspector tool, go to http://127.0.0.1:6274 
-- Click on tools
-- Click on list tools
-- Click on read_database_list
-- Click on run
-
-Test the other tools, each should have a successful outcome
-
-Control+c to stop the server in the terminal
-
-### Running the server
-You can simply run the server with:
-`uv run teradata-mcp-server`
-
-### Adding your sever to an Agent using stdio
-#### Option 1 - pydanticai chatbot
+## Using with AI Agents (stdio version)
+### Option 1 - pydanticai chatbot
 &nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the SSE flag in .env file has been set to False
 ```
 SSE=False
@@ -264,7 +304,7 @@ uv run ./test/ClientChatBot.py
 - Ask the agent a question that requires SQL to run against a table
 - Type "quit" to exit.
 
-#### Option 2 - ADK Chatbot
+### Option 2 - ADK Chatbot
 &nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the SSE flag in .env file has been set to False
 ```
 SSE=False
@@ -278,7 +318,7 @@ adk web
 
 &nbsp;&nbsp;&nbsp;&nbsp; Step 4 - chat with the td_agent
 
-#### Option 3 - mcp_chatbot
+### Option 3 - mcp_chatbot
 
 &nbsp;&nbsp;&nbsp;&nbsp; step 0 - Modify server_config.json in the test directory, ensure path is correct.
 
@@ -300,7 +340,7 @@ Query: /prompt prompt_td_base_databaseBusinessDesc database_name=demo_user
 ```
 
 
-### Exposing tools as REST endpoints with mcpo
+## Using with any tool: REST interface 
 You can use [mcpo](https://github.com/open-webui/mcpo) to expose this MCP tool as an OpenAPI-compatible HTTP server.
 
 For example, using uv:
@@ -308,7 +348,7 @@ For example, using uv:
 
 Your Teradata tools are now available as local REST endpoints, view documentation and test it at http://localhost:8001/docs
 
-### Using the server with Open WebUI
+## Using with Open WebUI
 [Open WebUI](https://github.com/open-webui/open-webui) is user-friendly self-hosted AI platform designed to operate entirely offline, supporting various LLM runners like Ollama. It provides a convenient way to interact with LLMs and MCP servers from an intuitive GUI. It can be integrated with this MCP server using the [mcpo](https://github.com/open-webui/mcpo) component.
 
 First run mcpo as specified [in the section above](#exposing-tools-as-rest-endpoints-with-mcpo).
@@ -327,41 +367,6 @@ You should be able to see the tools in the Chat Control Valves section on the ri
 
 ---
 
-## Docker & Docker Compose Usage
-
-The server expects the Teradata URI string via the `DATABASE_URI` environment variable. You may update the `docker-compose.yaml` file or setup the environment variable with your system's connection details:
-
-`export DATABASE_URI=teradata://username:password@host:1025/databasename`
-
-### Build the Docker image
-
-```sh
-docker compose build
-```
-
-### Run the MCP server (default)
-
-This starts only the core Teradata MCP server (with stdio or SSE communication):
-
-```sh
-docker compose up
-```
-
-The server will be available on port 8001 (or the value of the `PORT` environment variable).
-
-### Run the REST API server (mcpo) as an option
-
-To expose your tools as REST endpoints via mcpo, use the `rest` profile.
-
-You can set an API key using the environment variable `MCPO_API_KEY`. 
-Caution: there is no default value, not no authorization needed by default.
-
-The default port is 8002.
-
-```sh
-export MCPO_API_KEY=top-secret
-docker compose --profile rest up
-```
 
 You can now access the OpenAPI docs at: [http://localhost:8002/docs](http://localhost:8002/docs)
 
@@ -369,6 +374,24 @@ You can now access the OpenAPI docs at: [http://localhost:8002/docs](http://loca
 ---
 
 For more details on mcpo, see: https://github.com/open-webui/mcpo
+
+### Testing your server with MCP Inspector
+Step 1 - Start the server, typer the following in your terminal
+```
+uv run mcp dev ./src/teradata_mcp_server/server.py
+```
+NOTE: If you are running this on a Windows machine and get npx, npm or node.js errors, install the required node.js software from here: https://github.com/nodists/nodist
+
+Step 2 - Open the MCP Inspector
+- You should open the inspector tool, go to http://127.0.0.1:6274 
+- Click on tools
+- Click on list tools
+- Click on read_database_list
+- Click on run
+
+Test the other tools, each should have a successful outcome
+
+Control+c to stop the server in the terminal
 
 ---------------------------------------------------------------------
 ## Certification
