@@ -20,8 +20,11 @@ You can now use it with clients supporting SSE such as [Visual Studio Code](#usi
 
 ## Key features
 
+### Available tools and prompts
+
 We are providing three sets of tools and associated helpful prompts
-1. td_base tools / prompts / resources:
+
+**Base** tools, prompts and resources to interact with your Teradata platform:
     - get_td_base_readQuery - runs a read query
     - write_td_base_writeQuery - runs a write query
     - get_td_base_tableDDL - returns the show table results
@@ -36,31 +39,33 @@ We are providing three sets of tools and associated helpful prompts
     - prompt_td_base_tableBusinessDesc - generates a business description of a table
     - prompt_td_base_databaseBusinessDesc - generates a business description of a databases based on the tables
 
-2. td_dba tools / prompts / resources:
-    - get_td_dba_userSqlList - returns a list of recently executed SQL for a user
-    - get_td_dba_tableSqlList - returns a list of recently executed SQL for a table
-    - get_td_dba_tableSpace - returns CurrentPerm table space 
-    - get_td_dba_databaseSpace - returns Space allocated, space used and percentage used for a database
-    - get_td_dba_databaseVersion - returns the database version information
-    - get_td_dba_resusageSummary - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.
-    - get_td_dba_resusageUserSummary - Get the system usage for a user
-    - get_td_dba_flowControl - Get the Teradata system flow control metrics by day and hour
-    - get_td_dba_featureUsage - Get the user feature usage metrics
-    - get_td_dba_userDelay - Get the Teradata user delay metrics.
-    - get_td_dba_tableUsageImpact - measures the usage of a table / view by a user
+**DBA** tools, prompts and resources to facilitate your platform administration tasks:
 
-    - prompt_td_dba_databaseHealthAssessment - Create a database health assessment for a Teradata system
-    - prompt_td_dba_userActivityAnalysis - Create a user activity analysis for a Teradata system
-    - prompt_td_dba_tableArchive - Create a table archive strategy for database tables.
-    - prompt_td_dba_databaseLineage - Creates a directed lineage map of tables in a database.
-    - prompt_td_dba_tableDropImpact - assesses the impact of a table being dropped
+- get_td_dba_userSqlList - returns a list of recently executed SQL for a user
+- get_td_dba_tableSqlList - returns a list of recently executed SQL for a table
+- get_td_dba_tableSpace - returns CurrentPerm table space 
+- get_td_dba_databaseSpace - returns Space allocated, space used and percentage used for a database
+- get_td_dba_databaseVersion - returns the database version information
+- get_td_dba_resusageSummary - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.
+- get_td_dba_resusageUserSummary - Get the system usage for a user
+- get_td_dba_flowControl - Get the Teradata system flow control metrics by day and hour
+- get_td_dba_featureUsage - Get the user feature usage metrics
+- get_td_dba_userDelay - Get the Teradata user delay metrics.
+- get_td_dba_tableUsageImpact - measures the usage of a table / view by a user
+- prompt_td_dba_databaseHealthAssessment - Create a database health assessment for a Teradata system
+- prompt_td_dba_userActivityAnalysis - Create a user activity analysis for a Teradata system
+- prompt_td_dba_tableArchive - Create a table archive strategy for database tables.
+- prompt_td_dba_databaseLineage - Creates a directed lineage map of tables in a database.
+- prompt_td_dba_tableDropImpact - assesses the impact of a table being dropped
 
-3. td_qlty tools / prompts / resources:
-    - get_td_qlty_missingValues - returns a list of column names with missing values
-    - get_td_qlty_negativeValues - returns a list of column names with negative values
-    - get_td_qlty_distinctCategories - returns a list of categories within a column
-    - get_td_qlty_standardDeviation - returns the mean and standard deviation for a column
+**Data Quality** tools, prompts and resources accelerate exploratory data analysis:
 
+- get_td_qlty_missingValues - returns a list of column names with missing values
+- get_td_qlty_negativeValues - returns a list of column names with negative values
+- get_td_qlty_distinctCategories - returns a list of categories within a column
+- get_td_qlty_standardDeviation - returns the mean and standard deviation for a column
+
+### Adding custom tools
 You may add define custom "query" tools in the `custom_tools.yaml` file or in any file ending with `_tools.yaml`. 
 Simply specify the tool name, description and SQL query to be executed. No parameters are supported at this point.
 
