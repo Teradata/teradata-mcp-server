@@ -51,14 +51,16 @@ The Test directory contains a simple ClientChatBot tool for testing tools.
 
 --------------------------------------------------------------------------------------
 ### Environment Set Up
-Step 1 - The environment has been put together assuming you have the uv package installed on your local machine.  Installation instructions for uv can be found at https://github.com/astral-sh/uv 
 
-Step 2 - Clone the mcp-server repository with 
+If you do not have a Teradata system, get a sandbox for free and right away at [ClearScape Analytics Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics)!
+
+
+**Step 1** - The environment has been put together assuming you have the uv package installed on your local machine.  Installation instructions for uv can be found at https://github.com/astral-sh/uv 
+
+**Step 2** - Clone the mcp-server repository with 
 
 On Windows
 ```
-mkdir MCP
-cd MCP
 git clone https://github.com/Teradata/teradata-mcp-server.git
 cd teradata-mcp-server
 uv sync
@@ -67,57 +69,32 @@ uv sync
 
 On Mac/Linux
 ```
-mkdir MCP
-cd MCP
 git clone https://github.com/Teradata/teradata-mcp-server.git
 cd teradata-mcp-server
 uv sync
 source .venv/bin/activate
 ```
 
-Step 3 - You need to update the .env file
-- Rename env file to .env 
-- The database URI will have the following format  teradata://username:password@host:1025/databasename, use a ClearScape Analytics Experience https://www.teradata.com/getting-started/demos/clearscape-analytics
-    - the usename needs updating
-    - the password needs updating
-    - the Teradata host needs updating
-    - the databasename needs updating
+**Step 3** - Configure the server
 
-- LLM Credentials need to be available for test code to work
+The server will connect to your Teradata instance and to the clients over stdio (default) or server-sent events (SSE). To configure the connections set the following environment variables in your shell or in a .env file in the current directory (by updating and renaming the provided [env](./env) file).
 
-- SSE setting 
-    - SSE : Boolean to determine if your server will be using the SSE transport (SSE = True) or the stdio transport (SSE=False)
-    - SSE_HOST: IP address that the server can be found at, default should be 127.0.0.1
-    - SSE_PORT: Port address that the server can be fount at, default should be 8001
+**Database connection string** with the following format: `teradata://username:password@host:1025/[schemaname]`
 
-Example .env file
+Repalce `username`, `password`, `host` with your systems and credential details, set default schema with `schemaname`
+
+
+**Optionally, for SSE connectivity**, set `SSE` to True and your host IP and port number with `SSE_HOST` (defaults to `127.0.0.1`) and `SSE_PORT` (defaults to `8001`):
+
+
+Configuration example:
 ```
-############################################
-DATABASE_URI=teradata://username:password@host:1025/databasename
-SSE=False
-SSE_HOST=127.0.0.1
-SSE_PORT=8001
+export DATABASE_URI=teradata://username:password@host:1025/schemaname
 
-############################################
-# These are only required for testing the server 
-############################################
-aws_role_switch=False
-aws_access_key_id=
-aws_secret_access_key=
-aws_session_token=
-aws_region_name=
-
-############################################
-OPENAI_API_KEY=
-
-############################################
-GOOGLE_GENAI_USE_VERTEXAI=FALSE
-GOOGLE_API_KEY=
-
-############################################
-azure_api_key=
-azure_gpt-4o-mini=
-
+# Enables SSE communication
+export SSE=True
+export SSE_HOST=127.0.0.1
+export SSE_PORT=8001
 ```
 
 --------------------------------------------------------------------------------------
