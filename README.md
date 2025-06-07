@@ -23,7 +23,13 @@ You can now use it with clients supporting SSE such as [Visual Studio Code](#usi
 ### Available tools and prompts
 
 We are providing three sets of tools and associated helpful prompts
-1. base tools:
+- **Base** tools, prompts and resources to interact with your Teradata platform:
+- **DBA** tools, prompts and resources to facilitate your platform administration tasks:
+- **Data Quality** tools, prompts and resources accelerate exploratory data analysis:
+- **Custom Tools** to easily implement tools for custom actions based on your data and business context 
+
+**Base** tools:
+
     - get_base_readQuery - runs a read query
     - write_base_writeQuery - runs a write query
     - get_base_tableDDL - returns the show table results
@@ -34,36 +40,40 @@ We are providing three sets of tools and associated helpful prompts
     - get_base_tableAffinity - gets tables commonly used together
     - get_base_tableUsage - Measure the usage of a table and views by users in a given schema
 
-2. base prompts:
+**Base** Prompts:
+
     - base_query - Create a SQL query against the database
     - base_tableBusinessDesc - generates a business description of a table
     - base_databaseBusinessDesc - generates a business description of a databases based on the tables
 
-3. dba tools:
-    - get_dba_userSqlList - returns a list of recently executed SQL for a user
-    - get_dba_tableSqlList - returns a list of recently executed SQL for a table
-    - get_dba_tableSpace - returns CurrentPerm table space 
-    - get_dba_databaseSpace - returns Space allocated, space used and percentage used for a database
-    - get_dba_databaseVersion - returns the database version information
-    - get_dba_resusageSummary - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.
-    - get_dba_resusageUserSummary - Get the system usage for a user
-    - get_dba_flowControl - Get the Teradata system flow control metrics by day and hour
-    - get_dba_featureUsage - Get the user feature usage metrics
-    - get_dba_userDelay - Get the Teradata user delay metrics.
-    - get_dba_tableUsageImpact - measures the usage of a table / view by a user
+**DBA** tools:
 
-4. dba prompts:
-    - dba_databaseHealthAssessment - Create a database health assessment for a Teradata system
-    - dba_userActivityAnalysis - Create a user activity analysis for a Teradata system
-    - dba_tableArchive - Create a table archive strategy for database tables.
-    - dba_databaseLineage - Creates a directed lineage map of tables in a database.
-    - dba_tableDropImpact - assesses the impact of a table being dropped
+- get_dba_userSqlList - returns a list of recently executed SQL for a user
+- get_dba_tableSqlList - returns a list of recently executed SQL for a table
+- get_dba_tableSpace - returns CurrentPerm table space 
+- get_dba_databaseSpace - returns Space allocated, space used and percentage used for a database
+- get_dba_databaseVersion - returns the database version information
+- get_dba_resusageSummary - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.
+- get_dba_resusageUserSummary - Get the system usage for a user
+- get_dba_flowControl - Get the Teradata system flow control metrics by day and hour
+- get_dba_featureUsage - Get the user feature usage metrics
+- get_dba_userDelay - Get the Teradata user delay metrics.
+- get_dba_tableUsageImpact - measures the usage of a table / view by a user
 
-5. qlty tools:
-    - get_qlty_missingValues - returns a list of column names with missing values
-    - get_qlty_negativeValues - returns a list of column names with negative values
-    - get_qlty_distinctCategories - returns a list of categories within a column
-    - get_qlty_standardDeviation - returns the mean and standard deviation for a column
+**DBA** prompts:
+
+- dba_databaseHealthAssessment - Create a database health assessment for a Teradata system
+- dba_userActivityAnalysis - Create a user activity analysis for a Teradata system
+- dba_tableArchive - Create a table archive strategy for database tables.
+- dba_databaseLineage - Creates a directed lineage map of tables in a database.
+- dba_tableDropImpact - assesses the impact of a table being dropped
+
+**Data Quality** tools:
+
+- get_qlty_missingValues - returns a list of column names with missing values
+- get_qlty_negativeValues - returns a list of column names with negative values
+- get_qlty_distinctCategories - returns a list of categories within a column
+- get_qlty_standardDeviation - returns the mean and standard deviation for a column
 
 ### Adding custom tools
 You may add define custom "query" tools in the `custom_tools.yaml` file or in any file ending with `_tools.yaml`. 
@@ -130,93 +140,105 @@ export SSE_PORT=8001
 `uv run teradata-mcp-server`
 
 --------------------------------------------------------------------------------------
-### Testing your server with MCP Inspector
-Step 1 - Start the server, typer the following in your terminal
-```
-uv run mcp dev ./src/teradata_mcp_server/server.py
-```
-NOTE: If you are running this on a Windows machine and get npx, npm or node.js errors, install the required node.js software from here: https://github.com/nodists/nodist
+## Using Docker
 
-Step 2 - Open the MCP Inspector
-- You should open the inspector tool, go to http://127.0.0.1:6274 
-- Click on tools
-- Click on list tools
-- Click on read_database_list
-- Click on run
-
-Test the other tools, each should have a successful outcome
-
-Control+c to stop the server in the terminal
-
-### Running the server
-You can simply run the server with:
-`uv run teradata-mcp-server`
-
-### Adding your sever to an Agent using stdio
-#### Option 1 - pydanticai chatbot
-&nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the SSE flag in .env file has been set to False
+Clone this repository
 ```
-SSE=False
-```
-&nbsp;&nbsp;&nbsp;&nbsp; Step 2 - Modify the ./test/ClientChatBot.py script to point to where you installed the server, you will need to modify the following line
-```
-    td_mcp_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server", "run", "teradata-mcp-server"])
+git clone https://github.com/Teradata/teradata-mcp-server.git
+cd teradata-mcp-server
 ```
 
-&nbsp;&nbsp;&nbsp;&nbsp; Step 3 - run the ./test/ClientChatBot.py script, this will create an interactive session with the agent who has access to the MCP server.  From a terminal.
-```
-uv run ./test/ClientChatBot.py
+The server expects the Teradata URI string via the `DATABASE_URI` environment variable. You may update the `docker-compose.yaml` file or setup the environment variable with your system's connection details:
+
+`export DATABASE_URI=teradata://username:password@host:1025/databaseschema`
+
+### Run the MCP server with SSE (default)
+
+This starts only the core Teradata MCP server (with stdio or SSE communication):
+
+```sh
+docker compose up
 ```
 
-- Ask the agent to list the databases
-- Ask the agent to list the table in a database
-- Ask the agent to show all the objects in a database
-- Ask the agent a question that requires SQL to run against a table
-- Type "quit" to exit.
+The server will be available on port 8001 (or the value of the `PORT` environment variable).
 
-#### Option 2 - ADK Chatbot
-&nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the SSE flag in .env file has been set to False
-```
-SSE=False
-```
-&nbsp;&nbsp;&nbsp;&nbsp; Step 2 - move into teradata_mcp_server/test directory From a terminal.
-```
-cd test
-adk web
-```
-&nbsp;&nbsp;&nbsp;&nbsp; Step 3 - open [ADK Web Server ](http://0.0.0.0:8000) 
+### Run the MCP server with REST
 
-&nbsp;&nbsp;&nbsp;&nbsp; Step 4 - chat with the td_agent
+Alternatively, you can expose your tools, prompts and resources as REST endpoints using the `rest` profile.
 
-#### Option 3 - mcp_chatbot
+You can set an API key using the environment variable `MCPO_API_KEY`. 
+Caution: there is no default value, not no authorization needed by default.
 
-&nbsp;&nbsp;&nbsp;&nbsp; step 0 - Modify server_config.json in the test directory, ensure path is correct.
+The default port is 8002.
 
-&nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the SSE flag in .env file has been set to False
-```
-SSE=False
-```
-&nbsp;&nbsp;&nbsp;&nbsp;Step 2 - move into teradata_mcp_server directory From a terminal and run the mcp_chatbot
-```
-uv run test/mcp_chatbot.py
-```
-&nbsp;&nbsp;&nbsp;&nbsp;Step 3 - list the prompts by typing /prompts
-```
-Query: /prompts
-```
-&nbsp;&nbsp;&nbsp;&nbsp;Step 4 - running a prompt to describe a database
-```
-Query: /prompt base_databaseBusinessDesc database_name=demo_user
+```sh
+export MCPO_API_KEY=top-secret
+docker compose --profile rest up
 ```
 
+## Using with Visual Studio Code Co-pilot
+
+Visual Studio Code Co-pilot provides a simple and interactive way to test this server. 
+Follow the instructions below to run and configure the server, set co-pilot to Agent mode, and use it.
+
+![alt text](./documentation/media/copilot-agent.png)
+
+Detailed instructions on configuring MCP server with Visual Studio Code can be found [in Visual Studio Code documentation](https://code.visualstudio.com/docs/copilot/chat/mcp-servers).
 
 
-### Adding tools using stdio to Visual Studio Code Co-pilot
-- confirm the SSE flag in .env file has been set to False
+### Using Server-Sent Events (SSE) (recommended)
+
+You can use uv or Docker to start the server.
+
+Using uv, ensure that SSE is enabled (not by default) and the host port are defined. You can do this with setting the environment variables below or in the `.env` file):
+
 ```
-SSE=False
+export SSE=True
+export SSE_HOST=127.0.0.1
+export SSE_PORT=8001
+
+uv run teradata-mcp-server
 ```
-- In VS Code, "Show and Run Commands"
+
+Alternatively, start with Docker (defaults to SSE):
+
+```
+docker compose up
+```
+
+Add the server in VS Code:
+
+- Open the Command Palette (View>Command Palette)
+- select "MCP: Add Server"
+- select "HTTP Server Sent Events"
+- enter URL for the location of the server e.g. http://127.0.0.1:8001/sse
+- enter name of the server for the id
+- select user space
+- the settings.json file should open
+- add the args so that it looks like:
+```
+   "mcp": {
+        "servers": {
+            "teradataSSE": {
+                "type": "sse",
+                "url": "http://127.0.0.1:8001/sse"
+            }
+        }
+    }
+```
+- within the settings.json file or you can "MCP: Start Server"  
+ 
+### Using stdio
+To run the server with stdio set SSE flag to False in your .env file or via the `SSE` environment variable.
+
+```
+export SSE=False
+uv run teradata-mcp-server
+```
+
+Add the server in VS Code:
+
+- Open the Command Palette (View>Command Palette)
 - select "MCP: Add Server"
 - select "Command Stdio"
 - enter "uv" at command to run
