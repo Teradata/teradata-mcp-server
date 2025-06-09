@@ -384,7 +384,7 @@ async def main():
     elif mcp_transport == "streamable-http":
         mcp.settings.host = os.getenv("MCP_HOST")
         mcp.settings.port = int(os.getenv("MCP_PORT"))
-        mcp.settings.streamable_http_path = os.getenv("MCP_PATH", "/mcp")
+        mcp.settings.streamable_http_path = os.getenv("MCP_PATH", "/mcp/")
         logger.info(f"Starting MCP server on {mcp.settings.host}:{mcp.settings.port} with path {mcp.settings.streamable_http_path}")
         await mcp.run_streamable_http_async()
     else:

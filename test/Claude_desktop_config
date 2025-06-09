@@ -16,6 +16,9 @@
       "env" :{
          "DATABASE_URI": "teradata://username:password@host:1025/databasename"
       }
+    },
+    "teradata_mcp_streamable": {
+      "url" : "http://localhost:8001/mcp/",
     }
   }
 }

@@ -124,7 +124,7 @@ Replace `username`, `password`, `host` with your systems and credential details,
 
 **Optionally, for transport connectivity**, SSE transport is in the process of being decommissioned and replaces with streamable-http, we will continue to support SSE for the moment. Set `MCP_TRANSPORT` to `sse` and your host IP and port number with `MCP_HOST` (defaults to `127.0.0.1`) and `MCP_PORT` (defaults to `8001`):
 
-**Optionally, for transport connectivity**, set `MCP_TRANSPORT` to `streamable-http` and your host IP and port number with `MCP_HOST` (defaults to `127.0.0.1`) and `MCP_PORT` (defaults to `8001`) and `MCP_PATH` (defaults to `\mcp`):
+**Optionally, for transport connectivity**, set `MCP_TRANSPORT` to `streamable-http` and your host IP and port number with `MCP_HOST` (defaults to `127.0.0.1`) and `MCP_PORT` (defaults to `8001`) and `MCP_PATH` (defaults to `/mcp/`):
 
 Configuration example:
 ```
