@@ -115,24 +115,26 @@ source .venv/bin/activate
 
 **Step 2** - Configure the server
 
-The server will connect to your Teradata instance and to the clients over stdio (default) or server-sent events (SSE). To configure the connections set the following environment variables in your shell or in a .env file in the current directory (by updating and renaming the provided [env](./env) file).
+The server will connect to your Teradata instance and to the clients over stdio (default) or server-sent events (SSE) or streamable-http. To configure the connections set the following environment variables in your shell or in a .env file in the current directory (by updating and renaming the provided [env](./env) file).
 
 **Database connection string** with the following format: `teradata://username:password@host:1025/[schemaname]`
 
-Repalce `username`, `password`, `host` with your systems and credential details, set default schema with `schemaname`
+Replace `username`, `password`, `host` with your systems and credential details, set default schema with `schemaname`
 
 
-**Optionally, for SSE connectivity**, set `SSE` to True and your host IP and port number with `SSE_HOST` (defaults to `127.0.0.1`) and `SSE_PORT` (defaults to `8001`):
+**Optionally, for transport connectivity**, SSE transport is in the process of being decommissioned and replaces with streamable-http, we will continue to support SSE for the moment. Set `MCP_TRANSPORT` to `sse` and your host IP and port number with `MCP_HOST` (defaults to `127.0.0.1`) and `MCP_PORT` (defaults to `8001`):
 
+**Optionally, for transport connectivity**, set `MCP_TRANSPORT` to `streamable-http` and your host IP and port number with `MCP_HOST` (defaults to `127.0.0.1`) and `MCP_PORT` (defaults to `8001`) and `MCP_PATH` (defaults to `\mcp`):
 
 Configuration example:
 ```
 export DATABASE_URI=teradata://username:password@host:1025/schemaname
 
-# Enables SSE communication
-export SSE=True
-export SSE_HOST=127.0.0.1
-export SSE_PORT=8001
+# Enables transport communication as stdio, sse, streamable-http
+export MCP_TRANSPORT=stdio 
+export MCP_HOST=127.0.0.1
+export MCP_PORT=8001
+export MCP_PATH=/mcp
 ```
 
 **Step 3** - Run the server with uv
@@ -193,9 +195,9 @@ You can use uv or Docker to start the server.
 Using uv, ensure that SSE is enabled (not by default) and the host port are defined. You can do this with setting the environment variables below or in the `.env` file):
 
 ```
-export SSE=True
-export SSE_HOST=127.0.0.1
-export SSE_PORT=8001
+export MCP_TRANSPORT=sse
+export MCP_HOST=127.0.0.1
+export MCP_PORT=8001
 
 uv run teradata-mcp-server
 ```
@@ -229,10 +231,10 @@ Add the server in VS Code:
 - within the settings.json file or you can "MCP: Start Server"  
  
 ### Using stdio
-To run the server with stdio set SSE flag to False in your .env file or via the `SSE` environment variable.
+To run the server with stdio set MCP_TRANSPORT=stdio in your .env file or via the `MCP_TRANSPORT` environment variable.
 
 ```
-export SSE=False
+export MCP_TRANSPORT=stdio
 uv run teradata-mcp-server
 ```
 
@@ -299,9 +301,9 @@ Note: this requires that `uv` is available to Claude in your system path or inst
 
 ## Using with AI Agents (stdio version)
 ### Option 1 - pydanticai chatbot
-&nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the SSE flag in .env file has been set to False
+&nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the MCP_TRANSPORT=stdio  in .env file 
 ```
-SSE=False
+MCP_TRANSPORT=stdio
 ```
 &nbsp;&nbsp;&nbsp;&nbsp; Step 2 - Modify the ./test/ClientChatBot.py script to point to where you installed the server, you will need to modify the following line
 ```
@@ -320,9 +322,9 @@ uv run ./test/ClientChatBot.py
 - Type "quit" to exit.
 
 ### Option 2 - ADK Chatbot
-&nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the SSE flag in .env file has been set to False
+&nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the MCP_TRANSPORT=stdio  in .env file 
 ```
-SSE=False
+MCP_TRANSPORT=stdio
 ```
 &nbsp;&nbsp;&nbsp;&nbsp; Step 2 - move into teradata_mcp_server/test directory From a terminal.
 ```
@@ -337,9 +339,9 @@ adk web
 
 &nbsp;&nbsp;&nbsp;&nbsp; step 0 - Modify server_config.json in the test directory, ensure path is correct.
 
-&nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the SSE flag in .env file has been set to False
+&nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the MCP_TRANSPORT=stdio  in .env file 
 ```
-SSE=False
+MCP_TRANSPORT=stdio
 ```
 &nbsp;&nbsp;&nbsp;&nbsp;Step 2 - move into teradata_mcp_server directory From a terminal and run the mcp_chatbot
 ```

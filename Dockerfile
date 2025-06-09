@@ -28,8 +28,8 @@ RUN useradd --no-log-init --create-home appuser && chown -R appuser /app
 USER appuser
 
 ENV PYTHONUNBUFFERED=1
-ENV SSE=True
-ENV SSE_HOST=127.0.0.1
-ENV SSE_PORT=8001
+ENV MCP_TRANSPORT=sse
+ENV MCP_HOST=127.0.0.1
+ENV MCP_PORT=8001
 CMD ["uv", "run", "teradata-mcp-server"]
 # └──────────── End runtime stage ──────────┘

@@ -4,19 +4,19 @@ services:
     image: teradata-mcp-server:latest
     environment:
       - DATABASE_URI=${DATABASE_URI}
-      - SSE=True
-      - SSE_HOST=0.0.0.0
-      - SSE_PORT=8001
+      - MCP_TRANSPORT=sse
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8001
     ports:
       - "${PORT:-8001}:8001"
 
   teradata-rest-server:
     build: .
     image: teradata-mcp-server:latest
-    entrypoint: sh -c 'export SSE=False && mcpo --port 8002 --api-key "$MCPO_API_KEY" -- uv run teradata-mcp-server'
+    entrypoint: sh -c 'export MCP_TRANSPORT=stdio && mcpo --port 8002 --api-key "$MCPO_API_KEY" -- uv run teradata-mcp-server'
     environment:
       - DATABASE_URI=${DATABASE_URI}
-      - SSE=False
+      - MCP_TRANSPORT=stdio
       - MCPO_API_KEY
     ports:
       - "8002:8002"

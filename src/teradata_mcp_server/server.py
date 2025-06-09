@@ -360,8 +360,8 @@ for q in query_defs:
 async def main():
     global _tdconn
     
-    sse = os.getenv("SSE", "false").lower()
-    logger.info(f"SSE: {sse}")
+    mcp_transport = os.getenv("MCP_TRANSPORT", "stdio").lower()
+    logger.info(f"MCP_TRANSPORT: {mcp_transport}")
 
     # Set up proper shutdown handling
     try:
@@ -376,12 +376,17 @@ async def main():
         pass
     
     # Start the MCP server
-    # await mcp.run_stdio_async()
-    if sse == "true":
-        mcp.settings.host = os.getenv("SSE_HOST")
-        mcp.settings.port = int(os.getenv("SSE_PORT"))
+    if mcp_transport == "sse":
+        mcp.settings.host = os.getenv("MCP_HOST")
+        mcp.settings.port = int(os.getenv("MCP_PORT"))
         logger.info(f"Starting MCP server on {mcp.settings.host}:{mcp.settings.port}")
         await mcp.run_sse_async()
+    elif mcp_transport == "streamable-http":
+        mcp.settings.host = os.getenv("MCP_HOST")
+        mcp.settings.port = int(os.getenv("MCP_PORT"))
+        mcp.settings.streamable_http_path = os.getenv("MCP_PATH", "/mcp")
+        logger.info(f"Starting MCP server on {mcp.settings.host}:{mcp.settings.port} with path {mcp.settings.streamable_http_path}")
+        await mcp.run_streamable_http_async()
     else:
         logger.info("Starting MCP server on stdin/stdout")
         await mcp.run_stdio_async()    

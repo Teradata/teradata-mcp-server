@@ -11,7 +11,6 @@ dependencies = [
     "langchain-mcp-adapters>=0.0.9",
     "langchain-openai>=0.3.14",
     "langgraph>=0.3.31",
-    "mcp[cli]>=1.6.0",
     "openai>=1.75.0",
     "pip>=25.0.1",
     "pydantic>=2.11.3",
@@ -22,6 +21,7 @@ dependencies = [
     "google-adk>=0.5.0",
     "litellm>=1.68.2",
     "nest-asyncio>=1.6.0",
+    "mcp==1.9.3",
 ]
 
 [project.scripts]
