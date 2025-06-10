@@ -255,6 +255,14 @@ async def get_dba_tableUsageImpact(
     global _tdconn
     return execute_db_tool(_tdconn, td.handle_get_dba_tableUsageImpact, db_name=db_name,  user_name=user_name)
 
+@mcp.tool(description="Get the Teradata session information for user.")
+async def get_dba_sessionInfo(
+    user_name: str = Field(description="User name", default=""),
+    ) -> ResponseType:
+    """Get the Teradata session information for user."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_get_dba_sessionInfo, user_name=user_name)
+
 
 @mcp.prompt()
 async def dba_databaseHealthAssessment() -> UserMessage:
@@ -324,6 +332,35 @@ async def qlty_databaseQuality(database_name: str) -> UserMessage:
     """Assess the data quality of a database."""
     return UserMessage(role="user", content=TextContent(type="text", text=td.handle_qlty_databaseQuality.format(database_name=database_name)))
 
+
+#------------------ Security Tools  ------------------#
+
+
+@mcp.tool(description="Get permissions for a user.")
+async def get_sec_userDbPermissions(
+    user_name: str = Field(description="User name", default=""),
+    ) -> ResponseType:
+    """Get permissions for a user."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_get_sec_userDbPermissions, user_name=user_name)
+
+
+@mcp.tool(description="Get permissions for a role.")
+async def get_sec_rolePermissions(
+    role_name: str = Field(description="Role name", default=""),
+    ) -> ResponseType:
+    """Get permissions for a role."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_get_sec_rolePermissions, role_name=role_name)
+
+
+@mcp.tool(description="Get roles assigned to a user.")
+async def get_sec_userRoles(
+    user_name: str = Field(description="User name", default=""),
+    ) -> ResponseType:
+    """Get roles assigned to a user."""
+    global _tdconn
+    return execute_db_tool(_tdconn, td.handle_get_sec_userRoles, user_name=user_name)
 
 
 #------------------ Custom Tools  ------------------#

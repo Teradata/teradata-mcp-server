@@ -580,3 +580,47 @@ def handle_get_dba_userDelay(conn: TeradataConnection, *args, **kwargs):
         }
         return create_response(data, metadata)    
     
+
+#------------------ Tool  ------------------#
+# Get session information tool
+#     Arguments: 
+#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
+#       user_name (str) - name of the user
+#     Returns: formatted response with database feature usage information or error message    
+def handle_get_dba_sessionInfo(conn: TeradataConnection, user_name: str, *args, **kwargs):
+    logger.debug("Tool: handle_get_dba_sessionInfo: Args: ")
+
+    with conn.cursor() as cur:
+        if user_name == "":
+            logger.debug("No user_name argument provided")
+            rows = []
+        else:
+            logger.debug("Database session information requested for {user_name}.")
+            rows = cur.execute("""
+                SELECT
+                    UserName,
+                    AccountName,
+                    SessionNo,
+                    DefaultDataBase, 
+                    LogonDate,
+                    LogonTime,
+                    LogonSource, 
+                    LogonAcct,
+                    CurrentRole, 
+                    QueryBand,
+                    ClientIpAddress, 
+                    ClientProgramName,
+                    ClientSystemUserId,
+                    ClientInterfaceVersion
+                FROM DBC.SessionInfoV
+                WHERE UserName LIKE '%{user_name}%' (NOT CASESPECIFIC);
+            """)
+
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "tool_name": "get_dba_sessionInfo",
+            "total_rows": len(data)
+        }
+        return create_response(data, metadata)
+
+ 

@@ -22,58 +22,20 @@ You can now use it with clients supporting SSE such as [Visual Studio Code](#usi
 
 ### Available tools and prompts
 
-We are providing three sets of tools and associated helpful prompts
+We are providing groupings of tools and associated helpful prompts
 - **Base** tools, prompts and resources to interact with your Teradata platform:
+  - [Base Tools](src/teradata_mcp_server/tools/base/README.md)
 - **DBA** tools, prompts and resources to facilitate your platform administration tasks:
+  - [DBA Tools](src/teradata_mcp_server/tools/dba/README.md)
 - **Data Quality** tools, prompts and resources accelerate exploratory data analysis:
+  - [Data Quality Tools](src/teradata_mcp_server/tools/qlty/README.md)
+- **Security** tools, prompts and resources to resolve permissions:
+  - [Security Tools](src/teradata_mcp_server/tools/sec/README.md)
+- **Feature Store** tools, prompts and resources to manage the Enterprise Feature Store:
+  - [Feature Store Tools](src/teradata_mcp_server/tools/fs/README.md)
 - **Custom Tools** to easily implement tools for custom actions based on your data and business context 
 
-**Base** tools:
 
-  - get_base_readQuery - runs a read query
-  - write_base_writeQuery - runs a write query
-  - get_base_tableDDL - returns the show table results
-  - get_base_databaseList - returns a list of all databases
-  - get_base_tableList - returns a list of tables in a database
-  - get_base_columnDescription - returns description of columns in a table
-  - get_base_tablePreview - returns column information and 5 rows from the table
-  - get_base_tableAffinity - gets tables commonly used together
-  - get_base_tableUsage - Measure the usage of a table and views by users in a given schema
-
-**Base** Prompts:
-
-  - base_query - Create a SQL query against the database
-  - base_tableBusinessDesc - generates a business description of a table
-  - base_databaseBusinessDesc - generates a business description of a databases based on the tables
-
-**DBA** tools:
-
-- get_dba_userSqlList - returns a list of recently executed SQL for a user
-- get_dba_tableSqlList - returns a list of recently executed SQL for a table
-- get_dba_tableSpace - returns CurrentPerm table space 
-- get_dba_databaseSpace - returns Space allocated, space used and percentage used for a database
-- get_dba_databaseVersion - returns the database version information
-- get_dba_resusageSummary - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.
-- get_dba_resusageUserSummary - Get the system usage for a user
-- get_dba_flowControl - Get the Teradata system flow control metrics by day and hour
-- get_dba_featureUsage - Get the user feature usage metrics
-- get_dba_userDelay - Get the Teradata user delay metrics.
-- get_dba_tableUsageImpact - measures the usage of a table / view by a user
-
-**DBA** prompts:
-
-- dba_databaseHealthAssessment - Create a database health assessment for a Teradata system
-- dba_userActivityAnalysis - Create a user activity analysis for a Teradata system
-- dba_tableArchive - Create a table archive strategy for database tables.
-- dba_databaseLineage - Creates a directed lineage map of tables in a database.
-- dba_tableDropImpact - assesses the impact of a table being dropped
-
-**Data Quality** tools:
-
-- get_qlty_missingValues - returns a list of column names with missing values
-- get_qlty_negativeValues - returns a list of column names with negative values
-- get_qlty_distinctCategories - returns a list of categories within a column
-- get_qlty_standardDeviation - returns the mean and standard deviation for a column
 
 ### Adding custom tools
 You may add define custom "query" tools in the `custom_tools.yaml` file or in any file ending with `_tools.yaml`. 
@@ -134,7 +96,7 @@ export DATABASE_URI=teradata://username:password@host:1025/schemaname
 export MCP_TRANSPORT=stdio 
 export MCP_HOST=127.0.0.1
 export MCP_PORT=8001
-export MCP_PATH=/mcp
+export MCP_PATH=/mcp/
 ```
 
 **Step 3** - Run the server with uv

@@ -46,6 +46,13 @@ We will modularize the tool sets so that users will have the ability to add the 
 - qlty_resources.py - will contain the resource handle code
 - README.md - will describe the tools, prompts, resources, and package dependencies
 
+[src/teradata_mcp_server/tools/sec](./src/teradata_mcp_server/tools/sec) - this will contain security tool set:
+- __init__.py - will contain library imports
+- sec_tools.py - will contain the tool handle code
+- sec_prompts.py - will contain the prompt handle code
+- sec_resources.py - will contain the resource handle code
+- README.md - will describe the tools, prompts, resources, and package dependencies
+
 [src/teradata_mcp_server/tools/fs](./src/teradata_mcp_server/tools/fs) - this will contain feature store (tdfs4ds package) tool set:
 - __init__.py - will contain library imports
 - fs_tools.py - will contain the tool handle code
