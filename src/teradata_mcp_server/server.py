@@ -244,60 +244,7 @@ async def get_dba_featureUsage() -> ResponseType:
 async def get_dba_userDelay() -> ResponseType:
     """Get the Teradata user delay metrics."""
     global _tdconn
-    return execute_db_tool(_tdconn, td.handle_read_user_delay)
-
-
-@mcp.prompt()
-async def table_archive() -> UserMessage:
-    """Create a table archive strategy for database tables."""
-    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_table_archive))
-
-@mcp.prompt()
-async def database_lineage(database_name: str) -> UserMessage:
-    """Create a database lineage map for tables in a database."""
-    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_database_lineage.format(database_name=database_name)))
-
-@mcp.prompt()
-async def table_drop_impact(database_name: str, table_name: str) -> UserMessage:
-    """Assess the impact of dropping a table."""
-    return UserMessage(role="user", content=TextContent(type="text", text=td.prompt_table_drop_impact.format(database_name=database_name, table_name=table_name)))
-
-#------------------ Data Quality Tools  ------------------#
-
-@mcp.tool(description="Get the column names that having missing values in a table.")
-async def read_missing_columns(
-    table_name: str = Field(description="table name", default=""),
-    ) -> ResponseType:
-    """Get the column names that having missing values in a table."""
-    global _tdconn
-    return execute_db_tool(_tdconn, td.handle_missing_values, table_name=table_name)
-
-
-@mcp.tool(description="Get the column names that having negative values in a table.")
-async def read_negative_columns(
-    table_name: str = Field(description="table name", default=""),
-    ) -> ResponseType:
-    """Get the column names that having negative values in a table."""
-    global _tdconn
-    return execute_db_tool(_tdconn, td.handle_negative_values, table_name=table_name)
-
-@mcp.tool(description="Get the distinct categories from column in a table.")
-async def read_destinct_categories(
-    table_name: str = Field(description="table name", default=""),
-    col_name: str = Field(description="column name", default=""),
-    ) -> ResponseType:
-    """Get the destinct categories from column in a table."""
-    global _tdconn
-    return execute_db_tool(_tdconn, td.handle_destinct_categories, table_name=table_name, col_name=col_name)    
-
-@mcp.tool(description="Get the standard deviation from column in a table.")
-async def read_standard_deviation(
-    table_name: str = Field(description="table name", default=""),
-    col_name: str = Field(description="column name", default=""),
-    ) -> ResponseType:
-    """Get the standard deviation from column in a table."""
-    global _tdconn
-    return execute_db_tool(_tdconn, td.handle_standard_deviation, table_name=table_name, col_name=col_name)  
+    return execute_db_tool(_tdconn, td.handle_get_dba_userDelay)
 
 @mcp.tool(description="Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time.")
 async def get_dba_tableUsageImpact(
@@ -377,13 +324,7 @@ async def qlty_databaseQuality(database_name: str) -> UserMessage:
     """Assess the data quality of a database."""
     return UserMessage(role="user", content=TextContent(type="text", text=td.handle_qlty_databaseQuality.format(database_name=database_name)))
 
-
-
-
-
-
 # ------------------ RAG Tools ------------------ #
-
 
 @mcp.tool(description="""
 Set the configuration for the current Retrieval-Augmented Generation (RAG) session.
@@ -416,9 +357,6 @@ async def rag_set_config(
         vector_db=vector_db,
         vector_table=vector_table,
     )
-
-
-
 
 @mcp.tool(
     description=(
@@ -458,7 +396,6 @@ async def store_user_query(
 async def tokenize_query() -> ResponseType:
     return execute_db_tool(_tdconn, td.create_tokenized_view)
 
-
 @mcp.tool(
     description=(
         "Generates sentence embeddings for the most recent tokenized user query using the model specified in the RAG configuration. "
@@ -470,7 +407,6 @@ async def tokenize_query() -> ResponseType:
 async def create_embedding_view() -> ResponseType:
     return execute_db_tool(_tdconn, td.create_embedding_view)
 
-
 @mcp.tool(
     description=(
         "Converts the sentence embedding from the view `v_topics_embeddings` into 384 vector columns using `ivsm.vector_to_columns`. "
@@ -481,8 +417,6 @@ async def create_embedding_view() -> ResponseType:
 )
 async def create_query_embedding_table() -> ResponseType:
     return execute_db_tool(_tdconn, td.handle_create_query_embeddings)
-
-
 
 @mcp.tool(
     description=(
@@ -499,13 +433,9 @@ async def semantic_search_chunks(
     return execute_db_tool(_tdconn, td.handle_semantic_search, topk=k)
 
 
-
-
 @mcp.prompt()
 async def rag_guidelines() -> UserMessage:
     return UserMessage(role="user", content=TextContent(type="text", text=td.rag_guidelines))
-
-
 
 #------------------ Custom Tools  ------------------#
 # Custom tools are defined as SQL queries in a YAML file and loaded at startup.
@@ -601,5 +531,5 @@ async def shutdown(sig=None):
 #         It loads environment variables, initializes logging, and starts the MCP server.
 #         The main function is called to start the server and handle incoming requests.
 #         If an error occurs during execution, it logs the error and exits with a non-zero status code.
-if __name__ == "__main__": 
+if __name__ == "__main__":
     asyncio.run(main())

@@ -9,10 +9,9 @@
       DBC.SessionInfoV
     WHERE
       UserName IS NOT NULL
-    GROUP BY UserName;
-    
+      group by UserName;
+      
 - name: get_td_cust_dbcInfo
   description: "Aggregate order counts by status"
   sql: |
     sel * from dbc.dbcinfo;
-

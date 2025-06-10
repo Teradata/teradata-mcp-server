@@ -6,3 +6,7 @@ working/
 .vscode/
 .venv/
 *.egg-info/
+
+
+
+claude-config.txt
