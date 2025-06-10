@@ -48,28 +48,9 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
     return json.dumps(response, default=serialize_teradata_types)
 
 
-"""
-Tools that power Retrieval-Augmented Generation (RAG) on Teradata Vantage.
 
-They let an MCP agent
-1. store the user’s question,
-2. create an embedding for that question, and
-3. fetch the top-k most-similar PDF chunks.
-
-All SQL objects (DB, table, model-ID) are passed in as parameters.
-"""
-
-import logging
-from typing import Optional, List
-from teradatasql import TeradataConnection
-from datetime import datetime
-
-from .td_base_tools import rows_to_json, create_response  # reuse helpers
-
-logger = logging.getLogger("teradata_mcp_server")
-
-
-
+#------------------ Tool  ------------------
+# RAG (Retrieval-Augmented Generation) tools for Teradata MCP Server
 # Store RAG config for the session in a global or module-level variable
 rag_config = {}
 
