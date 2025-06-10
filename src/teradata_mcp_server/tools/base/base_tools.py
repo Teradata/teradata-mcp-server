@@ -224,7 +224,7 @@ def handle_get_base_columnDescription(conn: TeradataConnection, db_name: str, ob
                 WHEN 'XM' THEN 'XML'
                 WHEN 'JN' THEN 'JSON'
                 WHEN 'DT' THEN 'DATASET'
-                WHEN '??' THEN 'STGEOMETRY''ANY_TYPE'
+                WHEN '??' THEN 'STGEOMETRY/so ANY_TYPE'
                 END as CType
             from DBC.ColumnsVX where upper(tableName) like upper(?) and upper(DatabaseName) like upper(?)
         """
@@ -274,6 +274,12 @@ def handle_get_base_tablePreview(conn: TeradataConnection, table_name: str, db_n
             "sample_size": len(sample)
         }
         return create_response(sample, metadata)
+
+
+
+
+
+
 
 #------------------ Tool  ------------------#
 # Read table affinity tool
