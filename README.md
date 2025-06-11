@@ -33,6 +33,8 @@ We are providing groupings of tools and associated helpful prompts
   - [Security Tools](src/teradata_mcp_server/tools/sec/README.md)
 - **Feature Store** tools, prompts and resources to manage the Enterprise Feature Store:
   - [Feature Store Tools](src/teradata_mcp_server/tools/fs/README.md)
+- **RAG** tools, prompts and resources to manage vector store creation and use
+  - [RAG Tools](src/teradata_mcp_server/tools/rag/README.md)
 - **Custom Tools** to easily implement tools for custom actions based on your data and business context 
 
 
