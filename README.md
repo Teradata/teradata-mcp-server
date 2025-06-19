@@ -43,7 +43,7 @@ cd teradata-mcp-server
 docker compose up
 ```
 
-You can now use it with clients supporting SSE such as [Visual Studio Code](#using-with-visual-studio-code-co-pilot).
+You can now use it with clients supporting SSE such as [Visual Studio Code](documentation/working_with_clients.md#using-with-visual-studio-code-co-pilot).
 
 
 
