@@ -83,21 +83,26 @@ source .venv/bin/activate
 To configure the connections set the following environment variables in your shell or in a .env file in the current directory (by updating and renaming the provided [env](./env) file).
 
 1. **DATABASE_URI**
+
 This is the database connection string using the following format:  `teradata://username:password@host:1025/[schemaname]`
 
 2. **MCP_TRANSPORT**
+
 The server will connect to your Teradata instance and to the clients using one of the following transport modes 
 - Standard IO (stdio)
 - server-sent events (SSE)  
 - streamable-http (streamable-http). 
 
 3. **MCP_HOST**
+
 This is the host address used when using the sse or streamable-http transport modes, default = localhost (127.0.0.1)
 
 4. **MCP_PORT**
+
 This is the port address used when using the sse or streamable-http transport modes, default = 8001
 
 5. **MCP_PATH**
+
 This is the path used for streamable_http transport mode, default to `\mcp`
 
 

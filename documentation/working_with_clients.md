@@ -1,6 +1,27 @@
 
 # Working with MCP Clients
 
+
+## Testing your server with MCP Inspector
+Step 1 - Start the server, typer the following in your terminal
+```
+uv run mcp dev ./src/teradata_mcp_server/server.py
+```
+NOTE: If you are running this on a Windows machine and get npx, npm or node.js errors, install the required node.js software from here: https://github.com/nodists/nodist
+
+Step 2 - Open the MCP Inspector
+- You should open the inspector tool, go to http://127.0.0.1:6274 
+- Click on tools
+- Click on list tools
+- Click on read_database_list
+- Click on run
+
+Test the other tools, each should have a successful outcome
+
+Control+c to stop the server in the terminal
+
+---------------------------------------------------------------------
+
 ## Using with Visual Studio Code Co-pilot
 
 Visual Studio Code Co-pilot provides a simple and interactive way to test this server. 
@@ -94,6 +115,7 @@ Note: you will need to modify the directory path in the args for your system, th
 ```
 - you can start the server from within the settings.json file or you can "MCP: Start Server"
 
+---------------------------------------------------------------------
 
 ## Using with Claude Desktop
 You can add this server Claude desktop adding this entry to your `claude_desktop_config.json` config file:
@@ -121,30 +143,12 @@ Note: this requires that `uv` is available to Claude in your system path or inst
 }
 ```
 
+---------------------------------------------------------------------
 
 ## Using with AI Agents (stdio version)
-### Option 1 - pydanticai chatbot
-&nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the MCP_TRANSPORT=stdio  in .env file 
-```
-MCP_TRANSPORT=stdio
-```
-&nbsp;&nbsp;&nbsp;&nbsp; Step 2 - Modify the ./test/ClientChatBot.py script to point to where you installed the server, you will need to modify the following line
-```
-    td_mcp_server = MCPServerStdio('uv', ["--directory", "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server", "run", "teradata-mcp-server"])
-```
 
-&nbsp;&nbsp;&nbsp;&nbsp; Step 3 - run the ./test/ClientChatBot.py script, this will create an interactive session with the agent who has access to the MCP server.  From a terminal.
-```
-uv run ./test/ClientChatBot.py
-```
 
-- Ask the agent to list the databases
-- Ask the agent to list the table in a database
-- Ask the agent to show all the objects in a database
-- Ask the agent a question that requires SQL to run against a table
-- Type "quit" to exit.
-
-### Option 2 - ADK Chatbot
+### Option 1 - ADK Chatbot
 &nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the MCP_TRANSPORT=stdio  in .env file 
 ```
 MCP_TRANSPORT=stdio
@@ -156,9 +160,11 @@ adk web
 ```
 &nbsp;&nbsp;&nbsp;&nbsp; Step 3 - open [ADK Web Server ](http://0.0.0.0:8000) 
 
-&nbsp;&nbsp;&nbsp;&nbsp; Step 4 - chat with the td_agent
+&nbsp;&nbsp;&nbsp;&nbsp; Step 4 - chat with the Simple_Agent or DBA_Agent
 
-### Option 3 - mcp_chatbot
+---------------------------------------------------------------------
+
+### Option 2 - mcp_chatbot
 
 &nbsp;&nbsp;&nbsp;&nbsp; step 0 - Modify server_config.json in the test directory, ensure path is correct.
 
@@ -179,6 +185,7 @@ Query: /prompts
 Query: /prompt base_databaseBusinessDesc database_name=demo_user
 ```
 
+---------------------------------------------------------------------
 
 ## Using with any tool: REST interface 
 You can use [mcpo](https://github.com/open-webui/mcpo) to expose this MCP tool as an OpenAPI-compatible HTTP server.
@@ -196,6 +203,8 @@ docker compose --profile rest up
 ```
 
 Your Teradata tools are now available as local REST endpoints, view documentation and test it at http://localhost:8002/docs
+
+---------------------------------------------------------------------
 
 ## Using with Open WebUI
 [Open WebUI](https://github.com/open-webui/open-webui) is user-friendly self-hosted AI platform designed to operate entirely offline, supporting various LLM runners like Ollama. It provides a convenient way to interact with LLMs and MCP servers from an intuitive GUI. It can be integrated with this MCP server using the REST endpoints.
@@ -224,20 +233,4 @@ You can now access the OpenAPI docs at: [http://localhost:8002/docs](http://loca
 
 For more details on mcpo, see: https://github.com/open-webui/mcpo
 
-### Testing your server with MCP Inspector
-Step 1 - Start the server, typer the following in your terminal
-```
-uv run mcp dev ./src/teradata_mcp_server/server.py
-```
-NOTE: If you are running this on a Windows machine and get npx, npm or node.js errors, install the required node.js software from here: https://github.com/nodists/nodist
-
-Step 2 - Open the MCP Inspector
-- You should open the inspector tool, go to http://127.0.0.1:6274 
-- Click on tools
-- Click on list tools
-- Click on read_database_list
-- Click on run
-
-Test the other tools, each should have a successful outcome
-
-Control+c to stop the server in the terminal
+---------------------------------------------------------------------
