@@ -1,5 +1,9 @@
 # Security Tools
 
+**Dependencies**
+
+Assumes Teradata >=17.20.
+
 **Security** tools:
 
 - get_sec_userDbPermissions - returns permissions that are assigned directly to a user

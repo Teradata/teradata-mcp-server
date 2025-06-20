@@ -1,5 +1,10 @@
 # Feature Store Tools
 
+
+**Dependencies**
+
+Assumes Teradata >=17.20.
+
 **fs** tools:
 
 - get_fs_nameFunction - description of tool

@@ -1,5 +1,9 @@
 # RAG Tools
 
+**Dependencies**
+
+Assumes Teradata >=20.XX.  
+
 **RAG** tools:
 
 - 

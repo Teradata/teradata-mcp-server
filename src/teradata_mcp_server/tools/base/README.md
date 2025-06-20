@@ -1,5 +1,9 @@
 # Base tools
 
+**Dependencies**
+
+Assumes Teradata >=17.20.
+
 **Base** tools:
 
   - get_base_readQuery - runs a read query

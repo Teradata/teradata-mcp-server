@@ -1,5 +1,9 @@
 # Quality Tools
 
+**Dependencies**
+
+Assumes Teradata >=17.20.
+
 **Data Quality** tools:
 
 - get_qlty_missingValues - returns a list of column names with missing values

@@ -1,5 +1,9 @@
 # Template Tools
 
+**Dependencies**
+
+Assumes Teradata >=17.20.
+
 **Template** tools:
 
 - get_tmpl_nameFunction - description of tool

@@ -1,5 +1,9 @@
 # DBA Tools
 
+**Dependencies**
+
+Assumes Teradata >=17.20.
+
 
 **DBA** tools:
 
