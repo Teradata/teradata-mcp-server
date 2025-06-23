@@ -125,7 +125,7 @@ class MCP_ChatBot:
 
     async def connect_to_servers(self):
         try:
-            with open("./test/server_config.json", "r") as file:
+            with open("./test/MCP_Client_Example/server_config.json", "r") as file:
                 data = json.load(file)
             servers = data.get("mcpServers", {})
             for server_name, server_config in servers.items():

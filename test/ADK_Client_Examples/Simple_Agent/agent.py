@@ -65,6 +65,13 @@ async def create_agent():
     #         api_base=os.getenv('azure_gpt-4o-mini'),
     #     )
 
+    # # Using Ollama model, you need to install Ollama and run the server
+    # # https://ollama.com/docs/installation
+    # model=LiteLlm(
+    #         model='ollama/llama4:latest',
+    #         api_base=os.getenv('ollama_api_base', 'http://localhost:11434'),
+    #     )
+
     agent = LlmAgent(
         model=model,
         name='Simple_Agent',
