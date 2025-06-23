@@ -1,6 +1,34 @@
 
 # Working with MCP Clients
 
+All the client tools below leverage a Large Language Model, the code provided as examples in the test directory assumes you have set up the environment variables for your model.  Alternatively you should add them to your .env file.
+
+```
+############################################
+# These are only required for testing the server 
+############################################
+aws_role_switch=False
+aws_access_key_id=
+aws_secret_access_key=
+aws_session_token=
+aws_region=
+
+############################################
+OPENAI_API_KEY=
+
+############################################
+GOOGLE_GENAI_USE_VERTEXAI=FALSE
+GOOGLE_API_KEY=
+
+############################################
+azure_api_key=
+azure_gpt-4o-mini=
+
+############################################
+ollama_api_base= 
+
+```
+
 
 ## Testing your server with MCP Inspector
 Step 1 - Start the server, typer the following in your terminal
