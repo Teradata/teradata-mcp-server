@@ -4,7 +4,7 @@ import asyncio
 from dotenv import load_dotenv
 from google.adk.agents import LlmAgent
 from google.adk.models.lite_llm import LiteLlm
-from google.adk.tools.mcp_tool.mcp_toolset import StdioServerParameters, StreamableHTTPConnectionParams, SseConnectionParams
+from google.adk.tools.mcp_tool.mcp_toolset import StdioServerParameters, StreamableHTTPConnectionParams, SseConnectionParams, StdioConnectionParams
 
 from .sub_agents.DB_Object_Agent import create_db_object_agent
 from .sub_agents.DB_Space_Agent import create_db_space_agent
@@ -20,25 +20,30 @@ async def create_agent():
     """Defines the transport mode to be used."""
     if os.getenv("MCP_TRANSPORT") == 'stdio':
         # .env file needs to have MCP_TRANSPORT=stdio
-        connection_params=StdioServerParameters(
-            command='uv',
-            args=[
-                "--directory",
-                "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server",
-                "run",
-                "teradata-mcp-server"
-            ],
+        connection_params=StdioConnectionParams(
+            server_params=StdioServerParameters(
+                command='uv',
+                args=[
+                    "--directory",
+                    "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server",
+                    "run",
+                    "teradata-mcp-server"
+                ],
+            ),
+            timeout=5  # Timeout in seconds for establishing the connection to the MCP std
         )
     elif os.getenv("MCP_TRANSPORT") == 'sse':
         # .env file needs to have MCP_TRANSPORT=sse
         connection_params=SseConnectionParams(
             url = f'http://{os.getenv("MCP_HOST", "localhost")}:{os.getenv("MCP_PORT", 8001)}/sse',  # URL of the MCP server
+            timeout=5,  # Timeout in seconds for establishing the connection to the MCP SSE server
         )
 
     elif os.getenv("MCP_TRANSPORT") == 'streamable-http':
         # .env file needs to have MCP_TRANSPORT=streamable-http
         connection_params=StreamableHTTPConnectionParams(
             url = f'http://{os.getenv("MCP_HOST", "localhost")}:{os.getenv("MCP_PORT", 8001)}/mcp/',  # URL of the MCP server
+            timeout=5,  # Timeout in seconds for establishing the connection to the MCP Streamable HTTP server
         )
 
     else:

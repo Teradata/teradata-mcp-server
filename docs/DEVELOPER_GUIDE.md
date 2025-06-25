@@ -94,7 +94,7 @@ To assist tool users we would like to align tool, prompt, and resources to a nam
 - If the tool changes the state of data (e.g. write_base_)
 - If a prompt just prefix the grouping identifier that best fits (e.g. base)
 - If a resource just prefix the grouping identifier that best fits (e.g. base)
-- The tool/prompt/resource should have a descriptive name that is short  (e.g. get_base_dbList, get_qlty_missingValues, write_dba_userGrant, write_dba_tableCreate)
+- The tool/prompt/resource should have a descriptive name that is short, use lowercase with captials for new words.  (e.g. get_base_dbList, get_qlty_missingValues, write_dba_userGrant, write_dba_tableCreate)
 
 <br><br><br>
 
@@ -118,6 +118,6 @@ To assist tool users we would like to align tool, prompt, and resources to a nam
 
 
 ## Submitting Code
-All contributions to the repository should be made through the Github pull request process.  
+All contributions to the repository should be made through the Github pull request process.   [Contributing to a project step by step instuctions](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project)
 
 The repository admins will review the code for compliance and either provide feedback or merge the code.

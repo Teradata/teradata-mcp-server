@@ -3,7 +3,7 @@ Make sure you have setup your environment based on the Developer Guide in this r
 
 ## Development Guidelines
 - Always ask before creating a PR. To avoid duplication efforts, its better to discuss it with us first or create an issue.
-- All code must be reviewed via a pull request. Before anything can be merged, it must be reviewed by at least 2 others.
+- All code must be reviewed via a pull request. Before anything can be merged, it must be reviewed by at least 2 others. [Contributing to a project step by step instuctions](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project)
 - Squash commits into a single commit for your PR. We want to keep a clean git history.
 - Code should adhere to lint and codestyle tests. While you can commit code that doesn't validate but still works, it is encouraged to validate your code. It saves other's headaches down the road.
 - Code must pass existing tests when submitting a pull request. If your code breaks a test, it needs to be updated to pass the tests before merging.
