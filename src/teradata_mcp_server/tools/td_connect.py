@@ -1,5 +1,6 @@
 from typing import Optional
 import teradatasql
+import teradataml as tdml # import of the teradataml package
 from urllib.parse import urlparse
 import logging
 import os
@@ -42,6 +43,23 @@ class TDConn:
             except Exception as e:
                 logger.error(f"Error connecting to database: {e}")
                 self.conn = None
+
+        # ----------- support of the teradataml context -------------
+        if os.getenv("DATABASE_URI") is not None:
+            try:
+                parsed_url = urlparse(os.getenv("DATABASE_URI"))
+                Param = {
+                        'username' : parsed_url.username,
+                        'password' : parsed_url.password,
+                        'host'     : parsed_url.hostname,
+                        'database' : parsed_url.path.lstrip('/')
+                }
+                tdml.create_context(**Param)
+            except Exception as e:
+                logger.error(f"Error connecting to database: {e}")
+        else:
+            logger.warning("DATABASE_URI is not specified, teradataml context has not been established.")
+        # -----------------------------------------------------------     
     
     # Method to return the cursor
     #     If the connection is not established, it will raise an exception
