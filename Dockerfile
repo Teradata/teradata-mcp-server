@@ -26,6 +26,7 @@ COPY --from=builder /app /app
 
 RUN useradd --no-log-init --create-home appuser && chown -R appuser /app
 USER appuser
+RUN chmod -R u+w /app/src
 
 ENV PYTHONUNBUFFERED=1
 ENV MCP_TRANSPORT=sse
