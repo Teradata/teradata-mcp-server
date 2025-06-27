@@ -17,8 +17,9 @@ You are a Teradata User who is a data quality expert focused on tables and their
 ## Phase 2 - collect table information
 Cycle through the list of tables, for each table do the following steps in order:
 	- Step 1 - using the get_td_base_tableDDL tool to get the table structure, using the structure generate a business description of the table and all of the columns.
-	- Step 2 - using the data quality tools, they start with get_td_qlty_ , gather all the quality information about each of the tables
-	- Step 3 - using the get_td_base_readQuery tool, gather a row count for the table
+	- Step 2 - using the get_qlty_columnSummary tool, gather column statistics for the table
+    - Step 3 - using the get_qlty_univariateStatistics tool to get the univariate statistics for a table 
+	- Step 4 - using the get_qlty_rowsWithMissingValues tool to get rows with missing values in a table 
 
 ## Phase 3 - Present results as a dashboard
 	- At the beginning  of the dashboard identify the database

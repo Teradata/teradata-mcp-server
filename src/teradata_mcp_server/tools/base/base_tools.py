@@ -1,3 +1,4 @@
+import re
 import logging
 from typing import Optional, Any, Dict, List
 from teradatasql import TeradataConnection
@@ -112,6 +113,12 @@ def handle_get_base_tableDDL(conn: TeradataConnection, db_name: str, table_name:
         db_name = "%"
     if len(table_name) == 0:
         table_name = "%"
+    # Only allow alphanumeric and underscore for safety
+    valid_identifier = re.compile(r"^\w+$")
+    if not valid_identifier.match(db_name) or not valid_identifier.match(table_name):
+        logger.error("Invalid database or table name provided")
+        raise ValueError("Invalid database or table name")
+
     with conn.cursor() as cur:
         rows = cur.execute(f"show table {db_name}.{table_name}")
         data = rows_to_json(cur.description, rows.fetchall())
