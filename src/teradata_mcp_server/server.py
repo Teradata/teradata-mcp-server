@@ -334,7 +334,6 @@ async def get_qlty_missingValues(
     """Get the column names that having missing values in a table."""
     return execute_db_tool( td.handle_get_qlty_missingValues, table_name=table_name)
 
-
 @mcp.tool(description="Get the column names that having negative values in a table.")
 async def get_qlty_negativeValues(
     table_name: str = Field(description="table name", default=""),
@@ -358,6 +357,28 @@ async def get_qlty_standardDeviation(
     """Get the standard deviation from column in a table."""
     return execute_db_tool( td.handle_get_qlty_standardDeviation, table_name=table_name, col_name=col_name)
 
+@mcp.tool(description="Get the column summary statistics for a table.")
+async def get_qlty_columnSummary(
+    table_name: str = Field(description="table name", default=""),
+    ) -> ResponseType:
+    """Get the column summary statistics for a table."""
+    return execute_db_tool( td.handle_get_qlty_columnSummary, table_name=table_name)
+
+@mcp.tool(description="Get the univariate statistics for a table.")
+async def get_qlty_univariateStatistics(
+    table_name: str = Field(description="table name", default=""),
+    col_name: str = Field(description="column name", default=""),
+    ) -> ResponseType:
+    """Get the univariate statistics for a table."""
+    return execute_db_tool( td.handle_get_qlty_univariateStatistics, table_name=table_name, col_name=col_name)
+
+@mcp.tool(description="Get the rows with missing values in a table.")
+async def get_qlty_rowsWithMissingValues(
+    table_name: str = Field(description="table name", default=""),
+    col_name: str = Field(description="column name", default=""),
+    ) -> ResponseType:
+    """Get the rows with missing values in a table."""
+    return execute_db_tool( td.handle_get_qlty_rowsWithMissingValues, table_name=table_name, col_name=col_name)
 
 @mcp.prompt()
 async def qlty_databaseQuality(database_name: str) -> UserMessage:

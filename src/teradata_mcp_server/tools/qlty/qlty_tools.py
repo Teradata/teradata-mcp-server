@@ -123,3 +123,65 @@ def handle_get_qlty_standardDeviation(conn: TeradataConnection, table_name: str,
         }
         return create_response(data, metadata)
 
+
+#------------------ Tool  ------------------#
+# column summary tool
+#     Arguments: 
+#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
+#       table_name (str) - name of the table 
+#     Returns: formatted response with list of column names and stats or error message
+def handle_get_qlty_columnSummary(conn: TeradataConnection, table_name: str, *args, **kwargs):
+    logger.debug(f"Tool: handle_get_qlty_columnSummary: Args: table_name: {table_name}")
+
+    with conn.cursor() as cur:
+        rows = cur.execute(f"select * from TD_ColumnSummary ( on {table_name} as InputTable using TargetColumns ('[:]')) as dt")
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "tool_name": "get_qlty_columnSummary",
+            "table_name": table_name,
+        }
+        return create_response(data, metadata)  
+    
+
+#------------------ Tool  ------------------#
+# Univariate statistics tool
+#     Arguments: 
+#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
+#       table_name (str) - name of the table 
+#       col_name (str) - name of the column
+#     Returns: formatted response with list of column names and stats or error message
+def handle_get_qlty_univariateStatistics(conn: TeradataConnection, table_name: str, col_name: str, *args, **kwargs):
+    logger.debug(f"Tool: handle_get_qlty_univariateStatistics: Args: table_name: {table_name}, col_name: {col_name}")
+
+    with conn.cursor() as cur:
+        rows = cur.execute(f"select * from TD_UnivariateStatistics ( on {table_name} as InputTable using TargetColumns ('{col_name}') Stats('ALL')) as dt ORDER BY 1,2")
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "tool_name": "get_qlty_univariateStatistics",
+            "table_name": table_name,
+            "col_name": col_name,
+            "stats_calculated": ["ALL"]
+        }
+        return create_response(data, metadata)
+    
+
+#------------------ Tool  ------------------#
+# Get Rows with Miissing Values tool
+#     Arguments: 
+#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
+#       table_name (str) - name of the table 
+#       col_name (str) - name of the column
+#     Returns: formatted response with list of rows with missing values or error message
+def handle_get_qlty_rowsWithMissingValues(conn: TeradataConnection, table_name: str, col_name: str, *args, **kwargs):
+    logger.debug(f"Tool: handle_get_qlty_rowsWithMissingValues: Args: table_name: {table_name}, col_name: {col_name}")
+
+    with conn.cursor() as cur:
+        rows = cur.execute(f"select * from TD_getRowsWithMissingValues ( ON {table_name} AS InputTable USING TargetColumns ('[{col_name}]')) AS dt;")
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "tool_name": "get_qlty_rowsWithMissingValues",
+            "table_name": table_name,
+            "col_name": col_name,
+            "rows_with_missing_values": len(data)
+        }
+        return create_response(data, metadata)
