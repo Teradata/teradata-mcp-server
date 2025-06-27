@@ -8,6 +8,27 @@ import os
 
 logger = logging.getLogger("teradata_mcp_server")
 
+
+# ----------- support of the teradataml context -------------
+def teradataml_connection():
+    if os.getenv("DATABASE_URI") is not None:
+        try:
+            parsed_url = urlparse(os.getenv("DATABASE_URI"))
+            Param = {
+                    'username' : parsed_url.username,
+                    'password' : parsed_url.password,
+                    'host'     : parsed_url.hostname,
+                    'database' : parsed_url.path.lstrip('/')
+            }
+            tdml.create_context(**Param)
+            logger.info(f"Connection with teradataml is successful.")
+        except Exception as e:
+            logger.error(f"Error connecting to database: {e}")
+    else:
+        logger.warning("DATABASE_URI is not specified, teradataml context has not been established.")
+teradataml_connection()
+# -----------------------------------------------------------     
+
 # This class is used to connect to Teradata database using teradatasql library
 #     It uses the connection URL from the environment variable DATABASE_URI from a .env file
 #     The connection URL should be in the format: teradata://username:password@host:port/database
@@ -44,22 +65,6 @@ class TDConn:
                 logger.error(f"Error connecting to database: {e}")
                 self.conn = None
 
-        # ----------- support of the teradataml context -------------
-        if os.getenv("DATABASE_URI") is not None:
-            try:
-                parsed_url = urlparse(os.getenv("DATABASE_URI"))
-                Param = {
-                        'username' : parsed_url.username,
-                        'password' : parsed_url.password,
-                        'host'     : parsed_url.hostname,
-                        'database' : parsed_url.path.lstrip('/')
-                }
-                tdml.create_context(**Param)
-            except Exception as e:
-                logger.error(f"Error connecting to database: {e}")
-        else:
-            logger.warning("DATABASE_URI is not specified, teradataml context has not been established.")
-        # -----------------------------------------------------------     
     
     # Method to return the cursor
     #     If the connection is not established, it will raise an exception

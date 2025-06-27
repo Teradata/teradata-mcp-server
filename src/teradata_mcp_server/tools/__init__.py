@@ -1,6 +1,6 @@
 # src/teradata_aitools/__init__.py
 
-from .td_connect import TDConn
+from .td_connect import TDConn, teradataml_connection
 
 from .base import *
 from .dba import *

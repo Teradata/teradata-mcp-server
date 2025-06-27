@@ -13,19 +13,29 @@ RUN apt-get update && \
     apt-get purge -y build-essential gcc && \
     rm -rf /var/lib/apt/lists/*
 
+# Copy everything *except* src (excluded via .dockerignore)
 COPY . /app
+
+# Now copy src separately — this layer will be re-run only if src changes
+COPY ./src /app/src
+
 # └──────────── End build stage ────────────┘
 
 # ┌───────────── Runtime stage ─────────────┐
 FROM python:3.13-slim
 WORKDIR /app
 
-COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
-COPY --from=builder /app /app
+# Create the user early
+RUN useradd --no-log-init --create-home appuser
 
-RUN useradd --no-log-init --create-home appuser && chown -R appuser /app
+# Copy all files with correct ownership immediately
+COPY --from=builder --chown=appuser:appuser /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=builder --chown=appuser:appuser /usr/local/bin /usr/local/bin
+COPY --from=builder --chown=appuser:appuser /app /app
+RUN mkdir /app/logs && chown appuser:appuser /app/logs
+
 USER appuser
+
 RUN chmod -R u+w /app/src
 
 ENV PYTHONUNBUFFERED=1
