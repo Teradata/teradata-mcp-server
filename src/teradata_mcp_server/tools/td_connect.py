@@ -21,7 +21,7 @@ def teradataml_connection():
                     'database' : parsed_url.path.lstrip('/')
             }
             tdml.create_context(**Param)
-            logger.info(f"Connection with teradataml is successful.")
+            logger.info("Connection with teradataml is successful.")
         except Exception as e:
             logger.error(f"Error connecting to database: {e}")
     else:
