@@ -4,7 +4,9 @@ import teradataml as tdml # import of the teradataml package
 from urllib.parse import urlparse
 import logging
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -20,6 +22,7 @@ def teradataml_connection():
                     'host'     : parsed_url.hostname,
                     'database' : parsed_url.path.lstrip('/')
             }
+            print(f"\n\n Param: {Param}\n")
             tdml.create_context(**Param)
             logger.info("Connection with teradataml is successful.")
         except Exception as e:
