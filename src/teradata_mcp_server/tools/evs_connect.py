@@ -10,7 +10,7 @@ from .td_connect import TDConn
 logger = logging.getLogger("evs_connect")
 
 # -------------------------------------------------------------
-#  单例：Enterprise Vector Store
+#  Singleton：Enterprise Vector Store
 # -------------------------------------------------------------
 @lru_cache(maxsize=1)
 def get_evs() -> VectorStore:

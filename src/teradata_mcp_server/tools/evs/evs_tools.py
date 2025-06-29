@@ -50,26 +50,18 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
 
 
 #================================================================
-#  Enterprise Vector Store 相关工具
+#  Enterprise Vector Store tools
 #================================================================
 
 
 def handle_evs_similarity_search(
-    conn: TeradataConnection,        # 保持一致的签名，实际不使用
+    conn: TeradataConnection, 
     question: str,
     top_k: int = 1,
     *args,
     **kwargs,
 ) -> str:
-    """
-    在 Enterprise Vector Store 中做相似度检索。
-    
-    Args:
-        question: 待检索的问题
-        top_k:    返回前 K 条
-    Returns:
-        JSON 格式字符串
-    """
+
     logger.debug(f"EVS similarity_search: q='{question}', top_k={top_k}")
     vs = get_evs()
     try:
