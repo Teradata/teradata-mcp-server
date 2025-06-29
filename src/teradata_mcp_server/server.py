@@ -545,25 +545,18 @@ async def rag_guidelines() -> UserMessage:
 
 
 #------------------ Enterprise Vectore Store Tools  ------------------#
-# >>> EVS PATCH BEGIN ───────────── Enterprise Vector Store 工具 ───────
+
 @mcp.tool(description="Enterprise Vector Store similarity search")
-async def evs_similarity(
+async def evs_similarity_search(
     question: str = Field(description="Natural language question"),
     top_k: int = Field(1, description="top matches to return"),
 ) -> ResponseType:
-    """
-    对 Enterprise Vector Store 做相似度检索。
-    """
+
     return execute_vs_tool(
         td.evs_tools.handle_evs_similarity_search,
         question=question,
         top_k=top_k,
     )
-
-
-# >>> EVS PATCH END ───────────────────────────────────────────────────
-
-
 
 
 
