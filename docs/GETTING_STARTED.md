@@ -39,29 +39,42 @@ To configure the connections set the following environment variables in your she
 
 This is the database connection string using the following format:  `teradata://username:password@host:1025/[schemaname]`
 
-2. **MCP_TRANSPORT**
+2. **LOGMECH**
+
+This is the login mechansim: TD or LDAP
+
+3. **MCP_TRANSPORT**
 
 The server will connect to your Teradata instance and to the clients using one of the following transport modes 
 - Standard IO (stdio)
 - server-sent events (SSE)  
 - streamable-http (streamable-http). 
 
-3. **MCP_HOST**
+4. **MCP_HOST**
 
 This is the host address used when using the sse or streamable-http transport modes, default = localhost (127.0.0.1)
 
-4. **MCP_PORT**
+5. **MCP_PORT**
 
 This is the port address used when using the sse or streamable-http transport modes, default = 8001
 
-5. **MCP_PATH**
+6. **MCP_PATH**
 
 This is the path used for streamable_http transport mode, default to `\mcp`
 
+7. **Enterprise Vector Store**
+These are the parameters required when using the enterprose vector store tools.
 
-Configuration example:
+TD_BASE_URL=        #Your UES_URI, strip off the trailing /open-analytics
+TD_PAT=             #Your PAT string
+TD_PEM=             #Your PEM location
+VS_NAME=            #Your target Vector Store Name
+
+
+Minimum Configuration example:
 ```
 export DATABASE_URI=teradata://username:password@host:1025/schemaname
+export LOGMECH=LDAP
 
 # Enables transport communication as stdio, sse, streamable-http
 export MCP_TRANSPORT=stdio 
