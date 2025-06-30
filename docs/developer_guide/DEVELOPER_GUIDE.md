@@ -23,6 +23,12 @@ The directory structure will follow the following conventions
 - __init__.py - will contain server imports
 - server.py - contains the main server script and will decorate tools, prompts, and resources.
 
+
+[src/teradata_mcp_server/tools](./src/teradata_mcp_server/tools) - this will contain code to connect to the database as well as the modules.
+- __init__.py - will contain tool module imports
+- td_connect.py - contains the code responsible for connecting to Teradata.
+
+
 We will modularize the tool sets so that users will have the ability to add the tool sets that they need to the server.  It is expected that groupings of tools will have a consistent naming convention so that they can be easily associated.  
 
 [src/teradata_mcp_server/tools/base](./src/teradata_mcp_server/tools/base) - this will contain the base tool set:
@@ -60,6 +66,15 @@ We will modularize the tool sets so that users will have the ability to add the 
 - fs_resources.py - will contain the resource handle code
 - README.md - will describe the tools, prompts, resources, and package dependencies
 
+
+[src/teradata_mcp_server/tools/rag](./src/teradata_mcp_server/tools/rag) - this will contain vector store tool set:
+- __init__.py - will contain library imports
+- rag_tools.py - will contain the tool handle code
+- rag_prompts.py - will contain the prompt handle code
+- rag_resources.py - will contain the resource handle code
+- README.md - will describe the tools, prompts, resources, and package dependencies
+
+
 **New tools sets**
 New tool sets can be created in one of two ways:
 1. Custom tools - this approach allows the custom_tools.yaml file to register allthe tool information.  This approach is suitable for tools that run predefined SQL against Teradata.
@@ -68,7 +83,7 @@ New tool sets can be created in one of two ways:
 - ensure that the tool names correspond to the tool naming convention
 
 2. New tool libraries - this approach requires changes to the server code, as defined below.
-- grouping name should start with  and be up to 4 characters that describes the function
+- grouping name should start with up to 4 characters that describes the module function
 - Template code can be found in:
 [src/teradata_mcp_server/tools/tmpl](./src/teradata_mcp_server/tools/tmpl) - this will contain template tool set:
 - __init__.py - will contain library imports
@@ -81,8 +96,17 @@ The template code should be copied and prefixes for directory name and files sho
 
 [src/test/](./src/test/) - this will contain client tools for testing the server functionality
 
-[src/documentation](./src/documentation/) - contains package documentation.
-- development_conventions.md - contains directory structure, file naming and tool/prompt/resource naming convention.
+[docs](./docs/) - contains package documentation.
+- CHANGE_LOG.md - maintains the change log of releases.
+- CLIENT_GUIDE.md - explains how to connect common clients to the server.
+- CONTRIBUTING.md - guidelines for contributors
+- GETTING_STARTED.md - explains how to get the server up and running
+- SECURITY.md - explains how to register security issues
+
+[docs/developer_guide](./docs/developer_guide) - contains developer package documentation.
+- DEVELOPER_GUIDE.md - explains structural elements of the server for developers.
+- HOW_TO_ADD_YOUR_FUNCTION.md - explains how to add tools to a module
+- HOW_TO_ADD_CUSTOM_FUNCTIONS.md - explains how to add customer functions to the server.
 
 <br>
 

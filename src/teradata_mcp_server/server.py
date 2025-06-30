@@ -4,8 +4,8 @@ import logging
 import signal
 import json
 import yaml
-from typing import Any, List
-from pydantic import Field
+from typing import Any, List, Optional
+from pydantic import Field, BaseModel
 import mcp.types as types
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.prompts.base import UserMessage, TextContent
@@ -54,56 +54,8 @@ if (len(os.getenv("VS_NAME", "").strip()) > 0):
 #afm-defect: moved establish teradataml connection into main TDConn to enable auto-reconnect.
 #td.teradataml_connection()
 
-#---------- Feature Store Knowledge Base -----------#
-from pydantic import BaseModel
-from typing import Optional
 
-class FeatureStoreConfig(BaseModel):
-    """
-    Configuration class for the feature store. This model defines the metadata and catalog sources 
-    used to organize and access features, processes, and datasets across data domains.
-    """
 
-    data_domain: Optional[str] = Field(
-        default=None,
-        description="The data domain associated with the feature store, grouping features within the same namespace."
-    )
-
-    entity: Optional[str] = Field(
-        default=None,
-        description="The list of entities, comma separated and in alphabetical order, upper case."
-    )
-
-    db_name: Optional[str] = Field(
-        default=None,
-        description="Name of the database where the feature store is hosted."
-    )
-
-    feature_catalog: Optional[str] = Field(
-        default=None,
-        description=(
-            "Name of the feature catalog table. "
-            "This table contains detailed metadata about features and entities."
-        )
-    )
-
-    process_catalog: Optional[str] = Field(
-        default=None,
-        description=(
-            "Name of the process catalog table. "
-            "Used to retrieve information about feature generation processes, features, and associated entities."
-        )
-    )
-
-    dataset_catalog: Optional[str] = Field(
-        default=None,
-        description=(
-            "Name of the dataset catalog table. "
-            "Used to list and manage available datasets within the feature store."
-        )
-    )
-
-fs_config = FeatureStoreConfig() 
 
 #------------------ Tool utilies  ------------------#
 ResponseType = List[types.TextContent | types.ImageContent | types.EmbeddedResource]
@@ -549,22 +501,72 @@ async def rag_guidelines() -> UserMessage:
 
 #------------------ Enterprise Vectore Store Tools  ------------------#
 
-@mcp.tool(description="Enterprise Vector Store similarity search")
-async def vector_store_similarity_search(
-    question: str = Field(description="Natural language question"),
-    top_k: int = Field(1, description="top matches to return"),
-) -> ResponseType:
+# @mcp.tool(description="Enterprise Vector Store similarity search")
+# async def vector_store_similarity_search(
+#     question: str = Field(description="Natural language question"),
+#     top_k: int = Field(1, description="top matches to return"),
+# ) -> ResponseType:
 
-    return execute_vs_tool(
-        td.evs_tools.handle_evs_similarity_search,
-        question=question,
-        top_k=top_k,
-    )
+#     return execute_vs_tool(
+#         td.evs_tools.handle_evs_similarity_search,
+#         question=question,
+#         top_k=top_k,
+#     )
 
 
 
 #--------------- Feature Store Tools ---------------#
 # Feature tools leveraging the tdfs4ds package.
+
+
+#---------- Feature Store Knowledge Base -----------#
+class FeatureStoreConfig(BaseModel):
+    """
+    Configuration class for the feature store. This model defines the metadata and catalog sources 
+    used to organize and access features, processes, and datasets across data domains.
+    """
+
+    data_domain: Optional[str] = Field(
+        default=None,
+        description="The data domain associated with the feature store, grouping features within the same namespace."
+    )
+
+    entity: Optional[str] = Field(
+        default=None,
+        description="The list of entities, comma separated and in alphabetical order, upper case."
+    )
+
+    db_name: Optional[str] = Field(
+        default=None,
+        description="Name of the database where the feature store is hosted."
+    )
+
+    feature_catalog: Optional[str] = Field(
+        default=None,
+        description=(
+            "Name of the feature catalog table. "
+            "This table contains detailed metadata about features and entities."
+        )
+    )
+
+    process_catalog: Optional[str] = Field(
+        default=None,
+        description=(
+            "Name of the process catalog table. "
+            "Used to retrieve information about feature generation processes, features, and associated entities."
+        )
+    )
+
+    dataset_catalog: Optional[str] = Field(
+        default=None,
+        description=(
+            "Name of the dataset catalog table. "
+            "Used to list and manage available datasets within the feature store."
+        )
+    )
+
+fs_config = FeatureStoreConfig() 
+
 
 @mcp.tool(description="Reconnect to the Teradata database if the connection is lost.")
 async def reconnect_to_database() -> ResponseType:

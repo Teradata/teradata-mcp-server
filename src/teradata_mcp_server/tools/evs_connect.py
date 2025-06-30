@@ -1,11 +1,15 @@
 # ── evs_connect.py ────────────────────────────────────────────
-import os, logging
+import os 
+import logging
 from urllib.parse import urlparse
 from functools import lru_cache
 
 from teradataml import create_context, get_context, set_auth_token
 from teradatagenai import VectorStore, VSManager
 from .td_connect import TDConn                 
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger("evs_connect")
 
