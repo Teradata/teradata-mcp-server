@@ -40,8 +40,19 @@ shutdown_in_progress = False
 
 # Initiate connection to Teradata
 _tdconn = td.TDConn()
-_evs    = td.get_evs()
-td.teradataml_connection()
+
+#afm-defect:
+_enableEVS = False
+# Only attempt to connect to EVS is the system has an EVS installed/configured
+if (len(os.getenv("VS_NAME", "").strip()) > 0):
+    try:
+        _evs    = td.get_evs()
+        _enableEVS = True
+    except:
+        logger.error("Unable to establish connection to EVS, disabling")
+        
+#afm-defect: moved establish teradataml connection into main TDConn to enable auto-reconnect.
+#td.teradataml_connection()
 
 #---------- Feature Store Knowledge Base -----------#
 from pydantic import BaseModel
@@ -131,21 +142,26 @@ def execute_db_tool(tool, *args, **kwargs):
     
 
 def execute_vs_tool(tool, *args, **kwargs) -> ResponseType:
-    global _evs                          
-    try:
-        return format_text_response(tool(_evs, *args, **kwargs))
-    except Exception as e:
-        if "401" in str(e) or "Session expired" in str(e):
-            logger.warning("EVS session expired, refreshing …")
-            _evs = td.evs_connect.refresh_evs()
-            try:
-                return format_text_response(tool(_evs, *args, **kwargs))
-            except Exception as retry_err:
-                logger.error(f"EVS retry failed: {retry_err}")
-                return format_error_response(f"After refresh, still failed: {retry_err}")
+    global _evs
+    global _enableEVS
 
-        logger.error(f"EVS tool error: {e}")
-        return format_error_response(str(e))
+    if _enableEVS:
+        try:
+            return format_text_response(tool(_evs, *args, **kwargs))
+        except Exception as e:
+            if "401" in str(e) or "Session expired" in str(e):
+                logger.warning("EVS session expired, refreshing …")
+                _evs = td.evs_connect.refresh_evs()
+                try:
+                    return format_text_response(tool(_evs, *args, **kwargs))
+                except Exception as retry_err:
+                    logger.error(f"EVS retry failed: {retry_err}")
+                    return format_error_response(f"After refresh, still failed: {retry_err}")
+    
+            logger.error(f"EVS tool error: {e}")
+            return format_error_response(str(e))
+    else:
+        return format_error_response("Enterprise Vector Store is not available on this server.")
 
     
 #------------------ Base Tools  ------------------#
@@ -429,7 +445,7 @@ async def rag_set_config(
     vector_db: str = Field(description="Database containing the chunk vector store"),
     vector_table: str = Field(description="Table containing chunk embeddings for similarity search"),
 ) -> ResponseType:
-    return execute_db_tool( _tdconn, td.handle_set_rag_config, query_db=query_db, model_db=model_db, vector_db=vector_db, vector_table=vector_table,)
+    return execute_db_tool( td.handle_set_rag_config, query_db=query_db, model_db=model_db, vector_db=vector_db, vector_table=vector_table,)
 
 @mcp.tool(
     description=(
