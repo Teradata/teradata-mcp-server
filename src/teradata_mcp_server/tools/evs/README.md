@@ -2,7 +2,8 @@
 
 **Dependencies**
 
-Assumes Teradata >=17.20.
+Assumes Teradata >=20.
+assumes security
 
 **Template** tools:
 

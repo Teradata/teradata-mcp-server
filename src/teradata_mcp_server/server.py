@@ -40,7 +40,7 @@ shutdown_in_progress = False
 
 # Initiate connection to Teradata
 _tdconn = td.TDConn()
-_evs    = td.get_evs()
+# _evs    = td.get_evs()
 td.teradataml_connection()
 
 #---------- Feature Store Knowledge Base -----------#
@@ -533,17 +533,17 @@ async def rag_guidelines() -> UserMessage:
 
 #------------------ Enterprise Vectore Store Tools  ------------------#
 
-@mcp.tool(description="Enterprise Vector Store similarity search")
-async def vector_store_similarity_search(
-    question: str = Field(description="Natural language question"),
-    top_k: int = Field(1, description="top matches to return"),
-) -> ResponseType:
+# @mcp.tool(description="Enterprise Vector Store similarity search")
+# async def vector_store_similarity_search(
+#     question: str = Field(description="Natural language question"),
+#     top_k: int = Field(1, description="top matches to return"),
+# ) -> ResponseType:
 
-    return execute_vs_tool(
-        td.evs_tools.handle_evs_similarity_search,
-        question=question,
-        top_k=top_k,
-    )
+#     return execute_vs_tool(
+#         td.evs_tools.handle_evs_similarity_search,
+#         question=question,
+#         top_k=top_k,
+#     )
 
 
 
