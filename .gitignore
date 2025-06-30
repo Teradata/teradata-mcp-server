@@ -6,3 +6,5 @@ working/
 .vscode/
 .venv/
 *.egg-info/
+**/.ipynb_checkpoints/
+env
