@@ -5,8 +5,8 @@ import json
 from datetime import date, datetime
 from decimal import Decimal
 import tdfs4ds
-from teradatasql import TeradataConnection
-import teradataml as tdml
+
+
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -75,7 +75,7 @@ def handle_get_fs_is_feature_store_present(conn: TeradataConnection, db_name: st
     }
     return create_response(data, metadata)
 
-
+#------------------ Tool  ------------------#
 # Feature Store available data domainAdd commentMore actions
 #     Arguments: 
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
@@ -108,20 +108,16 @@ def handle_get_fs_get_data_domains(conn: TeradataConnection, fs_config, *args, *
     """
     logger.info(sql_query)
     with conn.cursor() as cur:
-        if argument == "":
-            logger.debug("No argument provided")
-            rows = cur.execute("Teradata query goes here;")
-        else:
-            logger.debug(f"Argument provided: {argument}")
-            rows = cur.execute(f"Teradata query goes here with argument {argument};")
+        rows = cur.execute(sql_query)
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
             "tool_name": "handle_get_fs_get_data_domains",
             "db_name": fs_config.db_name,
         }
 
-        return create_response(data, metadata)Add commentMore actions
+        return create_response(data, metadata)
 
+#------------------ Tool  ------------------#
 # Feature high level report of the feature store content
 #     Arguments: 
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
@@ -159,7 +155,7 @@ def handle_get_fs_feature_store_content(conn: TeradataConnection, fs_config, *ar
 
         return create_response(data, metadata)
 
-
+#------------------ Tool  ------------------#
 # Feature Store: feature store schema
 #     Arguments: 
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
@@ -200,7 +196,7 @@ def handle_get_fs_get_the_feature_data_model(conn: TeradataConnection, fs_config
     }
     return create_response(data, metadata)
 
-
+#------------------ Tool  ------------------#
 # Feature Store: get abailable entities
 #     Arguments: 
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
@@ -224,7 +220,7 @@ def handle_get_fs_get_available_entities(conn: TeradataConnection, fs_config, *a
     # set the data domain:
     data_domain = fs_config.data_domain
     if data_domain is None or data_domain == '':
-        return create_response({"error": f"The data domain is not specified"}, {"tool_name": "handle_get_fs_get_available_entities", "db_name": db_name})
+        return create_response({"error": "The data domain is not specified"}, {"tool_name": "handle_get_fs_get_available_entities", "db_name": db_name})
     
     tdfs4ds.DATA_DOMAIN = data_domain
 
@@ -246,7 +242,7 @@ def handle_get_fs_get_available_entities(conn: TeradataConnection, fs_config, *a
     }
     return create_response(data, metadata)
 
-
+#------------------ Tool  ------------------#
 # Feature Store: get abailable entities
 #     Arguments: 
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
@@ -279,6 +275,7 @@ def handle_get_fs_get_available_datasets(conn: TeradataConnection, fs_config, *a
     }
     return create_response(data, metadata)
 
+#------------------ Tool  ------------------#
 # Feature Store: get abailable entities
 #     Arguments: 
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
@@ -338,7 +335,7 @@ def handle_get_fs_get_features(conn: TeradataConnection, fs_config, *args, **kwa
     }
     return create_response(data, metadata)
 
-
+#------------------ Tool  ------------------#
 # Feature Store: dataset creation tool
 #     Arguments: 
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
@@ -362,7 +359,7 @@ def handle_write_fs_get_create_dataset(conn: TeradataConnection, fs_config, enti
     # set the data domain:
     data_domain = fs_config.data_domain
     if data_domain is None or data_domain == '':
-        return create_response({"error": f"The data domain is not specified"}, {"tool_name": "handle_get_fs_get_create_dataset", "db_name": db_name})
+        return create_response({"error": "The data domain is not specified"}, {"tool_name": "handle_get_fs_get_create_dataset", "db_name": db_name})
 
     tdfs4ds.DATA_DOMAIN = data_domain
 
