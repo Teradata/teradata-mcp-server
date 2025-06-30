@@ -5,3 +5,8 @@ MCP_HOST=127.0.0.1
 MCP_PORT=8001
 MCP_PATH=/mcp/
 
+# ----- Enterprise Vector Store ----------
+TD_BASE_URL=https://tddemos.innovationlabs.teradata.com/api/accounts/1ca5520e-5abd-441d-ba25-40c83ff23b2e
+TD_PAT=gwxhQG2UZcDqQlp9LKWjEBfXB7GH
+TD_PEM=./tddemos_key.pem                                   
+VS_NAME=vs_example #Your target Vector Store Name
