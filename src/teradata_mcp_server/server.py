@@ -129,37 +129,24 @@ def execute_db_tool(tool, *args, **kwargs):
         logger.error(f"Error sampling object: {e}")
         return format_error_response(str(e))
     
-# >>> EVS PATCH BEGIN ────────────────────────────────────────────────
+
 def execute_vs_tool(tool, *args, **kwargs) -> ResponseType:
-    """
-    Enterprise Vector Store 工具统一入口  
-    第一个参数始终传入当前 VS 实例 _evs
-    """
-    global _evs                              # 后面要重新赋值，必须声明 global
-
+    global _evs                          
     try:
-        # 第一次调用
         return format_text_response(tool(_evs, *args, **kwargs))
-
     except Exception as e:
-        # —— 1) 判断是否为“会话失效 / 鉴权问题”
         if "401" in str(e) or "Session expired" in str(e):
             logger.warning("EVS session expired, refreshing …")
-
-            # —— 2) 重新建立 VS 会话
             _evs = td.evs_connect.refresh_evs()
-
             try:
-                # —— 3) 重试一次
                 return format_text_response(tool(_evs, *args, **kwargs))
             except Exception as retry_err:
                 logger.error(f"EVS retry failed: {retry_err}")
                 return format_error_response(f"After refresh, still failed: {retry_err}")
 
-        # 其它异常 → 原样返回
         logger.error(f"EVS tool error: {e}")
         return format_error_response(str(e))
-# >>> EVS PATCH END ─────────────────────────────────────────────────
+
     
 #------------------ Base Tools  ------------------#
 
@@ -547,7 +534,7 @@ async def rag_guidelines() -> UserMessage:
 #------------------ Enterprise Vectore Store Tools  ------------------#
 
 @mcp.tool(description="Enterprise Vector Store similarity search")
-async def evs_similarity_search(
+async def vector_store_similarity_search(
     question: str = Field(description="Natural language question"),
     top_k: int = Field(1, description="top matches to return"),
 ) -> ResponseType:
