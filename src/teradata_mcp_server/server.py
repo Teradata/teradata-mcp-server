@@ -40,6 +40,7 @@ shutdown_in_progress = False
 
 # Initiate connection to Teradata
 _tdconn = td.TDConn()
+_evs    = td.get_evs()
 td.teradataml_connection()
 
 #---------- Feature Store Knowledge Base -----------#
@@ -127,6 +128,25 @@ def execute_db_tool(tool, *args, **kwargs):
     except Exception as e:
         logger.error(f"Error sampling object: {e}")
         return format_error_response(str(e))
+    
+
+def execute_vs_tool(tool, *args, **kwargs) -> ResponseType:
+    global _evs                          
+    try:
+        return format_text_response(tool(_evs, *args, **kwargs))
+    except Exception as e:
+        if "401" in str(e) or "Session expired" in str(e):
+            logger.warning("EVS session expired, refreshing …")
+            _evs = td.evs_connect.refresh_evs()
+            try:
+                return format_text_response(tool(_evs, *args, **kwargs))
+            except Exception as retry_err:
+                logger.error(f"EVS retry failed: {retry_err}")
+                return format_error_response(f"After refresh, still failed: {retry_err}")
+
+        logger.error(f"EVS tool error: {e}")
+        return format_error_response(str(e))
+
     
 #------------------ Base Tools  ------------------#
 
@@ -509,6 +529,22 @@ async def get_sec_userRoles(
 @mcp.prompt()
 async def rag_guidelines() -> UserMessage:
     return UserMessage(role="user", content=TextContent(type="text", text=td.rag_guidelines))
+
+
+#------------------ Enterprise Vectore Store Tools  ------------------#
+
+@mcp.tool(description="Enterprise Vector Store similarity search")
+async def vector_store_similarity_search(
+    question: str = Field(description="Natural language question"),
+    top_k: int = Field(1, description="top matches to return"),
+) -> ResponseType:
+
+    return execute_vs_tool(
+        td.evs_tools.handle_evs_similarity_search,
+        question=question,
+        top_k=top_k,
+    )
+
 
 
 #--------------- Feature Store Tools ---------------#

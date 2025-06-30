@@ -5,3 +5,8 @@ MCP_HOST=127.0.0.1
 MCP_PORT=8001
 MCP_PATH=/mcp/
 
+# ----- Enterprise Vector Store ----------
+TD_BASE_URL=https://host/api/accounts/40c83ff23b2e    #Your UES_URI, strip off the trailing /open-analytics
+TD_PAT=gwxhQG2UZcDqQlp9LKWjEBfXB7                     #Your PAT
+TD_PEM=./demo_key.pem                                 #Your PEM                                
+VS_NAME=vs_example                                    #Your target Vector Store Name

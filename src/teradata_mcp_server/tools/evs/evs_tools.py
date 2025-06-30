@@ -4,6 +4,7 @@ from typing import Optional, Any, Dict, List
 import json
 from datetime import date, datetime
 from decimal import Decimal
+from teradata_mcp_server.tools.evs_connect import get_evs
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -48,25 +49,37 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
 #------------------ Do not make changes above  ------------------#
 
 
-#------------------ Tool  ------------------#
-# <Name of Tool> tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-#       <arguments> - <description of arguments>
-#     Returns: <what it does> or error message    
-def handle_get_fs_nameOfTool(conn: TeradataConnection, argument: Optional[str], *args, **kwargs):
-    logger.debug(f"Tool: handle_get_fs_nameOfTool: Args: argument: {argument}")
+#================================================================
+#  Enterprise Vector Store tools
+#================================================================
 
-    with conn.cursor() as cur:
-        if argument == "":
-            logger.debug("No argument provided")
-            rows = cur.execute("Teradata query goes here;")
-        else:
-            logger.debug(f"Argument provided: {argument}")
-            rows = cur.execute(f"Teradata query goes here with argument {argument};")
-        data = rows_to_json(cur.description, rows.fetchall())
-        metadata = {
-            "tool_name": "get_fs_nameOfTool",
-            "argument": argument,
-        }
-        return create_response(data, metadata)
+
+def handle_evs_similarity_search(
+    conn: TeradataConnection, 
+    question: str,
+    top_k: int = 1,
+    *args,
+    **kwargs,
+) -> str:
+
+    logger.debug(f"EVS similarity_search: q='{question}', top_k={top_k}")
+    vs = get_evs()
+    try:
+        results = vs.similarity_search(
+            question=question,
+            top_k=top_k,
+            return_type="json",
+        )
+        return create_response(
+            results,
+            metadata={
+                "tool_name": "evs_similarity_search",
+                "question": question,
+                "top_k": top_k,
+            },
+        )
+    except Exception as e:
+        logger.error(f"EVS similarity_search failed: {e}")
+        return json.dumps({"status": "error", "message": str(e)})
+
+

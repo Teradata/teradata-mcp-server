@@ -30,20 +30,20 @@ async def create_agent():
                     "teradata-mcp-server"
                 ],
             ),
-            timeout=10  # Timeout in seconds for establishing the connection to the MCP std
+            timeout=5  # Timeout in seconds for establishing the connection to the MCP std
         )
     elif os.getenv("MCP_TRANSPORT") == 'sse':
         # .env file needs to have MCP_TRANSPORT=sse
         connection_params=SseConnectionParams(
             url = f'http://{os.getenv("MCP_HOST", "localhost")}:{os.getenv("MCP_PORT", 8001)}/sse',  # URL of the MCP server
-            timeout=10,  # Timeout in seconds for establishing the connection to the MCP SSE server
+            timeout=5,  # Timeout in seconds for establishing the connection to the MCP SSE server
         )
 
     elif os.getenv("MCP_TRANSPORT") == 'streamable-http':
         # .env file needs to have MCP_TRANSPORT=streamable-http
         connection_params=StreamableHTTPConnectionParams(
             url = f'http://{os.getenv("MCP_HOST", "localhost")}:{os.getenv("MCP_PORT", 8001)}/mcp/',  # URL of the MCP server
-            timeout=10,  # Timeout in seconds for establishing the connection to the MCP Streamable HTTP server
+            timeout=5,  # Timeout in seconds for establishing the connection to the MCP Streamable HTTP server
         )
 
     else:
