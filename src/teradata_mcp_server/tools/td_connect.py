@@ -23,7 +23,7 @@ def teradataml_connection():
                     'host'     : parsed_url.hostname,
                     'database' : parsed_url.path.lstrip('/')
             }
-            print(f"\n\n Param: {Param}\n")
+
             tdml.create_context(**Param, logmech = logmech)
             logger.info("Connection with teradataml is successful.")
         except Exception as e:

@@ -6,7 +6,7 @@ Assumes Teradata >=17.20.
 
 **Template** tools:
 
-- get_tmpl_nameFunction - description of tool
+- tmpl_nameFunction - description of tool
 
 
 **Template** prompts:

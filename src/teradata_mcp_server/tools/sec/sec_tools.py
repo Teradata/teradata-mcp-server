@@ -55,8 +55,8 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
 #       user_name (str) - The username for which to retrieve permissions
 #       
 #     Returns: permissions assigned to user_name or error message
-def handle_get_sec_userDbPermissions(conn: TeradataConnection, user_name: str, *args, **kwargs):
-    logger.debug(f"Tool: handle_get_sec_userDbPermissions: Args: user_name: {user_name}")
+def handle_sec_userDbPermissions(conn: TeradataConnection, user_name: str, *args, **kwargs):
+    logger.debug(f"Tool: handle_sec_userDbPermissions: Args: user_name: {user_name}")
 
     with conn.cursor() as cur:
         if user_name == "":
@@ -78,7 +78,7 @@ def handle_get_sec_userDbPermissions(conn: TeradataConnection, user_name: str, *
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_sec_userDbPermissions",
+            "tool_name": "sec_userDbPermissions",
             "argument": user_name,
         }
         return create_response(data, metadata) 
@@ -91,8 +91,8 @@ def handle_get_sec_userDbPermissions(conn: TeradataConnection, user_name: str, *
 #       role_name (str) - The role name for which to retrieve permissions
 #
 #     Returns: permissions assigned to role_name or error message
-def handle_get_sec_rolePermissions(conn: TeradataConnection, role_name: str, *args, **kwargs):
-    logger.debug(f"Tool: handle_get_sec_rolePermissions: Args: role_name: {role_name}")
+def handle_sec_rolePermissions(conn: TeradataConnection, role_name: str, *args, **kwargs):
+    logger.debug(f"Tool: handle_sec_rolePermissions: Args: role_name: {role_name}")
 
     with conn.cursor() as cur:
         if role_name == "":
@@ -174,7 +174,7 @@ def handle_get_sec_rolePermissions(conn: TeradataConnection, role_name: str, *ar
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_sec_rolePermissions",
+            "tool_name": "sec_rolePermissions",
             "argument": role_name,
         }
         return create_response(data, metadata)
@@ -187,8 +187,8 @@ def handle_get_sec_rolePermissions(conn: TeradataConnection, role_name: str, *ar
 #       user_name (str) - The username for which to retrieve roles
 #
 #     Returns: roles assigned to user_name or error message
-def handle_get_sec_userRoles(conn: TeradataConnection, user_name: str, *args, **kwargs):
-    logger.debug(f"Tool: handle_get_sec_userRoles: Args: user_name: {user_name}")
+def handle_sec_userRoles(conn: TeradataConnection, user_name: str, *args, **kwargs):
+    logger.debug(f"Tool: handle_sec_userRoles: Args: user_name: {user_name}")
 
     with conn.cursor() as cur:
         if user_name == "":
@@ -212,7 +212,7 @@ def handle_get_sec_userRoles(conn: TeradataConnection, user_name: str, *args, **
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_sec_userRoles",
+            "tool_name": "sec_userRoles",
             "argument": user_name,
         }
         return create_response(data, metadata)

@@ -55,8 +55,8 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries         
 #       sql (str) - SQL query to execute
 #     Returns: ResponseType - formatted response with query results or error message
-def handle_get_base_readQuery(conn: TeradataConnection, sql: str, *args, **kwargs):
-    logger.debug(f"Tool: handle_get_base_readQuery: Args: sql: {sql}")
+def handle_base_readQuery(conn: TeradataConnection, sql: str, *args, **kwargs):
+    logger.debug(f"Tool: handle_base_readQuery: Args: sql: {sql}")
 
     with conn.cursor() as cur:    
         rows = cur.execute(sql)  # type: ignore
@@ -65,7 +65,7 @@ def handle_get_base_readQuery(conn: TeradataConnection, sql: str, *args, **kwarg
             
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_base_readQuery",
+            "tool_name": "base_readQuery",
             "sql": sql,
             "columns": [
                 {"name": col[0], "type": col[1].__name__ if hasattr(col[1], '__name__') else str(col[1])}
@@ -82,8 +82,8 @@ def handle_get_base_readQuery(conn: TeradataConnection, sql: str, *args, **kwarg
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries         
 #       sql (str) - SQL query to execute
 #     Returns: ResponseType - formatted response with query results or error message
-def handle_write_base_writeQuery(conn: TeradataConnection, sql: str, *args, **kwargs):
-    logger.debug(f"Tool: handle_write_base_writeQuery: Args: sql: {sql}")
+def handle_base_writeQuery(conn: TeradataConnection, sql: str, *args, **kwargs):
+    logger.debug(f"Tool: handle_base_writeQuery: Args: sql: {sql}")
 
     with conn.cursor() as cur:   
         rows = cur.execute(sql)  # type: ignore
@@ -91,7 +91,7 @@ def handle_write_base_writeQuery(conn: TeradataConnection, sql: str, *args, **kw
             return create_response([])
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "write_base_writeQuery",
+            "tool_name": "base_writeQuery",
             "sql": sql,
             "affected_rows": cur.rowcount if hasattr(cur, 'rowcount') else None,
             "row_count": len(data)
@@ -106,8 +106,8 @@ def handle_write_base_writeQuery(conn: TeradataConnection, sql: str, *args, **kw
 #       db_name (str) - name of the database
 #       table_name (str) - name of the table to get the definition for
 #     Returns: ResponseType - formatted response with ddl results or error message
-def handle_get_base_tableDDL(conn: TeradataConnection, db_name: str, table_name: str, *args, **kwargs):
-    logger.debug(f"Tool: handle_get_base_tableDDL: Args: db_name: {db_name}, table_name: {table_name}")
+def handle_base_tableDDL(conn: TeradataConnection, db_name: str, table_name: str, *args, **kwargs):
+    logger.debug(f"Tool: handle_base_tableDDL: Args: db_name: {db_name}, table_name: {table_name}")
 
     if len(db_name) == 0:
         db_name = "%"
@@ -123,7 +123,7 @@ def handle_get_base_tableDDL(conn: TeradataConnection, db_name: str, table_name:
         rows = cur.execute(f"show table {db_name}.{table_name}")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_base_tableDDL",
+            "tool_name": "base_tableDDL",
             "database": db_name,
             "table": table_name
         }
@@ -135,14 +135,14 @@ def handle_get_base_tableDDL(conn: TeradataConnection, db_name: str, table_name:
 #     Arguments: 
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries        
 #     Returns: ResponseType - formatted response with list of databases or error message
-def handle_get_base_databaseList(conn: TeradataConnection, *args, **kwargs):
-    logger.debug("Tool: handle_get_base_databaseList: Args:")
+def handle_base_databaseList(conn: TeradataConnection, *args, **kwargs):
+    logger.debug("Tool: handle_base_databaseList: Args:")
 
     with conn.cursor() as cur:
         rows = cur.execute("select DataBaseName, DECODE(DBKind, 'U', 'User', 'D','DataBase') as DBType, CommentString from dbc.DatabasesV dv where OwnerName <> 'PDCRADM'")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_base_databaseList",
+            "tool_name": "base_databaseList",
             "total_count": len(data),
             "databases": len([d for d in data if d.get("DBType") == "DataBase"]),
             "users": len([d for d in data if d.get("DBType") == "User"])
@@ -156,8 +156,8 @@ def handle_get_base_databaseList(conn: TeradataConnection, *args, **kwargs):
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries   
 #       db_name (str) - name of the database to list objects from      
 #     Returns: formatted response with list of tables in database or error message    
-def handle_get_base_tableList(conn: TeradataConnection, db_name: str, *args, **kwargs):
-    logger.debug(f"Tool: handle_get_base_tableList: Args: db_name: {db_name}")
+def handle_base_tableList(conn: TeradataConnection, db_name: str, *args, **kwargs):
+    logger.debug(f"Tool: handle_base_tableList: Args: db_name: {db_name}")
 
     if len(db_name) == 0:
         db_name = "%"
@@ -165,7 +165,7 @@ def handle_get_base_tableList(conn: TeradataConnection, db_name: str, *args, **k
         rows = cur.execute("select TableName from dbc.TablesV tv where UPPER(tv.DatabaseName) = UPPER(?) and tv.TableKind in ('T','V', 'O', 'Q');", [db_name])
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_base_tableList",
+            "tool_name": "base_tableList",
             "database": db_name,
             "table_count": len(data)
         }
@@ -178,8 +178,8 @@ def handle_get_base_tableList(conn: TeradataConnection, db_name: str, *args, **k
 #       db_name (str) - name of the database to list objects from
 #       obj_name (str) - name of the object to list columns from     
 #     Returns: formatted response with list of columns and data types or error message
-def handle_get_base_columnDescription(conn: TeradataConnection, db_name: str, obj_name: str, *args, **kwargs):
-    logger.debug(f"Tool: handle_get_base_columnDescription: Args: db_name: {db_name}, obj_name: {obj_name}")
+def handle_base_columnDescription(conn: TeradataConnection, db_name: str, obj_name: str, *args, **kwargs):
+    logger.debug(f"Tool: handle_base_columnDescription: Args: db_name: {db_name}, obj_name: {obj_name}")
 
     if len(db_name) == 0:
         db_name = "%"
@@ -238,7 +238,7 @@ def handle_get_base_columnDescription(conn: TeradataConnection, db_name: str, ob
         rows = cur.execute(query, [obj_name, db_name])
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_base_columnDescription",
+            "tool_name": "base_columnDescription",
             "database": db_name,
             "object": obj_name,
             "column_count": len(data)
@@ -253,11 +253,11 @@ def handle_get_base_columnDescription(conn: TeradataConnection, db_name: str, ob
 #       db_name (str) - name of the database to list objects from
 #       table_name (str) - name of the table to list columns from     
 #     Returns: formatted response string or error message
-def handle_get_base_tablePreview(conn: TeradataConnection, table_name: str, db_name: Optional[str] = None, *args, **kwargs):
+def handle_base_tablePreview(conn: TeradataConnection, table_name: str, db_name: Optional[str] = None, *args, **kwargs):
     """
     This function returns data sample and inferred structure from a database table or view.
     """
-    logger.debug(f"Tool: handle_get_base_tablePreview: Args: tablename: {table_name}, databasename: {db_name}")
+    logger.debug(f"Tool: handle_base_tablePreview: Args: tablename: {table_name}, databasename: {db_name}")
 
     if db_name is not None:
         table_name = f"{db_name}.{table_name}"
@@ -267,7 +267,7 @@ def handle_get_base_tablePreview(conn: TeradataConnection, table_name: str, db_n
         sample = rows_to_json(cur.description, cur.fetchall())
 
         metadata = {
-            "tool_name": "get_base_tablePreview",
+            "tool_name": "base_tablePreview",
             "database": db_name,
             "table_name": table_name,
             "columns": [
@@ -289,11 +289,11 @@ def handle_get_base_tablePreview(conn: TeradataConnection, table_name: str, db_n
 #       db_name (str) - name of the database to list objects from
 #       obj_name (str) - name of the object to list columns from
 #     Returns: formatted response with list of tables and their usage or error message
-def handle_get_base_tableAffinity(conn: TeradataConnection, db_name: str, obj_name: str, *args, **kwargs):
+def handle_base_tableAffinity(conn: TeradataConnection, db_name: str, obj_name: str, *args, **kwargs):
     """
     Get tables commonly used together by database users, this is helpful to infer relationships between tables.
     """
-    logger.debug(f"Tool: handle_get_base_tableAffinity: Args: db_name: {db_name}, obj_name: {obj_name}")
+    logger.debug(f"Tool: handle_base_tableAffinity: Args: db_name: {db_name}, obj_name: {obj_name}")
     table_affiity_sql="""
     LOCKING ROW for ACCESS
     SELECT   TRIM(QTU2.DatabaseName)  AS "DatabaseName"
@@ -347,7 +347,7 @@ def handle_get_base_tableAffinity(conn: TeradataConnection, db_name: str, obj_na
     else:
         affinity_info=f'Object {db_name}.{obj_name} is not often queried with any other table or queried at all, try other ways to infer its relationships.'
     metadata = {
-        "tool_name": "handle_get_base_tableAffinity",
+        "tool_name": "handle_base_tableAffinity",
         "database": db_name,
         "object": obj_name,
         "table_count": len(data),
@@ -362,11 +362,11 @@ def handle_get_base_tableAffinity(conn: TeradataConnection, db_name: str, obj_na
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       db_name (str) - name of the database to list objects from
 #     Returns: formatted response with list of tables and their usage or error message
-def handle_get_base_tableUsage(conn: TeradataConnection, db_name: Optional[str] = None, *args, **kwargs):
+def handle_base_tableUsage(conn: TeradataConnection, db_name: Optional[str] = None, *args, **kwargs):
     """
     Measure the usage of a table and views by users in a given schema, this is helpful to infer what database objects are most actively used or drive most value.
     """
-    logger.debug("Tool: handle_get_base_tableUsage: Args: db_name:")
+    logger.debug("Tool: handle_base_tableUsage: Args: db_name:")
     if db_name:
         database_name_filter=f"AND objectdatabasename = '{db_name}'"
     else:
@@ -427,7 +427,7 @@ def handle_get_base_tableUsage(conn: TeradataConnection, db_name: Optional[str] 
     else:
         info=f'No tables have recently been queried in the database schema {db_name}.'
     metadata = {
-        "tool_name": "handle_get_base_tableUsage",
+        "tool_name": "handle_base_tableUsage",
         "database": db_name,
         "table_count": len(data),
         "comment": info

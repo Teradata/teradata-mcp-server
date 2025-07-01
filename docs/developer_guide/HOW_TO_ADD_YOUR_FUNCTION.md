@@ -10,8 +10,8 @@ This guide shows how to register a Python function named `my_function`—with mu
 
 Integrate `my_function` into the MPC toolchain with two layers:
 
-1. **Frontend wrapper** (MPC-exposed async function): `get_fs_my_function`
-2. **Backend logic handler** (actual logic): `handle_get_fs_my_function`
+1. **Frontend wrapper** (MPC-exposed async function): `fs_my_function`
+2. **Backend logic handler** (actual logic): `handle_fs_my_function`
 
 ---
 
@@ -22,7 +22,7 @@ This is the core function that performs the actual logic. It receives a database
 ```python
 # handler_function.py
 
-def handle_get_fs_my_function(
+def handle_fs_my_function(
     conn: TeradataConnection, 
     arg1: str, 
     arg2: int, 
@@ -30,14 +30,14 @@ def handle_get_fs_my_function(
     *args, 
     **kwargs
 ):
-    logger.debug(f"Tool: handle_get_fs_my_function: Args: arg1={arg1}, arg2={arg2}, flag={flag}")
+    logger.debug(f"Tool: handle_fs_my_function: Args: arg1={arg1}, arg2={arg2}, flag={flag}")
 
     try:
         # Replace this with real business logic
         result = my_function(arg1=arg1, arg2=arg2, flag=flag)
 
         metadata = {
-            "tool_name": "get_fs_my_function",
+            "tool_name": "fs_my_function",
             "arg1": arg1,
             "arg2": arg2,
             "flag": flag,
@@ -45,8 +45,8 @@ def handle_get_fs_my_function(
         return create_response(result, metadata)
 
     except Exception as e:
-        logger.error(f"Error in handle_get_fs_my_function: {e}")
-        return create_response({"error": str(e)}, {"tool_name": "get_fs_my_function"})
+        logger.error(f"Error in handle_fs_my_function: {e}")
+        return create_response({"error": str(e)}, {"tool_name": "fs_my_function"})
 ```
 
 ---
@@ -65,14 +65,14 @@ from mcp import tool  # adjust this import based on your actual framework
 @mcp.tool(
     description="Run `my_function` with required arguments `arg1`, `arg2`, and optional `flag`."
 )
-async def get_fs_my_function(
+async def fs_my_function(
     arg1: str = Field(..., description="First argument (string)."),
     arg2: int = Field(..., description="Second argument (integer)."),
     flag: Optional[bool] = Field(False, description="Optional flag (boolean)."),
 ) -> ResponseType:
     return execute_db_tool(
         _tdconn,
-        td.handle_get_fs_my_function,
+        td.handle_fs_my_function,
         arg1=arg1,
         arg2=arg2,
         flag=flag,
@@ -112,7 +112,7 @@ def my_function(arg1: str, arg2: int, flag: bool = False) -> str:
 ```python
 # Emulate how MPC would call the tool
 async def test_tool():
-    result = await get_fs_my_function(arg1="test", arg2=123, flag=True)
+    result = await fs_my_function(arg1="test", arg2=123, flag=True)
     print(result)
 ```
 
@@ -122,8 +122,8 @@ async def test_tool():
 
 | Component                   | Purpose                                                                       |
 | --------------------------- | ----------------------------------------------------------------------------- |
-| `get_fs_my_function`        | Async MPC tool function. Handles inputs, metadata, and passes to the backend. |
-| `handle_get_fs_my_function` | Backend business logic handler, receives parsed arguments and DB connection.  |
+| `fs_my_function`        | Async MPC tool function. Handles inputs, metadata, and passes to the backend. |
+| `handle_fs_my_function` | Backend business logic handler, receives parsed arguments and DB connection.  |
 | `execute_db_tool`           | Utility wrapper for error handling and formatting.                            |
 
 Let me know if you'd like this as a template or reusable decorator for many functions. 

@@ -1,15 +1,5 @@
 handle_base_query = """The assistant's goal is to help users interact with Teradata databases effectively. 
 
-   <mcp>
-   Tools:
-   - "execute_read_query": Runs read SQL queries and returns results
-   - "execute_write_query": Runs write SQL queries and returns results
-   - "read_database_list": List all databases in the Teradata system
-   - "read_table_list": List objects in a database
-   - "read_table_ddl": Show the DDL definition of a table
-   - "read_table_preview": Get data samples and structure overview from a database table
-   - "read_column_description": Show detailed column information about a database table
-   </mcp>
 
    <workflow>
    1. Database Exploration:
@@ -143,7 +133,7 @@ handle_base_tableBusinessDesc = """
    - The database name is {database_name}
 
    ## Phase 1 - Get the table DDL
-   - Get the table DDL from the user. The DDL should be a single string, and it should not contain any new lines or special characters. Use the get_base_tableDDL function to get the DDL.
+   - Get the table DDL from the user. The DDL should be a single string, and it should not contain any new lines or special characters. Use the base_tableDDL function to get the DDL.
 
    ## Phase 2 - Describe the table
    - Describe the table in a business context. The description should be a single string. 
@@ -180,11 +170,11 @@ handle_base_databaseBusinessDesc = """
    - the database name is {database_name}
 
    ## Phase 1 - get the list of tables
-   - Get the list of tables in the database. Use the get_base_tableList function to get the list.
+   - Get the list of tables in the database. Use the base_tableList function to get the list.
 
    ## Phase 2 - describe the tables
    For each table, you will:
-   - Get the table DDL from the user. Use the get_base_tableDDL function to get the DDL.
+   - Get the table DDL from the user. Use the base_tableDDL function to get the DDL.
    - Describe the table in a business context. The description should be a single string.
 
    ## Phase 3 - Describe the database

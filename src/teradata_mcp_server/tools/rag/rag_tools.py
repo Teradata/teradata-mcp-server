@@ -54,7 +54,7 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
 # Store RAG config for the session in a global or module-level variable
 rag_config = {}
 
-def handle_set_rag_config(
+def handle_rag_setConfig(
     conn: TeradataConnection,
     query_db: str,
     model_db: str,
@@ -71,7 +71,9 @@ def handle_set_rag_config(
     - vector_db / vector_table: where chunk embeddings are stored for similarity search
     """
     global rag_config
-
+    logger.debug(
+        "handle_rag_setConfig:"
+    )
     rag_config = {
         "query_db": query_db,
         "query_table": "user_query",
@@ -81,10 +83,13 @@ def handle_set_rag_config(
         "vector_db": vector_db,
         "vector_table": vector_table,
     }
+    metadata = {
+        "tool_name" : "rag_setConfig", 
+        "rag_config" : rag_config
+    }
+    return create_response({"message": "RAG config successfully set."}, metadata)
 
-    return create_response({"message": "RAG config successfully set."}, metadata=rag_config)
-
-def handle_store_user_query(
+def handle_rag_storeUserQuery(
     conn: TeradataConnection,
     question: str,
     *args,
@@ -96,6 +101,8 @@ def handle_store_user_query(
     """
     global rag_config
 
+    logger.debug(f"handle_rag_storeUserQuery: question={question[:60]}...")
+
     db_name = rag_config.get("query_db")
     table_name = rag_config.get("query_table")
 
@@ -103,7 +110,7 @@ def handle_store_user_query(
         raise ValueError("RAG config not set — call `rag_set_config` first to configure database and table.")
 
     logger.debug(
-        f"handle_store_user_query: db={db_name}, table={table_name}, text={question[:60]}"
+        f"handle_rag_storeUserQuery: db={db_name}, table={table_name}, text={question[:60]}"
     )
 
     ddl = f"""
@@ -145,16 +152,16 @@ def handle_store_user_query(
         cur.execute(f"SELECT txt FROM {db_name}.{table_name} WHERE id = ?", [new_id])
         cleaned_txt = cur.fetchone()[0]
 
-    meta = {
-        "tool_name": "store_user_query",
+    metadata = {
+        "tool_name": "rag_storeUserQuery",
         "database": db_name,
         "table": table_name,
         "inserted_id": new_id,
     }
 
-    return create_response([{"id": new_id, "txt": cleaned_txt}], meta)
+    return create_response([{"id": new_id, "txt": cleaned_txt}], metadata)
 
-def create_tokenized_view(conn: TeradataConnection):
+def handle_rag_tokeizedQuery(conn: TeradataConnection):
     """
     Tokenizes the most recent user-submitted query using the tokenizer specified in rag_config.
     
@@ -169,6 +176,8 @@ def create_tokenized_view(conn: TeradataConnection):
     db_name   = rag_config["query_db"]
     src_table = rag_config["query_table"]
     model_id  = rag_config["model_id"]
+
+    logger.debug(f"Tool: handle_rag_tokeizedQuery: db={db_name}, src_table={src_table}, model_id={model_id}")
 
     with conn.cursor() as cur:
         cur.execute(f"""
@@ -198,17 +207,17 @@ def create_tokenized_view(conn: TeradataConnection):
             );
         """)
 
-    meta = {
-        "tool_name": "create_tokenized_view",
+    metadata = {
+        "tool_name": "rag_tokeizedQuery",
         "database": db_name,
         "source_table": src_table,
         "model_id": model_id,
         "view_created": f"{db_name}.v_topics_tokenized"
     }
 
-    return create_response("Tokenized view created successfully.", meta)
+    return create_response("Tokenized view created successfully.", metadata)
 
-def create_embedding_view(conn: TeradataConnection):
+def handle_rag_createEmbeddingView(conn: TeradataConnection):
     """
     Generates sentence embeddings for the most recent user query using the model specified in rag_config.
 
@@ -223,6 +232,8 @@ def create_embedding_view(conn: TeradataConnection):
     db_name  = rag_config["query_db"]
     model_id = rag_config["model_id"]
 
+    logger.debug(f"Tool: handle_rag_createEmbeddingView: db={db_name}, model_id={model_id}")
+    
     with conn.cursor() as cur:
         cur.execute(f"""
             REPLACE VIEW {db_name}.v_topics_embeddings AS
@@ -245,18 +256,18 @@ def create_embedding_view(conn: TeradataConnection):
             );
         """)
 
-    meta = {
-        "tool_name": "create_embedding_view",
+    metadata = {
+        "tool_name": "rag_createEmbeddingView",
         "database": db_name,
         "tokenized_view": f"{db_name}.v_topics_tokenized",
         "embedding_model_id": model_id,
         "view_created": f"{db_name}.v_topics_embeddings"
     }
 
-    return create_response("Embedding view created successfully.", meta)
+    return create_response("Embedding view created successfully.", metadata)
 
 
-def handle_create_query_embeddings(conn: TeradataConnection, *args, **kwargs):
+def handle_rag_createQueryEmbeddingTable(conn: TeradataConnection, *args, **kwargs):
     global rag_config
     db_name = rag_config.get("query_db")
     dst_table = rag_config.get("query_embedding_store")
@@ -264,7 +275,7 @@ def handle_create_query_embeddings(conn: TeradataConnection, *args, **kwargs):
     if not db_name or not dst_table:
         raise ValueError("RAG config not set — call `rag_set_config` first to configure vector store for query embeddings.")
 
-    logger.debug(f"Tool: handle_create_query_embeddings: db={db_name}, dst={dst_table}")
+    logger.debug(f"Tool: handle_rag_createQueryEmbeddingTable: db={db_name}, dst={dst_table}")
 
     drop_sql = f"DROP TABLE {db_name}.{dst_table}"
     create_sql = f"""
@@ -295,7 +306,7 @@ def handle_create_query_embeddings(conn: TeradataConnection, *args, **kwargs):
         return create_response(
             [],
             metadata={
-                "tool_name": "materialize_query_embeddings",
+                "tool_name": "rag_createQueryEmbeddingTable",
                 "database": db_name,
                 "table": dst_table,
                 "status": "table created (or replaced)"
@@ -303,7 +314,7 @@ def handle_create_query_embeddings(conn: TeradataConnection, *args, **kwargs):
         )
 
 
-def handle_semantic_search(
+def handle_rag_semanticSearchChunks(
     conn: TeradataConnection,
     topk: int = 10,
     *args,
@@ -321,7 +332,7 @@ def handle_semantic_search(
     chunk_embed_table  = rag_config["vector_table"]
 
     logger.debug(
-        f"handle_semantic_search: db={db_name}, q_table={query_embed_table}, c_table={chunk_embed_table}, k={topk}"
+        f"handle_rag_semanticSearchChunks: db={db_name}, q_table={query_embed_table}, c_table={chunk_embed_table}, k={topk}"
     )
 
     sql = f"""
@@ -351,8 +362,8 @@ def handle_semantic_search(
         rows = cur.execute(sql)
         data = rows_to_json(cur.description, rows.fetchall())
 
-    meta = {
-        "tool_name": "semantic_search",
+    metadata = {
+        "tool_name": "rag_semanticSearchChunks",
         "vector_db": db_name,
         "query_embedding_store": query_embed_table,
         "chunk_embedding_store": chunk_embed_table,
@@ -360,7 +371,7 @@ def handle_semantic_search(
         "returned": len(data),
     }
 
-    return create_response(data, meta)
+    return create_response(data, metadata)
 
 
 

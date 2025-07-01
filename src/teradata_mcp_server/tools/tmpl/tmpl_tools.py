@@ -54,8 +54,8 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       <arguments> - <description of arguments>
 #     Returns: <what it does> or error message    
-def handle_get_tmpl_nameOfTool(conn: TeradataConnection, argument: Optional[str], *args, **kwargs):
-    logger.debug(f"Tool: handle_get_tmpl_nameOfTool: Args: argument: {argument}")
+def handle_tmpl_nameOfTool(conn: TeradataConnection, argument: Optional[str], *args, **kwargs):
+    logger.debug(f"Tool: handle_tmpl_nameOfTool: Args: argument: {argument}")
 
     with conn.cursor() as cur:
         if argument == "":
@@ -66,7 +66,7 @@ def handle_get_tmpl_nameOfTool(conn: TeradataConnection, argument: Optional[str]
             rows = cur.execute(f"Teradata query goes here with argument {argument};")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
-            "tool_name": "get_tmpl_nameOfTool",
+            "tool_name": "tmpl_nameOfTool",
             "argument": argument,
         }
         return create_response(data, metadata)

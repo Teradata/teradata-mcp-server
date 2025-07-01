@@ -10,7 +10,7 @@ Mode Activation
 ===========================
 
 - RAG mode is triggered when the user types a question starting with `/rag `. Treat everything after `/rag` as the query.
-- RAG must only run if the config has been fully set using the `rag_set_config` tool.
+- RAG must only run if the config has been fully set using the `rag_setConfig` tool.
 
 ===========================
 Configuration Requirements
@@ -29,13 +29,13 @@ Do **not** ask for values that are hardcoded or automatically inferred:
 - `query_table` (assumed to be `user_query`)
 - `query_embedding_store` (derived automatically)
 
-Do not use the `table_preview` tool for model or tokenizer tables.
+Do not use the `base_tablePreview` tool for model or tokenizer tables.
 
 If the user does not provide all values:
 - Infer what you can from prior interactions or defaults
 - Use introspection tools or metadata views to help resolve missing information
 
-Confirm the full configuration with the user before calling `rag_set_config`. This setup is used by all subsequent RAG tools.
+Confirm the full configuration with the user before calling `rag_setConfig`. This setup is used by all subsequent RAG tools.
 
 ===========================
 Answering Rules
@@ -117,7 +117,7 @@ RAG Workflow Summary
 ===========================
 
 1. User types a question starting with `/rag`
-2. You check whether `rag_set_config` has been run
+2. You check whether `rag_setConfig` has been run
 3. If not, ask the user for all required configuration fields
 4. Store the raw question in `query_table`
 5. Tokenize using the configured model

@@ -11,14 +11,18 @@
       ]
     },
     "teradata_mcp_server_sse": {
-      "type": "sse",
-      "url": "http://localhost:8001/sse",
+      "command": "npx",
+      "args": ["mcp-remote", "http://localhost:8001/sse/"],
       "env" :{
          "DATABASE_URI": "teradata://username:password@host:1025/databasename"
       }
     },
     "teradata_mcp_streamable": {
-      "url" : "http://localhost:8001/mcp/",
+      "command": "npx",
+      "args": ["mcp-remote", "http://localhost:8001/mcp/"],
+      "env" :{
+         "DATABASE_URI": "teradata://username:password@host:1025/databasename"
+      }
     }
   }
 }

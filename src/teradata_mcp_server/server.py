@@ -46,7 +46,7 @@ _enableEVS = False
 # Only attempt to connect to EVS is the system has an EVS installed/configured
 if (len(os.getenv("VS_NAME", "").strip()) > 0):
     try:
-        _evs    = td.get_evs()
+        _evs    = td.evs()
         _enableEVS = True
     except:
         logger.error("Unable to establish connection to EVS, disabling")
@@ -119,75 +119,75 @@ def execute_vs_tool(tool, *args, **kwargs) -> ResponseType:
 #------------------ Base Tools  ------------------#
 
 @mcp.tool(description="Executes a SQL query to read from the database.")
-async def get_base_readQuery(
+async def base_readQuery(
     sql: str = Field(description="SQL that reads from the database to run", default=""),
     ) -> ResponseType:
     """Executes a SQL query to read from the database."""
-    return execute_db_tool( td.handle_get_base_readQuery, sql=sql) 
+    return execute_db_tool( td.handle_base_readQuery, sql=sql) 
 
 
 @mcp.tool(description="Executes a SQL query to write to the database.")
-async def write_base_writeQuery(
+async def base_writeQuery(
     sql: str = Field(description="SQL that writes to the database to run", default=""),
     ) -> ResponseType:
     """Executes a SQL query to write to the database."""
-    return execute_db_tool( td.handle_write_base_writeQuery, sql=sql) 
+    return execute_db_tool( td.handle_base_writeQuery, sql=sql) 
 
 
 @mcp.tool(description="Display table DDL definition.")
-async def get_base_tableDDL(
+async def base_tableDDL(
     db_name: str = Field(description="Database name", default=""),
     table_name: str = Field(description="table name", default=""),
     ) -> ResponseType:
     """Display table DDL definition."""
-    return execute_db_tool( td.handle_get_base_tableDDL, db_name=db_name, table_name=table_name)    
+    return execute_db_tool( td.handle_base_tableDDL, db_name=db_name, table_name=table_name)    
 
 @mcp.tool(description="List all databases in the Teradata System.")
-async def get_base_databaseList() -> ResponseType:
+async def base_databaseList() -> ResponseType:
     """List all databases in the Teradata System."""
-    return execute_db_tool( td.handle_get_base_databaseList)
+    return execute_db_tool( td.handle_base_databaseList)
 
 
 @mcp.tool(description="List objects in a database.")
-async def get_base_tableList(
+async def base_tableList(
     db_name: str = Field(description="database name", default=""),
     ) -> ResponseType:
     """List objects in a database."""
-    return execute_db_tool( td.handle_get_base_tableList, db_name=db_name)
+    return execute_db_tool( td.handle_base_tableList, db_name=db_name)
 
 
 @mcp.tool(description="Show detailed column information about a database table.")
-async def get_base_columnDescription(
+async def base_columnDescription(
     db_name: str = Field(description="Database name", default=""),
     obj_name: str = Field(description="table name", default=""),
     ) -> ResponseType:
     """Show detailed column information about a database table."""
-    return execute_db_tool( td.handle_get_base_columnDescription, db_name=db_name, obj_name=obj_name)
+    return execute_db_tool( td.handle_base_columnDescription, db_name=db_name, obj_name=obj_name)
 
 
 @mcp.tool(description="Get data samples and structure overview from a database table.")
-async def get_base_tablePreview(
+async def base_tablePreview(
     db_name: str = Field(description="Database name", default=""),
     table_name: str = Field(description="table name", default=""),
     ) -> ResponseType:
     """Get data samples and structure overview from a database table."""
-    return execute_db_tool( td.handle_get_base_tablePreview, table_name=table_name, db_name=db_name)
+    return execute_db_tool( td.handle_base_tablePreview, table_name=table_name, db_name=db_name)
 
 @mcp.tool(description="Get tables commonly used together by database users, this is helpful to infer relationships between tables.")
-async def get_base_tableAffinity(
+async def base_tableAffinity(
     db_name: str = Field(description="Database name", default=""),
     obj_name: str = Field(description="Table or view name", default=""),
     ) -> ResponseType:
     """Get tables commonly used together by database users, this is helpful to infer relationships between tables."""
-    return execute_db_tool( td.handle_get_base_tableAffinity, obj_name=obj_name, db_name=db_name)
+    return execute_db_tool( td.handle_base_tableAffinity, obj_name=obj_name, db_name=db_name)
 
 
 @mcp.tool(description="Measure the usage of a table and views by users in a given schema, this is helpful to infer what database objects are most actively used or drive most value.")
-async def get_base_tableUsage(
+async def base_tableUsage(
     db_name: str = Field(description="Database name", default=""),
     ) -> ResponseType:
     """Measure the usage of a table and views by users in a given schema, this is helpful to infer what database objects are most actively used or drive most value."""
-    return execute_db_tool( td.handle_get_base_tableUsage, db_name=db_name)
+    return execute_db_tool( td.handle_base_tableUsage, db_name=db_name)
 
 @mcp.prompt()
 async def base_query(qry: str) -> UserMessage:
@@ -207,85 +207,85 @@ async def base_databaseBusinessDesc(database_name: str) -> UserMessage:
 #------------------ DBA Tools  ------------------#
 
 @mcp.tool(description="Get a list of SQL run by a user in the last number of days if a user name is provided, otherwise get list of all SQL in the last number of days.")
-async def get_dba_userSqlList(
+async def dba_userSqlList(
     user_name: str = Field(description="user name", default=""),
     no_days: int = Field(description="number of days to look back", default=7),
     ) -> ResponseType:
     """Get a list of SQL run by a user."""
-    return execute_db_tool( td.handle_get_dba_userSqlList, user_name=user_name, no_days=no_days)
+    return execute_db_tool( td.handle_dba_userSqlList, user_name=user_name, no_days=no_days)
 
 @mcp.tool(description="Get a list of SQL run against a table in the last number of days ")
-async def get_dba_tableSqlList(
+async def dba_tableSqlList(
     table_name: str = Field(description="table name", default=""),
     no_days: int = Field(description="number of days to look back", default=7),
     ) -> ResponseType:
     """Get a list of SQL run by a user."""
-    return execute_db_tool( td.handle_get_dba_tableSqlList, table_name=table_name, no_days=no_days)
+    return execute_db_tool( td.handle_dba_tableSqlList, table_name=table_name, no_days=no_days)
 
 @mcp.tool(description="Get table space used for a table if table name is provided or get table space for all tables in a database if a database name is provided.")
-async def get_dba_tableSpace(
+async def dba_tableSpace(
     db_name: str = Field(description="Database name", default=""),
     table_name: str = Field(description="table name", default=""),
     ) -> ResponseType:
     """Get table space used for a table if table name is provided or get table space for all tables in a database if a database name is provided."""
-    return execute_db_tool( td.handle_get_dba_tableSpace, db_name=db_name, table_name=table_name)
+    return execute_db_tool( td.handle_dba_tableSpace, db_name=db_name, table_name=table_name)
 
 @mcp.tool(description="Get database space if database name is provided, otherwise get all databases space allocations.")
-async def get_dba_databaseSpace(
+async def dba_databaseSpace(
     db_name: str = Field(description="Database name", default=""),
     ) -> ResponseType:
     """Get database space if database name is provided, otherwise get all databases space allocations."""
-    return execute_db_tool( td.handle_get_dba_databaseSpace, db_name=db_name)
+    return execute_db_tool( td.handle_dba_databaseSpace, db_name=db_name)
 
 @mcp.tool(description="Get Teradata database version information.")
-async def get_dba_databaseVersion() -> ResponseType:
+async def dba_databaseVersion() -> ResponseType:
     """Get Teradata database version information."""
-    return execute_db_tool( td.handle_get_dba_databaseVersion)
+    return execute_db_tool( td.handle_dba_databaseVersion)
 
 @mcp.tool(description="Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.")
-async def get_dba_resusageSummary() -> ResponseType:
+async def dba_resusageSummary() -> ResponseType:
     """Get the Teradata system usage summary metrics by weekday and hour."""
-    return execute_db_tool( td.handle_get_dba_resusageSummary, dimensions=["hourOfDay", "dayOfWeek"])
+    return execute_db_tool( td.handle_dba_resusageSummary, dimensions=["hourOfDay", "dayOfWeek"])
 
 @mcp.tool(description="Get the Teradata system usage summary metrics by user on a specified date, or day of week and hour of day.")
-async def get_dba_resusageUserSummary(
+async def dba_resusageUserSummary(
     user_name: str = Field(description="Database user name", default=""),
     date: str = Field(description="Date to analyze, formatted as `YYYY-MM-DD`", default=""),
     dayOfWeek: str = Field(description="Day of week to analyze", default=""),
     hourOfDay: str = Field(description="Hour of day to analyze", default=""),
     ) -> ResponseType:
     """Get the Teradata system usage summary metrics by user on a specified date, or day of week and hour of day."""
-    return execute_db_tool( td.handle_get_dba_resusageSummary, dimensions=["UserName", "hourOfDay", "dayOfWeek"], user_name=user_name, date=date, dayOfWeek=dayOfWeek, hourOfDay=hourOfDay)
+    return execute_db_tool( td.handle_dba_resusageSummary, dimensions=["UserName", "hourOfDay", "dayOfWeek"], user_name=user_name, date=date, dayOfWeek=dayOfWeek, hourOfDay=hourOfDay)
 
 @mcp.tool(description="Get the Teradata flow control metrics.")
-async def get_dba_flowControl() -> ResponseType:
+async def dba_flowControl() -> ResponseType:
     """Get the Teradata flow control metrics."""
-    return execute_db_tool( td.handle_get_dba_flowControl)
+    return execute_db_tool( td.handle_dba_flowControl)
 
 @mcp.tool(description="Get the user feature usage metrics.")
-async def get_dba_featureUsage() -> ResponseType:
+async def dba_featureUsage() -> ResponseType:
     """Get the user feature usage metrics.""" 
-    return execute_db_tool( td.handle_get_dba_featureUsage)
+    return execute_db_tool( td.handle_dba_featureUsage)
 
 @mcp.tool(description="Get the Teradata user delay metrics.")
-async def get_dba_userDelay() -> ResponseType:
+async def dba_userDelay() -> ResponseType:
     """Get the Teradata user delay metrics."""
-    return execute_db_tool( td.handle_get_dba_userDelay)
+    return execute_db_tool( td.handle_dba_userDelay)
 
 @mcp.tool(description="Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time.")
-async def get_dba_tableUsageImpact(
+async def dba_tableUsageImpact(
     db_name: str = Field(description="Database name", default=""),
     user_name: str = Field(description="User name", default=""),    
     ) -> ResponseType:
     """Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time."""
-    return execute_db_tool( td.handle_get_dba_tableUsageImpact, db_name=db_name,  user_name=user_name)
+    return execute_db_tool( td.handle_dba_tableUsageImpact, db_name=db_name,  user_name=user_name)
 
 @mcp.tool(description="Get the Teradata session information for user.")
-async def get_dba_sessionInfo(
+async def dba_sessionInfo(
     user_name: str = Field(description="User name", default=""),
     ) -> ResponseType:
     """Get the Teradata session information for user."""
-    return execute_db_tool( td.handle_get_dba_sessionInfo, user_name=user_name)
+    return execute_db_tool( td.handle_dba_sessionInfo, user_name=user_name)
 
 
 @mcp.prompt()
@@ -316,57 +316,57 @@ async def dba_tableDropImpact(database_name: str, table_name: str, number_days: 
 #------------------ Data Quality Tools  ------------------#
 
 @mcp.tool(description="Get the column names that having missing values in a table.")
-async def get_qlty_missingValues(
+async def qlty_missingValues(
     table_name: str = Field(description="table name", default=""),
     ) -> ResponseType:
     """Get the column names that having missing values in a table."""
-    return execute_db_tool( td.handle_get_qlty_missingValues, table_name=table_name)
+    return execute_db_tool( td.handle_qlty_missingValues, table_name=table_name)
 
 @mcp.tool(description="Get the column names that having negative values in a table.")
-async def get_qlty_negativeValues(
+async def qlty_negativeValues(
     table_name: str = Field(description="table name", default=""),
     ) -> ResponseType:
     """Get the column names that having negative values in a table."""
-    return execute_db_tool( td.handle_get_qlty_negativeValues, table_name=table_name)
+    return execute_db_tool( td.handle_qlty_negativeValues, table_name=table_name)
 
 @mcp.tool(description="Get the destinct categories from column in a table.")
-async def get_qlty_distinctCategories(
+async def qlty_distinctCategories(
     table_name: str = Field(description="table name", default=""),
     col_name: str = Field(description="column name", default=""),
     ) -> ResponseType:
     """Get the destinct categories from column in a table."""
-    return execute_db_tool( td.handle_get_qlty_distinctCategories, table_name=table_name, col_name=col_name)
+    return execute_db_tool( td.handle_qlty_distinctCategories, table_name=table_name, col_name=col_name)
 
 @mcp.tool(description="Get the standard deviation from column in a table.")
-async def get_qlty_standardDeviation(
+async def qlty_standardDeviation(
     table_name: str = Field(description="table name", default=""),
     col_name: str = Field(description="column name", default=""),
     ) -> ResponseType:
     """Get the standard deviation from column in a table."""
-    return execute_db_tool( td.handle_get_qlty_standardDeviation, table_name=table_name, col_name=col_name)
+    return execute_db_tool( td.handle_qlty_standardDeviation, table_name=table_name, col_name=col_name)
 
 @mcp.tool(description="Get the column summary statistics for a table.")
-async def get_qlty_columnSummary(
+async def qlty_columnSummary(
     table_name: str = Field(description="table name", default=""),
     ) -> ResponseType:
     """Get the column summary statistics for a table."""
-    return execute_db_tool( td.handle_get_qlty_columnSummary, table_name=table_name)
+    return execute_db_tool( td.handle_qlty_columnSummary, table_name=table_name)
 
 @mcp.tool(description="Get the univariate statistics for a table.")
-async def get_qlty_univariateStatistics(
+async def qlty_univariateStatistics(
     table_name: str = Field(description="table name", default=""),
     col_name: str = Field(description="column name", default=""),
     ) -> ResponseType:
     """Get the univariate statistics for a table."""
-    return execute_db_tool( td.handle_get_qlty_univariateStatistics, table_name=table_name, col_name=col_name)
+    return execute_db_tool( td.handle_qlty_univariateStatistics, table_name=table_name, col_name=col_name)
 
 @mcp.tool(description="Get the rows with missing values in a table.")
-async def get_qlty_rowsWithMissingValues(
+async def qlty_rowsWithMissingValues(
     table_name: str = Field(description="table name", default=""),
     col_name: str = Field(description="column name", default=""),
     ) -> ResponseType:
     """Get the rows with missing values in a table."""
-    return execute_db_tool( td.handle_get_qlty_rowsWithMissingValues, table_name=table_name, col_name=col_name)
+    return execute_db_tool( td.handle_qlty_rowsWithMissingValues, table_name=table_name, col_name=col_name)
 
 @mcp.prompt()
 async def qlty_databaseQuality(database_name: str) -> UserMessage:
@@ -391,13 +391,13 @@ You only need to provide the database locations:
 
 Once this configuration is set, all other RAG tools will reuse it automatically.
 """)
-async def rag_set_config(
+async def rag_setConfig(
     query_db: str = Field(description="Database to store user questions and query embeddings"),
     model_db: str = Field(description="Database where the embedding model is stored"),
     vector_db: str = Field(description="Database containing the chunk vector store"),
     vector_table: str = Field(description="Table containing chunk embeddings for similarity search"),
 ) -> ResponseType:
-    return execute_db_tool( td.handle_set_rag_config, query_db=query_db, model_db=model_db, vector_db=vector_db, vector_table=vector_table,)
+    return execute_db_tool( td.handle_rag_setConfig, query_db=query_db, model_db=model_db, vector_db=vector_db, vector_table=vector_table,)
 
 @mcp.tool(
     description=(
@@ -412,12 +412,12 @@ async def rag_set_config(
         "can then reference this ID or re-use the stored question text."
     )
 )
-async def store_user_query(
+async def rag_storeUserQuery(
     db_name: str = Field(..., description="Name of the Teradata database where the question will be stored."),
     table_name: str = Field(..., description="Name of the table to store user questions (e.g., 'pdf_user_queries')."),
     question: str = Field(..., description="Natural language question from the user. Can optionally start with '/rag '."),
 ) -> ResponseType:
-    return execute_db_tool( td.handle_store_user_query, db_name=db_name, table_name=table_name, question=question)
+    return execute_db_tool( td.handle_rag_storeUserQuery, db_name=db_name, table_name=table_name, question=question)
 
 @mcp.tool(
     description=(
@@ -428,8 +428,8 @@ async def store_user_query(
         "This view is used downstream to generate vector embeddings for similarity search."
     )
 )
-async def tokenize_query() -> ResponseType:
-    return execute_db_tool( td.create_tokenized_view)
+async def rag_tokenizeQuery() -> ResponseType:
+    return execute_db_tool( td.handle_rag_tokenizedQuery)
 
 @mcp.tool(
     description=(
@@ -439,8 +439,8 @@ async def tokenize_query() -> ResponseType:
         "This must be run *after* create_tokenized_view and before vector_to_columns()."
     )
 )
-async def create_embedding_view() -> ResponseType:
-    return execute_db_tool( td.create_embedding_view)
+async def rag_createEmbeddingView() -> ResponseType:
+    return execute_db_tool( td.handle_rag_createEmbeddingView)
 
 @mcp.tool(
     description=(
@@ -450,8 +450,8 @@ async def create_embedding_view() -> ResponseType:
         "This tool must be run *after* `create_embedding_view` and before `semantic_search_chunks`."
     )
 )
-async def create_query_embedding_table() -> ResponseType:
-    return execute_db_tool( td.handle_create_query_embeddings)
+async def rag_createQueryEmbeddingTable() -> ResponseType:
+    return execute_db_tool( td.handle_rag_createQueryEmbeddingTable)
 
 @mcp.tool(
     description=(
@@ -462,41 +462,44 @@ async def create_query_embedding_table() -> ResponseType:
         "Each result includes similarity score, chunk text, page number, chunk number, and document name."
     )
 )
-async def semantic_search_chunks(
+async def rag_semanticSearchChunks(
     k: int = Field(10, description="Number of top matching chunks to retrieve."),
 ) -> ResponseType:
-    return execute_db_tool( td.handle_semantic_search, topk=k)
-
-#------------------ Security Tools  ------------------#
-
-
-@mcp.tool(description="Get permissions for a user.")
-async def get_sec_userDbPermissions(
-    user_name: str = Field(description="User name", default=""),
-    ) -> ResponseType:
-    """Get permissions for a user."""
-    return execute_db_tool( td.handle_get_sec_userDbPermissions, user_name=user_name)
-
-
-@mcp.tool(description="Get permissions for a role.")
-async def get_sec_rolePermissions(
-    role_name: str = Field(description="Role name", default=""),
-    ) -> ResponseType:
-    """Get permissions for a role."""
-    return execute_db_tool( td.handle_get_sec_rolePermissions, role_name=role_name)
-
-
-@mcp.tool(description="Get roles assigned to a user.")
-async def get_sec_userRoles(
-    user_name: str = Field(description="User name", default=""),
-    ) -> ResponseType:
-    """Get roles assigned to a user."""
-    return execute_db_tool( td.handle_get_sec_userRoles, user_name=user_name)
+    return execute_db_tool( td.handle_rag_semanticSearchChunks, topk=k)
 
 
 @mcp.prompt()
 async def rag_guidelines() -> UserMessage:
     return UserMessage(role="user", content=TextContent(type="text", text=td.rag_guidelines))
+
+
+#------------------ Security Tools  ------------------#
+
+@mcp.tool(description="Get permissions for a user.")
+async def sec_userDbPermissions(
+    user_name: str = Field(description="User name", default=""),
+    ) -> ResponseType:
+    """Get permissions for a user."""
+    return execute_db_tool( td.handle_sec_userDbPermissions, user_name=user_name)
+
+
+@mcp.tool(description="Get permissions for a role.")
+async def sec_rolePermissions(
+    role_name: str = Field(description="Role name", default=""),
+    ) -> ResponseType:
+    """Get permissions for a role."""
+    return execute_db_tool( td.handle_sec_rolePermissions, role_name=role_name)
+
+
+@mcp.tool(description="Get roles assigned to a user.")
+async def sec_userRoles(
+    user_name: str = Field(description="User name", default=""),
+    ) -> ResponseType:
+    """Get roles assigned to a user."""
+    return execute_db_tool( td.handle_sec_userRoles, user_name=user_name)
+
+
+
 
 
 #------------------ Enterprise Vectore Store Tools  ------------------#
@@ -582,7 +585,7 @@ async def reconnect_to_database() -> ResponseType:
 
 
 @mcp.tool(description="Set or update the feature store configuration (database and data domain).")
-async def set_feature_store_config(
+async def fs_setFeatureStoreConfig(
     data_domain: Optional[str] = None,
     db_name: Optional[str] = None,
     entity: Optional[str] = None,
@@ -624,7 +627,7 @@ async def set_feature_store_config(
     return format_text_response(f"Feature store config updated: {fs_config.dict(exclude_none=True)}")
 
 @mcp.tool(description="Display the current feature store configuration (database and data domain).")
-async def get_feature_store_config() -> ResponseType:
+async def fs_getFeatureStoreConfig() -> ResponseType:
     return format_text_response(f"Current feature store config: {fs_config.dict(exclude_none=True)}")
 
 @mcp.tool(
@@ -632,11 +635,11 @@ async def get_feature_store_config() -> ResponseType:
         "Check if a feature store is present in the specified database."    
     )
 )
-async def get_fs_is_feature_store_present(
+async def fs_isFeatureStorePresent(
     db_name: str = Field(..., description="Name of the database to check for a feature store.")
 ) -> ResponseType:
     return execute_db_tool(
-        td.handle_get_fs_is_feature_store_present,
+        td.handle_fs_isFeatureStorePresent,
         db_name = db_name
     )
 
@@ -646,11 +649,11 @@ async def get_fs_is_feature_store_present(
         "Use this to understand what data is available in the feature store"
     )
 )
-async def get_fs_feature_store_content(
+async def fs_featureStoreContent(
 ) -> ResponseType:
     
     return execute_db_tool(
-        td.handle_get_fs_feature_store_content,
+        td.handle_fs_featureStoreContent,
         fs_config,
     )
 
@@ -661,12 +664,12 @@ async def get_fs_feature_store_content(
         "Use this to explore which entities can be used when building a dataset."
     )
 )
-async def get_fs_get_data_domains(
+async def fs_getDataDomains(
     entity: str = Field(..., description="The .")
 ) -> ResponseType:
     
     return execute_db_tool(
-        td.handle_get_fs_get_data_domains,
+        td.handle_fs_getDataDomains,
         fs_config,
     )
 
@@ -677,11 +680,11 @@ async def get_fs_get_data_domains(
         "Use this to explore the features available ."
     )
 )
-async def get_fs_get_features(
+async def fs_getFeatures(
 ) -> ResponseType:
     
     return execute_db_tool(
-        td.handle_get_fs_get_features,
+        td.handle_fs_getFeatures,
         fs_config,
     )
 
@@ -692,11 +695,11 @@ async def get_fs_get_features(
         "Use this to explore the datasets that are available ."
     )
 )
-async def get_fs_get_available_datasets(
+async def fs_getAvailableDatasets(
 ) -> ResponseType:
     
     return execute_db_tool(
-        td.handle_get_fs_get_available_datasets,
+        td.handle_fs_getAvailableDatasets,
         fs_config,
     )
 
@@ -706,10 +709,10 @@ async def get_fs_get_available_datasets(
         "Requires a feature store in the configured database (`db_name`)."
         )
 )
-async def get_fs_get_the_feature_data_model(
+async def fs_getFeatureDataModel(
 ) -> ResponseType:
     return execute_db_tool(
-        td.handle_get_fs_get_the_feature_data_model,
+        td.handle_fs_getFeatureDataModel,
         fs_config
     )
 
@@ -720,10 +723,10 @@ async def get_fs_get_the_feature_data_model(
         "Use this to explore which entities can be used when building a dataset."
         )
 )
-async def get_fs_get_available_entities(
+async def fs_getAvailableEntities(
 ) -> ResponseType:
     return execute_db_tool(
-        td.handle_get_fs_get_available_entities,
+        td.handle_fs_getAvailableEntities,
         fs_config,
     )
 
@@ -734,10 +737,10 @@ async def get_fs_get_available_entities(
         "Use this to explore which entities can be used when building a dataset."
         )
 )
-async def get_fs_get_available_features(
+async def fs_getAvailableEntities(
 ) -> ResponseType:
     return execute_db_tool(
-        td.handle_get_fs_get_available_features,
+        td.handle_fs_getAvailableEntities,
         fs_config,
     )
 
@@ -749,22 +752,22 @@ async def get_fs_get_available_features(
         "Use this when you want to build and register a new dataset for analysis or modeling."
         )
 )
-async def write_fs_get_create_dataset(
+async def fs_createDataset(
     entity_name: str = Field(..., description="Entity for which the dataset will be created. Available entities are reported in the feature catalog."),
     feature_selection: list[str] = Field(..., description="List of features to include in the dataset. Available features are reported in the feature catalog."),
     dataset_name: str = Field(..., description="Name of the dataset to create."),
-    target_database: str = Field(..., description="Target database where the dataset will be created.")
+    tardatabase: str = Field(..., description="Target database where the dataset will be created.")
 ) -> ResponseType:
     
     return execute_db_tool(
-        td.handle_write_fs_get_create_dataset,
+        td.handle_fs_createDataset,
         # Pass the parameters to the tool handler
         fs_config,
         entity_name = entity_name,
  
         feature_selection = feature_selection,
         dataset_name = dataset_name,
-        target_database = target_database
+        tardatabase = tardatabase
     )
 
 #------------------ Custom Tools  ------------------#
@@ -789,7 +792,7 @@ def make_custom_prompt(prompt: str, prompt_name: str, desc: str):
 def make_custom_query_tool(sql_text: str, tool_name: str, desc: str):
     async def _dynamic_tool():
         # SQL is closed over without parameters
-        return execute_db_tool( td.handle_get_base_readQuery, sql=sql_text)
+        return execute_db_tool( td.handle_base_readQuery, sql=sql_text)
     _dynamic_tool.__name__ = tool_name
     return mcp.tool(description=desc)(_dynamic_tool)
 
