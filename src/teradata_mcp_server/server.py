@@ -779,18 +779,33 @@ for file in custom_tool_files:
         query_defs.extend(yaml.safe_load(f))  # Concatenate all query definitions
 
 
+def make_custom_prompt(prompt: str, prompt_name: str, desc: str):
+    async def _dynamic_prompt():
+        # SQL is closed over without parameters
+        return UserMessage(role="user", content=TextContent(type="text", text=prompt))
+    _dynamic_prompt.__name__ = prompt_name
+    return mcp.prompt(description=desc)(_dynamic_prompt)
+
 def make_custom_query_tool(sql_text: str, tool_name: str, desc: str):
     async def _dynamic_tool():
         # SQL is closed over without parameters
-        return execute_db_tool( td.handle_execute_read_query, sql=sql_text)
+        return execute_db_tool( td.handle_get_base_readQuery, sql=sql_text)
     _dynamic_tool.__name__ = tool_name
     return mcp.tool(description=desc)(_dynamic_tool)
 
 # Instantiate custom query tools from YAML
 for q in query_defs:
-    fn = make_custom_query_tool(q["sql"], q["name"], q.get("description", ""))
-    globals()[q["name"]] = fn
-    logger.info(f"Created custom tool: {q["name"]}")
+    if q["type"] == "tool":
+        fn = make_custom_query_tool(q["sql"], q["name"], q.get("description", ""))
+        globals()[q["name"]] = fn
+        logger.info(f"Created custom tool: {q["name"]}")
+    elif q["type"] == "prompt":
+        fn = make_custom_prompt(q["prompt"], q["name"], q.get("description", "") )
+        globals()[q["name"]] = fn
+        logger.info(f"Created custom prompt: {q["name"]}")
+    else:
+        logger.info("Custom yaml type is unnkown.")
+
 
 #------------------ Main ------------------#
 # Main function to start the MCP server

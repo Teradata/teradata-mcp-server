@@ -30,7 +30,7 @@ async def create_agent():
                     "teradata-mcp-server"
                 ],
             ),
-            timeout=20  # Timeout in seconds for establishing the connection to the MCP std
+            timeout=30  # Timeout in seconds for establishing the connection to the MCP std
         )
     elif os.getenv("MCP_TRANSPORT") == 'sse':
         # .env file needs to have MCP_TRANSPORT=sse

@@ -1,7 +1,8 @@
 # Custom tool definitions here
 # This file is used to define custom tools for your application.
 # Below are two example tool definitions.
-- name: get_td_cust_activeUsers
+- type: tool 
+  name: get_cust_activeUsers
   description: "Fetch currently active database users"
   sql: |
     SELECT UserName
@@ -11,7 +12,16 @@
       UserName IS NOT NULL
       group by UserName;
       
-- name: get_td_cust_dbcInfo
+- type: tool
+  name: get_cust_dbcInfo
   description: "Aggregate order counts by status"
   sql: |
     sel * from dbc.dbcinfo;
+
+- type: prompt
+  name: cust_promptExample
+  description: "my prompt description"
+  prompt: |
+    Write me a poem about ai 
+    it should be a single verse
+    it should rhyme
