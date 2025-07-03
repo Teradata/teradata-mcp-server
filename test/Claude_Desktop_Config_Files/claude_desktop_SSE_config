@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "teradata_mcp_server_sse": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://localhost:8001/sse/"],
+      "env" :{
+         "DATABASE_URI": "teradata://username:password@host:1025/databasename"
+      }
+    }
+  }
+}

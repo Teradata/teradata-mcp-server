@@ -39,8 +39,9 @@ RUN chmod -R u+w /app/src
 
 
 ENV PYTHONUNBUFFERED=1
-ENV MCP_TRANSPORT=sse
-ENV MCP_HOST=127.0.0.1
+ENV MCP_TRANSPORT=streamable-http
+ENV MCP_PATH=/mcp/
+ENV MCP_HOST=0.0.0.0
 ENV MCP_PORT=8001
 CMD ["uv", "run", "teradata-mcp-server"]
 # └──────────── End runtime stage ──────────┘

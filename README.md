@@ -22,27 +22,18 @@ We are providing groupings of tools and associated helpful prompts
   - [Feature Store Tools](src/teradata_mcp_server/tools/fs/README.md)
 - **RAG** tools, prompts and resources to manage vector store creation and use
   - [RAG Tools](src/teradata_mcp_server/tools/rag/README.md)
-- **Custom Tools** to easily implement tools for custom actions based on your data and business context. 
-
-### Adding custom tools
-You may add define custom "query" tools in the `custom_tools.yaml` file or in any file ending with `_tools.yaml`. 
-Simply specify the tool name, description and SQL query to be executed. No parameters are supported at this point.
+- **Custom Tools** to easily implement tools for custom actions based on your data and business context. Refer to [developer guide](docs/developer_guide/HOW_TO_ADD_CUSTOM_FUNCTIONS.md)
 
 
---------------------------------------------------------------------------------------
+## Getting Started
 
-## TLDR; I want to try it locally now
+![Getting Started](docs/media/MCP.png)
 
-If you have Docker and a client that can connect MCP servers via SSE, copy the code below, update the connection string set in `DATABASE_URI` with your database connection details and run it:
+**Step 1.** - Identify the running Teradata System, you need username, password and host details to populate "teradata://username:password@host:1025". If you do not have a Teradata system to conect to, then leverage [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics)
 
-```
-export DATABASE_URI=teradata://username:password@host:1025
-git clone https://github.com/Teradata/teradata-mcp-server.git
-cd teradata-mcp-server
-docker compose up
-```
+**Step 2.** - To cofigure and run the MCP server, refer to the [Getting stated guide](docs/GETTING_STARTED.md).
 
-You can now use it with clients supporting SSE such as [Visual Studio Code](docs/CLIENT_GUIDE.md#using-with-visual-studio-code-co-pilot).
+**Step 3.** - There are many client options availale, the [Client Guide](docs/CLIENT_GUIDE.md) explains how to configure and run a sample of different clients.
 
 
 

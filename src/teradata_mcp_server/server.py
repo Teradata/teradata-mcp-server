@@ -638,10 +638,7 @@ async def fs_getFeatureStoreConfig() -> ResponseType:
 async def fs_isFeatureStorePresent(
     db_name: str = Field(..., description="Name of the database to check for a feature store.")
 ) -> ResponseType:
-    return execute_db_tool(
-        td.handle_fs_isFeatureStorePresent,
-        db_name = db_name
-    )
+    return execute_db_tool(td.handle_fs_isFeatureStorePresent, db_name=db_name)
 
 @mcp.tool(
     description=(
@@ -651,11 +648,8 @@ async def fs_isFeatureStorePresent(
 )
 async def fs_featureStoreContent(
 ) -> ResponseType:
-    
-    return execute_db_tool(
-        td.handle_fs_featureStoreContent,
-        fs_config,
-    )
+
+    return execute_db_tool(td.handle_fs_featureStoreContent, fs_config=fs_config)
 
 @mcp.tool(
     description=(
@@ -667,11 +661,8 @@ async def fs_featureStoreContent(
 async def fs_getDataDomains(
     entity: str = Field(..., description="The .")
 ) -> ResponseType:
-    
-    return execute_db_tool(
-        td.handle_fs_getDataDomains,
-        fs_config,
-    )
+
+    return execute_db_tool(td.handle_fs_getDataDomains, fs_config=fs_config)
 
 @mcp.tool(
     description=(
@@ -682,11 +673,8 @@ async def fs_getDataDomains(
 )
 async def fs_getFeatures(
 ) -> ResponseType:
-    
-    return execute_db_tool(
-        td.handle_fs_getFeatures,
-        fs_config,
-    )
+
+    return execute_db_tool(td.handle_fs_getFeatures, fs_config=fs_config)
 
 @mcp.tool(
     description=(
@@ -697,11 +685,8 @@ async def fs_getFeatures(
 )
 async def fs_getAvailableDatasets(
 ) -> ResponseType:
-    
-    return execute_db_tool(
-        td.handle_fs_getAvailableDatasets,
-        fs_config,
-    )
+
+    return execute_db_tool(td.handle_fs_getAvailableDatasets, fs_config=fs_config)
 
 @mcp.tool(
     description=(
@@ -711,24 +696,9 @@ async def fs_getAvailableDatasets(
 )
 async def fs_getFeatureDataModel(
 ) -> ResponseType:
-    return execute_db_tool(
-        td.handle_fs_getFeatureDataModel,
-        fs_config
-    )
+    return execute_db_tool(td.handle_fs_getFeatureDataModel, fs_config=fs_config)
 
-@mcp.tool(
-    description=(
-        "List the available entities for a given data domain."
-        "Requires a configured `db_name` and `data_domain` in the feature store config."
-        "Use this to explore which entities can be used when building a dataset."
-        )
-)
-async def fs_getAvailableEntities(
-) -> ResponseType:
-    return execute_db_tool(
-        td.handle_fs_getAvailableEntities,
-        fs_config,
-    )
+
 
 @mcp.tool(
     description=(
@@ -739,10 +709,7 @@ async def fs_getAvailableEntities(
 )
 async def fs_getAvailableEntities(
 ) -> ResponseType:
-    return execute_db_tool(
-        td.handle_fs_getAvailableEntities,
-        fs_config,
-    )
+    return execute_db_tool(td.handle_fs_getAvailableEntities, fs_config=fs_config)
 
 @mcp.tool(
     description=(
@@ -756,19 +723,9 @@ async def fs_createDataset(
     entity_name: str = Field(..., description="Entity for which the dataset will be created. Available entities are reported in the feature catalog."),
     feature_selection: list[str] = Field(..., description="List of features to include in the dataset. Available features are reported in the feature catalog."),
     dataset_name: str = Field(..., description="Name of the dataset to create."),
-    tardatabase: str = Field(..., description="Target database where the dataset will be created.")
+    target_database: str = Field(..., description="Target database where the dataset will be created.")
 ) -> ResponseType:
-    
-    return execute_db_tool(
-        td.handle_fs_createDataset,
-        # Pass the parameters to the tool handler
-        fs_config,
-        entity_name = entity_name,
- 
-        feature_selection = feature_selection,
-        dataset_name = dataset_name,
-        tardatabase = tardatabase
-    )
+    return execute_db_tool(td.handle_fs_createDataset, fs_config=fs_config, entity_name=entity_name, feature_selection=feature_selection, dataset_name=dataset_name, target_database=target_database)
 
 #------------------ Custom Tools  ------------------#
 # Custom tools are defined as SQL queries in a YAML file and loaded at startup.
