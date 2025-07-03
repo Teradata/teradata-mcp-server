@@ -166,5 +166,5 @@ docker compose --profile rest up
 ---------------------------------------------------------------------
 ## Client set up
 
-For details on how to set up client tools, refer to [Working with Clients](docs/CLIENT_GUIDE.md)
+For details on how to set up client tools, refer to [Working with Clients](./CLIENT_GUIDE.md)
 
