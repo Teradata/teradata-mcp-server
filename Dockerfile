@@ -1,5 +1,5 @@
 # ┌────────────── Build stage ──────────────┐
-FROM python:3.13-slim AS builder
+FROM --platform=linux/amd64 python:3.13-slim AS builder
 WORKDIR /app
 
 COPY pyproject.toml uv.lock* /app/
@@ -21,7 +21,7 @@ COPY ./src /app/src
 # └──────────── End build stage ────────────┘
 
 # ┌───────────── Runtime stage ─────────────┐
-FROM python:3.13-slim
+FROM --platform=linux/amd64 python:3.13-slim
 WORKDIR /app
 
 # Create the user early
