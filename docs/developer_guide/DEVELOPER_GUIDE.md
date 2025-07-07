@@ -114,11 +114,12 @@ The template code should be copied and prefixes for directory name and files sho
 To assist tool users we would like to align tool, prompt, and resources to a naming convention, this will assist MCP clients to group tools and understand its function.
 
 - tool/prompt/resource name starts the grouping identifier (e.g. base).
-- If the tool returns data it will be a get function  (e.g.  base_)
-- If the tool changes the state of data (e.g. write_base_)
-- If a prompt just prefix the grouping identifier that best fits (e.g. base)
-- If a resource just prefix the grouping identifier that best fits (e.g. base)
-- The tool/prompt/resource should have a descriptive name that is short, use lowercase with captials for new words.  (e.g. base_dbList, qlty_missingValues, write_dba_userGrant, write_dba_tableCreate)
+- The tool/prompt/resource should have a descriptive name that is short, use lowercase with captials for new words.  (e.g. base_databaseList, qlty_missingValues, dba_tableSpace, dba_resusageUserSummary)
+
+Two guides have been created to show how to add tools and prompts:
+- [How to add new modules of tools](./HOW_TO_ADD_YOUR_FUNCTION.md)
+- [How to add customer fuctions](HOW_TO_ADD_CUSTOM_FUNCTIONS.md)
+
 
 <br><br><br>
 

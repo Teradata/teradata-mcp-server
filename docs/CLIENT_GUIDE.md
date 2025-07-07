@@ -1,36 +1,68 @@
-
 # Working with MCP Clients
 
-All the client tools below leverage a Large Language Model, the code provided as examples in the test directory assumes you have set up the environment variables for your model.  Alternatively you should add them to your .env file.
+![Getting Started](media/MCP.png)
 
-```
-############################################
-# These are only required for testing the server 
-############################################
-aws_role_switch=False
-aws_access_key_id=
-aws_secret_access_key=
-aws_session_token=
-aws_region=
+This documet will cover the process and options for getting a client tool to connect to the teradata-mcp-server.  Note that you have many client options, we will cover some but not all.
 
-############################################
-OPENAI_API_KEY=
+The transport mode that the server is running needs to be the same as the client configuration.
 
-############################################
-GOOGLE_GENAI_USE_VERTEXAI=FALSE
-GOOGLE_API_KEY=
+![Client Server](media/clientServer.png)
 
-############################################
-azure_api_key=
-azure_gpt-4o-mini=
+If you configured the server as a Streamable-http transport mode then the client also needs to be configured as a streamable-http mode.
 
-############################################
-ollama_api_base= 
 
-```
+## Using with Claude Desktop
+
+[Claude Desktop Instructions](https://modelcontextprotocol.io/quickstart/user)
+
+Step1 - Modify your claude desktop configuration file -  `claude_desktop_config.json` config file:
+
+**Streamable-http**
+
+Example can be found in [claude_desktop_http_config](../test/Claude_Desktop_Config_Files/claude_desktop_http_config)
+
+Note: you may need to modify the host in the args.
+
+
+**Stdio**
+
+Example can be found in [claude_desktop_stdio_config](../test/Claude_Desktop_Config_Files/claude_desktop_stdio_config)
+
+Note: you will need to modify the directory path in the args for your system, this needs to be a complete path.  You may also need to have a complete path to uv in the command as well.
+
+Note: this requires that `uv` is available to Claude in your system path or installed globally on your system (eg. uv installed with `brew` for Mac OS users).
+
+**SSE**
+
+Example can be found in [claude_desktop_SSE_config](../test/Claude_Desktop_Config_Files/claude_desktop_SSE_config)
+
+Note: you may need to modify the host in the args.
+
+<br><br>
+
+## Using with Microsoft Copilot
+
+Instructions are being worked on
+
+<br><br>
+
+## Using Google Agent Space
+
+Instructions are beig worked on
+
+<br>
+<br>
+
+# Testing Clients
+
+There are a number of way to test a MCP server.
 
 
 ## Testing your server with MCP Inspector
+
+MCP Inspector was developed by Anthropic to support the testing of servers.  It provides a GUI for you to connect to your server and make tool and prompt calls.  All developers should use this for initial testing of tools ad prompts. 
+
+
 Step 1 - Start the server, typer the following in your terminal
 ```
 uv run mcp dev ./src/teradata_mcp_server/server.py
@@ -41,42 +73,39 @@ Step 2 - Open the MCP Inspector
 - You should open the inspector tool, go to http://127.0.0.1:6274 
 - Click on tools
 - Click on list tools
-- Click on read_database_list
+- Click on base_databaseList
 - Click on run
 
 Test the other tools, each should have a successful outcome
 
 Control+c to stop the server in the terminal
 
----------------------------------------------------------------------
+<br><br>
 
 ## Using with Visual Studio Code Co-pilot
 
 Visual Studio Code Co-pilot provides a simple and interactive way to test this server. 
 Follow the instructions below to run and configure the server, set co-pilot to Agent mode, and use it.
 
-![alt text](./documentation/media/copilot-agent.png)
+![alt text](media/copilot-agent.png)
 
 Detailed instructions on configuring MCP server with Visual Studio Code can be found [in Visual Studio Code documentation](https://code.visualstudio.com/docs/copilot/chat/mcp-servers).
 
 
-### Using Server-Sent Events (SSE) (recommended)
+### Using Streamable-http (recommended)
 
 You can use uv or Docker to start the server.
 
-Using uv, ensure that SSE is enabled (not by default) and the host port are defined. You can do this with setting the environment variables below or in the `.env` file):
+Using uv, ensure that Streamable-http is enabled and the host port are defined. You can do this with setting the environment variables below or in the `.env` file):
 
 ```
-export MCP_TRANSPORT=sse
+export MCP_TRANSPORT=streamable-http
 export MCP_HOST=127.0.0.1
 export MCP_PORT=8001
+export MCP_PATH=/mcp/
 
 uv run teradata-mcp-server
-```
 
-Alternatively, start with Docker (defaults to SSE):
-
-```
 docker compose up
 ```
 
@@ -84,8 +113,8 @@ Add the server in VS Code:
 
 - Open the Command Palette (View>Command Palette)
 - select "MCP: Add Server"
-- select "HTTP Server Sent Events"
-- enter URL for the location of the server e.g. http://127.0.0.1:8001/sse
+- select "HTTP or Server Sent Events"
+- enter URL for the location of the server e.g. http://127.0.0.1:8001/mcp
 - enter name of the server for the id
 - select user space
 - the settings.json file should open
@@ -130,7 +159,7 @@ Note: you will need to modify the directory path in the args for your system, th
                 "command": "uv",
                 "args": [
                     "--directory",
-                    "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server",
+                    "<Full Path>/teradata-mcp-server",
                     "run",
                     "teradata-mcp-server"
                 ],
@@ -143,33 +172,142 @@ Note: you will need to modify the directory path in the args for your system, th
 ```
 - you can start the server from within the settings.json file or you can "MCP: Start Server"
 
----------------------------------------------------------------------
+<br><br>
 
-## Using with Claude Desktop
-You can add this server Claude desktop adding this entry to your `claude_desktop_config.json` config file:
+## Using with Google ADK AI Agents (streamable-http version)
 
-Note: you will need to modify the directory path in the args for your system, this needs to be a complete path.  You may also need to have a complete path to uv in the command as well.
-
-Note: this requires that `uv` is available to Claude in your system path or installed globally on your system (eg. uv installed with `brew` for Mac OS users).
+All the client tools below leverage a Large Language Model, the code provided as examples in the test directory assumes you have set up the environment variables for your model.  Alternatively you should add them to your .env file.
 
 ```
-{
-  "mcpServers": {
-    "teradataStdio": {
-      "command": "uv",
-      "args": [
-        "--directory",
-        "/path_to_code/teradata-mcp-server",
-        "run",
-        "teradata-mcp-server"
-      ],
-      "env": {
-        "DATABASE_URI": "teradata://username:password@host:1025/databasename"
-      }
-    }
-  }
-}
+############################################
+# These are only required for testing the server 
+############################################
+aws_role_switch=False
+aws_access_key_id=
+aws_secret_access_key=
+aws_session_token=
+aws_region=
+
+############################################
+OPENAI_API_KEY=
+
+############################################
+GOOGLE_GENAI_USE_VERTEXAI=FALSE
+GOOGLE_API_KEY=
+
+############################################
+azure_api_key=
+azure_gpt-4o-mini=
+
+############################################
+ollama_api_base= 
+
 ```
+
+
+<br><br>
+
+### Option 1 - ADK Chatbot
+&nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the following is in .env file 
+```
+MCP_TRANSPORT=streamable-http
+MCP_HOST=127.0.0.1
+MCP_PORT=8001
+MCP_PATH=/mcp/
+```
+&nbsp;&nbsp;&nbsp;&nbsp; Step 2 - move into teradata-mcp-server directory From a terminal and start the server.
+```
+cd teradata-mcp-server
+uv run src/teradata_mcp-server
+```
+&nbsp;&nbsp;&nbsp;&nbsp; Step 3 - move into teradata_mcp_server/test/ADK_Client_Example directory From a terminal.
+```
+cd test
+adk web
+```
+&nbsp;&nbsp;&nbsp;&nbsp; Step 4 - open [ADK Web Server ](http://0.0.0.0:8000) 
+
+&nbsp;&nbsp;&nbsp;&nbsp; Step 5 - chat with the Simple_Agent or DBA_Agent
+
+<br><br>
+
+### Option 2 - mcp_chatbot
+
+&nbsp;&nbsp;&nbsp;&nbsp; step 0 - Modify server_config.json in the test directory, ensure path is correct.
+
+&nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the following is in .env file 
+```
+MCP_TRANSPORT=streamable-http
+MCP_HOST=127.0.0.1
+MCP_PORT=8001
+MCP_PATH=/mcp/
+```
+&nbsp;&nbsp;&nbsp;&nbsp; Step 2 - move into teradata-mcp-server directory From a terminal and start the server.
+```
+cd teradata-mcp-server
+uv run src/teradata_mcp-server
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;Step 3 - move into teradata_mcp_server directory From a terminal and run the mcp_chatbot
+```
+uv run test/MCP_Client_Example/mcp_chatbot.py
+```
+&nbsp;&nbsp;&nbsp;&nbsp;Step 4 - list the prompts by typing /prompts
+```
+Query: /prompts
+```
+&nbsp;&nbsp;&nbsp;&nbsp;Step 5 - running a prompt to describe a database
+```
+Query: /prompt base_databaseBusinessDesc database_name=demo_user
+```
+
+
+<br><br>
+
+## Using with any tool: REST interface 
+You can use [mcpo](https://github.com/open-webui/mcpo) to expose this MCP tool as an OpenAPI-compatible HTTP server.
+
+For example, using uv:
+
+```
+uvx mcpo --port 8002 --api-key "top-secret" -- uv run teradata-mcp-server
+```
+
+TOr with Docker, using the "rest"  profile:
+```sh
+export MCPO_API_KEY=top-secret
+docker compose --profile rest up
+```
+
+Your Teradata tools are now available as local REST endpoints, view documentation and test it at http://localhost:8002/docs
+
+<br><br>
+
+## Using with Open WebUI
+[Open WebUI](https://github.com/open-webui/open-webui) is user-friendly self-hosted AI platform designed to operate entirely offline, supporting various LLM runners like Ollama. It provides a convenient way to interact with LLMs and MCP servers from an intuitive GUI. It can be integrated with this MCP server using the REST endpoints.
+
+Run the MCP server as a REST server [in the section above](#using-with-any-tool-rest-interface).
+
+```
+python -m venv ./env
+source ./env/bin/activate
+pip install open-webui   
+open-webui serve
+```
+
+Access the UI at http://localhost:8080.
+To add the MCP tools, navigate to Settings > Tools > Add Connection, and enter your mcpo server connection details (eg. `localhost:8001`, password = `top-secret` if you have executed the command line in the mcpo section).
+
+You should be able to see the tools in the Chat Control Valves section on the right and get your models to use it.
+
+
+
+
+You can now access the OpenAPI docs at: [http://localhost:8002/docs](http://localhost:8002/docs)
+
+
+
+For more details on mcpo, see: https://github.com/open-webui/mcpo
 
 ---------------------------------------------------------------------
 
@@ -197,95 +335,3 @@ Note: this requires that `uv` is available to Claude in your system path or inst
 }
 ```
 5. Open a cmd terminal, type ```gemini``` and hit enter, now you should see gemini-cli interface.
-
----------------------------------------------------------------------
-
-## Using with AI Agents (stdio version)
-
-
-### Option 1 - ADK Chatbot
-&nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the MCP_TRANSPORT=stdio  in .env file 
-```
-MCP_TRANSPORT=stdio
-```
-&nbsp;&nbsp;&nbsp;&nbsp; Step 2 - move into teradata_mcp_server/test directory From a terminal.
-```
-cd test
-adk web
-```
-&nbsp;&nbsp;&nbsp;&nbsp; Step 3 - open [ADK Web Server ](http://0.0.0.0:8000) 
-
-&nbsp;&nbsp;&nbsp;&nbsp; Step 4 - chat with the Simple_Agent or DBA_Agent
-
----------------------------------------------------------------------
-
-### Option 2 - mcp_chatbot
-
-&nbsp;&nbsp;&nbsp;&nbsp; step 0 - Modify server_config.json in the test directory, ensure path is correct.
-
-&nbsp;&nbsp;&nbsp;&nbsp; step 1 - confirm the MCP_TRANSPORT=stdio  in .env file 
-```
-MCP_TRANSPORT=stdio
-```
-&nbsp;&nbsp;&nbsp;&nbsp;Step 2 - move into teradata_mcp_server directory From a terminal and run the mcp_chatbot
-```
-uv run test/mcp_chatbot.py
-```
-&nbsp;&nbsp;&nbsp;&nbsp;Step 3 - list the prompts by typing /prompts
-```
-Query: /prompts
-```
-&nbsp;&nbsp;&nbsp;&nbsp;Step 4 - running a prompt to describe a database
-```
-Query: /prompt base_databaseBusinessDesc database_name=demo_user
-```
-
----------------------------------------------------------------------
-
-## Using with any tool: REST interface 
-You can use [mcpo](https://github.com/open-webui/mcpo) to expose this MCP tool as an OpenAPI-compatible HTTP server.
-
-For example, using uv:
-
-```
-uvx mcpo --port 8002 --api-key "top-secret" -- uv run teradata-mcp-server
-```
-
-TOr with Docker, using the "rest"  profile:
-```sh
-export MCPO_API_KEY=top-secret
-docker compose --profile rest up
-```
-
-Your Teradata tools are now available as local REST endpoints, view documentation and test it at http://localhost:8002/docs
-
----------------------------------------------------------------------
-
-## Using with Open WebUI
-[Open WebUI](https://github.com/open-webui/open-webui) is user-friendly self-hosted AI platform designed to operate entirely offline, supporting various LLM runners like Ollama. It provides a convenient way to interact with LLMs and MCP servers from an intuitive GUI. It can be integrated with this MCP server using the REST endpoints.
-
-Run the MCP server as a REST server [in the section above](#using-with-any-tool-rest-interface).
-
-```
-python -m venv ./env
-source ./env/bin/activate
-pip install open-webui   
-open-webui serve
-```
-
-Access the UI at http://localhost:8080.
-To add the MCP tools, navigate to Settings > Tools > Add Connection, and enter your mcpo server connection details (eg. `localhost:8001`, password = `top-secret` if you have executed the command line in the mcpo section).
-
-You should be able to see the tools in the Chat Control Valves section on the right and get your models to use it.
-
----
-
-
-You can now access the OpenAPI docs at: [http://localhost:8002/docs](http://localhost:8002/docs)
-
-
----
-
-For more details on mcpo, see: https://github.com/open-webui/mcpo
-
----------------------------------------------------------------------

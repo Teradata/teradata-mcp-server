@@ -1,24 +1,85 @@
-# Getting Started
+# MCP Server - Getting Started
 
---------------------------------------------------------------------------------------
-## Environment Set Up 
+![Getting Started](media/MCP.png)
 
-If you do not have a Teradata system, get a sandbox for free and right away at [ClearScape Analytics Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics)!
+This documet will cover the process and options for getting the teradata-mcp-server up and runing
 
+Assumes that you have a running Teradata environment, you should have the following information for yout Teradata system:
+1. host address - IP address or DNS address for the location of the server
+2. user name - name you log into the teradata system with
+3. user password - password for the corresponding user name
+4. database - On Teradata systems this is typically the same as you user name
 
-The two recommended ways to run this server are using uv or Docker. 
+## Step 0 - Installing git
+Refer to the [git](https://git-scm.com/) website for download and installation instructions for your environment.
 
-[Jump to next section](#using-docker) for the docker option.
-
-### Using uv
-
-Make sure you have uv installed on your system, installation instructions can be found at https://github.com/astral-sh/uv .
-
-**Step 1** - Clone the mcp-server repository with 
+## Step 1 - Download the Software
+Clone the mcp-server repository with 
 
 On Windows
 ```
 git clone https://github.com/Teradata/teradata-mcp-server.git
+cd teradata-mcp-server
+```
+
+On Mac/Linux
+```
+git clone https://github.com/Teradata/teradata-mcp-server.git
+cd teradata-mcp-server
+```
+
+Changes are constantly happening to the server, we recommend that you come back occasionally to update the code.
+```
+cd teradata-mcp-server
+git pull origin main
+```
+
+## Step 3 - You have a choice
+
+![Choice](media/transport.png) 
+
+Transport Modes
+1. Stadard IO (stdio) - all communications are published to standard input and output, this is suitable for a standalong server running on your laptop.
+2. Server Side Events (SSE) - this transport mode is going to be decomissioned by the mcp standard hence we do not recommend using this.
+3. Streamable-Http (http) - this transport mode uses the http protocole for commuication, this is the recomended mode to use.
+
+Deployment Choice
+1. Docker Container - the container will manage the libraries and starting the service.
+2. UV - UV will manage the libraries (this approach is more suitable for development)
+3. REST - The rest approach takes the docker container and wraps it in a Restful API
+
+The recommended choice will be to deploy Streamable-http in a docker container. [Jump to next section](#using-docker) for the docker option.
+
+
+--------------------------------------------------------------------------------------
+## Step 4 - Using Docker
+
+The server expects the Teradata URI string via the `DATABASE_URI` environment variable. You may:
+- update the `docker-compose.yaml` file or 
+- setup the environment variable with your system's connection details:
+
+`export DATABASE_URI=teradata://username:password@host:1025/databaseschema`
+
+### Run the MCP server with Streamable-Http (default)
+
+This starts only the core Teradata MCP server (with stdio or SSE communication):
+
+```sh
+docker compose up
+```
+
+The server will be available on port 8001 (or the value of the `PORT` environment variable).
+<br><br><br>
+
+--------------------------------------------------------------------------------------
+## Step 4 - UV Environment Set Up 
+
+Make sure you have uv installed on your system, installation instructions can be found at https://github.com/astral-sh/uv .
+
+**Step 1** - Clone the mcp-server repository, sync the necessary libraries, and activate the environment with
+
+On Windows
+```
 cd teradata-mcp-server
 uv sync
 .venv/Scripts/activate
@@ -26,7 +87,6 @@ uv sync
 
 On Mac/Linux
 ```
-git clone https://github.com/Teradata/teradata-mcp-server.git
 cd teradata-mcp-server
 uv sync
 source .venv/bin/activate
@@ -77,40 +137,19 @@ export DATABASE_URI=teradata://username:password@host:1025/schemaname
 export LOGMECH=LDAP
 
 # Enables transport communication as stdio, sse, streamable-http
-export MCP_TRANSPORT=stdio 
+export MCP_TRANSPORT=streamable-http 
 export MCP_HOST=127.0.0.1
 export MCP_PORT=8001
 export MCP_PATH=/mcp/
 ```
 
-**Step 3** - Run the server with uv
+**Step 3** - Run the server with uv in a terminal
 
 `uv run teradata-mcp-server`
 
---------------------------------------------------------------------------------------
-## Using Docker
 
-Clone this repository
-```
-git clone https://github.com/Teradata/teradata-mcp-server.git
-cd teradata-mcp-server
-```
-
-The server expects the Teradata URI string via the `DATABASE_URI` environment variable. You may update the `docker-compose.yaml` file or setup the environment variable with your system's connection details:
-
-`export DATABASE_URI=teradata://username:password@host:1025/databaseschema`
-
-### Run the MCP server with SSE (default)
-
-This starts only the core Teradata MCP server (with stdio or SSE communication):
-
-```sh
-docker compose up
-```
-
-The server will be available on port 8001 (or the value of the `PORT` environment variable).
-
-### Run the MCP server with REST
+--------------------------------------------------------------------
+## Step 4 Run the MCP server with REST
 
 Alternatively, you can expose your tools, prompts and resources as REST endpoints using the `rest` profile.
 
@@ -127,5 +166,5 @@ docker compose --profile rest up
 ---------------------------------------------------------------------
 ## Client set up
 
-For details on how to set up client tools, refer to [Working with Clients](docs/CLIENT_GUIDE.md)
+For details on how to set up client tools, refer to [Working with Clients](./CLIENT_GUIDE.md)
 

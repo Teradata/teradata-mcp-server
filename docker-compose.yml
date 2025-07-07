@@ -4,7 +4,8 @@ services:
     image: teradata-mcp-server:latest
     environment:
       - DATABASE_URI=${DATABASE_URI}
-      - MCP_TRANSPORT=sse
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PATH=/mcp/
       - MCP_HOST=0.0.0.0
       - MCP_PORT=8001
     ports:
