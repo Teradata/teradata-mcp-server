@@ -1,0 +1,259 @@
+{
+    "module": "base",
+    "tests": [
+        {
+            "name": "base_WriteQuery",
+            "description": "Test the base WriteQuery functionality",
+            "type": "tool",
+            "input": {
+                "query": "create a table test_table (id INT, name VARCHAR(255)) in demo_user database;"
+            },
+            "expected_output": {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "toolu_bdrk_01Lqf8PwKEFfAWfLE2LWk7x4",
+                        "name": "base_writeQuery",
+                        "input": {
+                            "sql": "CREATE TABLE demo_user.test_table (\n    id INT,\n    name VARCHAR(255)\n);"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "base_WriteQuery",
+            "description": "Test the base WriteQuery functionality",
+            "type": "tool",
+            "input": {
+                "query": "add 2 rows to test_table with values ('1', 'Alice') and ('2', 'Bob') in demo_user database;"
+            },
+            "expected_output": {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "toolu_bdrk_01WhPH2RDaZ21GVxKd4HRkgu",
+                        "name": "base_writeQuery",
+                        "input": {
+                            "sql": "INSERT INTO demo_user.test_table VALUES ('1', 'Alice');\nINSERT INTO demo_user.test_table VALUES ('2', 'Bob');"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "base_readQuery",
+            "description": "Test the base readQuery functionality",
+            "type": "tool",
+            "input": {
+                "query": "how many rows are in test_table in demo_user database?"
+            },
+            "expected_output": {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "toolu_bdrk_01JiMYC2FTqGjR676ZnyKYi7",
+                        "name": "base_readQuery",
+                        "input": {
+                            "sql": "SELECT COUNT(*) AS row_count FROM demo_user.test_table;"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "base_readQuery",
+            "description": "Test the base readQuery functionality",
+            "type": "tool",
+            "input": {
+                "query": "what are the names in test_table in demo_user database?"
+            },
+            "expected_output": {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "toolu_bdrk_016BeqQA3aFeqVveWXqb8ztX",
+                        "name": "base_readQuery",
+                        "input": {
+                            "sql": "SELECT name FROM demo_user.test_table;"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "base_tableDDL",
+            "description": "Test the base tableDDL functionality",
+            "type": "tool",
+            "input": {
+                "query": "get the DDL for test_table in demo_user database?"
+            },
+            "expected_output": {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "toolu_bdrk_01BSHFAjRwWGWGMmX6BJBXFo",
+                        "name": "base_tableDDL",
+                        "input": {
+                            "db_name": "demo_user",
+                            "table_name": "test_table"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "base_tableList",
+            "description": "Test the base tableList functionality",
+            "type": "tool",
+            "input": {
+                "query": "list all tables in demo_user database"
+            },
+            "expected_output": {
+               "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "toolu_bdrk_013bYQLBSDSJ8xSWUysLG3hH",
+                        "name": "base_tableList",
+                        "input": {
+                            "db_name": "demo_user"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "base_databaseList",
+            "description": "Test the base databaseList functionality",
+            "type": "tool",
+            "input": {
+                "query": "list all databases"
+            },
+            "expected_output": {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "toolu_bdrk_01DiKqnmeduo1K4Kwwk53o6U",
+                        "name": "base_databaseList",
+                        "input": {}
+                    }
+                ]
+            }
+        }, 
+        {
+            "name": "base_columnDescription",
+            "description": "Test the base columnDescription functionality",
+            "type": "tool",
+            "input": {
+                "query": "describe the columns in test_table in demo_user database"
+            },
+            "expected_output": {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "toolu_bdrk_01B2gJfy15B7Tr24fT7emmyS",
+                        "name": "base_columnDescription",
+                        "input": {
+                            "db_name": "demo_user",
+                            "obj_name": "test_table"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "base_tablePreview",
+            "description": "Test the base tablePreview functionality",
+            "type": "tool",
+            "input": {
+                "query": "preview test_table in demo_user database"
+            },
+            "expected_output": {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "toolu_bdrk_018gxyhQK6ZgLY1u8mANcvrZ",
+                        "name": "base_tablePreview",
+                            "input": {
+                                "db_name": "demo_user",
+                                "table_name": "test_table"
+                            }
+                        }
+                    ]
+            }
+        },
+        {
+            "name": "base_tableAffinity",
+            "description": "Test the base tableAffinity functionality",
+            "type": "tool",
+            "input": {
+                "query": "which tables are commonly used with test_table in demo_user database?"
+            },
+            "expected_output": {
+               "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "toolu_bdrk_019Gf578NmkCimkxVTwsHkNw",
+                        "name": "base_tableAffinity",
+                        "input": {
+                            "db_name": "demo_user",
+                            "obj_name": "test_table"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "base_tableUsage",
+            "description": "Test the base tableUsage functionality",
+            "type": "tool",
+            "input": {
+                "query": "how is test_table used by users in demo_user database?"
+            },
+            "expected_output": {
+               "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "toolu_bdrk_01QxmzFuhmWkPbAMDgQTYj7h",
+                        "name": "base_tableUsage",
+                        "input": {
+                            "db_name": "demo_user"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "base_WriteQuery",
+            "description": "Test the base WriteQuery functionality",
+            "type": "tool",
+            "input": {
+                "query": "delete the test_table in demo_user database;"
+            },
+            "expected_output": {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "toolu_bdrk_01Lqf8PwKEFfAWfLE2LWk7x4",
+                        "name": "base_writeQuery",
+                        "input": {
+                            "sql": "Delete TABLE demo_user.test_table;"
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

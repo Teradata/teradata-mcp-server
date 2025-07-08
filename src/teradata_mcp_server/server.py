@@ -46,7 +46,7 @@ _enableEVS = False
 # Only attempt to connect to EVS is the system has an EVS installed/configured
 if (len(os.getenv("VS_NAME", "").strip()) > 0):
     try:
-        _evs    = td.evs()
+        _evs    = td.get_evs()
         _enableEVS = True
     except:
         logger.error("Unable to establish connection to EVS, disabling")
