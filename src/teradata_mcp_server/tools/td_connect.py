@@ -21,7 +21,6 @@ logger = logging.getLogger("teradata_mcp_server")
 class TDConn:
     engine: Optional[Engine] = None
     connection_url: Optional[str] = None
-    conn = None  # Raw DBAPI connection for compatibility
 
     # Constructor
     #     It will read the connection URL from the environment variable DATABASE_URI
@@ -61,37 +60,16 @@ class TDConn:
                 )
                 self.connection_url = sqlalchemy_url
                 logger.info(f"SQLAlchemy engine created for Teradata: {host}:{port}/{database}")
-                # 1-liner: assign raw DBAPI connection directly
-                self.conn = self.engine.connect().connection
             except Exception as e:
                 logger.error(f"Error creating database engine: {e}")
                 self.engine = None
-                self.conn = None
 
             # Create the teradataml context 
             tdml.create_context(tdsqlengine=self.engine)
 
-    # Method to return a DBAPI cursor via SQLAlchemy connection
-    #     If the engine is not established, it will raise an exception
-    #     Returns a context-managed cursor (user should close after use)
-    def cursor(self):
-        if self.engine is None:
-            logger.error("Error: SQLAlchemy engine is None")
-            raise Exception("No connection to database")
-        if self.conn is None:
-            self.conn = self.engine.connect().connection
-        return self.conn.cursor()  # DBAPI cursor
-
     # Destructor
     #     It will close the SQLAlchemy connection and engine
     def close(self):
-        if self.conn is not None:
-            try:
-                self.conn.close()
-                logger.info("DBAPI connection closed")
-            except Exception as e:
-                logger.error(f"Error closing DBAPI connection: {e}")
-            self.conn = None
         if self.engine is not None:
             try:
                 self.engine.dispose()
