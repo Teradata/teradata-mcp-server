@@ -25,6 +25,7 @@ dependencies = [
     "teradatagenai>=20.0.0.0",
     "tdfs4ds==0.2.4.16",
     "teradataml>=20.0.0.5",
+    "teradatasqlalchemy>=20.0.0.0",
 ]
 
 [project.scripts]

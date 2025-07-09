@@ -84,10 +84,10 @@ def execute_db_tool(tool, *args, **kwargs):
     """Execute a database tool with the given connection and arguments."""
     global _tdconn
     try:
-        if not _tdconn.conn:
+        if not _tdconn.engine:
             logger.info("Reinitializing TDConn")
             _tdconn = td.TDConn()  # Reinitialize connection if not connected
-        return format_text_response(tool(_tdconn, *args, **kwargs))
+        return format_text_response(tool(_tdconn.engine.raw_connection(), *args, **kwargs))
     except Exception as e:
         logger.error(f"Error sampling object: {e}")
         return format_error_response(str(e))

@@ -1,100 +1,82 @@
 from typing import Optional
-import teradatasql
 import teradataml as tdml # import of the teradataml package
 from urllib.parse import urlparse
 import logging
 import os
 from dotenv import load_dotenv
 
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
+from sqlalchemy.pool import QueuePool
+
 load_dotenv()
 
 logger = logging.getLogger("teradata_mcp_server")
 
 
-# ----------- support of the teradataml context -------------
-def teradataml_connection():
-    if os.getenv("DATABASE_URI") is not None:
-        try:
-            logmech = os.getenv("LOGMECH", "TD2")
-            parsed_url = urlparse(os.getenv("DATABASE_URI"))
-            Param = {
-                    'username' : parsed_url.username,
-                    'password' : parsed_url.password,
-                    'host'     : parsed_url.hostname,
-                    'database' : parsed_url.path.lstrip('/')
-            }
 
-            tdml.create_context(**Param, logmech = logmech)
-            logger.info("Connection with teradataml is successful.")
-        except Exception as e:
-            logger.error(f"Error connecting to database with Teradataml: {e}")
-    else:
-        logger.warning("DATABASE_URI is not specified, teradataml context has not been established.")
-
-# -----------------------------------------------------------     
-
-# This class is used to connect to Teradata database using teradatasql library
+# This class is used to connect to Teradata database using SQLAlchemy (teradatasqlalchemy driver)
 #     It uses the connection URL from the environment variable DATABASE_URI from a .env file
 #     The connection URL should be in the format: teradata://username:password@host:port/database
 class TDConn:
-    conn = None
-    connection_url = None
+    engine: Optional[Engine] = None
+    connection_url: Optional[str] = None
 
     # Constructor
     #     It will read the connection URL from the environment variable DATABASE_URI
-    #     It will parse the connection URL and create a connection to the database
+    #     It will parse the connection URL and create a SQLAlchemy engine connected to the database
     def __init__(self, connection_url: Optional[str] = None):
-
         if connection_url is None and os.getenv("DATABASE_URI") is None:
             logger.warning("DATABASE_URI is not specified, database connection will not be established.")
-            self.conn = None
+            self.engine = None
         else:
             connection_url = connection_url or os.getenv("DATABASE_URI")
             parsed_url = urlparse(connection_url)
             user = parsed_url.username
             password = parsed_url.password
             host = parsed_url.hostname
-            database = parsed_url.path.lstrip('/') 
-            self.connection_url = connection_url
+            port = parsed_url.port or 1025
+            database = parsed_url.path.lstrip('/')
             logmech = os.getenv("LOGMECH", "TD2")
+
+            # Pool parameters from env
+            pool_size = int(os.getenv("TD_POOL_SIZE", 5))
+            max_overflow = int(os.getenv("TD_MAX_OVERFLOW", 10))
+            pool_timeout = int(os.getenv("TD_POOL_TIMEOUT", 30))
+
+            # Build SQLAlchemy connection string for teradatasqlalchemy
+            # Format: teradatasql://user:pass@host:port/database?LOGMECH=TD2
+            sqlalchemy_url = (
+                f"teradatasql://{user}:{password}@{host}:{port}/{database}?LOGMECH={logmech}"
+            )
+
             try:
-                self.conn = teradatasql.connect (
-                    host=host,
-                    user=user,
-                    password=password,
-                    database=database,
-                    logmech=logmech
+                self.engine = create_engine(
+                    sqlalchemy_url,
+                    poolclass=QueuePool,
+                    pool_size=pool_size,
+                    max_overflow=max_overflow,
+                    pool_timeout=pool_timeout,
                 )
-                logger.info(f"Connected to database: {host}")
-
+                self.connection_url = sqlalchemy_url
+                logger.info(f"SQLAlchemy engine created for Teradata: {host}:{port}/{database}")
             except Exception as e:
-                logger.error(f"Error connecting to database: {e}")
-                self.conn = None
+                logger.error(f"Error creating database engine: {e}")
+                self.engine = None
 
-            #afm--defect teradataml does not auto-reconnect 
-            # also, connect to teradataml.  
-            teradataml_connection()
-    
-    # Method to return the cursor
-    #     If the connection is not established, it will raise an exception
-    #     If the connection is established, it will return the cursor
-    #     The cursor can be used to execute SQL queries
-    def cursor(self):
-        if self.conn is None:
-            logger.error("Error cursor is None")
-            raise Exception("No connection to database")
-        return self.conn.cursor()
+            # Create the teradataml context 
+            tdml.create_context(tdsqlengine=self.engine)
 
     # Destructor
-    #     It will close the connection to the database
+    #     It will close the SQLAlchemy connection and engine
     def close(self):
-        if self.conn is not None:
+        if self.engine is not None:
             try:
-                self.conn.close()
-                logger.info("Connection to database closed")
+                self.engine.dispose()
+                logger.info("SQLAlchemy engine disposed")
             except Exception as e:
-                logger.error(f"Error closing connection to database: {e}")
+                logger.error(f"Error disposing SQLAlchemy engine: {e}")
         else:
-            logger.warning("Connection to database is already closed")
-        
+            logger.warning("SQLAlchemy engine is already disposed or was never created")
+
 
