@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/teradata-teradata-mcp-server-badge.png)](https://mseep.ai/app/teradata-teradata-mcp-server)
+
 # Teradata MCP Server
 
 ## Overview
