@@ -110,19 +110,31 @@ The server will connect to your Teradata instance and to the clients using one o
 - server-sent events (SSE)  
 - streamable-http (streamable-http). 
 
-4. **MCP_HOST**
+4. **TD_POOL_SIZE**
+
+The TD_POOL_SIZE defaults to 5, this is used in the connection to Teradata.
+
+5. **TD_MAX_OVERFLOW**
+
+The TD_MAX_OVERFLOW defaults to 10, this is used in the connection to Teradata.
+
+6. **TD_POOL_TIMEOUT**
+
+The TD_POOL_TIMEOUT defaults to 30, this is used in the connection to Teradata.
+
+7. **MCP_HOST**
 
 This is the host address used when using the sse or streamable-http transport modes, default = localhost (127.0.0.1)
 
-5. **MCP_PORT**
+8. **MCP_PORT**
 
 This is the port address used when using the sse or streamable-http transport modes, default = 8001
 
-6. **MCP_PATH**
+9. **MCP_PATH**
 
 This is the path used for streamable_http transport mode, default to `\mcp`
 
-7. **Enterprise Vector Store**
+10. **Enterprise Vector Store**
 These are the parameters required when using the enterprose vector store tools.
 
 TD_BASE_URL=        #Your UES_URI, strip off the trailing /open-analytics
