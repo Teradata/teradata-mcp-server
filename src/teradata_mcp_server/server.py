@@ -547,19 +547,19 @@ if config['sec']['allmodule']:
 
 #------------------ Enterprise Vectore Store Tools  ------------------#
 
-if config['evs']['allmodule']:
-    if config['evs']['tool']['evs_vectorStoreSimilaritySearch']:
-        @mcp.tool(description="Enterprise Vector Store similarity search")
-        async def evs_vectorStoreSimilaritySearch(
-            question: str = Field(description="Natural language question"),
-            top_k: int = Field(1, description="top matches to return"),
-        ) -> ResponseType:
+# if config['evs']['allmodule']:
+#     if config['evs']['tool']['evs_vectorStoreSimilaritySearch']:
+#         @mcp.tool(description="Enterprise Vector Store similarity search")
+#         async def evs_vectorStoreSimilaritySearch(
+#             question: str = Field(description="Natural language question"),
+#             top_k: int = Field(1, description="top matches to return"),
+#         ) -> ResponseType:
 
-            return execute_vs_tool(
-                td.evs_tools.handle_evs_vectorStoreSimilaritySearch,
-                question=question,
-                top_k=top_k,
-            )
+#             return execute_vs_tool(
+#                 td.evs_tools.handle_evs_vectorStoreSimilaritySearch,
+#                 question=question,
+#                 top_k=top_k,
+#             )
 
 
 
