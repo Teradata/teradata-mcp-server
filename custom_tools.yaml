@@ -18,6 +18,39 @@
   sql: |
     sel * from dbc.dbcinfo;
 
+- type: cube
+  name: cube_db_space_metrics
+  description: "Get the Teradata database space metrics for tables and databases"
+  sql: |
+    SELECT
+      DatabaseName,
+      TableName,
+      CurrentPerm,
+      PeakPerm
+      FROM DBC.AllSpaceV
+
+  measures:
+    - name: "current_perm"
+      description: "Object perm space in bytes"
+      expression: "SUM(CurrentPerm)"
+
+    - name: "peak_perm"
+      description: "Object peak perm space in bytes"
+      expression: "SUM(PeakPerm)"
+
+    - name: "table_skew_pct"
+      description: "Object skew percentage"
+      expression: "CAST((100 - (AVG(CurrentPerm)/MAX(NULLIFZERO(CurrentPerm)) * 100)) AS DECIMAL(5,2))"
+
+  dimensions:
+    - name: "DatabaseName"
+      description: "Name of the database"
+      expression: "DatabaseName"
+
+    - name: "TableName"
+      description: "Name of the table"
+      expression: "TableName"
+
 - type: prompt
   name: cust_promptExample
   description: "my prompt description"

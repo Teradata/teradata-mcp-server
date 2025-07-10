@@ -434,3 +434,32 @@ def handle_base_tableUsage(conn: TeradataConnection, db_name: Optional[str] = No
     }
     return create_response(data, metadata)
 
+#------------------ Tool  ------------------#
+# Dynamic SQL execution tool
+# This tool is used to execute dynamic SQL queries that are generated at runtime by a generator function.
+# This is not intended to be directly exposed as a tool, but used to build other tools.
+#     Arguments: 
+#       conn (TeradataConnection) - Teradata connection object for executing SQL queries         
+#       sql_generator (callable) - a generator function that returns a SQL query string
+#       *args - additional positional arguments to pass to the generator function
+#     Returns: ResponseType - formatted response with query results or error message
+def handle_base_dynamicQuery(conn: TeradataConnection, sql_generator: callable, *args, **kwargs):
+    logger.debug(f"Tool: _handle_base_dynamicQuery: Args: sql: {sql_generator}")
+
+    sql = sql_generator(*args, **kwargs)
+    with conn.cursor() as cur:    
+        rows = cur.execute(sql)  # type: ignore
+        if rows is None:
+            return create_response([])
+            
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "tool_name": sql_generator.__name__,
+            "sql": sql,
+            "columns": [
+                {"name": col[0], "type": col[1].__name__ if hasattr(col[1], '__name__') else str(col[1])}
+                for col in cur.description
+            ] if cur.description else [],
+            "row_count": len(data)
+        }
+        return create_response(data, metadata)

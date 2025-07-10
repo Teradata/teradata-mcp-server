@@ -727,16 +727,16 @@ async def fs_createDataset(
 ) -> ResponseType:
     return execute_db_tool(td.handle_fs_createDataset, fs_config=fs_config, entity_name=entity_name, feature_selection=feature_selection, dataset_name=dataset_name, target_database=target_database)
 
-#------------------ Custom Tools  ------------------#
-# Custom tools are defined as SQL queries in a YAML file and loaded at startup.
+#------------------ Custom Objects  ------------------#
+# Custom tools, resources and prompts are defined as SQL queries in a YAML file and loaded at startup.
 
 
-query_defs = []
-custom_tool_files = [file for file in os.listdir() if file.endswith("_tools.yaml")]
+custom_objects = []
+custom_object_files = [file for file in os.listdir() if file.endswith("_tools.yaml")]
 
-for file in custom_tool_files:
+for file in custom_object_files:
     with open(file) as f:
-        query_defs.extend(yaml.safe_load(f))  # Concatenate all query definitions
+        custom_objects.extend(yaml.safe_load(f))  # Concatenate all query definitions
 
 
 def make_custom_prompt(prompt: str, prompt_name: str, desc: str):
@@ -753,8 +753,82 @@ def make_custom_query_tool(sql_text: str, tool_name: str, desc: str):
     _dynamic_tool.__name__ = tool_name
     return mcp.tool(description=desc)(_dynamic_tool)
 
+def generate_cube_query_tool(cube):
+    """
+    Generate a function to create aggregation SQL from a cube definition.
+
+    :param cube: The cube definition
+    :return: A SQL query string generator function taking dimensions and measures as comma-separated strings.
+    """
+    def _cube_query_tool(dimensions: str, measures: str) -> str:
+        """
+        Generate a SQL query string for the cube using the specified dimensions and measures.
+
+        Args:
+            dimensions (str): Comma-separated dimension column names (e.g., "dim1,dim2").
+            measures (str): Comma-separated measure names to aggregate (e.g., "measure1,measure2").
+
+        Returns:
+            str: The generated SQL query.
+        """
+        dim_list_raw = [d.strip() for d in dimensions.split(",") if d.strip()]
+        met_list_raw = [m.strip() for m in measures.split(",") if m.strip()]
+        dim_list = ",\n  ".join(dim_list_raw)
+        met_lines = []
+        for measure in met_list_raw:
+            mdef = next((m for m in cube["measures"] if m["name"] == measure), None)
+            if mdef is None:
+                raise ValueError(f"Measure '{measure}' not found in cube '{cube['name']}'.")
+            expr = mdef["expression"]
+            met_lines.append(f"{expr} AS {measure}")
+        met_block = ",\n  ".join(met_lines)
+        sql = (
+            "SELECT\n"
+            f"  {dim_list},\n"
+            f"  {met_block}\n"
+            "FROM (\n"
+            f"{cube['sql'].strip()}\n"
+            ") AS c\n"
+            f"GROUP BY {', '.join(dim_list_raw)};"
+        )
+        return sql
+    return _cube_query_tool
+
+def make_custom_cube_tool(cube):
+    async def _dynamic_tool(dimensions, measures):
+        # Accept dimensions and measures as comma-separated strings, parse to lists
+        return execute_db_tool(
+            td.handle_base_dynamicQuery,
+            sql_generator=generate_cube_query_tool(cube),
+            dimensions=dimensions,
+            measures=measures
+        )
+    _dynamic_tool.__name__ = 'get_cube_' + cube["name"]
+    # Build allowed values and definitions for dimensions and measures
+    dim_lines = []
+    for d in cube.get('dimensions', []):
+        dim_lines.append(f"    - {d['name']}: {d.get('description', '')}")
+    measure_lines = []
+    for m in cube.get('measures', []):
+        measure_lines.append(f"    - {m['name']}: {m.get('description', '')}")
+    _dynamic_tool.__doc__ = f"""
+    Tool to query the cube '{cube['name']}'.
+    {cube.get('description', '')}
+
+    Expected inputs:
+        dimensions (str): Comma-separated dimension column names to group by. Allowed values:
+{chr(10).join(dim_lines)}
+
+        measures (str): Comma-separated measure names to aggregate (must match cube definition). Allowed values:
+{chr(10).join(measure_lines)}
+
+    Returns:
+        Query result as a formatted response.
+    """
+    return mcp.tool(description=_dynamic_tool.__doc__)(_dynamic_tool)
+
 # Instantiate custom query tools from YAML
-for q in query_defs:
+for q in custom_objects:
     if q["type"] == "tool":
         fn = make_custom_query_tool(q["sql"], q["name"], q.get("description", ""))
         globals()[q["name"]] = fn
@@ -763,6 +837,10 @@ for q in query_defs:
         fn = make_custom_prompt(q["prompt"], q["name"], q.get("description", "") )
         globals()[q["name"]] = fn
         logger.info(f"Created custom prompt: {q["name"]}")
+    elif q["type"] == "cube":
+        fn = make_custom_cube_tool(q)
+        globals()[q["name"]] = fn
+        logger.info(f"Created custom cube: {q["name"]}")
     else:
         logger.info("Custom yaml type is unnkown.")
 
