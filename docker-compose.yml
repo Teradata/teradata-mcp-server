@@ -4,6 +4,7 @@ services:
     image: teradata-mcp-server:latest
     environment:
       - DATABASE_URI=${DATABASE_URI}
+      - LOGMECH=TD2
       - MCP_TRANSPORT=streamable-http
       - MCP_PATH=/mcp/
       - MCP_HOST=0.0.0.0
