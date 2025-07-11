@@ -12,7 +12,9 @@ from mcp.server.fastmcp.prompts.base import UserMessage, TextContent
 from dotenv import load_dotenv
 import tdfs4ds
 import teradataml as tdml
-
+import inspect
+from sqlalchemy.engine import Engine, Connection
+import typing
 
 # Import the ai_tools module, clone-and-run friendly
 try:
@@ -81,15 +83,50 @@ def format_error_response(error: str) -> ResponseType:
     return format_text_response(f"Error: {error}")
 
 def execute_db_tool(tool, *args, **kwargs):
-    """Execute a database tool with the given connection and arguments."""
+    """
+    Execute a database tool with the given connection and arguments.
+    Currently support both tools expecting DB API or SQLAlchemy engine:
+      - If annotated Engine or Connection, pass SQLAlchemy engine
+      - Otherwise, pass raw DB-API connection
+    The second option should be eventually retired as all tools move to SQLAlchemy.
+    """
     global _tdconn
+    # (Re)initialize if needed
+    if not getattr(_tdconn, "engine", None):
+        logger.info("Reinitializing TDConn")
+        _tdconn = td.TDConn()
+
+    # 1. Inspect first parameter’s annotation
+    sig = inspect.signature(tool)
+    ann = next(iter(sig.parameters.values())).annotation
+
+    # 2. Unwrap any Union (typing.Union or PEP 604)
+    origin = typing.get_origin(ann)
+    types = typing.get_args(ann) if origin is not None else (ann,)
+
+    # 3. Check for SQLAlchemy types
+    use_sqla = any(
+        inspect.isclass(t) and issubclass(t, (Engine, Connection))
+        for t in types
+    )
+
     try:
-        if not _tdconn.engine:
-            logger.info("Reinitializing TDConn")
-            _tdconn = td.TDConn()  # Reinitialize connection if not connected
-        return format_text_response(tool(_tdconn.engine.raw_connection(), *args, **kwargs))
+        if use_sqla:
+            # Use a Connection that has .execute()
+            with _tdconn.engine.connect() as conn:
+                result = tool(conn, *args, **kwargs)
+        else:
+            # Raw DB-API path
+            raw = _tdconn.engine.raw_connection()
+            try:
+                result = tool(raw, *args, **kwargs)
+            finally:
+                raw.close()
+
+        return format_text_response(result)
+
     except Exception as e:
-        logger.error(f"Error sampling object: {e}")
+        logger.error(f"Error in execute_db_tool: {e}", exc_info=True)
         return format_error_response(str(e))
     
 

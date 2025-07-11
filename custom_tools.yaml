@@ -13,10 +13,10 @@
       group by UserName;
       
 - type: tool
-  name: get_cust_dbcInfo
-  description: "Aggregate order counts by status"
+  name: get_td_release
+  description: "Get the Teradata release information"
   sql: |
-    sel * from dbc.dbcinfo;
+    sel infodata from dbc.dbcinfo where infokey='release';
 
 - type: cube
   name: cube_db_space_metrics
