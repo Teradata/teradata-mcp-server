@@ -57,7 +57,6 @@ if (len(os.getenv("VS_NAME", "").strip()) > 0):
 
 
 
-
 #------------------ Tool utilies  ------------------#
 ResponseType = List[types.TextContent | types.ImageContent | types.EmbeddedResource]
 
@@ -85,7 +84,7 @@ def execute_db_tool(tool, *args, **kwargs):
     """
     Execute a database tool with the given connection and arguments.
     Currently support both tools expecting DB API or SQLAlchemy engine:
-      - If annotated Engine or Connection, pass SQLAlchemy engine
+      - If annotated Connection, pass SQLAlchemy engine
       - Otherwise, pass raw DB-API connection
     The second option should be eventually retired as all tools move to SQLAlchemy.
     """
@@ -95,19 +94,11 @@ def execute_db_tool(tool, *args, **kwargs):
         logger.info("Reinitializing TDConn")
         _tdconn = td.TDConn()
 
-    # 1. Inspect first parameter’s annotation
+    # Check is the first argument of the tool is a SQLAlchemy Connection
     sig = inspect.signature(tool)
-    ann = next(iter(sig.parameters.values())).annotation
-
-    # 2. Unwrap any Union (typing.Union or PEP 604)
-    origin = typing.get_origin(ann)
-    types = typing.get_args(ann) if origin is not None else (ann,)
-
-    # 3. Check for SQLAlchemy types
-    use_sqla = any(
-        inspect.isclass(t) and issubclass(t, Connection)
-        for t in types
-    )
+    first_param = next(iter(sig.parameters.values()))
+    ann = first_param.annotation
+    use_sqla = inspect.isclass(ann) and issubclass(ann, Connection)
 
     try:
         if use_sqla:
