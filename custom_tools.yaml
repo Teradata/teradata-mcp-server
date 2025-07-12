@@ -13,10 +13,13 @@
       group by UserName;
       
 - type: tool
-  name: get_td_release
-  description: "Get the Teradata release information"
+  name: get_td_serverInfo
+  description: "Get the Teradata software information: demonstrates how to use parameters for prepared statements."
   sql: |
-    sel infodata from dbc.dbcinfo where infokey='release';
+    sel infodata from dbc.dbcinfo where infokey=:infokey;
+  parameters:
+    - name: infokey
+      description: "The key of the information to retrieve. Any of 'VERSION', 'RELEASE', 'LANGUAGE SUPPORT MODE' can be used."
 
 - type: cube
   name: cube_db_space_metrics

@@ -15,7 +15,6 @@ import teradataml as tdml
 import inspect
 from sqlalchemy.engine import Engine, Connection
 import typing
-
 # Import the ai_tools module, clone-and-run friendly
 try:
     from teradata_mcp_server import tools as td
@@ -106,7 +105,7 @@ def execute_db_tool(tool, *args, **kwargs):
 
     # 3. Check for SQLAlchemy types
     use_sqla = any(
-        inspect.isclass(t) and issubclass(t, (Engine, Connection))
+        inspect.isclass(t) and issubclass(t, Connection)
         for t in types
     )
 
@@ -535,11 +534,7 @@ async def sec_userRoles(
     """Get roles assigned to a user."""
     return execute_db_tool( td.handle_sec_userRoles, user_name=user_name)
 
-
-
-
-
-#------------------ Enterprise Vectore Store Tools  ------------------#
+#------------------ Enterprise Vector Store Tools  ------------------#
 
 # @mcp.tool(description="Enterprise Vector Store similarity search")
 # async def vector_store_similarity_search(
@@ -783,12 +778,45 @@ def make_custom_prompt(prompt: str, prompt_name: str, desc: str):
     _dynamic_prompt.__name__ = prompt_name
     return mcp.prompt(description=desc)(_dynamic_prompt)
 
-def make_custom_query_tool(sql_text: str, tool_name: str, desc: str):
-    async def _dynamic_tool():
-        # SQL is closed over without parameters
-        return execute_db_tool( td.handle_base_readQuery, sql=sql_text)
-    _dynamic_tool.__name__ = tool_name
-    return mcp.tool(description=desc)(_dynamic_tool)
+def make_custom_query_tool(tool):
+    param_defs = tool.get("parameters", [])
+    # 1. Build Parameter objects
+    parameters = []
+    annotations = {}
+    for p in param_defs:
+        name = p["name"]
+        type_hint = p.get("type_hint", str)    # e.g. int, float, str, etc.
+        default = inspect.Parameter.empty if p.get("required", True) else p.get("default", None)
+        parameters.append(
+            inspect.Parameter(
+                name,
+                kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                default=default,
+                annotation=type_hint
+            )
+        )
+        annotations[name] = type_hint
+
+    # 2. Create the new signature
+    sig = inspect.Signature(parameters)
+
+    # 3. Define your generic handler
+    async def _dynamic_tool(**kwargs):
+        """Dynamically generated tool for {name}""".format(name=tool["name"])
+        missing = [n for n in annotations if n not in kwargs]
+        if missing:
+            raise ValueError(f"Missing parameters: {missing}")
+        return execute_db_tool(td.handle_base_readQuery,tool["sql"], **kwargs)
+
+    # 4. Inject signature & annotations
+    _dynamic_tool.__signature__   = sig
+    _dynamic_tool.__annotations__ = annotations
+
+    # 5. Register with FastMCP
+    return mcp.tool(
+        name=tool["name"],
+        description=tool.get("description", "")
+    )(_dynamic_tool)
 
 def generate_cube_query_tool(cube):
     """
@@ -867,7 +895,7 @@ def make_custom_cube_tool(cube):
 # Instantiate custom query tools from YAML
 for q in custom_objects:
     if q["type"] == "tool":
-        fn = make_custom_query_tool(q["sql"], q["name"], q.get("description", ""))
+        fn = make_custom_query_tool(q)
         globals()[q["name"]] = fn
         logger.info(f"Created custom tool: {q["name"]}")
     elif q["type"] == "prompt":

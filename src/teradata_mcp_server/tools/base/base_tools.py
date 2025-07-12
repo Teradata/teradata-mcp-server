@@ -79,7 +79,7 @@ def _handle_base_readQuery_legacy(conn: TeradataConnection, sql: str, *args, **k
 
 #------------------ Tool  ------------------#
 def handle_base_readQuery(
-    conn: Engine | Connection,
+    conn: Connection,
     sql: str,
     *args,
     **kwargs
@@ -89,7 +89,7 @@ def handle_base_readQuery(
     and return the fully rendered SQL (with literals) in metadata.
 
     Arguments:
-      conn   - SQLAlchemy Engine or Connection
+      conn   - SQLAlchemy Connection
       sql    - SQL text, with optional bind-parameter placeholders
       *args  - Positional bind parameters
       **kwargs - Named bind parameters
@@ -102,11 +102,9 @@ def handle_base_readQuery(
     # 1. Build a textual SQL statement
     stmt = text(sql)
 
-    # 2. Execute (will raise if bind names/count don’t match)
+    # 2. Execute with bind parameters if provided
     if kwargs:
-        result = conn.execute(stmt, **kwargs)
-    elif args:
-        result = conn.execute(stmt, *args)
+        result = conn.execute(stmt, kwargs)
     else:
         result = conn.execute(stmt)
 
