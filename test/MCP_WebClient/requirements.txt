@@ -1,0 +1,5 @@
+quart
+hypercorn
+httpx
+langchain-mcp-adapters
+langchain-google-genai
