@@ -50,9 +50,18 @@ Deployment Choice
 
 The recommended choice will be to deploy Streamable-http in a docker container. [Jump to next section](#using-docker) for the docker option.
 
+## Step 4 - Decide on the tools/prompts you want to be availble (optional)
+
+Open the [configure_tools.yaml](../configure_tools.yml) file.  You can control:
+1. all tools and prompts in a module by setting the module allmodule setting to 
+    - True = module tools and prompts will be visible
+    - False = modile tools and prompts will not be available
+2. select tools/prompts from a module, the allmodule will need to be set to True.  Then set True or False for each tool or prompt.
+
+All tools and prompts are enabled by default.
 
 --------------------------------------------------------------------------------------
-## Step 4 - Using Docker
+## Step 5 - Using Docker
 
 The server expects the Teradata URI string via the `DATABASE_URI` environment variable. You may:
 - update the `docker-compose.yaml` file or 
@@ -72,7 +81,7 @@ The server will be available on port 8001 (or the value of the `PORT` environmen
 <br><br><br>
 
 --------------------------------------------------------------------------------------
-## Step 4 - UV Environment Set Up 
+## Step 5 - UV Environment Set Up 
 
 Make sure you have uv installed on your system, installation instructions can be found at https://github.com/astral-sh/uv .
 
@@ -161,7 +170,7 @@ export MCP_PATH=/mcp/
 
 
 --------------------------------------------------------------------
-## Step 4 Run the MCP server with REST
+## Step 5 Run the MCP server with REST
 
 Alternatively, you can expose your tools, prompts and resources as REST endpoints using the `rest` profile.
 
