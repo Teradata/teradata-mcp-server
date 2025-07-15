@@ -33,7 +33,7 @@ We are providing groupings of tools and associated helpful prompts
 
 **Step 2.** - To cofigure and run the MCP server, refer to the [Getting stated guide](docs/GETTING_STARTED.md).
 
-**Step 3.** - There are many client options availale, the [Client Guide](docs/CLIENT_GUIDE.md) explains how to configure and run a sample of different clients.
+**Step 3.** - There are many client options availale, the [Client Guide](docs/client_guide/CLIENT_GUIDE.md) explains how to configure and run a sample of different clients.
 
 
 
