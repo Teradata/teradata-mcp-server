@@ -1,4 +1,4 @@
-# MCP (Multi-Command Protocol) Web Client
+# MCP (Model Context Protocol) Web Client
 
 ## 1. Introduction
 
