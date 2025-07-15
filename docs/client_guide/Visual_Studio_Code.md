@@ -3,7 +3,7 @@
 Visual Studio Code Co-pilot provides a simple and interactive way to test this server. 
 Follow the instructions below to run and configure the server, set co-pilot to Agent mode, and use it.
 
-![alt text](media/copilot-agent.png)
+![alt text](../media/copilot-agent.png)
 
 Detailed instructions on configuring MCP server with Visual Studio Code can be found [in Visual Studio Code documentation](https://code.visualstudio.com/docs/copilot/chat/mcp-servers).
 

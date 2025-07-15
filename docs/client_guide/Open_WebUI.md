@@ -1,7 +1,7 @@
 ## Using with Open WebUI
 [Open WebUI](https://github.com/open-webui/open-webui) is user-friendly self-hosted AI platform designed to operate entirely offline, supporting various LLM runners like Ollama. It provides a convenient way to interact with LLMs and MCP servers from an intuitive GUI. It can be integrated with this MCP server using the REST endpoints.
 
-Run the MCP server as a REST server [in the section above](#using-with-any-tool-rest-interface).
+Run the MCP server as a [REST server](./Rest_API.md).
 
 ```
 python -m venv ./env
