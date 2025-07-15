@@ -2,7 +2,7 @@
 
 ## 1. Introduction
 
-This application is a Python-based web client that provides an interactive, user-friendly interface for interacting with an MCP (Multi-Command Protocol) server. It acts as a bridge between a user's natural language requests and a suite of backend tools, prompts, and resources exposed by the MCP server.
+This application is a Python-based web client that provides an interactive, user-friendly interface for interacting with an MCP (Model Context Protocol) server. It acts as a bridge between a user's natural language requests and a suite of backend tools, prompts, and resources exposed by the MCP server.
 
 The client leverages a powerful Large Language Model (LLM), specifically Google's Gemini 1.5 Flash, to interpret user intent, select the appropriate tool or prompt, and generate the necessary commands. The results are then streamed back to the user in a clear, conversational format. This creates a dynamic "natural language shell" for complex backend systems, particularly geared towards managing a Teradata database environment.
 
