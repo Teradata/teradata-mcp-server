@@ -29,26 +29,29 @@ The application operates in a multi-step flow to process a user's request:
 
 ## 4. Requirements
 
-### 4.1. Python Libraries
+### 4.1. Python Environment
+This application requires **Python 3.9** or newer.
 
-You will need to install the following Python libraries. You can create a `requirements.txt` file and install them using `pip install -r requirements.txt`.
+### 4.2. Python Libraries
+
+You will need to install the following Python libraries. You can use the provided `requirements.txt` file and install them using `pip install -r requirements.txt`.
 
 ```
 quart
 quart-cors
 hypercorn
-google-generativeai
-langchain-mcp-adapters
 python-dotenv
+langchain-mcp-adapters
+google-generativeai
 ```
 
-### 4.2. External Dependencies
+### 4.3. External Dependencies
 
-* **MCP Server**: A running instance of the MCP server is required. The client is configured by default to connect to `http://localhost:8001/mcp/`. This URL can be changed in the `MCP_SERVER_URL` global variable.
-* **Google Gemini API Key**: The application requires a valid API key for the Gemini LLM, configured via a `.env` file.
+* **MCP Server**: A running instance of the MCP server is required. The client is configured via the `.env` file to connect to the server.
+* **Google Gemini API Key**: The application requires a valid API key for the Gemini LLM, which must be set as a shell environment variable.
 * **Web Browser**: A modern web browser that supports Server-Sent Events (e.g., Chrome, Firefox, Safari, Edge).
 
-## 5. Setup & Installation
+## 5. Usage
 
 1.  **Clone the Repository**:
     ```bash
@@ -61,30 +64,47 @@ python-dotenv
     pip install -r requirements.txt
     ```
 
-3.  **Configure Environment Variables**: Create a file named `.env` in the root directory of the project. Add your Gemini API key to this file:
+3.  **Set Environment Variable**: Set your Gemini API key as a shell environment variable. This is more secure than saving it in a file.
+
+    *On macOS/Linux:*
+    ```bash
+    export GEMINI_API_KEY="YOUR_API_KEY_HERE"
     ```
-    GEMINI_API_KEY="YOUR_API_KEY_HERE"
+    *On Windows (Command Prompt):*
+    ```powershell
+    set GEMINI_API_KEY="YOUR_API_KEY_HERE"
+    ```
+    *On Windows (PowerShell):*
+    ```powershell
+    $env:GEMINI_API_KEY="YOUR_API_KEY_HERE"
     ```
 
-4.  **Create the Web Interface**: Create a directory named `templates` in the same directory as `mcp_web_client.py`. Inside the `templates` directory, create an `index.html` file. You will need to provide your own HTML/CSS/JS for the frontend that interacts with the backend API endpoints.
+4.  **Configure MCP Server**: Ensure you have a `.env` file with the correct connection details for your MCP server.
 
-## 6. Usage
+5.  **Start the MCP Server**: Ensure your MCP server instance is running and accessible. The client will connect to the URL configured in your `.env` file (`http://<MCP_HOST>:<MCP_PORT><MCP_PATH>`).
 
-1.  **Start the MCP Server**: Ensure your MCP server instance is running and accessible at the configured URL.
+    For the `streamable-http` transport protocol to work, the MCP server must also be started with the correct settings. You can do this by setting the environment variables before running the server.
 
-2.  **Run the Web Client**: Execute the main Python script from your terminal:
+    *Example on macOS/Linux:*
+    ```bash
+    export MCP_PORT=8001
+    export MCP_TRANSPORT=streamable-http
+    uv run teradata-mcp-server
+    ```
+
+6.  **Run the Web Client**: Execute the main Python script from your terminal:
     ```bash
     python mcp_web_client.py
     ```
 
-3.  **Access the UI**: Once the server starts, you will see a message like:
+7.  **Access the UI**: Once the server starts, you will see a message like:
     ```
     --- Starting Hypercorn Server for Quart App ---
     Web client initialized and ready. Navigate to [http://127.0.0.1:5000](http://127.0.0.1:5000)
     ```
     Open your web browser and navigate to `http://127.0.0.1:5000` to begin using the application.
 
-## 7. API Endpoints
+## 6. API Endpoints
 
 The Quart web server exposes the following RESTful API endpoints:
 
@@ -92,30 +112,22 @@ The Quart web server exposes the following RESTful API endpoints:
     * **Description**: Serves the main `index.html` chat interface.
 * **`GET /tools`**:
     * **Description**: Returns a categorized JSON object of all tools loaded from the MCP server.
-    * **Success Response**: `200 OK` with a JSON body like `{"Category 1": [{"name": "tool_A", "description": "..."}]}`.
 * **`GET /prompts`**:
     * **Description**: Returns a categorized JSON object of all prompts loaded from the MCP server.
-    * **Success Response**: `200 OK` with a JSON body containing prompt details.
 * **`GET /resources`**:
     * **Description**: Returns a categorized JSON object of all resources loaded from the MCP server.
-    * **Success Response**: `200 OK` with a JSON body containing resource details.
 * **`POST /session`**:
-    * **Description**: Creates a new, unique chat session with the LLM, initialized with the system prompt.
-    * **Success Response**: `200 OK` with a JSON body: `{"session_id": "unique-uuid-string"}`.
+    * **Description**: Creates a new, unique chat session with the LLM.
 * **`POST /ask_stream`**:
-    * **Description**: The main endpoint for processing a user's natural language request. It streams the entire multi-step process back to the client.
-    * **Request Body**: `{"session_id": "...", "message": "..."}`
-    * **Response**: A `text/event-stream` response with multiple events (`llm_thought`, `tool_result`, `final_answer`, `error`).
+    * **Description**: The main endpoint for processing a user's natural language request.
 * **`POST /invoke_prompt_stream`**:
     * **Description**: Executes a pre-defined prompt with arguments and streams the results.
-    * **Request Body**: `{"session_id": "...", "prompt_name": "...", "arguments": {...}}`
-    * **Response**: A `text/event-stream` response similar to `/ask_stream`.
 
-## 8. Project Structure
+## 7. Project Structure
 
 ```
 .
-├── .env                    # Environment variables file
+├── .env                    # Environment variables file for MCP server
 ├── mcp_web_client.py       # Main Quart application file
 ├── templates/
 │   └── index.html          # Frontend HTML, CSS, and JavaScript

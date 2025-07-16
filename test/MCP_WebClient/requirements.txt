@@ -1,5 +1,6 @@
 quart
+quart-cors
 hypercorn
-httpx
+python-dotenv
 langchain-mcp-adapters
-langchain-google-genai
+google-generativeai
