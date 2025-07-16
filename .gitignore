@@ -10,3 +10,4 @@ working/
 env
 uv.lock
 test_results/
+uv.lock
