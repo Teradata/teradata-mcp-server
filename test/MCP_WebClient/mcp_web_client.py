@@ -22,9 +22,6 @@ from langchain_mcp_adapters.resources import load_mcp_resources
 # Using the base google.generativeai library for stateful chat
 import google.generativeai as genai
 
-# --- Configuration ---
-MCP_SERVER_URL = "http://localhost:8001/mcp/"
-
 # --- Globals for Web App ---
 app = Quart(__name__)
 app = cors(app, allow_origin="*") # Enable CORS for all origins
@@ -349,20 +346,28 @@ async def main():
     """Initializes services and runs the web server within a persistent MCP session."""
     global mcp_tools, tools_context, llm, structured_tools, mcp_prompts, structured_prompts, prompts_context, mcp_session, structured_resources
 
-    # Load environment variables from a .env file
+    # Load environment variables from a .env file for MCP configuration
     load_dotenv()
     
     try:
+        # The GEMINI_API_KEY is expected to be in the shell environment, not the .env file.
         api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key: raise ValueError("GEMINI_API_KEY not found in environment variables.")
+        if not api_key: 
+            raise ValueError("GEMINI_API_KEY not found. Please export it in your shell environment.")
         genai.configure(api_key=api_key)
         llm = genai.GenerativeModel('gemini-1.5-flash')
     except Exception as e:
         print(f"Fatal Error initializing LLM: {e}")
         sys.exit(1)
 
-    print(f"\nAttempting to connect to MCP server at {MCP_SERVER_URL}...")
-    client = MultiServerMCPClient({"mcp_server": {"url": MCP_SERVER_URL, "transport": "streamable_http"}})
+    # Construct MCP Server URL from environment variables
+    mcp_host = os.getenv("MCP_HOST", "127.0.0.1")
+    mcp_port = os.getenv("MCP_PORT", "8001")
+    mcp_path = os.getenv("MCP_PATH", "/mcp/")
+    mcp_server_url = f"http://{mcp_host}:{mcp_port}{mcp_path}"
+
+    print(f"\nAttempting to connect to MCP server at {mcp_server_url}...")
+    client = MultiServerMCPClient({"mcp_server": {"url": mcp_server_url, "transport": "streamable_http"}})
     
     try:
         async with client.session("mcp_server") as session:
