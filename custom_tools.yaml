@@ -61,3 +61,12 @@
     Write me a poem about ai 
     it should be a single verse
     it should rhyme
+
+- type: glossary:
+  - term: teradata
+definition: "Refers to the Teradata system accessible via MCP tools exposed by this server."
+  synonyms:
+      - TD
+      - Teradata system
+  - term: database
+    definition: "A namespace containing tables, views, and other objects."

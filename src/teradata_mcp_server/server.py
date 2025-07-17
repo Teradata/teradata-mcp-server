@@ -754,8 +754,9 @@ async def fs_createDataset(
 # Custom tools, resources and prompts are defined as SQL queries in a YAML file and loaded at startup.
 
 
-custom_objects = []
 custom_object_files = [file for file in os.listdir() if file.endswith("_tools.yaml")]
+custom_objects = []
+custom_glossary = {}
 
 for file in custom_object_files:
     with open(file) as f:
@@ -897,9 +898,13 @@ for q in custom_objects:
         fn = make_custom_cube_tool(q)
         globals()[q["name"]] = fn
         logger.info(f"Created custom cube: {q["name"]}")
+    elif q["type"] == "glossary":
+        # Load glossary entries into a dictionary
+        for term in q.items():
+            custom_glossary[term[0]] = term[1]
+        logger.info(f"Added glossary entry: {q['name']}")
     else:
         logger.info("Custom yaml type is unnkown.")
-
 
 #------------------ Main ------------------#
 # Main function to start the MCP server
