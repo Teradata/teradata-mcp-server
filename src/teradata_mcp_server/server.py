@@ -937,6 +937,23 @@ for term, details in custom_terms.items():
         if name not in custom_glossary[term_key]["tools"]:
             custom_glossary[term_key]["tools"].append(name)
 
+if custom_glossary:
+    # Resource returning the list glossary terms
+    @mcp.resource("glossary://terms")
+    def get_glossary_terms() -> ResponseType:
+        """List all glossary terms."""
+        return list(custom_glossary.keys())
+
+    # Resource returning all information about a specific glossary term
+    @mcp.resource("glossary://term/{term_name}")
+    def get_glossary_term(term_name: str)  -> dict:
+        """Return the definition, synonyms and associated tools of a specific glossary term."""
+        term = custom_glossary.get(term_name)
+        if term:
+            return term
+        else:
+            return {"error": f"Glossary term not found: {term_name}"}
+
 #------------------ Main ------------------#
 # Main function to start the MCP server
 #     Description: Initializes the MCP server and sets up signal handling for graceful shutdown.
