@@ -42,7 +42,7 @@ MCP_PATH=/mcp/
 &nbsp;&nbsp;&nbsp;&nbsp; Step 2 - move into teradata-mcp-server directory From a terminal and start the server.
 ```
 cd teradata-mcp-server
-uv run src/teradata_mcp-server
+uv run src/teradata_mcp_server/server.py
 ```
 &nbsp;&nbsp;&nbsp;&nbsp; Step 3 - move into teradata_mcp_server/test/ADK_Client_Example directory From a terminal.
 ```
