@@ -22,7 +22,7 @@ We are providing groupings of tools and associated helpful prompts
   - [Feature Store Tools](src/teradata_mcp_server/tools/fs/README.md)
 - **RAG** tools, prompts and resources to manage vector store creation and use
   - [RAG Tools](src/teradata_mcp_server/tools/rag/README.md)
-- **Custom Semantic Layer** to easily implement domain-specific tools, prompts and resources based on your business data. Refer to [developer guide](docs/developer_guide/CUSTOMIZING.md)
+- **Custom Semantic Layer** to easily implement domain-specific tools, prompts and resources based on your business data. Refer to [semantic layer definition](docs/CUSTOMIZING.md)
 
 ## Getting Started
 
