@@ -1,0 +1,69 @@
+# Custom tool definitions here
+get_cust_activeUsers:
+  type: tool
+  description: "Fetch currently active database users"
+  sql: |
+    SELECT UserName
+    FROM DBC.SessionInfoV
+    WHERE UserName IS NOT NULL
+    GROUP BY UserName;
+
+get_td_serverInfo:
+  type: tool
+  description: "Get the Teradata software information: demonstrates how to use parameters for prepared statements."
+  sql: |
+    sel infodata from dbc.dbcinfo where infokey=:infokey;
+  parameters:
+    infokey:
+      description: "The key of the information to retrieve. Any of 'VERSION', 'RELEASE', 'LANGUAGE SUPPORT MODE' can be used."
+
+cube_db_space_metrics:
+  type: cube
+  description: "Get the Teradata database space metrics for tables and databases"
+  sql: |
+    SELECT DatabaseName, TableName, CurrentPerm, PeakPerm FROM DBC.AllSpaceV
+  measures:
+    current_perm:
+      description: "Object perm space in bytes"
+      expression: "SUM(CurrentPerm)"
+    peak_perm:
+      description: "Object peak perm space in bytes"
+      expression: "SUM(PeakPerm)"
+    table_skew_pct:
+      description: "Object skew percentage"
+      expression: "CAST((100 - (AVG(CurrentPerm)/MAX(NULLIFZERO(CurrentPerm)) * 100)) AS DECIMAL(5,2))"
+  dimensions:
+    DatabaseName:
+      description: "Name of the database"
+      expression: "DatabaseName"
+    TableName:
+      description: "Name of the table"
+      expression: "TableName"
+
+cust_promptExample:
+  type: prompt
+  description: "my prompt description"
+  prompt: |
+    Write me a poem about ai
+    it should be a single verse
+    it should rhyme
+
+custom_glossary:
+  type: glossary
+  teradata:
+    definition: "Refers to the Teradata system accessible via MCP tools exposed by this server."
+    synonyms:
+      - TD
+      - Teradata system
+
+  database:
+    definition: "A namespace containing tables, views, and other objects."
+
+  "teradata version":
+    definition: "The version of the Teradata software."
+    synonyms:
+      - teradata release
+      - software version
+      - database version
+    tools:
+      - get_td_serverInfo

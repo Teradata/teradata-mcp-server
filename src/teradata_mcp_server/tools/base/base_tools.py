@@ -5,7 +5,9 @@ from teradatasql import TeradataConnection
 import json
 from datetime import date, datetime
 from decimal import Decimal
-
+from sqlalchemy import text
+from sqlalchemy.engine import Engine, Connection
+from sqlalchemy.engine import default
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -55,7 +57,7 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries         
 #       sql (str) - SQL query to execute
 #     Returns: ResponseType - formatted response with query results or error message
-def handle_base_readQuery(conn: TeradataConnection, sql: str, *args, **kwargs):
+def _handle_base_readQuery_legacy(conn: TeradataConnection, sql: str, *args, **kwargs):
     logger.debug(f"Tool: handle_base_readQuery: Args: sql: {sql}")
 
     with conn.cursor() as cur:    
@@ -75,6 +77,67 @@ def handle_base_readQuery(conn: TeradataConnection, sql: str, *args, **kwargs):
         }
         return create_response(data, metadata)
 
+#------------------ Tool  ------------------#
+def handle_base_readQuery(
+    conn: Connection,
+    sql: str,
+    *args,
+    **kwargs
+):
+    """
+    Execute a SQL query via SQLAlchemy, bind parameters if provided (prepared SQL),
+    and return the fully rendered SQL (with literals) in metadata.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      sql    - SQL text, with optional bind-parameter placeholders
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
+    logger.debug(f"Tool: handle_base_readQuery: Args: sql: {sql}, args={args!r}, kwargs={kwargs!r}")
+
+    # 1. Build a textual SQL statement
+    stmt = text(sql)
+
+    # 2. Execute with bind parameters if provided
+    if kwargs:
+        result = conn.execute(stmt, kwargs)
+    else:
+        result = conn.execute(stmt)
+
+    # 3. Fetch rows & column metadata
+    cursor = result.cursor  # underlying DB-API cursor
+    raw_rows = cursor.fetchall() or []
+    data = rows_to_json(cursor.description, raw_rows)
+    columns = [
+        {
+            "name": col[0],
+            "type": getattr(col[1], "__name__", str(col[1]))
+        }
+        for col in (cursor.description or [])
+    ]
+
+    # 4. Compile the statement with literal binds for “final SQL”
+    #    Fallback to DefaultDialect if conn has no `.dialect`
+    dialect = getattr(conn, "dialect", default.DefaultDialect())
+    compiled = stmt.compile(
+        dialect=dialect,
+        compile_kwargs={"literal_binds": True}
+    )
+    final_sql = str(compiled)
+
+    # 5. Build metadata using the rendered SQL
+    metadata = {
+        "tool_name": "read_query_sqlalchemy",
+        "sql": final_sql,
+        "columns": columns,
+        "row_count": len(data),
+    }
+
+    return create_response(data, metadata)
         
 #------------------ Tool  ------------------#
 # Write SQL execution tool
@@ -434,3 +497,32 @@ def handle_base_tableUsage(conn: TeradataConnection, db_name: Optional[str] = No
     }
     return create_response(data, metadata)
 
+#------------------ Tool  ------------------#
+# Dynamic SQL execution tool
+# This tool is used to execute dynamic SQL queries that are generated at runtime by a generator function.
+# This is not intended to be directly exposed as a tool, but used to build other tools.
+#     Arguments: 
+#       conn (TeradataConnection) - Teradata connection object for executing SQL queries         
+#       sql_generator (callable) - a generator function that returns a SQL query string
+#       *args - additional positional arguments to pass to the generator function
+#     Returns: ResponseType - formatted response with query results or error message
+def handle_base_dynamicQuery(conn: TeradataConnection, sql_generator: callable, *args, **kwargs):
+    logger.debug(f"Tool: handle_base_dynamicQuery: Args: sql: {sql_generator}")
+
+    sql = sql_generator(*args, **kwargs)
+    with conn.cursor() as cur:    
+        rows = cur.execute(sql)  # type: ignore
+        if rows is None:
+            return create_response([])
+            
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "tool_name": sql_generator.__name__,
+            "sql": sql,
+            "columns": [
+                {"name": col[0], "type": col[1].__name__ if hasattr(col[1], '__name__') else str(col[1])}
+                for col in cur.description
+            ] if cur.description else [],
+            "row_count": len(data)
+        }
+        return create_response(data, metadata)
