@@ -50,9 +50,18 @@ Deployment Choice
 
 The recommended choice will be to deploy Streamable-http in a docker container. [Jump to next section](#using-docker) for the docker option.
 
+## Step 4 - Decide on the tools/prompts you want to be availble (optional)
+
+Open the [configure_tools.yaml](../configure_tools.yml) file.  You can control:
+1. all tools and prompts in a module by setting the module allmodule setting to 
+    - True = module tools and prompts will be visible
+    - False = modile tools and prompts will not be available
+2. select tools/prompts from a module, the allmodule will need to be set to True.  Then set True or False for each tool or prompt.
+
+All tools and prompts are enabled by default.
 
 --------------------------------------------------------------------------------------
-## Step 4 - Using Docker
+## Step 5 - Using Docker
 
 The server expects the Teradata URI string via the `DATABASE_URI` environment variable. You may:
 - update the `docker-compose.yaml` file or 
@@ -72,7 +81,7 @@ The server will be available on port 8001 (or the value of the `PORT` environmen
 <br><br><br>
 
 --------------------------------------------------------------------------------------
-## Step 4 - UV Environment Set Up 
+## Step 5 - UV Environment Set Up 
 
 Make sure you have uv installed on your system, installation instructions can be found at https://github.com/astral-sh/uv .
 
@@ -110,19 +119,31 @@ The server will connect to your Teradata instance and to the clients using one o
 - server-sent events (SSE)  
 - streamable-http (streamable-http). 
 
-4. **MCP_HOST**
+4. **TD_POOL_SIZE**
+
+The TD_POOL_SIZE defaults to 5, this is used in the connection to Teradata.
+
+5. **TD_MAX_OVERFLOW**
+
+The TD_MAX_OVERFLOW defaults to 10, this is used in the connection to Teradata.
+
+6. **TD_POOL_TIMEOUT**
+
+The TD_POOL_TIMEOUT defaults to 30, this is used in the connection to Teradata.
+
+7. **MCP_HOST**
 
 This is the host address used when using the sse or streamable-http transport modes, default = localhost (127.0.0.1)
 
-5. **MCP_PORT**
+8. **MCP_PORT**
 
 This is the port address used when using the sse or streamable-http transport modes, default = 8001
 
-6. **MCP_PATH**
+9. **MCP_PATH**
 
 This is the path used for streamable_http transport mode, default to `\mcp`
 
-7. **Enterprise Vector Store**
+10. **Enterprise Vector Store**
 These are the parameters required when using the enterprose vector store tools.
 
 TD_BASE_URL=        #Your UES_URI, strip off the trailing /open-analytics
@@ -149,7 +170,7 @@ export MCP_PATH=/mcp/
 
 
 --------------------------------------------------------------------
-## Step 4 Run the MCP server with REST
+## Step 5 Run the MCP server with REST
 
 Alternatively, you can expose your tools, prompts and resources as REST endpoints using the `rest` profile.
 
@@ -166,5 +187,5 @@ docker compose --profile rest up
 ---------------------------------------------------------------------
 ## Client set up
 
-For details on how to set up client tools, refer to [Working with Clients](./CLIENT_GUIDE.md)
+For details on how to set up client tools, refer to [Working with Clients](./client_guide/CLIENT_GUIDE.md)
 

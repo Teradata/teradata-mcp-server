@@ -32,10 +32,35 @@ We are providing groupings of tools and associated helpful prompts
 
 **Step 2.** - To cofigure and run the MCP server, refer to the [Getting stated guide](docs/GETTING_STARTED.md).
 
-**Step 3.** - There are many client options availale, the [Client Guide](docs/CLIENT_GUIDE.md) explains how to configure and run a sample of different clients.
+**Step 3.** - There are many client options availale, the [Client Guide](docs/client_guide/CLIENT_GUIDE.md) explains how to configure and run a sample of different clients.
 
 
+### Quick start with Claude desktop
+If you want to quickly evaluate the tool, we recommend using Claude desktop, the uv package manager and [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics).
 
+  
+1. Get your Teradata database credentials or create a free sandbox at [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics).
+2. Install [uv](https://docs.astral.sh/uv/getting-started/installation/). If you are on macOS, use Homebrew: `brew install uv`
+3. Clone this repository with `git clone https://github.com/Teradata/teradata-mcp-server.git`
+4. Install [Claude Desktop](https://claude.ai/download)
+5. Configure the claude_desktop_config.json (Settings>Developer>Edit Config) by adding the code below, updating the PATH_TO_DIRECTORY (where you cloned the repo in step 2) and database username, password and URL.
+```
+{
+  "mcpServers": {
+    "teradata": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "<PATH_TO_DIRECTORY>/teradata-mcp-server",
+        "run",
+        "teradata-mcp-server"
+      ],
+      "env": {
+        "DATABASE_URI": "teradata://<USERNAME>:<PASSWORD>@<HOST_URL>:1025/<USERNAME>"
+      }
+    }
+  }
+```
 
 ---------------------------------------------------------------------
 ## Certification
