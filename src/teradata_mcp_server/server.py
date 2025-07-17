@@ -965,7 +965,7 @@ if custom_glossary:
             return term
         else:
             return {"error": f"Glossary term not found: {term_name}"}
-=======
+
 #------------------ Custom Tools  ------------------#
 # Custom tools are defined as SQL queries in a YAML file and loaded at startup.
 
