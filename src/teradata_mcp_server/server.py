@@ -753,9 +753,7 @@ async def fs_createDataset(
 #------------------ Custom Objects  ------------------#
 # Custom tools, resources and prompts are defined as SQL queries in a YAML file and loaded at startup.
 
-
-
-custom_object_files = [file for file in os.listdir() if file.endswith("_tools.yaml")]
+custom_object_files = [file for file in os.listdir() if file.endswith("_objects.yaml")]
 custom_objects = {}
 custom_glossary = {}
 
