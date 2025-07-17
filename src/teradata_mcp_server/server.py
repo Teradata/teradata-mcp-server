@@ -892,7 +892,7 @@ def make_custom_cube_tool(name, cube):
     return mcp.tool(description=_dynamic_tool.__doc__)(_dynamic_tool)
 
 # Instantiate custom query tools from YAML
-custom_terms = {}
+custom_terms = []
 for name, obj in custom_objects.items():
     obj_type = obj.get("type")
     if obj_type == "tool":
@@ -917,10 +917,10 @@ for name, obj in custom_objects.items():
     # Look for additional terms to add to the custom glossary (currently only measures and dimensions in cubes)
     for section in ("measures", "dimensions"):
         if section in obj:
-            custom_terms.update(obj[section])
+            custom_terms.extend((term, details, name) for term, details in obj[section].items())
 
 # Enrich glossary with terms from tools and cubes
-for term, details in custom_terms.items():
+for term, details, tool in custom_terms:
     term_key = term.strip()
 
     if term_key not in custom_glossary:
@@ -928,21 +928,27 @@ for term, details in custom_terms.items():
         custom_glossary[term_key] = {
             "definition": details.get("description"),
             "synonyms": [],
-            "tools": [name]
+            "tools": [tool]
         }
     else:
         # Existing glossary term → preserve definition, just add tool if missing
         if "tools" not in custom_glossary[term_key]:
             custom_glossary[term_key]["tools"] = []
-        if name not in custom_glossary[term_key]["tools"]:
-            custom_glossary[term_key]["tools"].append(name)
+        if tool not in custom_glossary[term_key]["tools"]:
+            custom_glossary[term_key]["tools"].append(tool)
 
 if custom_glossary:
-    # Resource returning the list glossary terms
-    @mcp.resource("glossary://terms")
-    def get_glossary_terms() -> ResponseType:
+    # Resource returning the entire glossary
+    @mcp.resource("glossary://all")
+    def get_glossary() -> ResponseType:
         """List all glossary terms."""
-        return list(custom_glossary.keys())
+        return custom_glossary
+
+    # Resource returning the entire glossary
+    @mcp.resource("glossary://definitions")
+    def get_glossary_definitions() -> ResponseType:
+        """Returns all glossary terms with definitions."""
+        return {term: details["definition"] for term, details in custom_glossary.items()}
 
     # Resource returning all information about a specific glossary term
     @mcp.resource("glossary://term/{term_name}")
