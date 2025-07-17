@@ -1,72 +1,69 @@
 # Custom tool definitions here
-# This file is used to define custom tools for your application.
-# Below are two example tool definitions.
-- type: tool 
-  name: get_cust_activeUsers
+get_cust_activeUsers:
+  type: tool
   description: "Fetch currently active database users"
   sql: |
     SELECT UserName
-    FROM
-      DBC.SessionInfoV
-    WHERE
-      UserName IS NOT NULL
-      group by UserName;
-      
-- type: tool
-  name: get_td_serverInfo
+    FROM DBC.SessionInfoV
+    WHERE UserName IS NOT NULL
+    GROUP BY UserName;
+
+get_td_serverInfo:
+  type: tool
   description: "Get the Teradata software information: demonstrates how to use parameters for prepared statements."
   sql: |
     sel infodata from dbc.dbcinfo where infokey=:infokey;
   parameters:
-    - name: infokey
+    infokey:
       description: "The key of the information to retrieve. Any of 'VERSION', 'RELEASE', 'LANGUAGE SUPPORT MODE' can be used."
 
-- type: cube
-  name: cube_db_space_metrics
+cube_db_space_metrics:
+  type: cube
   description: "Get the Teradata database space metrics for tables and databases"
   sql: |
-    SELECT
-      DatabaseName,
-      TableName,
-      CurrentPerm,
-      PeakPerm
-      FROM DBC.AllSpaceV
-
+    SELECT DatabaseName, TableName, CurrentPerm, PeakPerm FROM DBC.AllSpaceV
   measures:
-    - name: "current_perm"
+    current_perm:
       description: "Object perm space in bytes"
       expression: "SUM(CurrentPerm)"
-
-    - name: "peak_perm"
+    peak_perm:
       description: "Object peak perm space in bytes"
       expression: "SUM(PeakPerm)"
-
-    - name: "table_skew_pct"
+    table_skew_pct:
       description: "Object skew percentage"
       expression: "CAST((100 - (AVG(CurrentPerm)/MAX(NULLIFZERO(CurrentPerm)) * 100)) AS DECIMAL(5,2))"
-
   dimensions:
-    - name: "DatabaseName"
+    DatabaseName:
       description: "Name of the database"
       expression: "DatabaseName"
-
-    - name: "TableName"
+    TableName:
       description: "Name of the table"
       expression: "TableName"
 
-- type: prompt
-  name: cust_promptExample
+cust_promptExample:
+  type: prompt
   description: "my prompt description"
   prompt: |
-    Write me a poem about ai 
+    Write me a poem about ai
     it should be a single verse
     it should rhyme
 
-- type: glossary:
-  - term: teradata
-definition: "Refers to the Teradata system accessible via MCP tools exposed by this server."
-  synonyms:
+custom_glossary:
+  type: glossary
+  teradata:
+    definition: "Refers to the Teradata system accessible via MCP tools exposed by this server."
+    synonyms:
       - TD
       - Teradata system
-  - term: database
+
+  database:
     definition: "A namespace containing tables, views, and other objects."
+
+  "teradata version":
+    definition: "The version of the Teradata software."
+    synonyms:
+      - teradata release
+      - software version
+      - database version
+    tools:
+      - get_td_serverInfo
