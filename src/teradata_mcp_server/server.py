@@ -148,294 +148,90 @@ def execute_vs_tool(tool, *args, **kwargs) -> ResponseType:
         return format_error_response("Enterprise Vector Store is not available on this server.")
 
     
-#------------------ Base Tools  ------------------#
 
-if config['base']['allmodule']:
-    if config['base']['tool']['base_readQuery']:
-        @mcp.tool(description="Executes a SQL query to read from the database.")
-        async def base_readQuery(
-            sql: str = Field(description="SQL that reads from the database to run", default=""),
-            ) -> ResponseType:
-            """Executes a SQL query to read from the database."""
-            return execute_db_tool( td.handle_base_readQuery, sql=sql) 
+#------------------ Dynamic Tool Registration ------------------#
 
-    if config['base']['tool']['base_writeQuery']:
-        @mcp.tool(description="Executes a SQL query to write to the database.")
-        async def base_writeQuery(
-            sql: str = Field(description="SQL that writes to the database to run", default=""),
-            ) -> ResponseType:
-            """Executes a SQL query to write to the database."""
-            return execute_db_tool( td.handle_base_writeQuery, sql=sql) 
+import inspect
 
-    if config['base']['tool']['base_tableDDL']:
-        @mcp.tool(description="Display table DDL definition.")
-        async def base_tableDDL(
-            db_name: str = Field(description="Database name", default=""),
-            table_name: str = Field(description="table name", default=""),
-            ) -> ResponseType:
-            """Display table DDL definition."""
-            return execute_db_tool( td.handle_base_tableDDL, db_name=db_name, table_name=table_name)    
+def register_td_tools(config, td, mcp):
+    """
+    Dynamically register all handle_* functions in td as mcp.tool(),
+    using config to enable/disable each tool.
+    """
+    for name, func in inspect.getmembers(td, inspect.isfunction):
+        if not name.startswith("handle_"):
+            continue
+        tool_name = name.replace("handle_", "")
+        # Find which config section this tool belongs to
+        section = None
+        for sec in ["base", "dba", "qlty"]:
+            if tool_name.startswith(sec):
+                section = sec
+                break
+        if not section:
+            continue
+        # Check if enabled in config
+        if not (config.get(section, {}).get("allmodule") and config[section]["tool"].get(tool_name)):
+            continue
+        sig = inspect.signature(func)
+        # Only include user parameters (skip connection, *args, **kwargs)
+        params = [
+            p for p in list(sig.parameters.values())[1:]  # skip first param (connection)
+            if p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+        ]
+        # Build dynamic async function
+        async def dynamic_tool(*args, __func=func, __params=params):
+            kwargs = {p.name: a for p, a in zip(__params, args)}
+            return execute_db_tool(__func, **kwargs)
+        # Set correct signature
+        dynamic_tool.__signature__ = inspect.Signature(params)
+        dynamic_tool.__name__ = tool_name
+        dynamic_tool.__doc__ = func.__doc__ or ""
+        # Register with mcp
+        mcp.tool(name=tool_name, description=dynamic_tool.__doc__)(dynamic_tool)
 
-    if config['base']['tool']['base_databaseList']:
-        @mcp.tool(description="List all databases in the Teradata System.")
-        async def base_databaseList() -> ResponseType:
-            """List all databases in the Teradata System."""
-            return execute_db_tool( td.handle_base_databaseList)
+register_td_tools(config, td, mcp)
 
-    if config['base']['tool']['base_tableList']:
-        @mcp.tool(description="List objects in a database.")
-        async def base_tableList(
-            db_name: str = Field(description="database name", default=""),
-            ) -> ResponseType:
-            """List objects in a database."""
-            return execute_db_tool( td.handle_base_tableList, db_name=db_name)
 
-    if config['base']['tool']['base_columnDescription']:
-        @mcp.tool(description="Show detailed column information about a database table.")
-        async def base_columnDescription(
-            db_name: str = Field(description="Database name", default=""),
-            obj_name: str = Field(description="table name", default=""),
-            ) -> ResponseType:
-            """Show detailed column information about a database table."""
-            return execute_db_tool( td.handle_base_columnDescription, db_name=db_name, obj_name=obj_name)
+# ------------------ DBA Prompts ------------------ #
+if config['dba']['prompt']['dba_databaseHealthAssessment'] or config['dba']['allmodule']:
+    @mcp.prompt()
+    async def dba_databaseHealthAssessment() -> UserMessage:
+        """Create a database health assessment for a Teradata system."""
+        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_databaseHealthAssessment))
 
-    if config['base']['tool']['base_tablePreview']:
-        @mcp.tool(description="Get data samples and structure overview from a database table.")
-        async def base_tablePreview(
-            db_name: str = Field(description="Database name", default=""),
-            table_name: str = Field(description="table name", default=""),
-            ) -> ResponseType:
-            """Get data samples and structure overview from a database table."""
-            return execute_db_tool( td.handle_base_tablePreview, table_name=table_name, db_name=db_name)
+if config['dba']['prompt']['dba_userActivityAnalysis'] or config['dba']['allmodule']:
+    @mcp.prompt()
+    async def dba_userActivityAnalysis() -> UserMessage:
+        """Create a user activity analysis for a Teradata system."""
+        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_userActivityAnalysis))
 
-    if config['base']['tool']['base_tableAffinity']:
-        @mcp.tool(description="Get tables commonly used together by database users, this is helpful to infer relationships between tables.")
-        async def base_tableAffinity(
-            db_name: str = Field(description="Database name", default=""),
-            obj_name: str = Field(description="Table or view name", default=""),
-            ) -> ResponseType:
-            """Get tables commonly used together by database users, this is helpful to infer relationships between tables."""
-            return execute_db_tool( td.handle_base_tableAffinity, obj_name=obj_name, db_name=db_name)
+if config['dba']['prompt']['dba_tableArchive']  or config['dba']['allmodule']:
+    @mcp.prompt()
+    async def dba_tableArchive() -> UserMessage:
+        """Create a table archive strategy for database tables."""
+        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_tableArchive))
 
-    if config['base']['tool']['base_tableUsage']:
-        @mcp.tool(description="Measure the usage of a table and views by users in a given schema, this is helpful to infer what database objects are most actively used or drive most value.")
-        async def base_tableUsage(
-            db_name: str = Field(description="Database name", default=""),
-            ) -> ResponseType:
-            """Measure the usage of a table and views by users in a given schema, this is helpful to infer what database objects are most actively used or drive most value."""
-            return execute_db_tool( td.handle_base_tableUsage, db_name=db_name)
+if config['dba']['prompt']['dba_databaseLineage'] or config['dba']['allmodule']:
+    @mcp.prompt()
+    async def dba_databaseLineage(database_name: str, number_days: int) -> UserMessage:
+        """Create a database lineage map for tables in a database."""
+        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_databaseLineage.format(database_name=database_name, number_days=number_days)))
 
-    if config['base']['prompt']['base_query']:
-        @mcp.prompt()
-        async def base_query(qry: str) -> UserMessage:
-            """Create a SQL query against the database"""
-            return UserMessage(role="user", content=TextContent(type="text", text=td.handle_base_query.format(qry=qry)))
+if config['dba']['prompt']['dba_tableDropImpact'] or config['dba']['allmodule']:
+    @mcp.prompt()
+    async def dba_tableDropImpact(database_name: str, table_name: str, number_days: int) -> UserMessage:
+        """Assess the impact of dropping a table."""
+        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_tableDropImpact.format(database_name=database_name, table_name=table_name, number_days=number_days)))
 
-    if config['base']['prompt']['base_tableBusinessDesc']:
-        @mcp.prompt()
-        async def base_tableBusinessDesc(database_name: str, table_name: str) -> UserMessage:
-            """Create a business description of the table and columns."""
-            return UserMessage(role="user", content=TextContent(type="text", text=td.handle_base_tableBusinessDesc.format(database_name=database_name, table_name=table_name)))
+# ------------------ Quality Prompts ------------------ #
 
-    if config['base']['prompt']['base_databaseBusinessDesc']:
-        @mcp.prompt()
-        async def base_databaseBusinessDesc(database_name: str) -> UserMessage:
-            """Create a business description of the database."""
-            return UserMessage(role="user", content=TextContent(type="text", text=td.handle_base_databaseBusinessDesc.format(database_name=database_name)))
+if config['qlty']['prompt']['qlty_databaseQuality'] or config['qlty']['allmodule']:
+    @mcp.prompt()
+    async def qlty_databaseQuality(database_name: str) -> UserMessage:
+        """Assess the data quality of a database."""
+        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_qlty_databaseQuality.format(database_name=database_name)))
 
-#------------------ DBA Tools  ------------------#
-if config['dba']['allmodule']:
-    if config['dba']['tool']['dba_userSqlList']:
-        @mcp.tool(description="Get a list of SQL run by a user in the last number of days if a user name is provided, otherwise get list of all SQL in the last number of days.")
-        async def dba_userSqlList(
-            user_name: str = Field(description="user name", default=""),
-            no_days: int = Field(description="number of days to look back", default=7),
-            ) -> ResponseType:
-            """Get a list of SQL run by a user."""
-            return execute_db_tool( td.handle_dba_userSqlList, user_name=user_name, no_days=no_days)
-
-    if config['dba']['tool']['dba_tableSqlList']:
-        @mcp.tool(description="Get a list of SQL run against a table in the last number of days ")
-        async def dba_tableSqlList(
-            table_name: str = Field(description="table name", default=""),
-            no_days: int = Field(description="number of days to look back", default=7),
-            ) -> ResponseType:
-            """Get a list of SQL run by a user."""
-            return execute_db_tool( td.handle_dba_tableSqlList, table_name=table_name, no_days=no_days)
-
-    if config['dba']['tool']['dba_tableSpace']:
-        @mcp.tool(description="Get table space used for a table if table name is provided or get table space for all tables in a database if a database name is provided.")
-        async def dba_tableSpace(
-            db_name: str = Field(description="Database name", default=""),
-            table_name: str = Field(description="table name", default=""),
-            ) -> ResponseType:
-            """Get table space used for a table if table name is provided or get table space for all tables in a database if a database name is provided."""
-            return execute_db_tool( td.handle_dba_tableSpace, db_name=db_name, table_name=table_name)
-
-    if config['dba']['tool']['dba_databaseSpace']:
-        @mcp.tool(description="Get database space if database name is provided, otherwise get all databases space allocations.")
-        async def dba_databaseSpace(
-            db_name: str = Field(description="Database name", default=""),
-            ) -> ResponseType:
-            """Get database space if database name is provided, otherwise get all databases space allocations."""
-            return execute_db_tool( td.handle_dba_databaseSpace, db_name=db_name)
-
-    if config['dba']['tool']['dba_databaseVersion']:
-        @mcp.tool(description="Get Teradata database version information.")
-        async def dba_databaseVersion() -> ResponseType:
-            """Get Teradata database version information."""
-            return execute_db_tool( td.handle_dba_databaseVersion)
-
-    if config['dba']['tool']['dba_resusageSummary']:
-        @mcp.tool(description="Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.")
-        async def dba_resusageSummary() -> ResponseType:
-            """Get the Teradata system usage summary metrics by weekday and hour."""
-            return execute_db_tool( td.handle_dba_resusageSummary, dimensions=["hourOfDay", "dayOfWeek"])
-
-    if config['dba']['tool']['dba_resusageUserSummary']:
-        @mcp.tool(description="Get the Teradata system usage summary metrics by user on a specified date, or day of week and hour of day.")
-        async def dba_resusageUserSummary(
-            user_name: str = Field(description="Database user name", default=""),
-            date: str = Field(description="Date to analyze, formatted as `YYYY-MM-DD`", default=""),
-            dayOfWeek: str = Field(description="Day of week to analyze", default=""),
-            hourOfDay: str = Field(description="Hour of day to analyze", default=""),
-            ) -> ResponseType:
-            """Get the Teradata system usage summary metrics by user on a specified date, or day of week and hour of day."""
-            return execute_db_tool( td.handle_dba_resusageSummary, dimensions=["UserName", "hourOfDay", "dayOfWeek"], user_name=user_name, date=date, dayOfWeek=dayOfWeek, hourOfDay=hourOfDay)
-
-    if config['dba']['tool']['dba_flowControl']:
-        @mcp.tool(description="Get the Teradata flow control metrics.")
-        async def dba_flowControl() -> ResponseType:
-            """Get the Teradata flow control metrics."""
-            return execute_db_tool( td.handle_dba_flowControl)
-
-    if config['dba']['tool']['dba_featureUsage']:
-        @mcp.tool(description="Get the user feature usage metrics.")
-        async def dba_featureUsage() -> ResponseType:
-            """Get the user feature usage metrics.""" 
-            return execute_db_tool( td.handle_dba_featureUsage)
-
-    if config['dba']['tool']['dba_userDelay']:
-        @mcp.tool(description="Get the Teradata user delay metrics.")
-        async def dba_userDelay() -> ResponseType:
-            """Get the Teradata user delay metrics."""
-            return execute_db_tool( td.handle_dba_userDelay)
-
-    if config['dba']['tool']['dba_tableUsageImpact']:
-        @mcp.tool(description="Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time.")
-        async def dba_tableUsageImpact(
-            db_name: str = Field(description="Database name", default=""),
-            user_name: str = Field(description="User name", default=""),    
-            ) -> ResponseType:
-            """Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time."""
-            return execute_db_tool( td.handle_dba_tableUsageImpact, db_name=db_name,  user_name=user_name)
-
-    if config['dba']['tool']['dba_sessionInfo']:
-        @mcp.tool(description="Get the Teradata session information for user.")
-        async def dba_sessionInfo(
-            user_name: str = Field(description="User name", default=""),
-            ) -> ResponseType:
-            """Get the Teradata session information for user."""
-            return execute_db_tool( td.handle_dba_sessionInfo, user_name=user_name)
-
-    if config['dba']['prompt']['dba_databaseHealthAssessment']:
-        @mcp.prompt()
-        async def dba_databaseHealthAssessment() -> UserMessage:
-            """Create a database health assessment for a Teradata system."""
-            return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_databaseHealthAssessment))
-
-    if config['dba']['prompt']['dba_userActivityAnalysis']:
-        @mcp.prompt()
-        async def dba_userActivityAnalysis() -> UserMessage:
-            """Create a user activity analysis for a Teradata system."""
-            return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_userActivityAnalysis))
-
-    if config['dba']['prompt']['dba_tableArchive']:
-        @mcp.prompt()
-        async def dba_tableArchive() -> UserMessage:
-            """Create a table archive strategy for database tables."""
-            return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_tableArchive))
-
-    if config['dba']['prompt']['dba_databaseLineage']:
-        @mcp.prompt()
-        async def dba_databaseLineage(database_name: str, number_days: int) -> UserMessage:
-            """Create a database lineage map for tables in a database."""
-            return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_databaseLineage.format(database_name=database_name, number_days=number_days)))
-
-    if config['dba']['prompt']['dba_tableDropImpact']:
-        @mcp.prompt()
-        async def dba_tableDropImpact(database_name: str, table_name: str, number_days: int) -> UserMessage:
-            """Assess the impact of dropping a table."""
-            return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_tableDropImpact.format(database_name=database_name, table_name=table_name, number_days=number_days)))
-
-#------------------ Data Quality Tools  ------------------#
-
-if config['qlty']['allmodule']:
-    if config['qlty']['tool']['qlty_missingValues']:
-        @mcp.tool(description="Get the column names that having missing values in a table.")
-        async def qlty_missingValues(
-            table_name: str = Field(description="table name", default=""),
-            ) -> ResponseType:
-            """Get the column names that having missing values in a table."""
-            return execute_db_tool( td.handle_qlty_missingValues, table_name=table_name)
-
-    if config['qlty']['tool']['qlty_negativeValues']:
-        @mcp.tool(description="Get the column names that having negative values in a table.")
-        async def qlty_negativeValues(
-            table_name: str = Field(description="table name", default=""),
-            ) -> ResponseType:
-            """Get the column names that having negative values in a table."""
-            return execute_db_tool( td.handle_qlty_negativeValues, table_name=table_name)
-
-    if config['qlty']['tool']['qlty_distinctCategories']:
-        @mcp.tool(description="Get the destinct categories from column in a table.")
-        async def qlty_distinctCategories(
-            table_name: str = Field(description="table name", default=""),
-            col_name: str = Field(description="column name", default=""),
-            ) -> ResponseType:
-            """Get the destinct categories from column in a table."""
-            return execute_db_tool( td.handle_qlty_distinctCategories, table_name=table_name, col_name=col_name)
-
-    if config['qlty']['tool']['qlty_standardDeviation']:
-        @mcp.tool(description="Get the standard deviation from column in a table.")
-        async def qlty_standardDeviation(
-            table_name: str = Field(description="table name", default=""),
-            col_name: str = Field(description="column name", default=""),
-            ) -> ResponseType:
-            """Get the standard deviation from column in a table."""
-            return execute_db_tool( td.handle_qlty_standardDeviation, table_name=table_name, col_name=col_name)
-
-    if config['qlty']['tool']['qlty_columnSummary']:
-        @mcp.tool(description="Get the column summary statistics for a table.")
-        async def qlty_columnSummary(
-            table_name: str = Field(description="table name", default=""),
-            ) -> ResponseType:
-            """Get the column summary statistics for a table."""
-            return execute_db_tool( td.handle_qlty_columnSummary, table_name=table_name)
-
-    if config['qlty']['tool']['qlty_univariateStatistics']:
-        @mcp.tool(description="Get the univariate statistics for a table.")
-        async def qlty_univariateStatistics(
-            table_name: str = Field(description="table name", default=""),
-            col_name: str = Field(description="column name", default=""),
-            ) -> ResponseType:
-            """Get the univariate statistics for a table."""
-            return execute_db_tool( td.handle_qlty_univariateStatistics, table_name=table_name, col_name=col_name)
-
-    if config['qlty']['tool']['qlty_rowsWithMissingValues']:
-        @mcp.tool(description="Get the rows with missing values in a table.")
-        async def qlty_rowsWithMissingValues(
-            table_name: str = Field(description="table name", default=""),
-            col_name: str = Field(description="column name", default=""),
-            ) -> ResponseType:
-            """Get the rows with missing values in a table."""
-            return execute_db_tool( td.handle_qlty_rowsWithMissingValues, table_name=table_name, col_name=col_name)
-
-    if config['qlty']['prompt']['qlty_databaseQuality']:
-        @mcp.prompt()
-        async def qlty_databaseQuality(database_name: str) -> UserMessage:
-            """Assess the data quality of a database."""
-            return UserMessage(role="user", content=TextContent(type="text", text=td.handle_qlty_databaseQuality.format(database_name=database_name)))
 
 # ------------------ RAG Tools ------------------ #
 
@@ -544,36 +340,7 @@ if config['rag']['allmodule']:
             return UserMessage(role="user", content=TextContent(type="text", text=td.rag_guidelines))
 
 
-#------------------ Security Tools  ------------------#
-
-
-if config['sec']['allmodule']:
-    if config['sec']['tool']['sec_userDbPermissions']:
-        @mcp.tool(description="Get permissions for a user.")
-        async def sec_userDbPermissions(
-            user_name: str = Field(description="User name", default=""),
-            ) -> ResponseType:
-            """Get permissions for a user."""
-            return execute_db_tool( td.handle_sec_userDbPermissions, user_name=user_name)
-
-    if config['sec']['tool']['sec_rolePermissions']:
-        @mcp.tool(description="Get permissions for a role.")
-        async def sec_rolePermissions(
-            role_name: str = Field(description="Role name", default=""),
-            ) -> ResponseType:
-            """Get permissions for a role."""
-            return execute_db_tool( td.handle_sec_rolePermissions, role_name=role_name)
-
-    if config['sec']['tool']['sec_userRoles']:
-        @mcp.tool(description="Get roles assigned to a user.")
-        async def sec_userRoles(
-            user_name: str = Field(description="User name", default=""),
-            ) -> ResponseType:
-            """Get roles assigned to a user."""
-            return execute_db_tool( td.handle_sec_userRoles, user_name=user_name)
-
-
-#------------------ Enterprise Vectore Store Tools  ------------------#
+#------------------ Enterprise Vector Store Tools  ------------------#
 
 # if config['evs']['allmodule']:
 #     if config['evs']['tool']['evs_vectorStoreSimilaritySearch']:
