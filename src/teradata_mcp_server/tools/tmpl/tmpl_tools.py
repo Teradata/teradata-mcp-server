@@ -55,6 +55,18 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
 #       <arguments> - <description of arguments>
 #     Returns: <what it does> or error message    
 def handle_tmpl_nameOfTool(conn: TeradataConnection, argument: Optional[str], *args, **kwargs):
+    """
+    <description of what the tool is for>
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      arguments - arguments to analyze
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
     logger.debug(f"Tool: handle_tmpl_nameOfTool: Args: argument: {argument}")
 
     with conn.cursor() as cur:

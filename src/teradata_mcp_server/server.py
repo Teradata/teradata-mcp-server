@@ -164,7 +164,7 @@ def register_td_tools(config, td, mcp):
         tool_name = name.replace("handle_", "")
         # Find which config section this tool belongs to
         section = None
-        for sec in ["base", "dba", "qlty"]:
+        for sec in ["base", "dba", "qlty", "rag", "sec"]:
             if tool_name.startswith(sec):
                 section = sec
                 break
@@ -192,6 +192,25 @@ def register_td_tools(config, td, mcp):
 
 register_td_tools(config, td, mcp)
 
+
+# ------------------ base Prompts ------------------ #
+if config['base']['prompt']['base_query'] or config['base']['allmodule']:
+    @mcp.prompt()
+    async def base_query(qry: str) -> UserMessage:
+        """Create a SQL query against the Teradata database"""
+        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_base_query.format(qry=qry)))
+
+if config['base']['prompt']['base_tableBusinessDesc'] or config['base']['allmodule']:
+    @mcp.prompt()
+    async def base_tableBusinessDesc(database_name: str, table_name: str) -> UserMessage:
+        """Create a SQL query against the Teradata database"""
+        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_base_tableBusinessDesc.format(database_name=database_name, table_name=table_name)))
+                           
+if config['base']['prompt']['base_databaseBusinessDesc'] or config['base']['allmodule']:
+    @mcp.prompt()
+    async def base_databaseBusinessDesc(database_name: str) -> UserMessage:
+        """Create a SQL query against the Teradata database"""
+        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_base_databaseBusinessDesc.format(database_name=database_name)))
 
 # ------------------ DBA Prompts ------------------ #
 if config['dba']['prompt']['dba_databaseHealthAssessment'] or config['dba']['allmodule']:
@@ -233,111 +252,12 @@ if config['qlty']['prompt']['qlty_databaseQuality'] or config['qlty']['allmodule
         return UserMessage(role="user", content=TextContent(type="text", text=td.handle_qlty_databaseQuality.format(database_name=database_name)))
 
 
-# ------------------ RAG Tools ------------------ #
+# ------------------ RAG Prompts ------------------ #
 
-if config['rag']['allmodule']:
-    if config['rag']['tool']['rag_setConfig']:
-        @mcp.tool(description="""
-        Set the configuration for the current Retrieval-Augmented Generation (RAG) session.
-        This MUST be called before any other RAG-related tools.
-
-        The following values are hardcoded:
-        - query_table = 'user_query'
-        - query_embedding_store = 'user_query_embeddings'
-        - model_id = 'bge-small-en-v1.5'
-
-        You only need to provide the database locations:
-        - query_db: where user queries and query embeddings will be stored
-        - model_db: where the embedding model metadata is stored
-        - vector_db + vector_table: where PDF chunk embeddings are stored
-
-        Once this configuration is set, all other RAG tools will reuse it automatically.
-        """)
-        async def rag_setConfig(
-            query_db: str = Field(description="Database to store user questions and query embeddings"),
-            model_db: str = Field(description="Database where the embedding model is stored"),
-            vector_db: str = Field(description="Database containing the chunk vector store"),
-            vector_table: str = Field(description="Table containing chunk embeddings for similarity search"),
-        ) -> ResponseType:
-            return execute_db_tool( td.handle_rag_setConfig, query_db=query_db, model_db=model_db, vector_db=vector_db, vector_table=vector_table,)
-
-    if config['rag']['tool']['rag_storeUserQuery']:
-        @mcp.tool(
-            description=(
-                "Store a user's natural language question as the first step in a Retrieval-Augmented Generation (RAG) workflow."
-                "This tool should always be run **before any embedding or similarity search** steps."
-                "It inserts the raw question into a Teradata table specified by `db_name` and `table_name`. "
-                "If the question starts with the prefix '/rag ', the prefix is automatically stripped before storage. "
-                "Each question is appended as a new row with a generated ID and timestamp."
-                "If the specified table does not exist, it will be created with columns: `id`, `txt`, and `created_ts`."
-                "Returns the inserted row ID and cleaned question text."
-                "This tool is **only needed once per user question** — downstream embedding and vector search tools "
-                "can then reference this ID or re-use the stored question text."
-            )
-        )
-        async def rag_storeUserQuery(
-            db_name: str = Field(..., description="Name of the Teradata database where the question will be stored."),
-            table_name: str = Field(..., description="Name of the table to store user questions (e.g., 'pdf_user_queries')."),
-            question: str = Field(..., description="Natural language question from the user. Can optionally start with '/rag '."),
-        ) -> ResponseType:
-            return execute_db_tool( td.handle_rag_storeUserQuery, db_name=db_name, table_name=table_name, question=question)
-
-    if config['rag']['tool']['rag_tokenizeQuery']:
-        @mcp.tool(
-            description=(
-                "Tokenizes the latest user-submitted question using the tokenizer specified in the current RAG configuration. "
-                "This tool must be used *after* calling 'configure_rag' (to initialize the config) and 'store_user_query' (to capture a user question). "
-                "It selects the most recent row from the query table (e.g., 'pdf_topics_of_interest'), runs it through the ONNX tokenizer, "
-                "and creates a temporary view '<query_db>.v_topics_tokenized' containing 'id', 'txt', 'input_ids', and 'attention_mask'. "
-                "This view is used downstream to generate vector embeddings for similarity search."
-            )
-        )
-        async def rag_tokenizeQuery() -> ResponseType:
-            return execute_db_tool( td.handle_rag_tokenizedQuery)
-
-    if config['rag']['tool']['rag_createEmbeddingView']:
-        @mcp.tool(
-            description=(
-                "Generates sentence embeddings for the most recent tokenized user query using the model specified in the RAG configuration. "
-                "Reads from the view `<db>.v_topics_tokenized` and applies the ONNX model from `<model_db>.embeddings_models`. "
-                "Creates or replaces the view `<db>.v_topics_embeddings` which includes the original input and a `sentence_embedding` column. "
-                "This must be run *after* create_tokenized_view and before vector_to_columns()."
-            )
-        )
-        async def rag_createEmbeddingView() -> ResponseType:
-            return execute_db_tool( td.handle_rag_createEmbeddingView)
-
-    if config['rag']['tool']['rag_createQueryEmbeddingTable']:
-        @mcp.tool(
-            description=(
-                "Converts the sentence embedding from the view `v_topics_embeddings` into 384 vector columns using `ivsm.vector_to_columns`. "
-                "Creates or replaces a physical table to store the latest query embeddings for use in similarity search. "
-                "The table location is defined via `rag_set_config`. "
-                "This tool must be run *after* `create_embedding_view` and before `semantic_search_chunks`."
-            )
-        )
-        async def rag_createQueryEmbeddingTable() -> ResponseType:
-            return execute_db_tool( td.handle_rag_createQueryEmbeddingTable)
-
-    if config['rag']['tool']['rag_semanticSearchChunks']:
-        @mcp.tool(
-            description=(
-                "Retrieve top-k most relevant PDF chunks for the user's latest embedded query. "
-                "This tool is part of the RAG workflow and should be called after the query has been embedded. "
-                "If the RAG config has not been set, use `rag_set_config` first to define where queries, models, and chunk embeddings are stored. "
-                "Uses cosine similarity via `TD_VECTORDISTANCE` to compare embeddings. "
-                "Each result includes similarity score, chunk text, page number, chunk number, and document name."
-            )
-        )
-        async def rag_semanticSearchChunks(
-            k: int = Field(10, description="Number of top matching chunks to retrieve."),
-        ) -> ResponseType:
-            return execute_db_tool( td.handle_rag_semanticSearchChunks, topk=k)
-
-    if config['rag']['prompt']['rag_guidelines']:
-        @mcp.prompt()
-        async def rag_guidelines() -> UserMessage:
-            return UserMessage(role="user", content=TextContent(type="text", text=td.rag_guidelines))
+if config['rag']['prompt']['rag_guidelines'] or config['rag']['allmodule']:
+    @mcp.prompt()
+    async def rag_guidelines() -> UserMessage:
+        return UserMessage(role="user", content=TextContent(type="text", text=td.rag_guidelines))
 
 
 #------------------ Enterprise Vector Store Tools  ------------------#

@@ -52,6 +52,19 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
 #       user_name (str) - name of the user 
 #     Returns: formatted response with list of QueryText and UserIDs or error message    
 def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: Optional[int],  *args, **kwargs):
+    """
+    Get a list of SQL run against a table in the last number of days.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      table_name - table name
+      no_days - number of days
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
     logger.debug(f"Tool: handle_dba_tableSqlList: Args: table_name: {table_name}")
 
     with conn.cursor() as cur:
@@ -83,6 +96,19 @@ def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: 
 #       user_name (str) - name of the user 
 #     Returns: formatted response with list of QueryText and UserIDs or error message    
 def handle_dba_userSqlList(conn: TeradataConnection, user_name: Optional[str] | None, no_days: Optional[int],  *args, **kwargs):
+    """
+    Get a list of SQL run by a user in the last number of days if a user name is provided, otherwise get list of all SQL in the last number of days.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      user_name - user name
+      no_days - number of days
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
     logger.debug(f"Tool: handle_dba_userSqlList: Args: user_name: {user_name}")
 
     with conn.cursor() as cur:
@@ -121,6 +147,19 @@ def handle_dba_userSqlList(conn: TeradataConnection, user_name: Optional[str] | 
 #       db_name (str) - name of the database 
 #     Returns: formatted response with list of tables and space information or database and space used or error message    
 def handle_dba_tableSpace(conn: TeradataConnection, db_name: Optional[str] | None , table_name: Optional[str] | None, *args, **kwargs):
+    """
+    Get table space used for a table if table name is provided or get table space for all tables in a database if a database name is provided."
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      db_name - database name
+      table_name - table name
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
     logger.debug(f"Tool: handle_dba_tableSpace: Args: db_name: {db_name}, table_name: {table_name}")
 
     with conn.cursor() as cur:
@@ -173,6 +212,18 @@ def handle_dba_tableSpace(conn: TeradataConnection, db_name: Optional[str] | Non
 #       db_name (str) - name of the database 
 #     Returns: formatted response with list of databases and space information or error message    
 def handle_dba_databaseSpace(conn: TeradataConnection, db_name: Optional[str] | None, *args, **kwargs):
+    """
+    Get database space if database name is provided, otherwise get all databases space allocations.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      db_name - database name
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
     logger.debug(f"Tool: handle_dba_databaseSpace: Args: db_name: {db_name}")
 
     with conn.cursor() as cur:
@@ -219,6 +270,17 @@ def handle_dba_databaseSpace(conn: TeradataConnection, db_name: Optional[str] | 
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #     Returns: formatted response with database version information or error message    
 def handle_dba_databaseVersion(conn: TeradataConnection, *args, **kwargs):
+    """
+    Get Teradata database version information.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
     logger.debug("Tool: handle_dba_databaseVersion: Args: ")
 
     with conn.cursor() as cur:
@@ -246,6 +308,22 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
                                  hourOfDay:  Optional[str] = None,
                                  *args, **kwargs):
 
+    """
+    Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      dimensions - list of dimensions to aggregate the resource usage summary. All dimensions are: ["LogDate", "hourOfDay", "dayOfWeek", "workloadType", "workloadComplexity", "UserName", "AppId", "StatementType"]
+      user_name - user name
+      date - Date to analyze, formatted as `YYYY-MM-DD`
+      dayOfWeek - day of the week to analyze
+      hourOfDay - hour of day to analyze
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
     logger.debug(f"Tool: handle_dba_resusageSummary: Args: dimensions: {dimensions}")
 
     comment="Total system resource usage summary."
@@ -359,6 +437,17 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #     Returns: formatted response with database flow control information or error message    
 def handle_dba_flowControl(conn: TeradataConnection, *args, **kwargs):
+    """
+    Get the Teradata flow control metrics.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
     logger.debug("Tool: handle_dba_flowControl: Args: ")
 
     with conn.cursor() as cur:
@@ -414,6 +503,16 @@ def handle_dba_flowControl(conn: TeradataConnection, *args, **kwargs):
 def handle_dba_tableUsageImpact(conn: TeradataConnection, db_name: Optional[str] = None, user_name: Optional[str] = None, *args, **kwargs):
     """
     Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time.
+    
+    Arguments:
+      conn   - SQLAlchemy Connection
+      db_name - database name to analyze
+      user_name - user name to analyze
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
     """
     logger.debug("Tool: handle_dba_tableUsageImpact: Args: ")
     if db_name:
@@ -500,6 +599,17 @@ def handle_dba_tableUsageImpact(conn: TeradataConnection, db_name: Optional[str]
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #     Returns: formatted response with database feature usage information or error message    
 def handle_dba_featureUsage(conn: TeradataConnection, *args, **kwargs):
+    """
+    Get the user feature usage metrics.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
     logger.debug("Tool: handle_dba_featureUsage: Args: ")
 
     with conn.cursor() as cur:
@@ -537,6 +647,17 @@ def handle_dba_featureUsage(conn: TeradataConnection, *args, **kwargs):
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #     Returns: formatted response with database user delay experience information or error message    
 def handle_dba_userDelay(conn: TeradataConnection, *args, **kwargs):
+    """
+    Get the Teradata user delay metrics.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
     logger.debug("Tool: handle_dba_userDelay: Args: ")
 
     with conn.cursor() as cur:
@@ -588,6 +709,18 @@ def handle_dba_userDelay(conn: TeradataConnection, *args, **kwargs):
 #       user_name (str) - name of the user
 #     Returns: formatted response with database feature usage information or error message    
 def handle_dba_sessionInfo(conn: TeradataConnection, user_name: str, *args, **kwargs):
+    """
+    Get the Teradata session information for user.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      user_name - user name to analyze
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
     logger.debug("Tool: handle_dba_sessionInfo: Args: ")
 
     with conn.cursor() as cur:

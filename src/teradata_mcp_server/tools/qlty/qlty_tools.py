@@ -52,6 +52,18 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
 #       table_name (str) - name of the table 
 #     Returns: formatted response with list of column names and stats on missing values or error message    
 def handle_qlty_missingValues(conn: TeradataConnection, table_name: str, *args, **kwargs):
+    """
+    Get the column names that having missing values in a table.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      table_name - table name to analyze
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """   
     logger.debug(f"Tool: handle_qlty_missingValues: Args: table_name: {table_name}")
 
     with conn.cursor() as cur:
@@ -70,6 +82,18 @@ def handle_qlty_missingValues(conn: TeradataConnection, table_name: str, *args, 
 #       table_name (str) - name of the table 
 #     Returns: formatted response with list of column names and stats on negative values or error message    
 def handle_qlty_negativeValues(conn: TeradataConnection, table_name: str, *args, **kwargs):
+    """
+    Get the column names that having negative values in a table.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      table_name - table name to analyze
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """   
     logger.debug(f"Tool: handle_qlty_negativeValues: Args: table_name: {table_name}")
 
     with conn.cursor() as cur:
@@ -89,6 +113,19 @@ def handle_qlty_negativeValues(conn: TeradataConnection, table_name: str, *args,
 #       col_name (str) - name of the column
 #     Returns: formatted response with list of column names and stats on categorial values or error message    
 def handle_qlty_distinctCategories(conn: TeradataConnection, table_name: str, col_name: str, *args, **kwargs):
+    """
+    Get the destinct categories from column in a table.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      table_name - table name to analyze
+      col_name - column name to analyze
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """   
     logger.debug(f"Tool: handle_qlty_distinctCategories: Args: table_name: {table_name}, col_name: {col_name}")
 
     with conn.cursor() as cur: 
@@ -110,6 +147,19 @@ def handle_qlty_distinctCategories(conn: TeradataConnection, table_name: str, co
 #       col_name (str) - name of the column
 #     Returns: formatted response with list of column names and standard deviation information or error message    
 def handle_qlty_standardDeviation(conn: TeradataConnection, table_name: str, col_name: str, *args, **kwargs):
+    """
+    Get the standard deviation from column in a table.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      table_name - table name to analyze
+      col_name - column name to analyze
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """   
     logger.debug(f"Tool: handle_qlty_standardDeviation: Args: table_name: {table_name}, col_name: {col_name}")
 
     with conn.cursor() as cur:
@@ -131,6 +181,18 @@ def handle_qlty_standardDeviation(conn: TeradataConnection, table_name: str, col
 #       table_name (str) - name of the table 
 #     Returns: formatted response with list of column names and stats or error message
 def handle_qlty_columnSummary(conn: TeradataConnection, table_name: str, *args, **kwargs):
+    """
+    Get the column summary statistics for a table.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      table_name - table name to analyze
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """   
     logger.debug(f"Tool: handle_qlty_columnSummary: Args: table_name: {table_name}")
 
     with conn.cursor() as cur:
@@ -151,6 +213,19 @@ def handle_qlty_columnSummary(conn: TeradataConnection, table_name: str, *args, 
 #       col_name (str) - name of the column
 #     Returns: formatted response with list of column names and stats or error message
 def handle_qlty_univariateStatistics(conn: TeradataConnection, table_name: str, col_name: str, *args, **kwargs):
+    """
+    Get the univariate statistics for a table.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      table_name - table name to analyze
+      col_name - column name to analyze
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """   
     logger.debug(f"Tool: handle_qlty_univariateStatistics: Args: table_name: {table_name}, col_name: {col_name}")
 
     with conn.cursor() as cur:
@@ -173,6 +248,19 @@ def handle_qlty_univariateStatistics(conn: TeradataConnection, table_name: str, 
 #       col_name (str) - name of the column
 #     Returns: formatted response with list of rows with missing values or error message
 def handle_qlty_rowsWithMissingValues(conn: TeradataConnection, table_name: str, col_name: str, *args, **kwargs):
+    """
+    Get the rows with missing values in a table.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      table_name - table name to analyze
+      col_name - column name to analyze
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """   
     logger.debug(f"Tool: handle_qlty_rowsWithMissingValues: Args: table_name: {table_name}, col_name: {col_name}")
 
     with conn.cursor() as cur:

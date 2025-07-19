@@ -14,7 +14,7 @@ Function naming convention is describes [here.](DEVELOPER_GUIDE.md#toolpromptres
 
 Integrate `myFunctionName` into the fs module of the MPC toolchain with two layers:
 
-1. **Frontend wrapper** (MPC-exposed async function): `fs_myFunctionName`
+1. **Frontend wrapper** will be created by parsing the handle fuction
 2. **Backend logic handler** (actual logic): `handle_fs_myFunctionName`
 
 ---
@@ -34,6 +34,20 @@ def handle_fs_myFunctionName(
     *args, 
     **kwargs
 ):
+    """
+    <description of what the tool is for, this is critical for the LLM to understand when to use the tool>
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      arg1 - arg1 to analyze
+      arg2 - arg2 to analyze
+      flag - flag to analyze
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
     logger.debug(f"Tool: handle_fs_my_function: Args: arg1={arg1}, arg2={arg2}, flag={flag}")
 
     try:
@@ -57,26 +71,9 @@ def handle_fs_myFunctionName(
 
 ### 🖥️ Step 2: Create the Async Tool Function
 
-This is what MPC exposes and calls. It uses `@mcp.tool` to register metadata and relies on `execute_db_tool` to call the backend handler. We wrape the `@mcp.tool` code in the config_tools.yaml 
+This is what MPC exposes and calls. It uses `@mcp.tool` to register metadata and relies on `execute_db_tool` to call the backend handler. The dynamic tool registration process in server.py will automatically decorate your tools starting with handle_ and that have been identified in the config_tools.yml profile.
 
-```python
-# mpc_tools.py
-
-from pydantic import Field
-from typing import Optional
-from mcp import tool  # adjust this import based on your actual framework
-
-if config['fs']['tool']['fs_myFunctionName']:
-    @mcp.tool(description="Run `myFunctionName` with required arguments `arg1`, `arg2`, and optional `flag`.")
-    async def fs_myFunctionName(
-        arg1: str = Field(..., description="First argument (string)."),
-        arg2: int = Field(..., description="Second argument (integer)."),
-        flag: Optional[bool] = Field(False, description="Optional flag (boolean)."),
-    ) -> ResponseType:
-        return execute_db_tool( td.handle_fs_myFunctionName, arg1=arg1, arg2=arg2, flag=flag)
-```
-
-You will need to add your tools into the config_tools.yaml file in the appropriate module, the allmodule flag turns the entire module on and off, the example below enables the module and turns off the fs_myFunctionName.
+You will need to add your tools into the config_tools.yaml file in the appropriate profile and module, the allmodule flag turns the entire module on and off, the example below enables the module and turns off the fs_myFunctionName.
 
 ```
 fs: 

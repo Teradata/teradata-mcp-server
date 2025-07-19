@@ -65,11 +65,17 @@ def handle_rag_setConfig(
 ):
     """
     Store session-wide RAG configuration for downstream tools:
-    - query_db / query_table: where to store user questions
-    - model_db / model_table / model_id: where the embedding model lives
-    - query_embedding_store: where to store user query embeddings
-    - vector_db / vector_table: where chunk embeddings are stored for similarity search
-    """
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      query_db / query_table - where to store user questions
+      model_db / model_table / model_id - where the embedding model lives
+      query_embedding_store - where to store user query embeddings
+      vector_db / vector_table - where chunk embeddings are stored for similarity search
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """   
     global rag_config
     logger.debug(
         "handle_rag_setConfig:"
@@ -171,7 +177,13 @@ def handle_rag_tokeizedQuery(conn: TeradataConnection):
     - Creates or replaces a view named <db>.v_topics_tokenized with input_ids and attention_mask
     
     Configuration like database name, table name, and model_id is pulled from rag_config.
-    """
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """   
     global rag_config
     db_name   = rag_config["query_db"]
     src_table = rag_config["query_table"]
@@ -227,7 +239,13 @@ def handle_rag_createEmbeddingView(conn: TeradataConnection):
     - Creates or replaces a view <db>.v_topics_embeddings with the original input and sentence_embedding column
 
     All table names and model info are pulled from the rag_config set earlier via 'configure_rag'.
-    """
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """   
     global rag_config
     db_name  = rag_config["query_db"]
     model_id = rag_config["model_id"]
@@ -268,6 +286,15 @@ def handle_rag_createEmbeddingView(conn: TeradataConnection):
 
 
 def handle_rag_createQueryEmbeddingTable(conn: TeradataConnection, *args, **kwargs):
+    """
+    Generates sentence embeddings for the most recent tokenized user query using the model specified in the RAG configuration. Reads from the view `<db>.v_topics_tokenized` and applies the ONNX model from `<model_db>.embeddings_models`. Creates or replaces the view `<db>.v_topics_embeddings` which includes the original input and a `sentence_embedding` column. This must be run *after* create_tokenized_view and before vector_to_columns().
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """   
     global rag_config
     db_name = rag_config.get("query_db")
     dst_table = rag_config.get("query_embedding_store")
@@ -321,10 +348,17 @@ def handle_rag_semanticSearchChunks(
     **kwargs,
 ):
     """
-    Return the top-k most similar chunk texts based on the latest query embedding.
-    Also returns chunk_num, page_num, and doc_name for context attribution.
-    Uses session-wide RAG config.
-    """
+    Retrieve top-k most relevant PDF chunks for the user's latest embedded query. This tool is part of the RAG workflow and should be called after the query has been embedded. If the RAG config has not been set, use `rag_set_config` first to define where queries, models, and chunk embeddings are stored. Uses cosine similarity via `TD_VECTORDISTANCE` to compare embeddings. Each result includes similarity score, chunk text, page number, chunk number, and document name.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      topk - number of chunks to return
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """   
     global rag_config
 
     db_name            = rag_config["vector_db"]
