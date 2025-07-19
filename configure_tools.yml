@@ -3,7 +3,7 @@ base :
     tool:
         base_readQuery : True
         base_writeQuery : True
-        base_tableDDL : True
+        base_tableDDL : False
         base_databaseList : True
         base_tableList : True
         base_columnDescription : True

@@ -13,8 +13,8 @@ from dotenv import load_dotenv
 import tdfs4ds
 import teradataml as tdml
 import inspect
-from sqlalchemy.engine import Engine, Connection
-import typing
+from sqlalchemy.engine import Connection
+
 # Import the ai_tools module, clone-and-run friendly
 try:
     from teradata_mcp_server import tools as td
@@ -151,7 +151,7 @@ def execute_vs_tool(tool, *args, **kwargs) -> ResponseType:
 
 #------------------ Dynamic Tool Registration ------------------#
 
-import inspect
+
 
 def register_td_tools(config, td, mcp):
     """
@@ -171,7 +171,7 @@ def register_td_tools(config, td, mcp):
         if not section:
             continue
         # Check if enabled in config
-        if not (config.get(section, {}).get("allmodule") and config[section]["tool"].get(tool_name)):
+        if not (config.get(section, {}).get("allmodule", False) and config.get(section, {}).get('tool', {}).get(tool_name, False)):
             continue
         sig = inspect.signature(func)
         # Only include user parameters (skip connection, *args, **kwargs)
@@ -179,6 +179,7 @@ def register_td_tools(config, td, mcp):
             p for p in list(sig.parameters.values())[1:]  # skip first param (connection)
             if p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
         ]
+
         # Build dynamic async function
         async def dynamic_tool(*args, __func=func, __params=params):
             kwargs = {p.name: a for p, a in zip(__params, args)}
@@ -194,50 +195,50 @@ register_td_tools(config, td, mcp)
 
 
 # ------------------ base Prompts ------------------ #
-if config['base']['prompt']['base_query'] or config['base']['allmodule']:
+if config.get('base', {}).get('prompt', {}).get('base_query', False) or config.get('base', {}).get('allmodule', False):
     @mcp.prompt()
     async def base_query(qry: str) -> UserMessage:
         """Create a SQL query against the Teradata database"""
         return UserMessage(role="user", content=TextContent(type="text", text=td.handle_base_query.format(qry=qry)))
 
-if config['base']['prompt']['base_tableBusinessDesc'] or config['base']['allmodule']:
+if config.get('base', {}).get('prompt', {}).get('base_tableBusinessDesc', False) or config.get('base', {}).get('allmodule', False):
     @mcp.prompt()
     async def base_tableBusinessDesc(database_name: str, table_name: str) -> UserMessage:
         """Create a SQL query against the Teradata database"""
         return UserMessage(role="user", content=TextContent(type="text", text=td.handle_base_tableBusinessDesc.format(database_name=database_name, table_name=table_name)))
                            
-if config['base']['prompt']['base_databaseBusinessDesc'] or config['base']['allmodule']:
+if config.get('base', {}).get('prompt', {}).get('base_databaseBusinessDesc', False) or config.get('base', {}).get('allmodule', False):
     @mcp.prompt()
     async def base_databaseBusinessDesc(database_name: str) -> UserMessage:
         """Create a SQL query against the Teradata database"""
         return UserMessage(role="user", content=TextContent(type="text", text=td.handle_base_databaseBusinessDesc.format(database_name=database_name)))
 
 # ------------------ DBA Prompts ------------------ #
-if config['dba']['prompt']['dba_databaseHealthAssessment'] or config['dba']['allmodule']:
+if config.get('dba', {}).get('prompt', {}).get('dba_databaseHealthAssessment', False) or config.get('dba', {}).get('allmodule', False):
     @mcp.prompt()
     async def dba_databaseHealthAssessment() -> UserMessage:
         """Create a database health assessment for a Teradata system."""
         return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_databaseHealthAssessment))
 
-if config['dba']['prompt']['dba_userActivityAnalysis'] or config['dba']['allmodule']:
+if config.get('dba', {}).get('prompt', {}).get('dba_userActivityAnalysis', False) or config.get('dba', {}).get('allmodule', False):
     @mcp.prompt()
     async def dba_userActivityAnalysis() -> UserMessage:
         """Create a user activity analysis for a Teradata system."""
         return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_userActivityAnalysis))
 
-if config['dba']['prompt']['dba_tableArchive']  or config['dba']['allmodule']:
+if config.get('dba', {}).get('prompt', {}).get('dba_tableArchive', False) or config.get('dba', {}).get('allmodule', False):
     @mcp.prompt()
     async def dba_tableArchive() -> UserMessage:
         """Create a table archive strategy for database tables."""
         return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_tableArchive))
 
-if config['dba']['prompt']['dba_databaseLineage'] or config['dba']['allmodule']:
+if config.get('dba', {}).get('prompt', {}).get('dba_databaseLineage', False) or config.get('dba', {}).get('allmodule', False):
     @mcp.prompt()
     async def dba_databaseLineage(database_name: str, number_days: int) -> UserMessage:
         """Create a database lineage map for tables in a database."""
         return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_databaseLineage.format(database_name=database_name, number_days=number_days)))
 
-if config['dba']['prompt']['dba_tableDropImpact'] or config['dba']['allmodule']:
+if config.get('dba', {}).get('prompt', {}).get('dba_tableDropImpact', False) or config.get('dba', {}).get('allmodule', False):
     @mcp.prompt()
     async def dba_tableDropImpact(database_name: str, table_name: str, number_days: int) -> UserMessage:
         """Assess the impact of dropping a table."""
@@ -245,7 +246,7 @@ if config['dba']['prompt']['dba_tableDropImpact'] or config['dba']['allmodule']:
 
 # ------------------ Quality Prompts ------------------ #
 
-if config['qlty']['prompt']['qlty_databaseQuality'] or config['qlty']['allmodule']:
+if config.get('qlty', {}).get('prompt', {}).get('qlty_databaseQuality', False) or config.get('qlty', {}).get('allmodule', False):
     @mcp.prompt()
     async def qlty_databaseQuality(database_name: str) -> UserMessage:
         """Assess the data quality of a database."""
@@ -254,7 +255,7 @@ if config['qlty']['prompt']['qlty_databaseQuality'] or config['qlty']['allmodule
 
 # ------------------ RAG Prompts ------------------ #
 
-if config['rag']['prompt']['rag_guidelines'] or config['rag']['allmodule']:
+if config.get('rag', {}).get('prompt', {}).get('rag_guidelines', False) or config.get('rag', {}).get('allmodule', False):
     @mcp.prompt()
     async def rag_guidelines() -> UserMessage:
         return UserMessage(role="user", content=TextContent(type="text", text=td.rag_guidelines))
@@ -281,7 +282,7 @@ if config['rag']['prompt']['rag_guidelines'] or config['rag']['allmodule']:
 #--------------- Feature Store Tools ---------------#
 # Feature tools leveraging the tdfs4ds package.
 
-if config['fs']['allmodule']:
+if config.get('fs', {}).get('allmodule', False):
     class FeatureStoreConfig(BaseModel):
         """
         Configuration class for the feature store. This model defines the metadata and catalog sources 
@@ -329,7 +330,7 @@ if config['fs']['allmodule']:
 
     fs_config = FeatureStoreConfig() 
 
-    if config['fs']['tool']['fs_reconnect_to_database']:
+    if config.get('fs', {}).get('tool', {}).get('fs_reconnect_to_database', False):
         @mcp.tool(description="Reconnect to the Teradata database if the connection is lost.")
         async def reconnect_to_database() -> ResponseType:
             """Reconnect to Teradata database if connection is lost."""
@@ -342,7 +343,7 @@ if config['fs']['allmodule']:
                 logger.error(f"Error reconnecting to database: {e}")
                 return format_error_response(str(e))
 
-    if config['fs']['tool']['fs_setFeatureStoreConfig']:
+    if config.get('fs', {}).get('tool', {}).get('fs_setFeatureStoreConfig', False):
         @mcp.tool(description="Set or update the feature store configuration (database and data domain).")
         async def fs_setFeatureStoreConfig(
             data_domain: Optional[str] = None,
@@ -384,57 +385,57 @@ if config['fs']['allmodule']:
                     fs_config.entity = entity
             return format_text_response(f"Feature store config updated: {fs_config.dict(exclude_none=True)}")
 
-    if config['fs']['tool']['fs_getFeatureStoreConfig']:
+    if config.get('fs', {}).get('tool', {}).get('fs_getFeatureStoreConfig', False):
         @mcp.tool(description="Display the current feature store configuration (database and data domain).")
         async def fs_getFeatureStoreConfig() -> ResponseType:
             return format_text_response(f"Current feature store config: {fs_config.dict(exclude_none=True)}")
 
-    if config['fs']['tool']['fs_isFeatureStorePresent']:
+    if config.get('fs', {}).get('tool', {}).get('fs_isFeatureStorePresent', False):
         @mcp.tool(description=("Check if a feature store is present in the specified database." ))
         async def fs_isFeatureStorePresent(
             db_name: str = Field(..., description="Name of the database to check for a feature store.")
         ) -> ResponseType:
             return execute_db_tool(td.handle_fs_isFeatureStorePresent, db_name=db_name)
 
-    if config['fs']['tool']['fs_featureStoreContent']:
+    if config.get('fs', {}).get('tool', {}).get('fs_featureStoreContent', False):
         @mcp.tool(description=("Returns a summary of the feature store content. Use this to understand what data is available in the feature store"))
         async def fs_featureStoreContent(
         ) -> ResponseType:
             return execute_db_tool(td.handle_fs_featureStoreContent, fs_config=fs_config)
 
-    if config['fs']['tool']['fs_getDataDomains']:
+    if config.get('fs', {}).get('tool', {}).get('fs_getDataDomains', False):
         @mcp.tool(description=( "List the available data domains. Requires a configured `db_name`  in the feature store config. Use this to explore which entities can be used when building a dataset."))
         async def fs_getDataDomains(
             entity: str = Field(..., description="The .")
         ) -> ResponseType:
             return execute_db_tool(td.handle_fs_getDataDomains, fs_config=fs_config)
 
-    if config['fs']['tool']['fs_getFeatures']:
+    if config.get('fs', {}).get('tool', {}).get('fs_getFeatures', False):
         @mcp.tool(description=("List the list of features. Requires a configured `db_name` and  `data_domain` in the feature store config. Use this to explore the features available ."))
         async def fs_getFeatures(
         ) -> ResponseType:
             return execute_db_tool(td.handle_fs_getFeatures, fs_config=fs_config)
 
-    if config['fs']['tool']['fs_getAvailableDatasets']:
+    if config.get('fs', {}).get('tool', {}).get('fs_getAvailableDatasets', False):
         @mcp.tool(description=("List the list of available datasets.Requires a configured `db_name` in the feature store config.Use this to explore the datasets that are available ."))
         async def fs_getAvailableDatasets(
         ) -> ResponseType:
             return execute_db_tool(td.handle_fs_getAvailableDatasets, fs_config=fs_config)
 
-    if config['fs']['tool']['fs_getFeatureDataModel']:
+    if config.get('fs', {}).get('tool', {}).get('fs_getFeatureDataModel', False):
         @mcp.tool(description=("Return the schema of the feature store.Requires a feature store in the configured database (`db_name`)."))
         async def fs_getFeatureDataModel(
         ) -> ResponseType:
             return execute_db_tool(td.handle_fs_getFeatureDataModel, fs_config=fs_config)
 
 
-    if config['fs']['tool']['fs_getAvailableEntities']:
+    if config.get('fs', {}).get('tool', {}).get('fs_getAvailableEntities', False):
         @mcp.tool(description=("List the available entities for a given data domain. Requires a configured `db_name` and `data_domain` and  `entity` in the feature store config. Use this to explore which entities can be used when building a dataset."))
         async def fs_getAvailableEntities(
         ) -> ResponseType:
             return execute_db_tool(td.handle_fs_getAvailableEntities, fs_config=fs_config)
 
-    if config['fs']['tool']['fs_createDataset']:
+    if config.get('fs', {}).get('tool', {}).get('fs_createDataset', False):
         @mcp.tool( description=("Create a dataset using selected features and an entity from the feature store. The dataset is created in the specified target database under the given name. Requires a configured feature store and data domain. Registers the dataset in the catalog automatically. Use this when you want to build and register a new dataset for analysis or modeling." ) )
         async def fs_createDataset(
             entity_name: str = Field(..., description="Entity for which the dataset will be created. Available entities are reported in the feature catalog."),
@@ -656,7 +657,7 @@ if custom_glossary:
 #------------------ Custom Tools  ------------------#
 # Custom tools are defined as SQL queries in a YAML file and loaded at startup.
 
-if config['cust']['allmodule']:
+if config.get('cust', {}).get('allmodule', False):
     query_defs = []
     custom_tool_files = [file for file in os.listdir() if file.endswith("_tools.yaml")]
 
