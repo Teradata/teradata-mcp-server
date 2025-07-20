@@ -14,6 +14,7 @@ import tdfs4ds
 import teradataml as tdml
 import inspect
 from sqlalchemy.engine import Connection
+import argparse
 
 # Import the ai_tools module, clone-and-run friendly
 try:
@@ -24,8 +25,21 @@ except ImportError:
 load_dotenv()
 
 # Load tool configuration from YAML file
+
+
+# Parse profile argument
+parser = argparse.ArgumentParser(description="Teradata MCP Server")
+parser.add_argument('--profile', type=str, required=False, help='Profile name to load from configure_tools.yml')
+args, unknown = parser.parse_known_args()
+profile_name = args.profile
+
+# Load only the selected profile from YAML
 with open('configure_tools.yml', 'r') as file:
-    config = yaml.safe_load(file)
+    all_profiles = yaml.safe_load(file)
+    if profile_name not in all_profiles:
+        print(f"Profile '{profile_name}' not found in configure_tools.yml. Available: {list(all_profiles.keys())}, will start with 'all' profile.")
+        # raise ValueError(f"Profile '{profile_name}' not found in configure_tools.yml. Available: {list(all_profiles.keys())}, will start with 'all' profile.")
+    config = all_profiles.get(profile_name, all_profiles["all"])
 
 # Set up logging
 os.makedirs("logs", exist_ok=True)
@@ -170,8 +184,20 @@ def register_td_tools(config, td, mcp):
                 break
         if not section:
             continue
-        # Check if enabled in config
-        if not (config.get(section, {}).get("allmodule", False) and config.get(section, {}).get('tool', {}).get(tool_name, False)):
+        # Enable logic:
+        # If allmodule is True, enable all tools unless explicitly set to False
+        # If allmodule is False, only enable tools explicitly set to True
+        section_cfg = config.get(section, {})
+        allmodule = bool(section_cfg.get("allmodule", False))
+        tool_cfg = section_cfg.get('tool', {})
+        enabled = False
+        if allmodule:
+            # Enabled unless explicitly set to False
+            enabled = tool_cfg.get(tool_name, True)
+        else:
+            # Only enabled if explicitly set to True
+            enabled = tool_cfg.get(tool_name, False)
+        if not enabled:
             continue
         sig = inspect.signature(func)
         # Only include user parameters (skip connection, *args, **kwargs)

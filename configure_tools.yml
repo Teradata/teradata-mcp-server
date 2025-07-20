@@ -1,95 +1,159 @@
-base : 
-    allmodule: True
-    tool:
-        base_readQuery : True
-        base_writeQuery : True
-        base_tableDDL : False
-        base_databaseList : True
-        base_tableList : True
-        base_columnDescription : True
-        base_tablePreview : True
-        base_tableAffinity : True
-        base_tableUsage : True
-    prompt:
-        base_query : True
-        base_tableBusinessDesc : True
-        base_databaseBusinessDesc : True
+all:
+    base : 
+        allmodule: True
+        tool:
+            base_readQuery : True
+            base_writeQuery : True
+            base_tableDDL : True
+            base_databaseList : True
+            base_tableList : True
+            base_columnDescription : True
+            base_tablePreview : True
+            base_tableAffinity : True
+            base_tableUsage : True
+        prompt:
+            base_query : True
+            base_tableBusinessDesc : True
+            base_databaseBusinessDesc : True
 
-dba:
-    allmodule: True
-    tool:
-        dba_userSqlList : True
-        dba_tableSqlList : True
-        dba_tableSpace : True
-        dba_databaseSpace : True
-        dba_databaseVersion : True
-        dba_resusageSummary : True
-        dba_resusageUserSummary : True
-        dba_flowControl : True
-        dba_featureUsage : True
-        dba_userDelay : True
-        dba_tableUsageImpact : True
-        dba_sessionInfo : True
-    prompt:
-        dba_databaseHealthAssessment : True
-        dba_userActivityAnalysis : True
-        dba_tableArchive : True
-        dba_databaseLineage : True
-        dba_tableDropImpact : True
-qlty:
-    allmodule: True
-    tool:
-        qlty_missingValues : True
-        qlty_negativeValues : True
-        qlty_distinctCategories : True
-        qlty_standardDeviation : True
-        qlty_columnSummary : True
-        qlty_univariateStatistics : True
-        qlty_rowsWithMissingValues : True
-    prompt:
-        qlty_databaseQuality : True 
-rag:
-    allmodule: True
-    tool:
-        rag_setConfig : True
-        rag_storeUserQuery : True
-        rag_tokenizeQuery : True
-        rag_createEmbeddingView : True
-        rag_createQueryEmbeddingTable : True
-        rag_semanticSearchChunks : True
-    prompt:
-        rag_guidelines : True 
-sec:
-    allmodule: True
-    tool:
-        sec_userDbPermissions : True
-        sec_rolePermissions : True
-        sec_userRoles : True
-    prompt:
-evs:
-    allmodule: True
-    tool:
-    prompt:    
-fs: 
-    allmodule: True
-    tool:
-        fs_reconnect_to_database : True
-        fs_setFeatureStoreConfig : True
-        fs_getFeatureStoreConfig : True
-        fs_isFeatureStorePresent : True
-        fs_featureStoreContent : True
-        fs_getDataDomains : True
-        fs_getFeatures : True
-        fs_getAvailableDatasets : True
-        fs_getFeatureDataModel : True
-        fs_getAvailableEntities : True
-        fs_createDataset : True
-    prompt:
+    dba:
+        allmodule: True
+        tool:
+            dba_userSqlList : True
+            dba_tableSqlList : True
+            dba_tableSpace : True
+            dba_databaseSpace : True
+            dba_databaseVersion : True
+            dba_resusageSummary : True
+            dba_resusageUserSummary : True
+            dba_flowControl : True
+            dba_featureUsage : True
+            dba_userDelay : True
+            dba_tableUsageImpact : True
+            dba_sessionInfo : True
+        prompt:
+            dba_databaseHealthAssessment : True
+            dba_userActivityAnalysis : True
+            dba_tableArchive : True
+            dba_databaseLineage : True
+            dba_tableDropImpact : True
+    qlty:
+        allmodule: True
+        tool:
+            qlty_missingValues : True
+            qlty_negativeValues : True
+            qlty_distinctCategories : True
+            qlty_standardDeviation : True
+            qlty_columnSummary : True
+            qlty_univariateStatistics : True
+            qlty_rowsWithMissingValues : True
+        prompt:
+            qlty_databaseQuality : True 
+    rag:
+        allmodule: True
+        tool:
+            rag_setConfig : True
+            rag_storeUserQuery : True
+            rag_tokenizeQuery : True
+            rag_createEmbeddingView : True
+            rag_createQueryEmbeddingTable : True
+            rag_semanticSearchChunks : True
+        prompt:
+            rag_guidelines : True 
+    sec:
+        allmodule: True
+        tool:
+            sec_userDbPermissions : True
+            sec_rolePermissions : True
+            sec_userRoles : True
+        prompt:
+    evs:
+        allmodule: True
+        tool:
+        prompt:    
+    fs: 
+        allmodule: True
+        tool:
+            fs_reconnect_to_database : True
+            fs_setFeatureStoreConfig : True
+            fs_getFeatureStoreConfig : True
+            fs_isFeatureStorePresent : True
+            fs_featureStoreContent : True
+            fs_getDataDomains : True
+            fs_getFeatures : True
+            fs_getAvailableDatasets : True
+            fs_getFeatureDataModel : True
+            fs_getAvailableEntities : True
+            fs_createDataset : True
+        prompt:
 
-cust:
-    allmodule: True
-    tool:
-    prompt:
+    cust:
+        allmodule: True
+        tool:
+        prompt:
 
+dbaTools:
+    base : 
+        allmodule: True
+        tool:
+            base_readQuery : True
+            base_writeQuery : True
+            base_tableDDL : True
+            base_databaseList : True
+            base_tableList : True
+            base_columnDescription : True
+            base_tablePreview : True
+            base_tableAffinity : True
+            base_tableUsage : True
+        prompt:
+            base_query : True
+            base_tableBusinessDesc : True
+            base_databaseBusinessDesc : True
 
+    dba:
+        allmodule: True
+        tool:
+            dba_userSqlList : True
+            dba_tableSqlList : True
+            dba_tableSpace : True
+            dba_databaseSpace : True
+            dba_databaseVersion : True
+            dba_resusageSummary : True
+            dba_resusageUserSummary : True
+            dba_flowControl : True
+            dba_featureUsage : True
+            dba_userDelay : True
+            dba_tableUsageImpact : True
+            dba_sessionInfo : True
+        prompt:
+            dba_databaseHealthAssessment : True
+            dba_userActivityAnalysis : True
+            dba_tableArchive : True
+            dba_databaseLineage : True
+            dba_tableDropImpact : True
+    sec:
+        allmodule: True
+        tool:
+            sec_userDbPermissions : True
+            sec_rolePermissions : True
+            sec_userRoles : True
+        prompt:
 
+dataScientist:
+    base : 
+        allmodule: True
+    rag:
+        allmodule: True
+    fs: 
+        allmodule: True
+    sec:
+        allmodule: True
+        tool:
+            sec_userDbPermissions : True
+            sec_rolePermissions : False
+            # sec_userRoles : True
+        prompt:
+    dba:
+        allmodule: False
+        tool:
+            dba_userSqlList : True
