@@ -22,6 +22,7 @@ try:
     from teradata_mcp_server import tools as td
 except ImportError:
     import tools as td
+import glob
 
 load_dotenv()
 
@@ -229,37 +230,6 @@ if config.get('base', {}).get('prompt', {}).get('base_databaseBusinessDesc', Fal
         """Create a SQL query against the Teradata database"""
         return UserMessage(role="user", content=TextContent(type="text", text=td.handle_base_databaseBusinessDesc.format(database_name=database_name)))
 
-# ------------------ DBA Prompts ------------------ #
-if config.get('dba', {}).get('prompt', {}).get('dba_databaseHealthAssessment', False) or config.get('dba', {}).get('allmodule', False):
-    @mcp.prompt()
-    async def dba_databaseHealthAssessment() -> UserMessage:
-        """Create a database health assessment for a Teradata system."""
-        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_databaseHealthAssessment))
-
-if config.get('dba', {}).get('prompt', {}).get('dba_userActivityAnalysis', False) or config.get('dba', {}).get('allmodule', False):
-    @mcp.prompt()
-    async def dba_userActivityAnalysis() -> UserMessage:
-        """Create a user activity analysis for a Teradata system."""
-        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_userActivityAnalysis))
-
-if config.get('dba', {}).get('prompt', {}).get('dba_tableArchive', False) or config.get('dba', {}).get('allmodule', False):
-    @mcp.prompt()
-    async def dba_tableArchive() -> UserMessage:
-        """Create a table archive strategy for database tables."""
-        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_tableArchive))
-
-if config.get('dba', {}).get('prompt', {}).get('dba_databaseLineage', False) or config.get('dba', {}).get('allmodule', False):
-    @mcp.prompt()
-    async def dba_databaseLineage(database_name: str, number_days: int) -> UserMessage:
-        """Create a database lineage map for tables in a database."""
-        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_databaseLineage.format(database_name=database_name, number_days=number_days)))
-
-if config.get('dba', {}).get('prompt', {}).get('dba_tableDropImpact', False) or config.get('dba', {}).get('allmodule', False):
-    @mcp.prompt()
-    async def dba_tableDropImpact(database_name: str, table_name: str, number_days: int) -> UserMessage:
-        """Assess the impact of dropping a table."""
-        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_dba_tableDropImpact.format(database_name=database_name, table_name=table_name, number_days=number_days)))
-
 # ------------------ Quality Prompts ------------------ #
 
 if config.get('qlty', {}).get('prompt', {}).get('qlty_databaseQuality', False) or config.get('qlty', {}).get('allmodule', False):
@@ -269,9 +239,14 @@ if config.get('qlty', {}).get('prompt', {}).get('qlty_databaseQuality', False) o
         return UserMessage(role="user", content=TextContent(type="text", text=td.handle_qlty_databaseQuality.format(database_name=database_name)))
 
 
-#------------------ Register tools declared in .yml files ------------------#
+#------------------ Register tools, resources and prompts declared in .yml files ------------------#
 
 custom_object_files = [file for file in os.listdir() if file.endswith("_objects.yaml")]
+
+# Also include all .yml files under ./src/teradata_mcp_server/tools/*/*.yml
+tool_yml_files = glob.glob(os.path.join(os.path.dirname(__file__), "tools", "*", "*.yml"))
+custom_object_files.extend(tool_yml_files)
+
 custom_objects = {}
 custom_glossary = {}
 
