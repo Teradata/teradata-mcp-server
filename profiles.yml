@@ -1,0 +1,30 @@
+all:
+  tool:
+    - .*
+  prompt:
+    - .*
+  resource:
+    - .*
+
+dba:
+  tool:
+    - dba_*
+    - base_*
+    - sec_*
+  prompt:
+    - dba_*
+
+dataScientist:
+  tool:
+    - base_*
+    - rag_*
+    - fs_*
+    - qlty_*
+    - sec_userDbPermissions
+    - dba_userSqlList
+
+eda:
+  tool:
+    - "base_(?!(writeQuery|dynamicQuery)$).*"
+    - qlty_.*
+    - sec_userDbPermissions

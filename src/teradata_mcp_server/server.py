@@ -15,6 +15,7 @@ import teradataml as tdml
 import inspect
 from sqlalchemy.engine import Connection
 import argparse
+import re
 
 # Import the ai_tools module, clone-and-run friendly
 try:
@@ -34,12 +35,15 @@ args, unknown = parser.parse_known_args()
 profile_name = args.profile
 
 # Load only the selected profile from YAML
-with open('configure_tools.yml', 'r') as file:
+with open('profiles.yml', 'r') as file:
     all_profiles = yaml.safe_load(file)
-    if profile_name not in all_profiles:
-        print(f"Profile '{profile_name}' not found in configure_tools.yml. Available: {list(all_profiles.keys())}, will start with 'all' profile.")
-        # raise ValueError(f"Profile '{profile_name}' not found in configure_tools.yml. Available: {list(all_profiles.keys())}, will start with 'all' profile.")
-    config = all_profiles.get(profile_name, all_profiles["all"])
+    if not profile_name:
+        print(f"No profile specified, load all tools, prompts and resources.")
+        config={'tool': ['.*'], 'prompt': ['.*'], 'resource': ['.*']}
+    elif profile_name not in all_profiles:
+        raise ValueError(f"Profile '{profile_name}' not found in profiles.yml. Available: {list(all_profiles.keys())}.")
+    else:
+        config = all_profiles.get(profile_name)
 
 # Set up logging
 os.makedirs("logs", exist_ok=True)
@@ -176,28 +180,8 @@ def register_td_tools(config, td, mcp):
         if not name.startswith("handle_"):
             continue
         tool_name = name.replace("handle_", "")
-        # Find which config section this tool belongs to
-        section = None
-        for sec in ["base", "dba", "qlty", "rag", "sec"]:
-            if tool_name.startswith(sec):
-                section = sec
-                break
-        if not section:
-            continue
-        # Enable logic:
-        # If allmodule is True, enable all tools unless explicitly set to False
-        # If allmodule is False, only enable tools explicitly set to True
-        section_cfg = config.get(section, {})
-        allmodule = bool(section_cfg.get("allmodule", False))
-        tool_cfg = section_cfg.get('tool', {})
-        enabled = False
-        if allmodule:
-            # Enabled unless explicitly set to False
-            enabled = tool_cfg.get(tool_name, True)
-        else:
-            # Only enabled if explicitly set to True
-            enabled = tool_cfg.get(tool_name, False)
-        if not enabled:
+        # Only enable tools matching the config patterns for the current profile (based on profiles.yml):
+        if not any(re.match(pattern, tool_name) for pattern in config.get('tool',[])):
             continue
         sig = inspect.signature(func)
         # Only include user parameters (skip connection, *args, **kwargs)

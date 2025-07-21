@@ -500,7 +500,8 @@ async def main():
                     structured_prompts = { "All Prompts": serializable_prompts }
             
             # Categorize Resources
-            if loaded_resources:
+            # De-activated for now.
+            if False: #loaded_resources:
                 print("\n--- Categorizing resources using the LLM ---")
                 resource_list_for_prompt = "\n".join([f"- {res.name}: {res.description}" for res in loaded_resources])
                 categorization_prompt_for_resources = (
