@@ -175,7 +175,7 @@ def execute_vs_tool(tool, *args, **kwargs) -> ResponseType:
 
     
 
-#------------------ Dynamic Tool Registration ------------------#
+#------------------ Register objects defined as code under ./src/teradata_mcp_server/tools/  ------------------#
 
 def register_td_tools(config, td, mcp):
     """
@@ -267,6 +267,253 @@ if config.get('qlty', {}).get('prompt', {}).get('qlty_databaseQuality', False) o
     async def qlty_databaseQuality(database_name: str) -> UserMessage:
         """Assess the data quality of a database."""
         return UserMessage(role="user", content=TextContent(type="text", text=td.handle_qlty_databaseQuality.format(database_name=database_name)))
+
+
+#------------------ Register tools declared in .yml files ------------------#
+
+custom_object_files = [file for file in os.listdir() if file.endswith("_objects.yaml")]
+custom_objects = {}
+custom_glossary = {}
+
+for file in custom_object_files:
+    with open(file) as f:
+        loaded = yaml.safe_load(f)
+        if loaded:
+            custom_objects.update(loaded)  # Merge dictionaries
+
+
+def make_custom_prompt(prompt_name: str, prompt: str, desc: str):
+    async def _dynamic_prompt():
+        # SQL is closed over without parameters
+        return UserMessage(role="user", content=TextContent(type="text", text=prompt))
+    _dynamic_prompt.__name__ = prompt_name
+    return mcp.prompt(description=desc)(_dynamic_prompt)
+
+def make_custom_query_tool(name, tool):
+    param_defs = tool.get("parameters", {})
+    # 1. Build Parameter objects
+    parameters = []
+    annotations = {}
+    # param_defs is now a dict keyed by name
+    for param_name, p in param_defs.items():
+        type_hint = p.get("type_hint", str)    # e.g. int, float, str, etc.
+        default = inspect.Parameter.empty if p.get("required", True) else p.get("default", None)
+        parameters.append(
+            inspect.Parameter(
+                param_name,
+                kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                default=default,
+                annotation=type_hint
+            )
+        )
+        annotations[param_name] = type_hint
+
+    # 2. Create the new signature
+    sig = inspect.Signature(parameters)
+
+    # 3. Define your generic handler
+    async def _dynamic_tool(**kwargs):
+        """Dynamically generated tool for {name}"""
+        missing = [n for n in annotations if n not in kwargs]
+        if missing:
+            raise ValueError(f"Missing parameters: {missing}")
+        return execute_db_tool(td.handle_base_readQuery, tool["sql"], **kwargs)
+
+    # 4. Inject signature & annotations
+    _dynamic_tool.__signature__   = sig
+    _dynamic_tool.__annotations__ = annotations
+
+    # 5. Register with FastMCP
+    return mcp.tool(
+        name=name,
+        description=tool.get("description", "")
+    )(_dynamic_tool)
+
+def generate_cube_query_tool(name, cube):
+    """
+    Generate a function to create aggregation SQL from a cube definition.
+
+    :param cube: The cube definition
+    :return: A SQL query string generator function taking dimensions and measures as comma-separated strings.
+    """
+    def _cube_query_tool(dimensions: str, measures: str) -> str:
+        """
+        Generate a SQL query string for the cube using the specified dimensions and measures.
+
+        Args:
+            dimensions (str): Comma-separated dimension names (keys in cube['dimensions']).
+            measures (str): Comma-separated measure names (keys in cube['measures']).
+
+        Returns:
+            str: The generated SQL query.
+        """
+        dim_list_raw = [d.strip() for d in dimensions.split(",") if d.strip()]
+        met_list_raw = [m.strip() for m in measures.split(",") if m.strip()]
+        # Get dimension expressions from dictionary
+        dim_list = ",\n  ".join([
+            cube["dimensions"][d]["expression"] if d in cube["dimensions"] else d
+            for d in dim_list_raw
+        ])
+        met_lines = []
+        for measure in met_list_raw:
+            mdef = cube["measures"].get(measure)
+            if mdef is None:
+                raise ValueError(f"Measure '{measure}' not found in cube '{name}'.")
+            expr = mdef["expression"]
+            met_lines.append(f"{expr} AS {measure}")
+        met_block = ",\n  ".join(met_lines)
+        sql = (
+            "SELECT\n"
+            f"  {dim_list},\n"
+            f"  {met_block}\n"
+            "FROM (\n"
+            f"{cube['sql'].strip()}\n"
+            ") AS c\n"
+            f"GROUP BY {', '.join(dim_list_raw)};"
+        )
+        return sql
+    return _cube_query_tool
+
+def make_custom_cube_tool(name, cube):
+    async def _dynamic_tool(dimensions, measures):
+        # Accept dimensions and measures as comma-separated strings, parse to lists
+        return execute_db_tool(
+            td.util_base_dynamicQuery,
+            sql_generator=generate_cube_query_tool(name, cube),
+            dimensions=dimensions,
+            measures=measures
+        )
+    _dynamic_tool.__name__ = 'get_cube_' + name
+    # Build allowed values and definitions for dimensions and measures
+    dim_lines = []
+    for name, d in cube.get('dimensions', {}).items():
+        dim_lines.append(f"    - {name}: {d.get('description', '')}")
+    measure_lines = []
+    for name, m in cube.get('measures', {}).items():
+        measure_lines.append(f"    - {name}: {m.get('description', '')}")
+    _dynamic_tool.__doc__ = f"""
+    Tool to query the cube '{name}'.
+    {cube.get('description', '')}
+
+    Expected inputs:
+        dimensions (str): Comma-separated dimension names to group by. Allowed values:
+{chr(10).join(dim_lines)}
+
+        measures (str): Comma-separated measure names to aggregate (must match cube definition). Allowed values:
+{chr(10).join(measure_lines)}
+
+    Returns:
+        Query result as a formatted response.
+    """
+    return mcp.tool(description=_dynamic_tool.__doc__)(_dynamic_tool)
+
+# Instantiate custom query tools from YAML
+custom_terms = []
+for name, obj in custom_objects.items():
+    obj_type = obj.get("type")
+    if obj_type == "tool" and any(re.match(pattern, name) for pattern in config.get('tool',[])):
+        fn = make_custom_query_tool(name, obj)
+        globals()[name] = fn
+        logger.info(f"Created custom tool: {name}")
+    elif obj_type == "prompt"  and any(re.match(pattern, name) for pattern in config.get('prompt',[])):
+        fn = make_custom_prompt(name, obj["prompt"], obj.get("description", ""))
+        globals()[name] = fn
+        logger.info(f"Created custom prompt: {name}")
+    elif obj_type == "cube"  and any(re.match(pattern, name) for pattern in config.get('tool',[])):
+        fn = make_custom_cube_tool(name, obj)
+        globals()[name] = fn
+        logger.info(f"Created custom cube: {name}")
+    elif obj_type == "glossary"  and any(re.match(pattern, name) for pattern in config.get('resource',[])):
+        # Remove the 'type' key to get just the terms
+        custom_glossary = {k: v for k, v in obj.items() if k != "type"}
+        logger.info(f"Added custom glossary entries for: {name}.")
+    else:
+        logger.info(f"Type {obj_type if obj_type else ''} for custom object {name} is {'unknown' if obj_type else 'undefined'}.")
+
+    # Look for additional terms to add to the custom glossary (currently only measures and dimensions in cubes)
+    for section in ("measures", "dimensions"):
+        if section in obj and  any(re.match(pattern, name) for pattern in config.get('tool',[])):
+            custom_terms.extend((term, details, name) for term, details in obj[section].items())
+
+# Enrich glossary with terms from tools and cubes
+for term, details, tool in custom_terms:
+    term_key = term.strip()
+
+    if term_key not in custom_glossary:
+        # New glossary entry
+        custom_glossary[term_key] = {
+            "definition": details.get("description"),
+            "synonyms": [],
+            "tools": [tool]
+        }
+    else:
+        # Existing glossary term → preserve definition, just add tool if missing
+        if "tools" not in custom_glossary[term_key]:
+            custom_glossary[term_key]["tools"] = []
+        if tool not in custom_glossary[term_key]["tools"]:
+            custom_glossary[term_key]["tools"].append(tool)
+
+if custom_glossary:
+    # Resource returning the entire glossary
+    @mcp.resource("glossary://all")
+    def get_glossary() -> ResponseType:
+        """List all glossary terms."""
+        return custom_glossary
+
+    # Resource returning the entire glossary
+    @mcp.resource("glossary://definitions")
+    def get_glossary_definitions() -> ResponseType:
+        """Returns all glossary terms with definitions."""
+        return {term: details["definition"] for term, details in custom_glossary.items()}
+
+    # Resource returning all information about a specific glossary term
+    @mcp.resource("glossary://term/{term_name}")
+    def get_glossary_term(term_name: str)  -> dict:
+        """Return the definition, synonyms and associated tools of a specific glossary term."""
+        term = custom_glossary.get(term_name)
+        if term:
+            return term
+        else:
+            return {"error": f"Glossary term not found: {term_name}"}
+
+#------------------ Custom Tools  ------------------#
+# Custom tools are defined as SQL queries in a YAML file and loaded at startup.
+
+if config.get('cust', {}).get('allmodule', False):
+    query_defs = []
+    custom_tool_files = [file for file in os.listdir() if file.endswith("_tools.yaml")]
+
+    for file in custom_tool_files:
+        with open(file) as f:
+            query_defs.extend(yaml.safe_load(f))  # Concatenate all query definitions
+
+
+    def make_custom_prompt(prompt: str, prompt_name: str, desc: str):
+        async def _dynamic_prompt():
+            # SQL is closed over without parameters
+            return UserMessage(role="user", content=TextContent(type="text", text=prompt))
+        _dynamic_prompt.__name__ = prompt_name
+        return mcp.prompt(description=desc)(_dynamic_prompt)
+
+    def make_custom_query_tool(sql_text: str, tool_name: str, desc: str):
+        async def _dynamic_tool():
+            # SQL is closed over without parameters
+            return execute_db_tool( td.handle_base_readQuery, sql=sql_text)
+        _dynamic_tool.__name__ = tool_name
+        return mcp.tool(description=desc)(_dynamic_tool)
+
+    # Instantiate custom query tools from YAML
+    for q in query_defs:
+        if q["type"] == "tool":
+            fn = make_custom_query_tool(q["sql"], q["name"], q.get("description", ""))
+            globals()[q["name"]] = fn
+            logger.info(f"Created custom tool: {q["name"]}")
+        elif q["type"] == "prompt":
+            fn = make_custom_prompt(q["prompt"], q["name"], q.get("description", "") )
+            globals()[q["name"]] = fn
+            logger.info(f"Created custom prompt: {q["name"]}")
+        else:
+            logger.info("Custom yaml type is unnkown.")
 
 
 # ------------------ RAG Prompts ------------------ #
@@ -460,254 +707,6 @@ if config.get('fs', {}).get('allmodule', False):
             target_database: str = Field(..., description="Target database where the dataset will be created.")
         ) -> ResponseType:
             return execute_db_tool(td.handle_fs_createDataset, fs_config=fs_config, entity_name=entity_name, feature_selection=feature_selection, dataset_name=dataset_name, target_database=target_database)
-
-
-#------------------ Custom Objects  ------------------#
-# Custom tools, resources and prompts are defined as SQL queries in a YAML file and loaded at startup.
-
-custom_object_files = [file for file in os.listdir() if file.endswith("_objects.yaml")]
-custom_objects = {}
-custom_glossary = {}
-
-for file in custom_object_files:
-    with open(file) as f:
-        loaded = yaml.safe_load(f)
-        if loaded:
-            custom_objects.update(loaded)  # Merge dictionaries
-
-
-def make_custom_prompt(prompt_name: str, prompt: str, desc: str):
-    async def _dynamic_prompt():
-        # SQL is closed over without parameters
-        return UserMessage(role="user", content=TextContent(type="text", text=prompt))
-    _dynamic_prompt.__name__ = prompt_name
-    return mcp.prompt(description=desc)(_dynamic_prompt)
-
-def make_custom_query_tool(name, tool):
-    param_defs = tool.get("parameters", {})
-    # 1. Build Parameter objects
-    parameters = []
-    annotations = {}
-    # param_defs is now a dict keyed by name
-    for param_name, p in param_defs.items():
-        type_hint = p.get("type_hint", str)    # e.g. int, float, str, etc.
-        default = inspect.Parameter.empty if p.get("required", True) else p.get("default", None)
-        parameters.append(
-            inspect.Parameter(
-                param_name,
-                kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                default=default,
-                annotation=type_hint
-            )
-        )
-        annotations[param_name] = type_hint
-
-    # 2. Create the new signature
-    sig = inspect.Signature(parameters)
-
-    # 3. Define your generic handler
-    async def _dynamic_tool(**kwargs):
-        """Dynamically generated tool for {name}"""
-        missing = [n for n in annotations if n not in kwargs]
-        if missing:
-            raise ValueError(f"Missing parameters: {missing}")
-        return execute_db_tool(td.handle_base_readQuery, tool["sql"], **kwargs)
-
-    # 4. Inject signature & annotations
-    _dynamic_tool.__signature__   = sig
-    _dynamic_tool.__annotations__ = annotations
-
-    # 5. Register with FastMCP
-    return mcp.tool(
-        name=name,
-        description=tool.get("description", "")
-    )(_dynamic_tool)
-
-def generate_cube_query_tool(name, cube):
-    """
-    Generate a function to create aggregation SQL from a cube definition.
-
-    :param cube: The cube definition
-    :return: A SQL query string generator function taking dimensions and measures as comma-separated strings.
-    """
-    def _cube_query_tool(dimensions: str, measures: str) -> str:
-        """
-        Generate a SQL query string for the cube using the specified dimensions and measures.
-
-        Args:
-            dimensions (str): Comma-separated dimension names (keys in cube['dimensions']).
-            measures (str): Comma-separated measure names (keys in cube['measures']).
-
-        Returns:
-            str: The generated SQL query.
-        """
-        dim_list_raw = [d.strip() for d in dimensions.split(",") if d.strip()]
-        met_list_raw = [m.strip() for m in measures.split(",") if m.strip()]
-        # Get dimension expressions from dictionary
-        dim_list = ",\n  ".join([
-            cube["dimensions"][d]["expression"] if d in cube["dimensions"] else d
-            for d in dim_list_raw
-        ])
-        met_lines = []
-        for measure in met_list_raw:
-            mdef = cube["measures"].get(measure)
-            if mdef is None:
-                raise ValueError(f"Measure '{measure}' not found in cube '{name}'.")
-            expr = mdef["expression"]
-            met_lines.append(f"{expr} AS {measure}")
-        met_block = ",\n  ".join(met_lines)
-        sql = (
-            "SELECT\n"
-            f"  {dim_list},\n"
-            f"  {met_block}\n"
-            "FROM (\n"
-            f"{cube['sql'].strip()}\n"
-            ") AS c\n"
-            f"GROUP BY {', '.join(dim_list_raw)};"
-        )
-        return sql
-    return _cube_query_tool
-
-def make_custom_cube_tool(name, cube):
-    async def _dynamic_tool(dimensions, measures):
-        # Accept dimensions and measures as comma-separated strings, parse to lists
-        return execute_db_tool(
-            td.util_base_dynamicQuery,
-            sql_generator=generate_cube_query_tool(name, cube),
-            dimensions=dimensions,
-            measures=measures
-        )
-    _dynamic_tool.__name__ = 'get_cube_' + name
-    # Build allowed values and definitions for dimensions and measures
-    dim_lines = []
-    for name, d in cube.get('dimensions', {}).items():
-        dim_lines.append(f"    - {name}: {d.get('description', '')}")
-    measure_lines = []
-    for name, m in cube.get('measures', {}).items():
-        measure_lines.append(f"    - {name}: {m.get('description', '')}")
-    _dynamic_tool.__doc__ = f"""
-    Tool to query the cube '{name}'.
-    {cube.get('description', '')}
-
-    Expected inputs:
-        dimensions (str): Comma-separated dimension names to group by. Allowed values:
-{chr(10).join(dim_lines)}
-
-        measures (str): Comma-separated measure names to aggregate (must match cube definition). Allowed values:
-{chr(10).join(measure_lines)}
-
-    Returns:
-        Query result as a formatted response.
-    """
-    return mcp.tool(description=_dynamic_tool.__doc__)(_dynamic_tool)
-
-# Instantiate custom query tools from YAML
-custom_terms = []
-for name, obj in custom_objects.items():
-    obj_type = obj.get("type")
-    if obj_type == "tool":
-        fn = make_custom_query_tool(name, obj)
-        globals()[name] = fn
-        logger.info(f"Created custom tool: {name}")
-    elif obj_type == "prompt":
-        fn = make_custom_prompt(name, obj["prompt"], obj.get("description", ""))
-        globals()[name] = fn
-        logger.info(f"Created custom prompt: {name}")
-    elif obj_type == "cube":
-        fn = make_custom_cube_tool(name, obj)
-        globals()[name] = fn
-        logger.info(f"Created custom cube: {name}")
-    elif obj_type == "glossary":
-        # Remove the 'type' key to get just the terms
-        custom_glossary = {k: v for k, v in obj.items() if k != "type"}
-        logger.info(f"Added custom glossary entries for: {name}.")
-    else:
-        logger.info(f"Type {obj_type if obj_type else ''} for custom object {name} is {'unknown' if obj_type else 'undefined'}.")
-
-    # Look for additional terms to add to the custom glossary (currently only measures and dimensions in cubes)
-    for section in ("measures", "dimensions"):
-        if section in obj:
-            custom_terms.extend((term, details, name) for term, details in obj[section].items())
-
-# Enrich glossary with terms from tools and cubes
-for term, details, tool in custom_terms:
-    term_key = term.strip()
-
-    if term_key not in custom_glossary:
-        # New glossary entry
-        custom_glossary[term_key] = {
-            "definition": details.get("description"),
-            "synonyms": [],
-            "tools": [tool]
-        }
-    else:
-        # Existing glossary term → preserve definition, just add tool if missing
-        if "tools" not in custom_glossary[term_key]:
-            custom_glossary[term_key]["tools"] = []
-        if tool not in custom_glossary[term_key]["tools"]:
-            custom_glossary[term_key]["tools"].append(tool)
-
-if custom_glossary:
-    # Resource returning the entire glossary
-    @mcp.resource("glossary://all")
-    def get_glossary() -> ResponseType:
-        """List all glossary terms."""
-        return custom_glossary
-
-    # Resource returning the entire glossary
-    @mcp.resource("glossary://definitions")
-    def get_glossary_definitions() -> ResponseType:
-        """Returns all glossary terms with definitions."""
-        return {term: details["definition"] for term, details in custom_glossary.items()}
-
-    # Resource returning all information about a specific glossary term
-    @mcp.resource("glossary://term/{term_name}")
-    def get_glossary_term(term_name: str)  -> dict:
-        """Return the definition, synonyms and associated tools of a specific glossary term."""
-        term = custom_glossary.get(term_name)
-        if term:
-            return term
-        else:
-            return {"error": f"Glossary term not found: {term_name}"}
-
-#------------------ Custom Tools  ------------------#
-# Custom tools are defined as SQL queries in a YAML file and loaded at startup.
-
-if config.get('cust', {}).get('allmodule', False):
-    query_defs = []
-    custom_tool_files = [file for file in os.listdir() if file.endswith("_tools.yaml")]
-
-    for file in custom_tool_files:
-        with open(file) as f:
-            query_defs.extend(yaml.safe_load(f))  # Concatenate all query definitions
-
-
-    def make_custom_prompt(prompt: str, prompt_name: str, desc: str):
-        async def _dynamic_prompt():
-            # SQL is closed over without parameters
-            return UserMessage(role="user", content=TextContent(type="text", text=prompt))
-        _dynamic_prompt.__name__ = prompt_name
-        return mcp.prompt(description=desc)(_dynamic_prompt)
-
-    def make_custom_query_tool(sql_text: str, tool_name: str, desc: str):
-        async def _dynamic_tool():
-            # SQL is closed over without parameters
-            return execute_db_tool( td.handle_base_readQuery, sql=sql_text)
-        _dynamic_tool.__name__ = tool_name
-        return mcp.tool(description=desc)(_dynamic_tool)
-
-    # Instantiate custom query tools from YAML
-    for q in query_defs:
-        if q["type"] == "tool":
-            fn = make_custom_query_tool(q["sql"], q["name"], q.get("description", ""))
-            globals()[q["name"]] = fn
-            logger.info(f"Created custom tool: {q["name"]}")
-        elif q["type"] == "prompt":
-            fn = make_custom_prompt(q["prompt"], q["name"], q.get("description", "") )
-            globals()[q["name"]] = fn
-            logger.info(f"Created custom prompt: {q["name"]}")
-        else:
-            logger.info("Custom yaml type is unnkown.")
 
 #------------------ Main ------------------#
 # Main function to start the MCP server
