@@ -211,34 +211,6 @@ def register_td_tools(config, td, mcp):
 register_td_tools(config, td, mcp)
 
 
-# ------------------ base Prompts ------------------ #
-if config.get('base', {}).get('prompt', {}).get('base_query', False) or config.get('base', {}).get('allmodule', False):
-    @mcp.prompt()
-    async def base_query(qry: str) -> UserMessage:
-        """Create a SQL query against the Teradata database"""
-        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_base_query.format(qry=qry)))
-
-if config.get('base', {}).get('prompt', {}).get('base_tableBusinessDesc', False) or config.get('base', {}).get('allmodule', False):
-    @mcp.prompt()
-    async def base_tableBusinessDesc(database_name: str, table_name: str) -> UserMessage:
-        """Create a SQL query against the Teradata database"""
-        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_base_tableBusinessDesc.format(database_name=database_name, table_name=table_name)))
-                           
-if config.get('base', {}).get('prompt', {}).get('base_databaseBusinessDesc', False) or config.get('base', {}).get('allmodule', False):
-    @mcp.prompt()
-    async def base_databaseBusinessDesc(database_name: str) -> UserMessage:
-        """Create a SQL query against the Teradata database"""
-        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_base_databaseBusinessDesc.format(database_name=database_name)))
-
-# ------------------ Quality Prompts ------------------ #
-
-if config.get('qlty', {}).get('prompt', {}).get('qlty_databaseQuality', False) or config.get('qlty', {}).get('allmodule', False):
-    @mcp.prompt()
-    async def qlty_databaseQuality(database_name: str) -> UserMessage:
-        """Assess the data quality of a database."""
-        return UserMessage(role="user", content=TextContent(type="text", text=td.handle_qlty_databaseQuality.format(database_name=database_name)))
-
-
 #------------------ Register tools, resources and prompts declared in .yml files ------------------#
 
 custom_object_files = [file for file in os.listdir() if file.endswith("_objects.yaml")]

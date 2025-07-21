@@ -1,3 +1,8 @@
+"""
+This file contains the Python implementation of tools for the Teradata MCP server.
+If the tool is a simple (parameterized) query or cube, it should it should be defined in the *_objects.yml file in this directory.
+"""
+
 import logging
 from teradatasql import TeradataConnection 
 from typing import Optional, Any, Dict, List

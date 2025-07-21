@@ -1,5 +1,3 @@
-
-
 dba_tableArchive:
   type: prompt
   description: "The following prompt is used to guide the Teradata DBA in finding opportunities for archiving data."
