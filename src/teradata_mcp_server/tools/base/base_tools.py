@@ -570,7 +570,7 @@ def handle_base_tableUsage(conn: TeradataConnection, db_name: Optional[str] = No
 #       sql_generator (callable) - a generator function that returns a SQL query string
 #       *args - additional positional arguments to pass to the generator function
 #     Returns: ResponseType - formatted response with query results or error message
-def handle_base_dynamicQuery(conn: TeradataConnection, sql_generator: callable, *args, **kwargs):
+def util_base_dynamicQuery(conn: TeradataConnection, sql_generator: callable, *args, **kwargs):
     """
     This tool is used to execute dynamic SQL queries that are generated at runtime by a generator function.
 
@@ -583,7 +583,7 @@ def handle_base_dynamicQuery(conn: TeradataConnection, sql_generator: callable, 
     Returns:
       ResponseType: formatted response with query results + metadata
     """ 
-    logger.debug(f"Tool: handle_base_dynamicQuery: Args: sql: {sql_generator}")
+    logger.debug(f"Tool: util_base_dynamicQuery: Args: sql: {sql_generator}")
 
     sql = sql_generator(*args, **kwargs)
     with conn.cursor() as cur:    

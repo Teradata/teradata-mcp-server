@@ -150,7 +150,6 @@ def execute_db_tool(tool, *args, **kwargs):
     except Exception as e:
         logger.error(f"Error in execute_db_tool: {e}", exc_info=True)
         return format_error_response(str(e))
-    
 
 def execute_vs_tool(tool, *args, **kwargs) -> ResponseType:
     global _evs
@@ -177,8 +176,6 @@ def execute_vs_tool(tool, *args, **kwargs) -> ResponseType:
     
 
 #------------------ Dynamic Tool Registration ------------------#
-
-
 
 def register_td_tools(config, td, mcp):
     """
@@ -575,7 +572,7 @@ def make_custom_cube_tool(name, cube):
     async def _dynamic_tool(dimensions, measures):
         # Accept dimensions and measures as comma-separated strings, parse to lists
         return execute_db_tool(
-            td.handle_base_dynamicQuery,
+            td.util_base_dynamicQuery,
             sql_generator=generate_cube_query_tool(name, cube),
             dimensions=dimensions,
             measures=measures
