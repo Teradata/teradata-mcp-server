@@ -25,16 +25,25 @@ except ImportError:
 
 load_dotenv()
 
-# Load tool configuration from YAML file
 
-
-# Parse profile argument
+# Parse command line arguments - if any they will override environment variables
 parser = argparse.ArgumentParser(description="Teradata MCP Server")
 parser.add_argument('--profile', type=str, required=False, help='Profile name to load from configure_tools.yml')
-args, unknown = parser.parse_known_args()
-profile_name = args.profile
+parser.add_argument('--database_uri', type=str, required=False, help='Database URI to connect to: teradata://username:password@host:1025/schemaname')
+parser.add_argument('--mcp_transport', type=str, required=False, help='MCP transport method to use: stdio, streamable-http, sse')
+parser.add_argument('--mcp_host', type=str, required=False, help='MCP host address')
+parser.add_argument('--mcp_port', type=int, required=False, help='MCP port number')
+parser.add_argument('--mcp_path', type=str, required=False, help='MCP path for the server')
 
-# Load only the selected profile from YAML
+# Extract known arguments and load them into the environment if provided
+args, unknown = parser.parse_known_args()
+for key, value in vars(args).items():
+    if value is not None:
+        os.environ[key.upper()] = str(value)
+
+profile_name = os.getenv("PROFILE")
+
+# Load tool configuration from YAML file
 with open('profiles.yml', 'r') as file:
     all_profiles = yaml.safe_load(file)
     if not profile_name:
