@@ -56,11 +56,8 @@ def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: 
     Get a list of SQL run against a table in the last number of days.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       table_name - table name
       no_days - number of days
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -100,11 +97,8 @@ def handle_dba_userSqlList(conn: TeradataConnection, user_name: Optional[str] | 
     Get a list of SQL run by a user in the last number of days if a user name is provided, otherwise get list of all SQL in the last number of days.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       user_name - user name
       no_days - number of days
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -151,11 +145,8 @@ def handle_dba_tableSpace(conn: TeradataConnection, db_name: Optional[str] | Non
     Get table space used for a table if table name is provided or get table space for all tables in a database if a database name is provided."
 
     Arguments:
-      conn   - SQLAlchemy Connection
       db_name - database name
       table_name - table name
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -216,10 +207,7 @@ def handle_dba_databaseSpace(conn: TeradataConnection, db_name: Optional[str] | 
     Get database space if database name is provided, otherwise get all databases space allocations.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       db_name - database name
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -263,43 +251,11 @@ def handle_dba_databaseSpace(conn: TeradataConnection, db_name: Optional[str] | 
             "total_databases": len(data)
         }
         return create_response(data, metadata)
-
-#------------------ Tool  ------------------#
-# Get database version tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-#     Returns: formatted response with database version information or error message    
-def handle_dba_databaseVersion(conn: TeradataConnection, *args, **kwargs):
-    """
-    Get Teradata database version information.
-
-    Arguments:
-      conn   - SQLAlchemy Connection
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
-
-    Returns:
-      ResponseType: formatted response with query results + metadata
-    """
-    logger.debug("Tool: handle_dba_databaseVersion: Args: ")
-
-    with conn.cursor() as cur:
-        logger.debug("Database version information requested.")
-        rows = cur.execute("select InfoKey, InfoData FROM DBC.DBCInfoV;")
-
-        data = rows_to_json(cur.description, rows.fetchall())
-        metadata = {
-            "tool_name": "dba_databaseVersion",
-            "total_rows": len(data)
-        }
-        return create_response(data, metadata)
     
 #------------------ Tool  ------------------#
 # Resource usage summary tool
 #     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       dimensions (List[str]) - list of dimensions to aggregate the resource usage summary. All dimensions are: ["LogDate", "hourOfDay", "dayOfWeek", "workloadType", "workloadComplexity", "UserName", "AppId", "StatementType"]
-#     Returns: formatted response with aggregated resource usage summary or error message
 def handle_dba_resusageSummary(conn: TeradataConnection, 
                                  dimensions: Optional[List[str]] = None,
                                  user_name: Optional[str] = None,
@@ -312,17 +268,12 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
     Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       dimensions - list of dimensions to aggregate the resource usage summary. All dimensions are: ["LogDate", "hourOfDay", "dayOfWeek", "workloadType", "workloadComplexity", "UserName", "AppId", "StatementType"]
       user_name - user name
       date - Date to analyze, formatted as `YYYY-MM-DD`
       dayOfWeek - day of the week to analyze
       hourOfDay - hour of day to analyze
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
-    Returns:
-      ResponseType: formatted response with query results + metadata
     """
     logger.debug(f"Tool: handle_dba_resusageSummary: Args: dimensions: {dimensions}")
 
@@ -432,72 +383,8 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
 
 
 #------------------ Tool  ------------------#
-# Get Flow Control tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-#     Returns: formatted response with database flow control information or error message    
-def handle_dba_flowControl(conn: TeradataConnection, *args, **kwargs):
-    """
-    Get the Teradata flow control metrics.
-
-    Arguments:
-      conn   - SQLAlchemy Connection
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
-
-    Returns:
-      ResponseType: formatted response with query results + metadata
-    """
-    logger.debug("Tool: handle_dba_flowControl: Args: ")
-
-    with conn.cursor() as cur:
-        logger.debug("Database flow control information requested.")
-        rows = cur.execute("""
-                SELECT A.THEDATE AS "Date"  
-                , A.THETIME (FORMAT '99:99:99') AS "Time"      
-                , CASE  
-                    WHEN DAY_OF_WEEK = 1 THEN 'Sun'
-                    WHEN DAY_OF_WEEK = 2 THEN 'Mon'
-                    WHEN DAY_OF_WEEK = 3 THEN 'Tue'
-                    WHEN DAY_OF_WEEK = 4 THEN 'Wed'
-                    WHEN DAY_OF_WEEK = 5 THEN 'Thr'
-                    WHEN DAY_OF_WEEK = 6 THEN 'Fri'
-                    WHEN DAY_OF_WEEK = 7 THEN 'Sat'
-                    END AS DAY_OF_WEEK
-                , A.FLOWCTLTIME AS "Flow Control Time" 
-                , (A.FLOWCTLTIME / 1000) / A.SECS AS "FlowControl%" 
-                , C.CPUUEXEC + C.CPUUSERV AS "CPUBusy"  
-                , CPUIOWAIT AS "CPUWaitForIO"    
-                , ((C.CPUUEXEC) / (C.CENTISECS * C.NCPUS)) * 100 AS "CPUEXEC%" 
-                , ((C.CPUUSERV) / (C.CENTISECS * C.NCPUS)) * 100 AS "CPUSERV%" 
-                , ((C.CPUIOWAIT) / (C.CENTISECS * C.NCPUS)) * 100 AS "WAITIO%"  
-                , ((C.CPUIDLE) / (C.CENTISECS * C.NCPUS)) * 100 AS "IDLE%"  
-                FROM DBC.RESUSAGESAWT A 
-                INNER JOIN DBC.RESUSAGESVPR B   
-                    ON A.VPRID = B.VPRID
-                    AND A.THETIME = B.THETIME
-                INNER JOIN DBC.RESUSAGESPMA C   
-                    ON A.NODEID = C.NODEID
-                    AND A.THETIME = C.THETIME
-                    AND A.THEDATE = C.THEDATE
-                INNER JOIN SYS_CALENDAR.CALENDAR D  
-                    ON C.THEDATE = D.CALENDAR_DATE
-                --WHERE A.THEDATE BETWEEN '2019-03-25' AND '2018-03-31'
-                WHERE A.THEDATE > DATE - 7
-                GROUP BY 1,2,3,4,5,6,7,8,9,10,11;    
-                           """)
-
-        data = rows_to_json(cur.description, rows.fetchall())
-        metadata = {
-            "tool_name": "dba_flowControl",
-            "total_rows": len(data) 
-        }
-        return create_response(data, metadata)    
-
-#------------------ Tool  ------------------#
 # Get table usage impact tool
 #     Arguments:
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       db_name (str) - name of the database
 #       user_name (str) - name of the user
 def handle_dba_tableUsageImpact(conn: TeradataConnection, db_name: Optional[str] = None, user_name: Optional[str] = None, *args, **kwargs):
@@ -505,14 +392,9 @@ def handle_dba_tableUsageImpact(conn: TeradataConnection, db_name: Optional[str]
     Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time.
     
     Arguments:
-      conn   - SQLAlchemy Connection
       db_name - database name to analyze
       user_name - user name to analyze
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
-    Returns:
-      ResponseType: formatted response with query results + metadata
     """
     logger.debug("Tool: handle_dba_tableUsageImpact: Args: ")
     if db_name:
@@ -591,169 +473,3 @@ def handle_dba_tableUsageImpact(conn: TeradataConnection, db_name: Optional[str]
         "comment": info
     }
     return create_response(data, metadata)
-
-
-#------------------ Tool  ------------------#
-# Get Feature Usage tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-#     Returns: formatted response with database feature usage information or error message    
-def handle_dba_featureUsage(conn: TeradataConnection, *args, **kwargs):
-    """
-    Get the user feature usage metrics.
-
-    Arguments:
-      conn   - SQLAlchemy Connection
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
-
-    Returns:
-      ResponseType: formatted response with query results + metadata
-    """
-    logger.debug("Tool: handle_dba_featureUsage: Args: ")
-
-    with conn.cursor() as cur:
-        logger.debug("Database feature usage information requested.")
-        rows = cur.execute("""
-            SELECT 
-                CAST(A.Starttime as Date)  AS LogDate
-            ,A.USERNAME as Username
-            ,CAST(B.FEATURENAME AS VARCHAR(100)) AS FEATURENAME
-            ,SUM(GETBIT(A.FEATUREUSAGE,(2047 - B.FEATUREBITPOS))) AS FeatureUseCount
-            ,COUNT(*) AS RequestCount
-            ,SUM(AMPCPUTIME) AS AMPCPUTIME
-
-            FROM DBC.DBQLOGTBL A, 
-                DBC.QRYLOGFEATURELISTV B 
-            WHERE CAST(A.Starttime as Date) > DATE-30
-            GROUP BY 
-                LogDate,
-                USERNAME, 
-                FeatureName having FeatureUseCount > 0
-                ORDER BY 1,2,3;
-                           """)
-
-        data = rows_to_json(cur.description, rows.fetchall())
-        metadata = {
-            "tool_name": "dba_featureUsage",
-            "total_rows": len(data) 
-        }
-        return create_response(data, metadata)    
-
-
-#------------------ Tool  ------------------#
-# Get User Delay Experience tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-#     Returns: formatted response with database user delay experience information or error message    
-def handle_dba_userDelay(conn: TeradataConnection, *args, **kwargs):
-    """
-    Get the Teradata user delay metrics.
-
-    Arguments:
-      conn   - SQLAlchemy Connection
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
-
-    Returns:
-      ResponseType: formatted response with query results + metadata
-    """
-    logger.debug("Tool: handle_dba_userDelay: Args: ")
-
-    with conn.cursor() as cur:
-        logger.debug("Database user delay information requested.")
-        rows = cur.execute("""
-            Select
-                CAST(a.Starttime as DATE) AS "Log Date"
-                ,extract(hour from a.starttime) as "Log Hour"
-                ,Username
-                ,WDName
-                ,Starttime
-                ,a.firststeptime
-                ,a.FirstRespTime
-                ,Zeroifnull(DelayTime) as DelayTime
-                , (CAST(extract(hour
-                    From     ((a.firststeptime - a.StartTime) HOUR(2) TO SECOND(6) ) ) * 3600 + extract(minute
-                    From     ((a.firststeptime - a.StartTime) HOUR(2) TO SECOND(6) ) ) * 60 + extract(second
-                    From     ((a.firststeptime - a.StartTime) HOUR(2) TO SECOND(6) ) ) AS dec(8,2))) - zeroifnull(cast(delaytime as float)) (float)     as PrsDctnryTime
-
-                , Zeroifnull(CAST(extract(hour
-                    From     ((a.firstresptime - a.firststepTime) HOUR(2) TO SECOND(6) ) ) * 3600 + extract(minute
-                    From     ((a.firstresptime - a.firststepTime) HOUR(2) TO SECOND(6) ) ) * 60 + extract(second
-                    From     ((a.firstresptime - a.firststepTime) HOUR(2) TO SECOND(6) ) ) AS INTEGER) )  as QryRespTime
-
-                , Zeroifnull(CAST(extract(hour
-                    From     ((a.firstresptime - a.StartTime) HOUR(2) TO SECOND(6) ) ) * 3600 + extract(minute
-                    From     ((a.firstresptime - a.StartTime) HOUR(2) TO SECOND(6) ) ) * 60 + extract(second
-                    From     ((a.firstresptime - a.StartTime) HOUR(2) TO SECOND(6) ) ) AS INTEGER) )  as TotalTime
-                ,count(*) As NoOfQueries
-                from  DBC.DBQLogTbl a
-                
-                Where  DelayTime > 0
-                AND CAST(a.Starttime as DATE) between current_date - 30 and current_date - 1
-                Group By 1,2,3,4,5,6,7,8,9,10,11;
-                           """)
-
-        data = rows_to_json(cur.description, rows.fetchall())
-        metadata = {
-            "tool_name": "dba_userDelay",
-            "total_rows": len(data)
-        }
-        return create_response(data, metadata)    
-    
-
-#------------------ Tool  ------------------#
-# Get session information tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-#       user_name (str) - name of the user
-#     Returns: formatted response with database feature usage information or error message    
-def handle_dba_sessionInfo(conn: TeradataConnection, user_name: str, *args, **kwargs):
-    """
-    Get the Teradata session information for user.
-
-    Arguments:
-      conn   - SQLAlchemy Connection
-      user_name - user name to analyze
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
-
-    Returns:
-      ResponseType: formatted response with query results + metadata
-    """
-    logger.debug("Tool: handle_dba_sessionInfo: Args: ")
-
-    with conn.cursor() as cur:
-        if user_name == "":
-            logger.debug("No user_name argument provided")
-            rows = []
-        else:
-            logger.debug("Database session information requested for {user_name}.")
-            rows = cur.execute("""
-                SELECT
-                    UserName,
-                    AccountName,
-                    SessionNo,
-                    DefaultDataBase, 
-                    LogonDate,
-                    LogonTime,
-                    LogonSource, 
-                    LogonAcct,
-                    CurrentRole, 
-                    QueryBand,
-                    ClientIpAddress, 
-                    ClientProgramName,
-                    ClientSystemUserId,
-                    ClientInterfaceVersion
-                FROM DBC.SessionInfoV
-                WHERE UserName LIKE '%{user_name}%' (NOT CASESPECIFIC);
-            """)
-
-        data = rows_to_json(cur.description, rows.fetchall())
-        metadata = {
-            "tool_name": "dba_sessionInfo",
-            "total_rows": len(data)
-        }
-        return create_response(data, metadata)
-
- 

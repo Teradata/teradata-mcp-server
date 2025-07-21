@@ -159,11 +159,8 @@ def handle_base_tableDDL(conn: TeradataConnection, db_name: str, table_name: str
     Displays the DDL definition of a table via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       db_name - Database name
       table_name - table name
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -200,11 +197,6 @@ def handle_base_databaseList(conn: TeradataConnection, *args, **kwargs):
     """
     Lists all databases in the Teradata System via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
-    Arguments:
-      conn   - SQLAlchemy Connection
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
-
     Returns:
       ResponseType: formatted response with query results + metadata
     """  
@@ -233,10 +225,7 @@ def handle_base_tableList(conn: TeradataConnection, db_name: str, *args, **kwarg
     Lists all tables in a databases via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       db_name - Database name
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -267,11 +256,8 @@ def handle_base_columnDescription(conn: TeradataConnection, db_name: str, obj_na
     Shows detailed column information about a database table via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       db_name - Database name
       obj_name - table or view name
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -355,11 +341,8 @@ def handle_base_tablePreview(conn: TeradataConnection, table_name: str, db_name:
     This function returns data sample and inferred structure from a database table or view via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       table_name - table or view name
       db_name - Database name
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -401,11 +384,8 @@ def handle_base_tableAffinity(conn: TeradataConnection, db_name: str, obj_name: 
     Get tables commonly used together by database users, this is helpful to infer relationships between tables via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       db_name - Database name
       object_name - table or view name
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -484,11 +464,8 @@ def handle_base_tableUsage(conn: TeradataConnection, db_name: Optional[str] = No
     Measure the usage of a table and views by users in a given schema, this is helpful to infer what database objects are most actively used or drive most value via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       db_name - Database name
       object_name - table or view name
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
