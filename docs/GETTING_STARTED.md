@@ -170,7 +170,7 @@ export MCP_PATH=/mcp/
 
 
 --------------------------------------------------------------------
-## Step 5 Run the MCP server with REST
+## Run the MCP server with REST
 
 Alternatively, you can expose your tools, prompts and resources as REST endpoints using the `rest` profile.
 
@@ -180,6 +180,7 @@ Caution: there is no default value, not no authorization needed by default.
 The default port is 8002.
 
 ```sh
+export DATABASE_URI=teradata://username:password@host:1025/databaseschema
 export MCPO_API_KEY=top-secret
 docker compose --profile rest up
 ```
