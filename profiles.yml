@@ -38,3 +38,11 @@ custom:
     - cust*
   resource:
     - cust*
+
+sales:
+  tool:
+    - sales_*    
+  prompt:
+    - sales_*
+  resource:
+    - sales_*

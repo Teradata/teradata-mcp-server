@@ -198,9 +198,10 @@ def register_td_tools(config, td, mcp):
         ]
 
         # Build dynamic async function
-        async def dynamic_tool(*args, __func=func, __params=params):
-            kwargs = {p.name: a for p, a in zip(__params, args)}
-            return execute_db_tool(__func, **kwargs)
+        async def dynamic_tool(*args, __func=func, __params=params, **kwargs):
+            arg_dict = {p.name: a for p, a in zip(__params, args)}
+            arg_dict.update(kwargs)
+            return execute_db_tool(__func, **arg_dict)
         # Set correct signature
         dynamic_tool.__signature__ = inspect.Signature(params)
         dynamic_tool.__name__ = tool_name
