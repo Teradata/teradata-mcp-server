@@ -153,7 +153,7 @@ test_dbaTools:
     - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket using the dba_resusageSummary tool. The system usage summary metrics should be returned  
 
     ## Phase 7 - get a list of the system usage for a user
-    - Get the system usage for a user (e.g. demo_user) using the dba_resusageUserSummary tool. The system usage for the user should be returned.
+    - Get the system usage for a user (e.g. demo_user) using the dba_resusageSummary tool. The system resusage for the user (e.g. demo_user) should be returned.
 
     ## Phase 8 - get a list of the system flow control metrics
     - Get the Teradata system flow control metrics by day and hour using the dba_flowControl tool. The system flow control metrics should be returned.
