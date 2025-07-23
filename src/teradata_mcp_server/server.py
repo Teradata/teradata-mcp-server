@@ -199,18 +199,31 @@ def register_td_tools(config, td, mcp):
 
         # Build dynamic async function
         async def dynamic_tool(*args, __func=func, __params=params, **kwargs):
+            import pydantic
             arg_dict = {p.name: a for p, a in zip(__params, args)}
             arg_dict.update(kwargs)
-            # Fill in missing parameters with defaults
+            # Detect if any parameter expects a Pydantic model or Field-wrapped value
             for p in __params:
-                if p.name not in arg_dict:
-                    if p.default is not inspect.Parameter.empty:
-                        arg_dict[p.name] = p.default
+                ann = p.annotation
+                # If annotation is a subclass of BaseModel, construct from kwargs
+                if inspect.isclass(ann) and issubclass(ann, pydantic.BaseModel):
+                    # Collect relevant fields for the model
+                    model_fields = {k: v for k, v in arg_dict.items() if k in ann.__fields__}
+                    arg_dict[p.name] = ann(**model_fields)
+                    # Remove used fields from arg_dict to avoid double passing
+                    for k in model_fields:
+                        arg_dict.pop(k, None)
+                # If default is a Field, extract default value if not provided
+                elif hasattr(p.default, 'default') and p.default is not inspect.Parameter.empty:
+                    if p.name not in arg_dict:
+                        arg_dict[p.name] = p.default.default
             return execute_db_tool(__func, **arg_dict)
-        # Set correct signature
+        # Set correct signature and type hints
         dynamic_tool.__signature__ = inspect.Signature(params)
         dynamic_tool.__name__ = tool_name
         dynamic_tool.__doc__ = func.__doc__ or ""
+        # Copy type hints for MCP tool argument introspection
+        dynamic_tool.__annotations__ = {p.name: p.annotation for p in params if p.annotation is not inspect.Parameter.empty}
         # Register with mcp
         mcp.tool(name=tool_name, description=dynamic_tool.__doc__)(dynamic_tool)
 
