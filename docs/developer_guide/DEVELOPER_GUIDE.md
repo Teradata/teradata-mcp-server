@@ -34,28 +34,28 @@ We will modularize the tool sets so that users will have the ability to add the 
 [src/teradata_mcp_server/tools/base](./src/teradata_mcp_server/tools/base) - this will contain the base tool set:
 - __init__.py - will contain library imports
 - base_tools.py - will contain the tool handle code
-- base_prompts.py - will contain the prompt handle code
+- base_prompts.yml - will contain the object (e.g. prompts, etc) code
 - base_resources.py - will contain the resource handle code
 - README.md - will describe the tools, prompts, resources, and package dependencies
 
 [src/teradata_mcp_server/tools/dba](./src/teradata_mcp_server/tools/dba) - this will contain DBA focused tools set:
 - __init__.py - will contain library imports
 - dba_tools.py - will contain the tool handle code
-- dba_prompts.py - will contain the prompt handle code
+- dba_objects.yml - will contain the object (e.g. prompts, etc) code
 - dba_resources.py - will contain the resource handle code
 - README.md - will describe the tools, prompts, resources, and package dependencies
 
 [src/teradata_mcp_server/tools/qlty](./src/teradata_mcp_server/tools/qlty) - this will contain data quality tool set:
 - __init__.py - will contain library imports
 - qlty_tools.py - will contain the tool handle code
-- qlty_prompts.py - will contain the prompt handle code
+- qlty_objects.yml - will contain the object (e.g. prompts, etc) code
 - qlty_resources.py - will contain the resource handle code
 - README.md - will describe the tools, prompts, resources, and package dependencies
 
 [src/teradata_mcp_server/tools/sec](./src/teradata_mcp_server/tools/sec) - this will contain security tool set:
 - __init__.py - will contain library imports
 - sec_tools.py - will contain the tool handle code
-- sec_prompts.py - will contain the prompt handle code
+- sec_objects.yml - will contain the object (e.g. prompts, etc) code
 - sec_resources.py - will contain the resource handle code
 - README.md - will describe the tools, prompts, resources, and package dependencies
 
@@ -106,7 +106,7 @@ The template code should be copied and prefixes for directory name and files sho
 [docs/developer_guide](./docs/developer_guide) - contains developer package documentation.
 - DEVELOPER_GUIDE.md - explains structural elements of the server for developers.
 - HOW_TO_ADD_YOUR_FUNCTION.md - explains how to add tools to a module
-- HOW_TO_ADD_CUSTOM_FUNCTIONS.md - explains how to add customer functions to the server.
+
 
 <br>
 
@@ -118,8 +118,56 @@ To assist tool users we would like to align tool, prompt, and resources to a nam
 
 Two guides have been created to show how to add tools and prompts:
 - [How to add new modules of tools](./HOW_TO_ADD_YOUR_FUNCTION.md)
-- [How to add customer fuctions](HOW_TO_ADD_CUSTOM_FUNCTIONS.md)
 
+
+<br>
+
+## Tools testing
+Every module will have at least one prompt that would be responsible for testing all of the tools in the module.  The following template should be used in the module_objects.ylm file, the name of the testig prompt should be test_\<module name\>Tools:
+
+```
+test_baseTools:
+  type: prompt
+  description: "Test all base tools in the Teradata MCP server."
+  prompt: |
+   You are a Testor who is an expert in testing the functionality of tools in the base module. You will test all tools in the module.
+   ## your role will work through the phases
+   Perform the phases in order, and do not skip any phase.
+   
+   ## Phase 0 - Get a list of databases
+   - Get a list of databases from the user. Use the base_databaseList function to get the list.  The tool should return a list of databases in the Teradata system.
+   ## Phase 1 - Get the list of tables in each database
+   - For the DBC database, get the list of tables. Use the base_tableList function to get the list. The tool should return a list of tables in the DBC database.
+   ## Phase 2 - Create a test table in your default database
+   - Create a customer table in your default database called test_customer, the table should have an Cust_id column. Use the base_writeQuery function to create the table. A test_customer table should be created.
+   - Add 10 rows to the test_customer table. Use the base_writeQuery function to add the rows.
+   ## Phase 3 - Test the query tool
+   - test the query tool by running a query on the test_customer table. Use the base_readQuery function to run the query. The query should return the 10 rows you added in the previous phase.
+   - test the query tool by running a query on the test_customer table with a filter. Use the base_readQuery function to run the query. The query should return only the rows that match the filter. (example of a filter is Cust_id > 5)
+   ## Phase 4 - Test the table DDL tool
+   - Get the DDL of the test_customer table. Use the base_tableDDL function to get the DDL. The tool should return the DDL of the test_customer table.
+   ## Phase 5 - Test the column description tool
+   - Get the column description of the test_customer table. Use the base_columnDescription function to get the columns description. The tool should return the column description of the test_customer table.
+   ## Phase 6 - Test the table preview tool
+   - Get the preview of the test_customer table. Use the base_tablePreview function to get the preview. The tool should return the first 5 rows of the test_customer table and the column information.
+   ## Phase 7 - Test the table affinity tool
+   - Get the table affinity of the test_customer table. Use the base_tableAffinity function to get the affinity. The tool should return the table affinity of the test_customer table.
+   ## Phase 8 - Test the table usage tool
+   - Get the table usage of the test_customer table. Use the base_tableUsage function to get the usage. The tool should return the table usage of the test_customer table.
+   ## Phase 9 - Clean up
+   - Drop the test_customer table. Use the base_writeQuery function to drop the table. The tool should return a success message.
+   ## Communication guidelines:
+         - Be concise but informative in your explanations
+         - Clearly indicate which phase the process is currently in
+         - summarize the success of the phase before moving to the next phase
+   ## Final output guidelines:
+         - return in markdown results for all phases
+         - Example:
+         ***Phase 0:*** list databases:  Successful
+         ***Phase 1:*** list tables in DBC database:  Successful
+         ***Phase 2:*** Create test_customer table:  Successful
+
+```
 
 <br><br><br>
 
