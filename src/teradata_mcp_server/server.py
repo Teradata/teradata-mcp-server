@@ -201,6 +201,11 @@ def register_td_tools(config, td, mcp):
         async def dynamic_tool(*args, __func=func, __params=params, **kwargs):
             arg_dict = {p.name: a for p, a in zip(__params, args)}
             arg_dict.update(kwargs)
+            # Fill in missing parameters with defaults
+            for p in __params:
+                if p.name not in arg_dict:
+                    if p.default is not inspect.Parameter.empty:
+                        arg_dict[p.name] = p.default
             return execute_db_tool(__func, **arg_dict)
         # Set correct signature
         dynamic_tool.__signature__ = inspect.Signature(params)
