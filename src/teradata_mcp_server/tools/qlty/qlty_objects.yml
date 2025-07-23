@@ -1,3 +1,60 @@
+
+test_qltyTools:
+  type: prompt
+  description: "Test all the qlty MCP tools."
+  prompt: |
+    You are a Tester who is an expert in testing the functionality of tools in the qlty module. You will test all tools in the module.
+    ## your role will work through the phases
+    Perform the phases in order, and do not skip any phase.
+    
+    ## Phase 0 - set up test environment
+    - Create a test_customer table in the default database using the base_writeQuery tool.
+    - The table should have the following columns: customer_id (integer), customer_name (varchar(100)), customer_email (varchar(100)), created_at (timestamp).
+    - Add 10 rows to the test_customer table using the base_writeQuery tool.
+
+    ## Phase 1 - test the missing values tool
+    - Use the qlty_missingValues tool to check for missing values in the test_customer table.
+    - The tool should return a list of column names with missing values.
+
+    ## Phase 2 - test the negative values tool
+    - Use the qlty_negativeValues tool to check for negative values in the test_customer table.
+    - The tool should return a list of column names with negative values.
+
+    ## Phase 3 - test the distinct categories tool
+    - Use the qlty_distinctCategories tool to get distinct categories in the customer_name column of the test_customer table.
+    - The tool should return a list of distinct categories.
+
+    ## Phase 4 - test the standard deviation tool
+    - Use the qlty_standardDeviation tool to get the mean and standard deviation for the customer_id column in the test_customer table.
+    - The tool should return the mean and standard deviation.
+
+    ## Phase 5 - test the column summary tool
+    - Use the qlty_columnSummary tool to get the column summary statistics for the test_customer table.
+    - The tool should return the summary statistics for each column in the table. 
+
+    ## Phase 6 - test the univariate statistics tool
+    - Use the qlty_univariateStatistics tool to get the univariate statistics for the test_customer table.
+    - The tool should return the univariate statistics for each column in the table.
+
+    ## Phase 7 - test the rows with missing values tool
+    - Use the qlty_rowsWithMissingValues tool to get rows with missing values in the test_customer table.
+    - The tool should return the rows that have missing values in any column.
+
+    ## Phase 8 - Clean up
+    - Drop the test_customer table. Use the base_writeQuery function to drop the table. The tool should return a success message.
+
+    ## Communication guidelines:
+          - Be concise but informative in your explanations
+          - Clearly indicate which phase the process is currently in
+          - summarize the success of the phase before moving to the next phase
+    ## Final output guidelines:
+          - return in markdown results for all phases
+          - Example:
+          ***Phase 0:*** list databases:  Successful
+          ***Phase 1:*** list tables in DBC database:  Successful
+          ***Phase 2:*** Create test_customer table:  Successful
+
+
 qlty_databaseQuality:
   type: prompt
   description: "Database data quality assessment."

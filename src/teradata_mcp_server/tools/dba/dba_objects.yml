@@ -121,6 +121,69 @@ dba_sessionInfo:
     user_name:
       description: "user name to analyze."
 
+test_dbaTools:
+  type: prompt
+  description: "Test all the DBA MCP tools."
+  prompt: |
+    You are a Tester who is an expert in testing the functionality of tools in the dba module. You will test all tools in the module.
+    ## your role will work through the phases
+    Perform the phases in order, and do not skip any phase.
+    
+    ## Phase 0 - set up test environment
+    - Create a test_customer table in the default database using the base_writeQuery tool.
+    - The table should have the following columns: customer_id (integer), customer_name (varchar(100)), customer_email (varchar(100)), created_at (timestamp).
+    - Add 10 rows to the test_customer table using the base_writeQuery tool.
+
+    ## Phase 1 - Get a list of all the SQL executed by a user
+    - Get a list of all the SQL executed by a user (e.g. demo_user) in the last 7 days using the dba_userSqlList tool. A list of all SQL statements should be returned
+    
+    ## Phase 2 - Get a list of all the SQL executed against a table
+    - Get a list of all the SQL executed against a table (e.g. test_customer) in the last 7 days using the dba_tableSqlList tool. A list of all SQL statements should be returned
+
+    ## Phase 3 - get a list of the current perm table space for a tables
+    - Get the current perm table space for a test_customer table using the dba_tableSpace tool. The current perm table space should be returned.
+
+    ## Phase 4 - get a list of the current perm database space for a database
+    - Get the current perm database space for a database (e.g. demo_user) using the dba_databaseSpace tool. The current perm database space should be returned.
+
+    ## Phase 5 - get a list of the current database version
+    - Get the current database version using the dba_databaseVersion tool. The current database version should be returned. 
+
+    ## Phase 6 - get a list of the system usage summary metrics
+    - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket using the dba_resusageSummary tool. The system usage summary metrics should be returned  
+
+    ## Phase 7 - get a list of the system usage for a user
+    - Get the system usage for a user (e.g. demo_user) using the dba_resusageUserSummary tool. The system usage for the user should be returned.
+
+    ## Phase 8 - get a list of the system flow control metrics
+    - Get the Teradata system flow control metrics by day and hour using the dba_flowControl tool. The system flow control metrics should be returned.
+
+    ## Phase 9 - get a list of the user feature usage metrics
+    - Get the user feature usage metrics using the dba_featureUsage tool. The user feature usage metrics should be returned.
+
+    ## Phase 10 - get a list of the user delay metrics
+    - Get the Teradata user delay metrics using the dba_userDelay tool. The user delay metrics should be returned.
+
+    ## Phase 11 - get a list of the table usage impact by a user
+    - Get the usage of a table (e.g. test_customer) by a user (e.g. demo_user) using the dba_tableUsageImpact tool. The usage of the table by the user should be returned.
+
+    ## Phase 12 - get a list of the session information for a user
+    - Get the session information for a user (e.g. demo_user) using the dba_sessionInfo tool. The session information for the user should be returned.
+
+    ## Phase 13 - Clean up
+    - Drop the test_customer table. Use the base_writeQuery function to drop the table. The tool should return a success message.
+    ## Communication guidelines:
+          - Be concise but informative in your explanations
+          - Clearly indicate which phase the process is currently in
+          - summarize the success of the phase before moving to the next phase
+    ## Final output guidelines:
+          - return in markdown results for all phases
+          - Example:
+          ***Phase 0:*** list databases:  Successful
+          ***Phase 1:*** list tables in DBC database:  Successful
+          ***Phase 2:*** Create test_customer table:  Successful
+
+
 dba_tableArchive:
   type: prompt
   description: "The following prompt is used to guide the Teradata DBA in finding opportunities for archiving data."
