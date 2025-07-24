@@ -15,7 +15,8 @@ logger = logging.getLogger("teradata_mcp_server")
 #------------------ Tool  ------------------#
 def handle_base_readQuery(
     conn: Connection,
-    sql: str,
+    sql: str = None,
+    tool_name: str = None,
     *args,
     **kwargs
 ):
@@ -25,8 +26,6 @@ def handle_base_readQuery(
     Arguments:
       conn   - SQLAlchemy Connection
       sql    - SQL text, with optional bind-parameter placeholders
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -65,7 +64,7 @@ def handle_base_readQuery(
 
     # 5. Build metadata using the rendered SQL
     metadata = {
-        "tool_name": "read_query_sqlalchemy",
+        "tool_name": tool_name if tool_name else "base_readQuery",
         "sql": final_sql,
         "columns": columns,
         "row_count": len(data),
@@ -78,6 +77,7 @@ def handle_base_readQuery(
 from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
 #       table_name (str) - name of the table to get the definition for
 #     Returns: ResponseType - formatted response with ddl results or error message
+
 def handle_base_tableDDL(conn: TeradataConnection, db_name: str, table_name: str, *args, **kwargs):
     """
     Displays the DDL definition of a table via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
@@ -108,63 +108,6 @@ def handle_base_tableDDL(conn: TeradataConnection, db_name: str, table_name: str
             "tool_name": "base_tableDDL",
             "database": db_name,
             "table": table_name
-        }
-        return create_response(data, metadata)
-        
-
-#------------------ Tool  ------------------#
-# Read database list tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries        
-#     Returns: ResponseType - formatted response with list of databases or error message
-def handle_base_databaseList(conn: TeradataConnection, *args, **kwargs):
-    """
-    Lists all databases in the Teradata System via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
-
-    Returns:
-      ResponseType: formatted response with query results + metadata
-    """  
-    logger.debug("Tool: handle_base_databaseList: Args:")
-
-    with conn.cursor() as cur:
-        rows = cur.execute("select DataBaseName, DECODE(DBKind, 'U', 'User', 'D','DataBase') as DBType, CommentString from dbc.DatabasesV dv where OwnerName <> 'PDCRADM'")
-        data = rows_to_json(cur.description, rows.fetchall())
-        metadata = {
-            "tool_name": "base_databaseList",
-            "total_count": len(data),
-            "databases": len([d for d in data if d.get("DBType") == "DataBase"]),
-            "users": len([d for d in data if d.get("DBType") == "User"])
-        }
-        return create_response(data, metadata)
-
-        
-#------------------ Tool  ------------------#
-# Read table list tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries   
-#       db_name (str) - name of the database to list objects from      
-#     Returns: formatted response with list of tables in database or error message    
-def handle_base_tableList(conn: TeradataConnection, db_name: str, *args, **kwargs):
-    """
-    Lists all tables in a databases via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
-
-    Arguments:
-      db_name - Database name
-
-    Returns:
-      ResponseType: formatted response with query results + metadata
-    """ 
-    logger.debug(f"Tool: handle_base_tableList: Args: db_name: {db_name}")
-
-    if len(db_name) == 0:
-        db_name = "%"
-    with conn.cursor() as cur:
-        rows = cur.execute("select TableName from dbc.TablesV tv where UPPER(tv.DatabaseName) = UPPER(?) and tv.TableKind in ('T','V', 'O', 'Q');", [db_name])
-        data = rows_to_json(cur.description, rows.fetchall())
-        metadata = {
-            "tool_name": "base_tableList",
-            "database": db_name,
-            "table_count": len(data)
         }
         return create_response(data, metadata)
         

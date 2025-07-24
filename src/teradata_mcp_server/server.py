@@ -183,13 +183,15 @@ def make_tool_wrapper(func):
     - the same signature minus the first 'connection' param
     - a call into execute_db_tool
     """
+
     sig = inspect.signature(func)
-    # Drop first param (connection)
+    # Drop first param (connection) and skip 'tool_name' if present
+    first_param = next(iter(sig.parameters))
     params = [
-        p for name,p in sig.parameters.items()
-        if name != next(iter(sig.parameters))  # skip 1st param
-        and p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                       inspect.Parameter.KEYWORD_ONLY)
+        p for name, p in sig.parameters.items()
+        if name != first_param
+        and name != "tool_name" # skip tool_name if present as this allows to override the tool name for query tools declared in # the *_objects.yml files
+        and p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
     ]
     new_sig = sig.replace(parameters=params)
 
@@ -274,7 +276,7 @@ def make_custom_query_tool(name, tool):
         missing = [n for n in annotations if n not in kwargs]
         if missing:
             raise ValueError(f"Missing parameters: {missing}")
-        return execute_db_tool(td.handle_base_readQuery, tool["sql"], **kwargs)
+        return execute_db_tool(td.handle_base_readQuery, tool["sql"], tool_name=name, **kwargs)
 
     # 4. Inject signature & annotations
     _dynamic_tool.__signature__   = sig

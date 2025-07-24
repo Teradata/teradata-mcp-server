@@ -1,3 +1,17 @@
+base_tableList:
+  type: tool
+  description: "Lists all tables in a database."
+  sql: |
+    select TableName from dbc.TablesV tv where UPPER(tv.DatabaseName) = UPPER(:db_name) and tv.TableKind in ('T','V', 'O', 'Q');
+  parameters:
+    db_name:
+      description: "Database name to inspect."
+
+base_databaseList:
+  type: tool
+  description: "Lists all databases in the Teradata System."
+  sql: |
+    select DataBaseName, DECODE(DBKind, 'U', 'User', 'D','DataBase') as DBType, CommentString from dbc.DatabasesV dv where OwnerName <> 'PDCRADM'
 
 test_baseTools:
   type: prompt
