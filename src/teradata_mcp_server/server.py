@@ -440,112 +440,158 @@ if config['qlty']['allmodule']:
 # ------------------ RAG Tools ------------------ #
 
 if config['rag']['allmodule']:
-    if config['rag']['tool']['rag_setConfig']:
-        @mcp.tool(description="""
-        Set the configuration for the current Retrieval-Augmented Generation (RAG) session.
-        This MUST be called before any other RAG-related tools.
+    if config['rag']['tool']['rag_executeWorkflow']:
+        
+        # Get the RAG version from config
+        rag_version = config['rag'].get('version', 'byom')  # Default to 'byom'
+        
+        if rag_version == 'byom':
+            @mcp.tool(description="""
+            Execute complete RAG workflow to answer user questions based on document context.
+            This tool handles the entire RAG pipeline in a single step when a user query is tagged with /rag.
 
-        The following values are hardcoded:
-        - query_table = 'user_query'
-        - query_embedding_store = 'user_query_embeddings'
-        - model_id = 'bge-small-en-v1.5'
+            WORKFLOW STEPS (executed automatically using ONNXEmbeddings):
+            1. Configuration setup using hardcoded values
+            2. Store user query with '/rag ' prefix stripping  
+            3. Generate query embeddings (tokenization + embedding using mldb.ONNXEmbeddings)
+            4. Perform semantic search against precomputed chunk embeddings
+            5. Return context chunks for answer generation
 
-        You only need to provide the database locations:
-        - query_db: where user queries and query embeddings will be stored
-        - model_db: where the embedding model metadata is stored
-        - vector_db + vector_table: where PDF chunk embeddings are stored
+            HARDCODED CONFIGURATION VALUES:
+            - query_table = 'user_query'
+            - query_embedding_store = 'user_query_embeddings'
+            - model_id = 'bge-small-en-v1.5'
+            - query_db = 'demo_db'
+            - vector_db = 'demo_db'
+            - model_db = 'demo_db'
+            - vector_table = 'pdf_embeddings_store'
+            - model_table = 'embeddings_models'
+            - tokenizer_table = 'embeddings_tokenizers'
 
-        Once this configuration is set, all other RAG tools will reuse it automatically.
-        """)
-        async def rag_setConfig(
-            query_db: str = Field(description="Database to store user questions and query embeddings"),
-            model_db: str = Field(description="Database where the embedding model is stored"),
-            vector_db: str = Field(description="Database containing the chunk vector store"),
-            vector_table: str = Field(description="Table containing chunk embeddings for similarity search"),
-        ) -> ResponseType:
-            return execute_db_tool( td.handle_rag_setConfig, query_db=query_db, model_db=model_db, vector_db=vector_db, vector_table=vector_table,)
+            TECHNICAL DETAILS:
+            - Strips the '/rag ' prefix if present from user questions
+            - Creates query table if it does not exist (columns: id, txt, created_ts)
+            - Retrieves the most recent user question from the configured table
+            - Uses the tokenizer and embedding model selected via model_id configuration
+            - Runs tokenization and embedding using mldb.ONNXEmbeddings UDF
+            - Stores resulting embeddings and metadata in the configured output table
+            - Uses cosine similarity via TD_VECTORDISTANCE to compare embedded query against precomputed chunk embeddings
+            - Returns the top-k matching chunks from the configured vector store
+            - Each result includes chunk text, similarity score, chunk number, page number, and document name
 
-    if config['rag']['tool']['rag_storeUserQuery']:
-        @mcp.tool(
-            description=(
-                "Store a user's natural language question as the first step in a Retrieval-Augmented Generation (RAG) workflow."
-                "This tool should always be run **before any embedding or similarity search** steps."
-                "It inserts the raw question into a Teradata table specified by `db_name` and `table_name`. "
-                "If the question starts with the prefix '/rag ', the prefix is automatically stripped before storage. "
-                "Each question is appended as a new row with a generated ID and timestamp."
-                "If the specified table does not exist, it will be created with columns: `id`, `txt`, and `created_ts`."
-                "Returns the inserted row ID and cleaned question text."
-                "This tool is **only needed once per user question** — downstream embedding and vector search tools "
-                "can then reference this ID or re-use the stored question text."
-            )
-        )
-        async def rag_storeUserQuery(
-            db_name: str = Field(..., description="Name of the Teradata database where the question will be stored."),
-            table_name: str = Field(..., description="Name of the table to store user questions (e.g., 'pdf_user_queries')."),
-            question: str = Field(..., description="Natural language question from the user. Can optionally start with '/rag '."),
-        ) -> ResponseType:
-            return execute_db_tool( td.handle_rag_storeUserQuery, db_name=db_name, table_name=table_name, question=question)
+            CRITICAL ANSWERING RULES:
+            - Answer ONLY using retrieved chunks - no external knowledge, speculation, or inference
+            - Quote source content directly without paraphrasing, summarizing, or rewriting
+            - If no relevant context found: "Not enough information found in the provided context"
+            - If partial context: "The available context does not fully answer the question"
+            - Include document/page references when available (e.g., "On page 2 of 'demo_policy.pdf'...")
+            - Execute entire workflow silently without showing function calls to user - only show final answer
 
-    if config['rag']['tool']['rag_tokenizeQuery']:
-        @mcp.tool(
-            description=(
-                "Tokenizes the latest user-submitted question using the tokenizer specified in the current RAG configuration. "
-                "This tool must be used *after* calling 'configure_rag' (to initialize the config) and 'store_user_query' (to capture a user question). "
-                "It selects the most recent row from the query table (e.g., 'pdf_topics_of_interest'), runs it through the ONNX tokenizer, "
-                "and creates a temporary view '<query_db>.v_topics_tokenized' containing 'id', 'txt', 'input_ids', and 'attention_mask'. "
-                "This view is used downstream to generate vector embeddings for similarity search."
-            )
-        )
-        async def rag_tokenizeQuery() -> ResponseType:
-            return execute_db_tool( td.handle_rag_tokenizedQuery)
+            LANGUAGE RESTRICTIONS:
+            - Do not say "According to the context" or "The context says" - just quote directly
+            - Do not say "It can be inferred that..." - no inference allowed
+            - Use exact or near-verbatim quotes only
+            - No paraphrasing, summarizing, or adding transitions between quotes
+            - Copy content precisely - no expansion or interpretation
 
-    if config['rag']['tool']['rag_createEmbeddingView']:
-        @mcp.tool(
-            description=(
-                "Generates sentence embeddings for the most recent tokenized user query using the model specified in the RAG configuration. "
-                "Reads from the view `<db>.v_topics_tokenized` and applies the ONNX model from `<model_db>.embeddings_models`. "
-                "Creates or replaces the view `<db>.v_topics_embeddings` which includes the original input and a `sentence_embedding` column. "
-                "This must be run *after* create_tokenized_view and before vector_to_columns()."
-            )
-        )
-        async def rag_createEmbeddingView() -> ResponseType:
-            return execute_db_tool( td.handle_rag_createEmbeddingView)
+            BEHAVIORAL REQUIREMENTS:
+            - Execute all RAG workflow steps silently without showing tool calls to users
+            - Only display final answers based strictly on retrieved context chunks
+            - Do not use external knowledge or speculation - only quote retrieved content directly
+            - RAG mode only triggers with explicit /rag prefix - do not enter RAG mode implicitly
+            - Hide all tool execution steps from user
+            - Provide clean, direct response with only the answer based on retrieved chunks
+            - This is a complete end-to-end RAG workflow - no additional tools needed
 
-    if config['rag']['tool']['rag_createQueryEmbeddingTable']:
-        @mcp.tool(
-            description=(
-                "Converts the sentence embedding from the view `v_topics_embeddings` into 384 vector columns using `ivsm.vector_to_columns`. "
-                "Creates or replaces a physical table to store the latest query embeddings for use in similarity search. "
-                "The table location is defined via `rag_set_config`. "
-                "This tool must be run *after* `create_embedding_view` and before `semantic_search_chunks`."
-            )
-        )
-        async def rag_createQueryEmbeddingTable() -> ResponseType:
-            return execute_db_tool( td.handle_rag_createQueryEmbeddingTable)
+            EXECUTION: Run completely silently - user only sees their question and the final context-grounded answer.
+            """)
+            async def rag_executeWorkflow(
+                question: str = Field(..., description="User's natural language question, optionally prefixed with '/rag '"),
+                k: int = Field(10, description="Number of top matching chunks to retrieve for context"),
+            ) -> ResponseType:
+                return execute_db_tool(td.handle_rag_executeWorkflow, question=question, k=k)
+                
+        elif rag_version == 'ivsm':
+            @mcp.tool(description="""
+            Execute complete RAG workflow to answer user questions based on document context.
+            This tool handles the entire RAG pipeline in a single step when a user query is tagged with /rag.
 
-    if config['rag']['tool']['rag_semanticSearchChunks']:
-        @mcp.tool(
-            description=(
-                "Retrieve top-k most relevant PDF chunks for the user's latest embedded query. "
-                "This tool is part of the RAG workflow and should be called after the query has been embedded. "
-                "If the RAG config has not been set, use `rag_set_config` first to define where queries, models, and chunk embeddings are stored. "
-                "Uses cosine similarity via `TD_VECTORDISTANCE` to compare embeddings. "
-                "Each result includes similarity score, chunk text, page number, chunk number, and document name."
-            )
-        )
-        async def rag_semanticSearchChunks(
-            k: int = Field(10, description="Number of top matching chunks to retrieve."),
-        ) -> ResponseType:
-            return execute_db_tool( td.handle_rag_semanticSearchChunks, topk=k)
+            WORKFLOW STEPS (executed automatically using IVSM functions):
+            1. Configuration setup using hardcoded values
+            2. Store user query with '/rag ' prefix stripping  
+            3. Tokenize query using ivsm.tokenizer_encode
+            4. Create embedding view using ivsm.IVSM_score
+            5. Convert embeddings to vector columns using ivsm.vector_to_columns
+            6. Perform semantic search against precomputed chunk embeddings
+
+            HARDCODED CONFIGURATION VALUES:
+            - query_table = 'user_query'
+            - query_embedding_store = 'user_query_embeddings'
+            - model_id = 'bge-small-en-v1.5'
+            - query_db = 'demo_db'
+            - vector_db = 'demo_db'
+            - model_db = 'demo_db'
+            - vector_table = 'pdf_embeddings_store'
+            - model_table = 'embeddings_models'
+            - tokenizer_table = 'embeddings_tokenizers'
+
+            TECHNICAL DETAILS:
+            - Strips the '/rag ' prefix if present from user questions
+            - Creates query table if it does not exist (columns: id, txt, created_ts)
+            - Selects the most recent row from the query table, runs it through the ONNX tokenizer
+            - Creates temporary view v_topics_tokenized containing 'id', 'txt', 'input_ids', and 'attention_mask'
+            - Reads from the tokenized view and applies the ONNX model to create embeddings
+            - Creates or replaces embedding view v_topics_embeddings which includes the original input and sentence_embedding column
+            - Converts the sentence embedding from the embedding view into vector columns for similarity search
+            - Creates or replaces a physical table to store the latest query embeddings for use in similarity search
+            - Uses cosine similarity via TD_VECTORDISTANCE to compare embedded query against precomputed chunk embeddings
+            - Returns the top-k matching chunks from the configured vector store
+            - Each result includes chunk text, similarity score, chunk number, page number, and document name
+
+            CRITICAL ANSWERING RULES:
+            - Answer ONLY using retrieved chunks - no external knowledge, speculation, or inference
+            - Quote source content directly without paraphrasing, summarizing, or rewriting
+            - If no relevant context found: "Not enough information found in the provided context"
+            - If partial context: "The available context does not fully answer the question"
+            - Include document/page references when available (e.g., "On page 2 of 'demo_policy.pdf'...")
+            - Execute entire workflow silently without showing function calls to user - only show final answer
+
+            LANGUAGE RESTRICTIONS:
+            - Do not say "According to the context" or "The context says" - just quote directly
+            - Do not say "It can be inferred that..." - no inference allowed
+            - Use exact or near-verbatim quotes only
+            - No paraphrasing, summarizing, or adding transitions between quotes
+            - Copy content precisely - no expansion or interpretation
+
+            BEHAVIORAL REQUIREMENTS:
+            - Execute all RAG workflow steps silently without showing tool calls to users
+            - Only display final answers based strictly on retrieved context chunks
+            - Do not use external knowledge or speculation - only quote retrieved content directly
+            - RAG mode only triggers with explicit /rag prefix - do not enter RAG mode implicitly
+            - Hide all tool execution steps from user
+            - Provide clean, direct response with only the answer based on retrieved chunks
+            - This is a complete end-to-end RAG workflow using IVSM functions - no additional tools needed
+
+            EXECUTION: Run completely silently - user only sees their question and the final context-grounded answer.
+            """)
+            async def rag_executeWorkflow(
+                question: str = Field(..., description="User's natural language question, optionally prefixed with '/rag '"),
+                k: int = Field(10, description="Number of top matching chunks to retrieve for context"),
+            ) -> ResponseType:
+                return execute_db_tool(td.handle_rag_executeWorkflow_ivsm, question=question, k=k)
+        
+        else:
+            raise ValueError(f"Invalid RAG version: {rag_version}. Must be 'byom' or 'ivsm'")
 
     if config['rag']['prompt']['rag_guidelines']:
         @mcp.prompt()
         async def rag_guidelines() -> UserMessage:
-            return UserMessage(role="user", content=TextContent(type="text", text=td.rag_guidelines))
-
-
+            return UserMessage(
+                role="user",
+                content=TextContent(type="text", text=td.rag_guidelines)
+            )
+        
 #------------------ Security Tools  ------------------#
-
 
 if config['sec']['allmodule']:
     if config['sec']['tool']['sec_userDbPermissions']:

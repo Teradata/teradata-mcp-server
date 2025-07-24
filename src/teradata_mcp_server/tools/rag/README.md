@@ -6,16 +6,24 @@ Assumes Teradata >=20.XX.
 
 **RAG** tools:
 
-- rag_setConfig - sets the config for the current rag session
-- rag_storeUserQuery - stores the users natural laguage query
-- rag_tokenizeQuery - turns the query into a vector
-- rag_createEmbeddingView - Generates sentence embeddings for the most recent tokenized user query
-- rag_createQueryEmbeddingTable - creates a table for embeddigs
-- rag_semanticSearchChunks - retreives the top N chucks
+- rag_executeWorkflow - executes complete RAG pipeline (config setup, query storage, embedding generation, and semantic search) in a single step
 
+**Version Selection:**
 
-**RAG** prompts:
+The RAG tool supports two implementations that can be selected via configuration:
 
-- rag_guidelines - guides user through rag example using vector data types.
+- **BYOM (default)**: Uses ONNXEmbeddings for embedding generation
+- **IVSM**: Uses IVSM functions for embedding generation
+
+To switch between versions, update the `version` parameter in `configure_tools.yaml`:
+
+```yaml
+rag:
+    allmodule: True
+    version: 'byom'  # Options: 'byom' or 'ivsm'
+    tool:
+        rag_executeWorkflow: True
+    prompt:
+        rag_guidelines: True
 
 [Return to Main README](../../../../README.md)

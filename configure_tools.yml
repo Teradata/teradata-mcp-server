@@ -7,16 +7,16 @@ base :
         base_databaseList : True
         base_tableList : True
         base_columnDescription : True
-        base_tablePreview : True
-        base_tableAffinity : True
-        base_tableUsage : True
+        base_tablePreview : False
+        base_tableAffinity : False
+        base_tableUsage : False
     prompt:
         base_query : True
-        base_tableBusinessDesc : True
-        base_databaseBusinessDesc : True
+        base_tableBusinessDesc : False
+        base_databaseBusinessDesc : False
 
 dba:
-    allmodule: True
+    allmodule: False
     tool:
         dba_userSqlList : True
         dba_tableSqlList : True
@@ -36,8 +36,9 @@ dba:
         dba_tableArchive : True
         dba_databaseLineage : True
         dba_tableDropImpact : True
+
 qlty:
-    allmodule: True
+    allmodule: False
     tool:
         qlty_missingValues : True
         qlty_negativeValues : True
@@ -48,30 +49,30 @@ qlty:
         qlty_rowsWithMissingValues : True
     prompt:
         qlty_databaseQuality : True 
+
 rag:
     allmodule: True
+    version: 'byom'  # Options: 'byom' (ONNXEmbeddings) or 'ivsm' (IVSM functions)
     tool:
-        rag_setConfig : True
-        rag_storeUserQuery : True
-        rag_tokenizeQuery : True
-        rag_createEmbeddingView : True
-        rag_createQueryEmbeddingTable : True
-        rag_semanticSearchChunks : True
+        rag_executeWorkflow: True
     prompt:
-        rag_guidelines : True 
+        rag_guidelines: True 
+
 sec:
-    allmodule: True
+    allmodule: False
     tool:
         sec_userDbPermissions : True
         sec_rolePermissions : True
         sec_userRoles : True
     prompt:
+
 evs:
-    allmodule: True
+    allmodule: False
     tool:
     prompt:    
+
 fs: 
-    allmodule: True
+    allmodule: False
     tool:
         fs_reconnect_to_database : True
         fs_setFeatureStoreConfig : True
@@ -87,9 +88,6 @@ fs:
     prompt:
 
 cust:
-    allmodule: True
+    allmodule: False
     tool:
     prompt:
-
-
-

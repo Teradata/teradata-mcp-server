@@ -47,85 +47,79 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
 
     return json.dumps(response, default=serialize_teradata_types)
 
-
-
-#------------------ Tool  ------------------
-# RAG (Retrieval-Augmented Generation) tools for Teradata MCP Server
-# Store RAG config for the session in a global or module-level variable
-rag_config = {}
-
-def handle_rag_setConfig(
-    conn: TeradataConnection,
-    query_db: str,
-    model_db: str,
-    vector_db: str,
-    vector_table: str,
-    *args,
-    **kwargs,
-):
-    """
-    Store session-wide RAG configuration for downstream tools:
-    - query_db / query_table: where to store user questions
-    - model_db / model_table / model_id: where the embedding model lives
-    - query_embedding_store: where to store user query embeddings
-    - vector_db / vector_table: where chunk embeddings are stored for similarity search
-    """
-    global rag_config
-    logger.debug(
-        "handle_rag_setConfig:"
-    )
-    rag_config = {
-        "query_db": query_db,
-        "query_table": "user_query",
-        "query_embedding_store": "user_query_embeddings",
-        "model_db": model_db,
-        "model_id": "bge-small-en-v1.5",
-        "vector_db": vector_db,
-        "vector_table": vector_table,
-    }
-    metadata = {
-        "tool_name" : "rag_setConfig", 
-        "rag_config" : rag_config
-    }
-    return create_response({"message": "RAG config successfully set."}, metadata)
-
-def handle_rag_storeUserQuery(
+def handle_rag_executeWorkflow(
     conn: TeradataConnection,
     question: str,
+    k: int = 10,
     *args,
     **kwargs,
 ):
     """
-    Insert the user's question into rag_config["query_db"].rag_config["query_table"].
-    Strips '/rag ' prefix if present. Creates the table if it does not exist.
+    Execute complete RAG workflow to answer user questions based on document context.
+
+    This function handles the entire RAG pipeline:
+    1. Configuration setup (using hardcoded values)
+    2. Store user query (with /rag prefix stripping)
+    3. Generate query embeddings (tokenization + embedding)
+    4. Perform semantic search against chunk embeddings
+    5. Return retrieved context chunks for answer generation
+
+    The function uses hardcoded configuration values:
+    - query_db = 'demo_db'
+    - query_table = 'user_query'
+    - query_embedding_store = 'user_query_embeddings'
+    - model_db = 'demo_db'
+    - model_id = 'bge-small-en-v1.5'
+    - vector_db = 'demo_db'
+    - vector_table = 'pdf_embeddings_store'
+
+    Returns the top-k most relevant chunks with metadata for context-grounded answer generation.
     """
+    
     global rag_config
-
-    logger.debug(f"handle_rag_storeUserQuery: question={question[:60]}...")
-
-    db_name = rag_config.get("query_db")
-    table_name = rag_config.get("query_table")
-
-    if not db_name or not table_name:
-        raise ValueError("RAG config not set — call `rag_set_config` first to configure database and table.")
-
-    logger.debug(
-        f"handle_rag_storeUserQuery: db={db_name}, table={table_name}, text={question[:60]}"
-    )
-
-    ddl = f"""
-    CREATE TABLE {db_name}.{table_name} (
-        id INTEGER GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1) NOT NULL,
-        txt VARCHAR(5000),
-        created_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (id)
-    )
-    """
+    
+    logger.debug(f"handle_rag_executeWorkflow: question={question[:60]}..., k={k}")
+    
+    # Step 1: Set configuration (hardcoded values)
+    rag_config = {
+        "query_db": "demo_db",
+        "query_table": "user_query",
+        "query_embedding_store": "user_query_embeddings",
+        "model_db": "demo_db",
+        "model_id": "bge-small-en-v1.5",
+        "vector_db": "demo_db",
+        "vector_table": "pdf_embeddings_store",
+    }
+    
+    # Extract config values
+    db_name = rag_config["query_db"]
+    table_name = rag_config["query_table"]
+    dst_table = rag_config["query_embedding_store"]
+    model_id = rag_config["model_id"]
+    model_db = rag_config["model_db"]
+    model_table = "embeddings_models"
+    tokenizer_table = "embeddings_tokenizers"
+    vector_db = rag_config["vector_db"]
+    chunk_embed_table = rag_config["vector_table"]
 
     with conn.cursor() as cur:
+        
+        # Step 2: Store user query
+        logger.debug(f"Step 2: Storing user query in {db_name}.{table_name}")
+        
+        # Create table if it doesn't exist
+        ddl = f"""
+        CREATE TABLE {db_name}.{table_name} (
+            id INTEGER GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1) NOT NULL,
+            txt VARCHAR(5000),
+            created_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id)
+        )
+        """
+        
         try:
             cur.execute(ddl)
-            logger.info(f"Table {db_name}.{table_name} created")
+            logger.debug(f"Table {db_name}.{table_name} created")
         except Exception as e:
             error_msg = str(e).lower()
             if "already exists" in error_msg or "3803" in error_msg:
@@ -144,44 +138,199 @@ def handle_rag_storeUserQuery(
           END
         """
         cur.execute(insert_sql, [question, question, question])
-
-        # Fetch ID and cleaned question
+        
+        # Get inserted ID and cleaned text
         cur.execute(f"SELECT MAX(id) AS id FROM {db_name}.{table_name}")
         new_id = cur.fetchone()[0]
-
+        
         cur.execute(f"SELECT txt FROM {db_name}.{table_name} WHERE id = ?", [new_id])
         cleaned_txt = cur.fetchone()[0]
+        
+        logger.debug(f"Stored query with ID {new_id}: {cleaned_txt[:60]}...")
 
+        # Step 3: Generate query embeddings
+        logger.debug(f"Step 3: Generating embeddings in {db_name}.{dst_table}")
+        
+        # Drop existing embeddings table
+        drop_sql = f"DROP TABLE {db_name}.{dst_table}"
+        try:
+            cur.execute(drop_sql)
+            logger.debug(f"Dropped existing table {db_name}.{dst_table}")
+        except Exception as e:
+            logger.debug(f"DROP failed or table not found: {e}")
+
+        # Create embeddings table using ONNXEmbeddings
+        create_sql = f"""
+        CREATE TABLE {db_name}.{dst_table} AS (
+            SELECT *
+            FROM mldb.ONNXEmbeddings(
+                ON (SELECT id, txt FROM {db_name}.{table_name})
+                ON (SELECT model_id, model FROM {model_db}.{model_table} WHERE model_id = '{model_id}') DIMENSION
+                ON (SELECT model AS tokenizer FROM {model_db}.{tokenizer_table} WHERE model_id = '{model_id}') DIMENSION
+                USING
+                    Accumulate('id', 'txt')
+                    ModelOutputTensor('sentence_embedding')
+                    OutputFormat('FLOAT32(384)')
+            ) AS a
+        ) WITH DATA
+        """
+        
+        cur.execute(create_sql)
+        logger.debug(f"Created embeddings table {db_name}.{dst_table}")
+
+        # Step 4: Perform semantic search
+        logger.debug(f"Step 4: Performing semantic search with k={k}")
+        
+        search_sql = f"""
+        SELECT
+            e_ref.txt          AS reference_txt,
+            e_ref.chunk_num    AS chunk_num,
+            e_ref.page_num     AS page_num,
+            e_ref.doc_name     AS doc_name,
+            (1.0 - dt.distance) AS similarity
+        FROM TD_VECTORDISTANCE (
+                ON {vector_db}.{dst_table}      AS TargetTable
+                ON {vector_db}.{chunk_embed_table}      AS ReferenceTable DIMENSION
+                USING
+                    TargetIDColumn('id')
+                    TargetFeatureColumns('[emb_0:emb_383]')
+                    RefIDColumn('id')
+                    RefFeatureColumns('[emb_0:emb_383]')
+                    DistanceMeasure('cosine')
+                    TopK({k})
+            ) AS dt
+        JOIN {vector_db}.{chunk_embed_table} e_ref
+          ON e_ref.id = dt.reference_id
+        ORDER BY similarity DESC;
+        """
+        
+        rows = cur.execute(search_sql)
+        data = rows_to_json(cur.description, rows.fetchall())
+        
+        logger.debug(f"Retrieved {len(data)} chunks for semantic search")
+
+    # Return results with comprehensive metadata
     metadata = {
-        "tool_name": "rag_storeUserQuery",
+        "tool_name": "rag_executeWorkflow",
+        "workflow_steps": ["config_set", "query_stored", "embeddings_generated", "semantic_search_completed"],
+        "query_id": new_id,
+        "cleaned_question": cleaned_txt,
         "database": db_name,
-        "table": table_name,
-        "inserted_id": new_id,
+        "query_table": table_name,
+        "embedding_table": dst_table,
+        "vector_table": chunk_embed_table,
+        "model_id": model_id,
+        "chunks_retrieved": len(data),
+        "topk_requested": k,
+        "description": "Complete RAG workflow executed: config → store query → generate embeddings → semantic search"
     }
 
-    return create_response([{"id": new_id, "txt": cleaned_txt}], metadata)
+    return create_response(data, metadata)
 
-def handle_rag_tokeizedQuery(conn: TeradataConnection):
+def handle_rag_executeWorkflow_ivsm(
+    conn: TeradataConnection,
+    question: str,
+    k: int = 10,
+    *args,
+    **kwargs,
+):
     """
-    Tokenizes the most recent user-submitted query using the tokenizer specified in rag_config.
-    
-    It:
-    - Pulls the latest row from the user query table (e.g., 'pdf_topics_of_interest')
-    - Tokenizes it using the ONNX tokenizer model (e.g., 'bge-small-en-v1.5')
-    - Creates or replaces a view named <db>.v_topics_tokenized with input_ids and attention_mask
-    
-    Configuration like database name, table name, and model_id is pulled from rag_config.
+    Execute complete RAG workflow to answer user questions based on document context.
+
+    This function handles the entire RAG pipeline using IVSM functions:
+    1. Configuration setup (using hardcoded values)
+    2. Store user query (with /rag prefix stripping)
+    3. Tokenize query using ivsm.tokenizer_encode
+    4. Create embedding view using ivsm.IVSM_score
+    5. Convert embeddings to vector columns using ivsm.vector_to_columns
+    6. Perform semantic search against chunk embeddings
+
+    The function uses hardcoded configuration values:
+    - query_db = 'demo_db'
+    - query_table = 'user_query'
+    - query_embedding_store = 'user_query_embeddings'
+    - model_db = 'demo_db'
+    - model_id = 'bge-small-en-v1.5'
+    - vector_db = 'demo_db'
+    - vector_table = 'pdf_embeddings_store'
+
+    Returns the top-k most relevant chunks with metadata for context-grounded answer generation.
     """
+    
     global rag_config
-    db_name   = rag_config["query_db"]
-    src_table = rag_config["query_table"]
-    model_id  = rag_config["model_id"]
-
-    logger.debug(f"Tool: handle_rag_tokeizedQuery: db={db_name}, src_table={src_table}, model_id={model_id}")
+    
+    logger.debug(f"handle_rag_executeWorkflow (IVSM): question={question[:60]}..., k={k}")
+    
+    # Step 1: Set configuration (hardcoded values)
+    rag_config = {
+        "query_db": "demo_db",
+        "query_table": "user_query",
+        "query_embedding_store": "user_query_embeddings",
+        "model_db": "demo_db",
+        "model_id": "bge-small-en-v1.5",
+        "vector_db": "demo_db",
+        "vector_table": "pdf_embeddings_store",
+    }
+    
+    # Extract config values
+    db_name = rag_config["query_db"]
+    table_name = rag_config["query_table"]
+    dst_table = rag_config["query_embedding_store"]
+    model_id = rag_config["model_id"]
+    vector_db = rag_config["vector_db"]
+    chunk_embed_table = rag_config["vector_table"]
 
     with conn.cursor() as cur:
+        
+        # Step 2: Store user query
+        logger.debug(f"Step 2: Storing user query in {db_name}.{table_name}")
+        
+        # Create table if it doesn't exist
+        ddl = f"""
+        CREATE TABLE {db_name}.{table_name} (
+            id INTEGER GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1) NOT NULL,
+            txt VARCHAR(5000),
+            created_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id)
+        )
+        """
+        
+        try:
+            cur.execute(ddl)
+            logger.debug(f"Table {db_name}.{table_name} created")
+        except Exception as e:
+            error_msg = str(e).lower()
+            if "already exists" in error_msg or "3803" in error_msg:
+                logger.debug(f"Table {db_name}.{table_name} already exists, skipping creation")
+            else:
+                logger.error(f"Error creating table: {e}")
+                raise
+
+        # Insert cleaned question
+        insert_sql = f"""
+        INSERT INTO {db_name}.{table_name} (txt)
+        SELECT
+          CASE
+            WHEN TRIM(?) LIKE '/rag %' THEN SUBSTRING(TRIM(?) FROM 6)
+            ELSE TRIM(?)
+          END
+        """
+        cur.execute(insert_sql, [question, question, question])
+        
+        # Get inserted ID and cleaned text
+        cur.execute(f"SELECT MAX(id) AS id FROM {db_name}.{table_name}")
+        new_id = cur.fetchone()[0]
+        
+        cur.execute(f"SELECT txt FROM {db_name}.{table_name} WHERE id = ?", [new_id])
+        cleaned_txt = cur.fetchone()[0]
+        
+        logger.debug(f"Stored query with ID {new_id}: {cleaned_txt[:60]}...")
+
+        # Step 3: Tokenize query
+        logger.debug(f"Step 3: Tokenizing query using ivsm.tokenizer_encode")
+        
         cur.execute(f"""
-            REPLACE VIEW {db_name}.v_topics_tokenized AS
+            REPLACE VIEW v_topics_tokenized AS
             (
                 SELECT id, txt,
                        IDS AS input_ids,
@@ -189,7 +338,7 @@ def handle_rag_tokeizedQuery(conn: TeradataConnection):
                 FROM ivsm.tokenizer_encode(
                     ON (
                         SELECT *
-                        FROM {db_name}.{src_table}
+                        FROM {db_name}.{table_name}
                         QUALIFY ROW_NUMBER() OVER (ORDER BY created_ts DESC) = 1
                     )
                     ON (
@@ -206,41 +355,18 @@ def handle_rag_tokeizedQuery(conn: TeradataConnection):
                 ) AS t
             );
         """)
+        
+        logger.debug("Tokenized view v_topics_tokenized created")
 
-    metadata = {
-        "tool_name": "rag_tokeizedQuery",
-        "database": db_name,
-        "source_table": src_table,
-        "model_id": model_id,
-        "view_created": f"{db_name}.v_topics_tokenized"
-    }
-
-    return create_response("Tokenized view created successfully.", metadata)
-
-def handle_rag_createEmbeddingView(conn: TeradataConnection):
-    """
-    Generates sentence embeddings for the most recent user query using the model specified in rag_config.
-
-    It:
-    - Reads tokenized input from <db>.v_topics_tokenized
-    - Applies IVSM_score using the ONNX model identified by rag_config['model_id']
-    - Creates or replaces a view <db>.v_topics_embeddings with the original input and sentence_embedding column
-
-    All table names and model info are pulled from the rag_config set earlier via 'configure_rag'.
-    """
-    global rag_config
-    db_name  = rag_config["query_db"]
-    model_id = rag_config["model_id"]
-
-    logger.debug(f"Tool: handle_rag_createEmbeddingView: db={db_name}, model_id={model_id}")
-    
-    with conn.cursor() as cur:
+        # Step 4: Create embedding view
+        logger.debug(f"Step 4: Creating embedding view using ivsm.IVSM_score")
+        
         cur.execute(f"""
-            REPLACE VIEW {db_name}.v_topics_embeddings AS
+            REPLACE VIEW v_topics_embeddings AS
             (
                 SELECT *
                 FROM ivsm.IVSM_score(
-                    ON {db_name}.v_topics_tokenized
+                    ON v_topics_tokenized
                     ON (
                         SELECT *
                         FROM {db_name}.embeddings_models
@@ -255,123 +381,86 @@ def handle_rag_createEmbeddingView(conn: TeradataConnection):
                 ) AS s
             );
         """)
+        
+        logger.debug("Embedding view v_topics_embeddings created")
 
-    metadata = {
-        "tool_name": "rag_createEmbeddingView",
-        "database": db_name,
-        "tokenized_view": f"{db_name}.v_topics_tokenized",
-        "embedding_model_id": model_id,
-        "view_created": f"{db_name}.v_topics_embeddings"
-    }
-
-    return create_response("Embedding view created successfully.", metadata)
-
-
-def handle_rag_createQueryEmbeddingTable(conn: TeradataConnection, *args, **kwargs):
-    global rag_config
-    db_name = rag_config.get("query_db")
-    dst_table = rag_config.get("query_embedding_store")
-
-    if not db_name or not dst_table:
-        raise ValueError("RAG config not set — call `rag_set_config` first to configure vector store for query embeddings.")
-
-    logger.debug(f"Tool: handle_rag_createQueryEmbeddingTable: db={db_name}, dst={dst_table}")
-
-    drop_sql = f"DROP TABLE {db_name}.{dst_table}"
-    create_sql = f"""
-    CREATE TABLE {db_name}.{dst_table} AS (
-        SELECT *
-        FROM ivsm.vector_to_columns(
-            ON {db_name}.v_topics_embeddings
-            USING
-                ColumnsToPreserve('id', 'txt') 
-                VectorDataType('FLOAT32')
-                VectorLength(384)
-                OutputColumnPrefix('emb_')
-                InputColumnName('sentence_embedding')
-        ) a 
-    ) WITH DATA
-    """
-
-    with conn.cursor() as cur:
+        # Step 5: Create query embedding table
+        logger.debug(f"Step 5: Creating query embedding table using ivsm.vector_to_columns")
+        
+        # Drop existing embeddings table
+        drop_sql = f"DROP TABLE {db_name}.{dst_table}"
         try:
             cur.execute(drop_sql)
             logger.debug(f"Dropped existing table {db_name}.{dst_table}")
         except Exception as e:
             logger.debug(f"DROP failed or table not found: {e}")
 
+        # Create embeddings table using vector_to_columns
+        create_sql = f"""
+        CREATE TABLE {db_name}.{dst_table} AS (
+            SELECT *
+            FROM ivsm.vector_to_columns(
+                ON v_topics_embeddings
+                USING
+                    ColumnsToPreserve('id', 'txt') 
+                    VectorDataType('FLOAT32')
+                    VectorLength(384)
+                    OutputColumnPrefix('emb_')
+                    InputColumnName('sentence_embedding')
+            ) a 
+        ) WITH DATA
+        """
+        
         cur.execute(create_sql)
-        logger.debug(f"Created table {db_name}.{dst_table} with embedding columns")
+        logger.debug(f"Created embeddings table {db_name}.{dst_table}")
 
-        return create_response(
-            [],
-            metadata={
-                "tool_name": "rag_createQueryEmbeddingTable",
-                "database": db_name,
-                "table": dst_table,
-                "status": "table created (or replaced)"
-            }
-        )
-
-
-def handle_rag_semanticSearchChunks(
-    conn: TeradataConnection,
-    topk: int = 10,
-    *args,
-    **kwargs,
-):
-    """
-    Return the top-k most similar chunk texts based on the latest query embedding.
-    Also returns chunk_num, page_num, and doc_name for context attribution.
-    Uses session-wide RAG config.
-    """
-    global rag_config
-
-    db_name            = rag_config["vector_db"]
-    query_embed_table  = rag_config["query_embedding_store"]
-    chunk_embed_table  = rag_config["vector_table"]
-
-    logger.debug(
-        f"handle_rag_semanticSearchChunks: db={db_name}, q_table={query_embed_table}, c_table={chunk_embed_table}, k={topk}"
-    )
-
-    sql = f"""
-    SELECT
-        e_ref.txt          AS reference_txt,
-        e_ref.chunk_num    AS chunk_num,
-        e_ref.page_num     AS page_num,
-        e_ref.doc_name     AS doc_name,
-        (1.0 - dt.distance) AS similarity
-    FROM TD_VECTORDISTANCE (
-            ON {db_name}.{query_embed_table}      AS TargetTable
-            ON {db_name}.{chunk_embed_table}      AS ReferenceTable DIMENSION
-            USING
-                TargetIDColumn('id')
-                TargetFeatureColumns('[emb_0:emb_383]')
-                RefIDColumn('id')
-                RefFeatureColumns('[emb_0:emb_383]')
-                DistanceMeasure('cosine')
-                TopK({topk})
-        ) AS dt
-    JOIN {db_name}.{chunk_embed_table} e_ref
-      ON e_ref.id = dt.reference_id
-    ORDER BY similarity DESC;
-    """
-
-    with conn.cursor() as cur:
-        rows = cur.execute(sql)
+        # Step 6: Perform semantic search
+        logger.debug(f"Step 6: Performing semantic search with k={k}")
+        
+        search_sql = f"""
+        SELECT
+            e_ref.txt          AS reference_txt,
+            e_ref.chunk_num    AS chunk_num,
+            e_ref.page_num     AS page_num,
+            e_ref.doc_name     AS doc_name,
+            (1.0 - dt.distance) AS similarity
+        FROM TD_VECTORDISTANCE (
+                ON {vector_db}.{dst_table}      AS TargetTable
+                ON {vector_db}.{chunk_embed_table}      AS ReferenceTable DIMENSION
+                USING
+                    TargetIDColumn('id')
+                    TargetFeatureColumns('[emb_0:emb_383]')
+                    RefIDColumn('id')
+                    RefFeatureColumns('[emb_0:emb_383]')
+                    DistanceMeasure('cosine')
+                    TopK({k})
+            ) AS dt
+        JOIN {vector_db}.{chunk_embed_table} e_ref
+          ON e_ref.id = dt.reference_id
+        ORDER BY similarity DESC;
+        """
+        
+        rows = cur.execute(search_sql)
         data = rows_to_json(cur.description, rows.fetchall())
+        
+        logger.debug(f"Retrieved {len(data)} chunks for semantic search")
 
+    # Return results with comprehensive metadata
     metadata = {
-        "tool_name": "rag_semanticSearchChunks",
-        "vector_db": db_name,
-        "query_embedding_store": query_embed_table,
-        "chunk_embedding_store": chunk_embed_table,
-        "topk": topk,
-        "returned": len(data),
+        "tool_name": "rag_executeWorkflow_ivsm",
+        "workflow_type": "IVSM",
+        "workflow_steps": ["config_set", "query_stored", "query_tokenized", "embedding_view_created", "embedding_table_created", "semantic_search_completed"],
+        "query_id": new_id,
+        "cleaned_question": cleaned_txt,
+        "database": db_name,
+        "query_table": table_name,
+        "embedding_table": dst_table,
+        "vector_table": chunk_embed_table,
+        "model_id": model_id,
+        "chunks_retrieved": len(data),
+        "topk_requested": k,
+        "views_created": ["v_topics_tokenized", "v_topics_embeddings"],
+        "description": "Complete RAG workflow executed using IVSM functions: config → store query → tokenize → create embedding view → create embedding table → semantic search"
     }
 
     return create_response(data, metadata)
-
-
-
