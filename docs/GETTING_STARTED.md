@@ -170,7 +170,7 @@ export MCP_PATH=/mcp/
 
 
 --------------------------------------------------------------------
-## Run the MCP server with REST
+## Step 5 Run the MCP server with REST
 
 Alternatively, you can expose your tools, prompts and resources as REST endpoints using the `rest` profile.
 
@@ -186,6 +186,46 @@ docker compose --profile rest up
 ```
 
 ---------------------------------------------------------------------
+## Run the MCP Server as a service
+There are two options to configure the MCP server for automatic restart:
+
+### Using Docker
+If the server is using docker compose and you wish to have it automatically start on system reboot, add the following entry to the docker-compose.yaml file to either or both service entries (```teradata-mcp-server:```, ```teradata-rest-server:```)
+```sh
+services:
+  teradata-mcp-server:
+    build: .
+    image: teradata-mcp-server:latest
+    restart: always
+```
+
+### Using UV in the user environment
+If the server is set up to run locally using ```uv run...```, it can be configured to run as a systemd service.
+1. Create a file in /etc/systemd/service named ```<your service name>.service```, e.g. ```teradata_mcp.service```
+2. Copy the following entries - modify for your environment:
+```sh
+[Unit]
+Description=Teradata MCP  demo service
+After=network.target
+StartLimitIntervalSec=0
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+WorkingDirectory=/home/ec2-user/teradata-mcp-server
+User=ec2-user
+ExecStart=/home/ec2-user/.local/bin/uv run /home/ec2-user/teradata-mcp-server/src/teradata_mcp_server/server.py > /dev/null
+
+[Install]
+WantedBy=multi-user.target
+```
+3. Run ```sudo systemctl start <your service name>.service``` to start the service
+4. Run ```sudo systemctl status <your service name>.service``` to check status
+5. Run ```sudo systemctl enable <your service name>.service``` to enable start on system boot
+6. To be safe, test increasing restart intervals for stability.  Create a crontab for the service:
+7. ```sudo crontab -e```
+8. ```0 * * * * /bin/systemctl restart <your service name>.service```
+
 ## Client set up
 
 For details on how to set up client tools, refer to [Working with Clients](./client_guide/CLIENT_GUIDE.md)
