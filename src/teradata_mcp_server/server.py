@@ -181,7 +181,6 @@ def make_tool_wrapper(func):
     """
     Given a handle_* function, return an async wrapper with:
     - the same signature minus the first 'connection' param
-    - automatic Pydantic-model construction
     - a call into execute_db_tool
     """
     sig = inspect.signature(func)
@@ -198,18 +197,6 @@ def make_tool_wrapper(func):
     async def wrapper(*args, **kwargs):
         ba = new_sig.bind_partial(*args, **kwargs)
         ba.apply_defaults()
-
-        # Build pydantic models in-place
-        for name, param in new_sig.parameters.items():
-            ann = param.annotation
-            if inspect.isclass(ann) and issubclass(ann, BaseModel):
-                model_kwargs = {
-                    k: v for k, v in ba.arguments.items()
-                    if k in ann.__fields__
-                }
-                ba.arguments[name] = ann(**model_kwargs)
-                for k in model_kwargs:
-                    ba.arguments.pop(k, None)
 
         return execute_db_tool(func, **ba.arguments)
 
