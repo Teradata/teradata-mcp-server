@@ -16,6 +16,7 @@ import inspect
 from sqlalchemy.engine import Connection
 import argparse
 import re
+import functools
 
 # Import the ai_tools module, clone-and-run friendly
 try:
@@ -176,56 +177,59 @@ def execute_vs_tool(tool, *args, **kwargs) -> ResponseType:
 
     
 
-#------------------ Register objects defined as code under ./src/teradata_mcp_server/tools/  ------------------#
+def make_tool_wrapper(func):
+    """
+    Given a handle_* function, return an async wrapper with:
+    - the same signature minus the first 'connection' param
+    - automatic Pydantic-model construction
+    - a call into execute_db_tool
+    """
+    sig = inspect.signature(func)
+    # Drop first param (connection)
+    params = [
+        p for name,p in sig.parameters.items()
+        if name != next(iter(sig.parameters))  # skip 1st param
+        and p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                       inspect.Parameter.KEYWORD_ONLY)
+    ]
+    new_sig = sig.replace(parameters=params)
 
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        ba = new_sig.bind_partial(*args, **kwargs)
+        ba.apply_defaults()
+
+        # Build pydantic models in-place
+        for name, param in new_sig.parameters.items():
+            ann = param.annotation
+            if inspect.isclass(ann) and issubclass(ann, BaseModel):
+                model_kwargs = {
+                    k: v for k, v in ba.arguments.items()
+                    if k in ann.__fields__
+                }
+                ba.arguments[name] = ann(**model_kwargs)
+                for k in model_kwargs:
+                    ba.arguments.pop(k, None)
+
+        return execute_db_tool(func, **ba.arguments)
+
+    wrapper.__signature__ = new_sig
+    return wrapper
+
+#------------------ Register objects defined as code under ./src/teradata_mcp_server/tools/  ------------------#
 def register_td_tools(config, td, mcp):
-    """
-    Dynamically register all handle_* functions in td as mcp.tool(),
-    using config to enable/disable each tool.
-    """
+    patterns = config.get('tool', [])
     for name, func in inspect.getmembers(td, inspect.isfunction):
         if not name.startswith("handle_"):
             continue
-        tool_name = name.replace("handle_", "")
-        # Only enable tools matching the config patterns for the current profile (based on profiles.yml):
-        if not any(re.match(pattern, tool_name) for pattern in config.get('tool',[])):
-            continue
-        sig = inspect.signature(func)
-        # Only include user parameters (skip connection, *args, **kwargs)
-        params = [
-            p for p in list(sig.parameters.values())[1:]  # skip first param (connection)
-            if p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
-        ]
 
-        # Build dynamic async function
-        async def dynamic_tool(*args, __func=func, __params=params, **kwargs):
-            import pydantic
-            arg_dict = {p.name: a for p, a in zip(__params, args)}
-            arg_dict.update(kwargs)
-            # Detect if any parameter expects a Pydantic model or Field-wrapped value
-            for p in __params:
-                ann = p.annotation
-                # If annotation is a subclass of BaseModel, construct from kwargs
-                if inspect.isclass(ann) and issubclass(ann, pydantic.BaseModel):
-                    # Collect relevant fields for the model
-                    model_fields = {k: v for k, v in arg_dict.items() if k in ann.__fields__}
-                    arg_dict[p.name] = ann(**model_fields)
-                    # Remove used fields from arg_dict to avoid double passing
-                    for k in model_fields:
-                        arg_dict.pop(k, None)
-                # If default is a Field, extract default value if not provided
-                elif hasattr(p.default, 'default') and p.default is not inspect.Parameter.empty:
-                    if p.name not in arg_dict:
-                        arg_dict[p.name] = p.default.default
-            return execute_db_tool(__func, **arg_dict)
-        # Set correct signature and type hints
-        dynamic_tool.__signature__ = inspect.Signature(params)
-        dynamic_tool.__name__ = tool_name
-        dynamic_tool.__doc__ = func.__doc__ or ""
-        # Copy type hints for MCP tool argument introspection
-        dynamic_tool.__annotations__ = {p.name: p.annotation for p in params if p.annotation is not inspect.Parameter.empty}
-        # Register with mcp
-        mcp.tool(name=tool_name, description=dynamic_tool.__doc__)(dynamic_tool)
+        tool_name = name[len("handle_"):]
+        if not any(re.match(p, tool_name) for p in patterns):
+            continue
+
+        wrapped = make_tool_wrapper(func)
+        mcp.tool(name=tool_name, description=wrapped.__doc__)(wrapped)
+
 
 register_td_tools(config, td, mcp)
 
