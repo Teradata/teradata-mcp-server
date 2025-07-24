@@ -12,6 +12,28 @@ from sqlalchemy.engine import default
 logger = logging.getLogger("teradata_mcp_server")
 
 
+
+def handle_sales_queryCustomers(conn: TeradataConnection, customer_name: str, *args, **kwargs):
+    """
+    Attempts to find a customer by name, based on first or last name.
+
+    Arguments:
+    customer_name - Customer name to search for
+
+    """ 
+    logger.debug(f"Tool: handle_sales_queryCustomers: Args: customer_name: {customer_name}")
+
+    with conn.cursor() as cur:
+        rows = cur.execute(f"select distinct first_name, last_name, email from demo_user.sim_customers where lower(last_name) like lower('%{customer_name}%') or lower(first_name) like lower('%{customer_name}%')")
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "tool_name": "sales_queryCustomers",
+            "customer_name": customer_name,
+            "customer_count": len(data)
+        }
+        return create_response(data, metadata)
+
+
 def serialize_teradata_types(obj: Any) -> Any:
     """Convert Teradata-specific types to JSON serializable formats"""
     if isinstance(obj, (date, datetime)):
