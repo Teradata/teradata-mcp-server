@@ -8,70 +8,9 @@ from decimal import Decimal
 from sqlalchemy import text
 from sqlalchemy.engine import Engine, Connection
 from sqlalchemy.engine import default
+from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
 
 logger = logging.getLogger("teradata_mcp_server")
-
-
-
-def handle_sales_queryCustomers(conn: TeradataConnection, customer_name: str, *args, **kwargs):
-    """
-    Attempts to find a customer by name, based on first or last name.
-
-    Arguments:
-    customer_name - Customer name to search for
-
-    """ 
-    logger.debug(f"Tool: handle_sales_queryCustomers: Args: customer_name: {customer_name}")
-
-    with conn.cursor() as cur:
-        rows = cur.execute(f"select distinct first_name, last_name, email from demo_user.sim_customers where lower(last_name) like lower('%{customer_name}%') or lower(first_name) like lower('%{customer_name}%')")
-        data = rows_to_json(cur.description, rows.fetchall())
-        metadata = {
-            "tool_name": "sales_queryCustomers",
-            "customer_name": customer_name,
-            "customer_count": len(data)
-        }
-        return create_response(data, metadata)
-
-
-def serialize_teradata_types(obj: Any) -> Any:
-    """Convert Teradata-specific types to JSON serializable formats"""
-    if isinstance(obj, (date, datetime)):
-        return obj.isoformat()
-    if isinstance(obj, Decimal):
-        return float(obj)
-    return str(obj)
-
-def rows_to_json(cursor_description: Any, rows: List[Any]) -> List[Dict[str, Any]]:
-    """Convert database rows to JSON objects using column names as keys"""
-    if not cursor_description or not rows:
-        return []
-    
-    columns = [col[0] for col in cursor_description]
-    return [
-        {
-            col: serialize_teradata_types(value)
-            for col, value in zip(columns, row)
-        }
-        for row in rows
-    ]
-
-def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str:
-    """Create a standardized JSON response structure"""
-    if metadata:
-        response = {
-            "status": "success",
-            "metadata": metadata,
-            "results": data
-        }
-    else:
-        response = {
-            "status": "success",
-            "results": data
-        }
-
-    return json.dumps(response, default=serialize_teradata_types)
-
 
 #------------------ Tool  ------------------#
 def handle_base_readQuery(
@@ -136,44 +75,7 @@ def handle_base_readQuery(
         
 #------------------ Tool  ------------------#
 # Write SQL execution tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries         
-#       sql (str) - SQL query to execute
-#     Returns: ResponseType - formatted response with query results or error message
-def handle_base_writeQuery(conn: TeradataConnection, sql: str, *args, **kwargs):
-    """
-    Executes a SQL query to write to the database via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
-
-    Arguments:
-      conn   - SQLAlchemy Connection
-      sql    - SQL text, with optional bind-parameter placeholders
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
-
-    Returns:
-      ResponseType: formatted response with query results + metadata
-    """
-    logger.debug(f"Tool: handle_base_writeQuery: Args: sql: {sql}")
-
-    with conn.cursor() as cur:   
-        rows = cur.execute(sql)  # type: ignore
-        if rows is None:
-            return create_response([])
-        data = rows_to_json(cur.description, rows.fetchall())
-        metadata = {
-            "tool_name": "base_writeQuery",
-            "sql": sql,
-            "affected_rows": cur.rowcount if hasattr(cur, 'rowcount') else None,
-            "row_count": len(data)
-        }
-        return create_response(data, metadata)
-
-        
-#------------------ Tool  ------------------#
-# Read table DDL tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries         
-#       db_name (str) - name of the database
+from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
 #       table_name (str) - name of the table to get the definition for
 #     Returns: ResponseType - formatted response with ddl results or error message
 def handle_base_tableDDL(conn: TeradataConnection, db_name: str, table_name: str, *args, **kwargs):
@@ -426,8 +328,8 @@ def handle_base_tableAffinity(conn: TeradataConnection, db_name: str, obj_name: 
                             , QueryId
                         FROM DBC.DBQLObjTbl /*  for DBC */
                         WHERE Objecttype in ('Tab', 'Viw')
-					    AND ObjectTableName = '{table_name}'
-					    AND objectdatabasename = '{database_name}'                        
+                        AND ObjectTableName = '{table_name}'
+                        AND objectdatabasename = '{database_name}'                        
                         AND ObjectTableName IS NOT NULL
                         AND ObjectColumnName IS NULL
                         -- AND LogDate BETWEEN '2017-01-01' AND '2017-08-01' /* uncomment for PDCR */
