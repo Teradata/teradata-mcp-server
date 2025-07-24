@@ -140,6 +140,7 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
     return json.dumps(response, default=serialize_teradata_types)
 
 def handle_rag_executeWorkflow(
+
     conn: TeradataConnection,
     question: str,
     k: int = None,
@@ -148,6 +149,7 @@ def handle_rag_executeWorkflow(
 ):
     """
     Execute complete RAG workflow to answer user questions based on document context.
+
 
     This function handles the entire RAG pipeline:
     1. Configuration setup (using configurable values from rag_config.yaml)
@@ -161,6 +163,7 @@ def handle_rag_executeWorkflow(
     Returns the top-k most relevant chunks with metadata for context-grounded answer generation.
     """
     
+
     # Use configuration from loaded config
     config = RAG_CONFIG
     
@@ -186,6 +189,7 @@ def handle_rag_executeWorkflow(
     tokenizer_table = config['tables']['tokenizer_table']
     vector_db = config['databases']['vector_db']
     chunk_embed_table = config['tables']['vector_table']
+
 
     with conn.cursor() as cur:
         
@@ -232,6 +236,7 @@ def handle_rag_executeWorkflow(
         cleaned_txt = cur.fetchone()[0]
         
         logger.debug(f"Stored query with ID {new_id}: {cleaned_txt[:60]}...")
+
 
         # Step 3: Generate query embeddings
         logger.debug(f"Step 3: Generating embeddings in {db_name}.{dst_table}")
@@ -388,6 +393,7 @@ def handle_rag_executeWorkflow_ivsm(
         
         logger.debug(f"Stored query with ID {new_id}: {cleaned_txt[:60]}...")
 
+
         # Step 3: Tokenize query
         logger.debug(f"Step 3: Tokenizing query using ivsm.tokenizer_encode")
         
@@ -468,6 +474,7 @@ def handle_rag_executeWorkflow_ivsm(
                     VectorDataType('FLOAT32')
                     VectorLength({config['embedding']['vector_length']})
                     OutputColumnPrefix('{config['embedding']['vector_column_prefix']}')
+
                     InputColumnName('sentence_embedding')
             ) a 
         ) WITH DATA
@@ -475,6 +482,7 @@ def handle_rag_executeWorkflow_ivsm(
         
         cur.execute(create_sql)
         logger.debug(f"Created embeddings table {db_name}.{dst_table}")
+
 
         # Step 6: Perform semantic search with dynamic query building
         logger.debug(f"Step 6: Performing semantic search with k={k}")

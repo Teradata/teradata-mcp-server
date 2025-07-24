@@ -8,6 +8,7 @@ Assumes Teradata >=20.XX.
 
 - rag_executeWorkflow - executes complete RAG pipeline (config setup, query storage, embedding generation, and semantic search) in a single step
 
+
 **Configuration:**
 
 The RAG system is fully configurable through `rag_config.yaml`. You can customize:
@@ -68,8 +69,11 @@ vector_store_schema:
     # Add any other metadata columns from your vector store
 ```
 
-**RAG** prompts:
+
+The RAG tool supports two implementations that can be selected via configuration:
+
 
 - rag_guidelines - guidelines for llm for rag workflow.
+
 
 [Return to Main README](../../../../README.md)

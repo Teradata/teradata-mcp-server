@@ -442,6 +442,7 @@ if config['qlty']['allmodule']:
 if config['rag']['allmodule']:
     if config['rag']['tool']['rag_executeWorkflow']:
         
+
         # Get the RAG version from rag_config.yaml instead of configure_tools.yml
         try:
             with open('rag_config.yaml', 'r') as file:  # ✅ CORRECT - same pattern as configure_tools.yml
@@ -453,6 +454,7 @@ if config['rag']['allmodule']:
             logger.warning(f"Could not load rag_config.yaml: {e}. Using default version 'byom'")
             rag_version = 'byom'
             default_k = 10
+
         
         if rag_version == 'byom':
             @mcp.tool(description="""
@@ -460,11 +462,13 @@ if config['rag']['allmodule']:
             This tool handles the entire RAG pipeline in a single step when a user query is tagged with /rag.
 
             WORKFLOW STEPS (executed automatically using ONNXEmbeddings):
+
             1. Configuration setup using configurable values from rag_config.yaml
             2. Store user query with '/rag ' prefix stripping  
             3. Generate query embeddings (tokenization + embedding using mldb.ONNXEmbeddings)
             4. Perform semantic search against precomputed chunk embeddings
             5. Return context chunks for answer generation
+
 
             CONFIGURATION VALUES (from rag_config.yaml):
             - All database names, table names, and model settings are configurable
@@ -472,6 +476,7 @@ if config['rag']['allmodule']:
             - Embedding parameters are configurable
             - Default chunk retrieval count is configurable
             - Default values are provided as fallback
+
 
             TECHNICAL DETAILS:
             - Strips the '/rag ' prefix if present from user questions
@@ -483,6 +488,7 @@ if config['rag']['allmodule']:
             - Uses cosine similarity via TD_VECTORDISTANCE to compare embedded query against precomputed chunk embeddings
             - Returns the top-k matching chunks from the configured vector store
             - Each result includes chunk text, similarity score, and any metadata fields specified in config
+
 
             CRITICAL ANSWERING RULES:
             - Answer ONLY using retrieved chunks - no external knowledge, speculation, or inference
@@ -513,6 +519,7 @@ if config['rag']['allmodule']:
             async def rag_executeWorkflow(
                 question: str = Field(..., description="User's natural language question, optionally prefixed with '/rag '"),
                 k: int = Field(None, description=f"Number of top matching chunks to retrieve for context (uses config default of {default_k} if not specified)"),
+
             ) -> ResponseType:
                 return execute_db_tool(td.handle_rag_executeWorkflow, question=question, k=k)
                 
@@ -522,6 +529,7 @@ if config['rag']['allmodule']:
             This tool handles the entire RAG pipeline in a single step when a user query is tagged with /rag.
 
             WORKFLOW STEPS (executed automatically using IVSM functions):
+
             1. Configuration setup using configurable values from rag_config.yaml
             2. Store user query with '/rag ' prefix stripping  
             3. Tokenize query using ivsm.tokenizer_encode
@@ -529,12 +537,14 @@ if config['rag']['allmodule']:
             5. Convert embeddings to vector columns using ivsm.vector_to_columns
             6. Perform semantic search against precomputed chunk embeddings
 
+
             CONFIGURATION VALUES (from rag_config.yaml):
             - All database names, table names, and model settings are configurable
             - Vector store metadata fields are dynamically detected
             - Embedding parameters are configurable
             - Default chunk retrieval count is configurable
             - Default values are provided as fallback
+
 
             TECHNICAL DETAILS:
             - Strips the '/rag ' prefix if present from user questions
@@ -548,6 +558,7 @@ if config['rag']['allmodule']:
             - Uses cosine similarity via TD_VECTORDISTANCE to compare embedded query against precomputed chunk embeddings
             - Returns the top-k matching chunks from the configured vector store
             - Each result includes chunk text, similarity score, and any metadata fields specified in config
+
 
             CRITICAL ANSWERING RULES:
             - Answer ONLY using retrieved chunks - no external knowledge, speculation, or inference
@@ -578,6 +589,7 @@ if config['rag']['allmodule']:
             async def rag_executeWorkflow(
                 question: str = Field(..., description="User's natural language question, optionally prefixed with '/rag '"),
                 k: int = Field(None, description=f"Number of top matching chunks to retrieve for context (uses config default of {default_k} if not specified)"),
+
             ) -> ResponseType:
                 return execute_db_tool(td.handle_rag_executeWorkflow_ivsm, question=question, k=k)
         
