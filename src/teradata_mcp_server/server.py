@@ -209,7 +209,7 @@ def make_tool_wrapper(func):
 def register_td_tools(config, td, mcp):
     patterns = config.get('tool', [])
     for name, func in inspect.getmembers(td, inspect.isfunction):
-        if not name.startswith("handle_"):
+        if not name.startswith("handle_") or name.startswith("handle_fs_"):
             continue
 
         tool_name = name[len("handle_"):]
@@ -218,6 +218,7 @@ def register_td_tools(config, td, mcp):
 
         wrapped = make_tool_wrapper(func)
         mcp.tool(name=tool_name, description=wrapped.__doc__)(wrapped)
+        logger.info(f"Created tool: {tool_name}")
 
 
 register_td_tools(config, td, mcp)
@@ -373,15 +374,15 @@ for name, obj in custom_objects.items():
     if obj_type == "tool" and any(re.match(pattern, name) for pattern in config.get('tool',[])):
         fn = make_custom_query_tool(name, obj)
         globals()[name] = fn
-        logger.info(f"Created custom tool: {name}")
+        logger.info(f"Created tool: {name}")
     elif obj_type == "prompt"  and any(re.match(pattern, name) for pattern in config.get('prompt',[])):
         fn = make_custom_prompt(name, obj["prompt"], obj.get("description", ""))
         globals()[name] = fn
-        logger.info(f"Created custom prompt: {name}")
+        logger.info(f"Created prompt: {name}")
     elif obj_type == "cube"  and any(re.match(pattern, name) for pattern in config.get('tool',[])):
         fn = make_custom_cube_tool(name, obj)
         globals()[name] = fn
-        logger.info(f"Created custom cube: {name}")
+        logger.info(f"Created cube: {name}")
     elif obj_type == "glossary"  and any(re.match(pattern, name) for pattern in config.get('resource',[])):
         # Remove the 'type' key to get just the terms
         custom_glossary = {k: v for k, v in obj.items() if k != "type"}
@@ -437,7 +438,7 @@ if custom_glossary:
 
 # ------------------ RAG Prompts ------------------ #
 
-if config.get('rag', {}).get('prompt', {}).get('rag_guidelines', False) or config.get('rag', {}).get('allmodule', False):
+if any(re.match(pattern, 'rag_guidelines') for pattern in config.get('prompt',[])):
     @mcp.prompt()
     async def rag_guidelines() -> UserMessage:
         return UserMessage(role="user", content=TextContent(type="text", text=td.rag_guidelines))
@@ -463,8 +464,8 @@ if config.get('rag', {}).get('prompt', {}).get('rag_guidelines', False) or confi
 
 #--------------- Feature Store Tools ---------------#
 # Feature tools leveraging the tdfs4ds package.
-
-if config.get('fs', {}).get('allmodule', False):
+# Run only if the EFS tools are defined in the config
+if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
     class FeatureStoreConfig(BaseModel):
         """
         Configuration class for the feature store. This model defines the metadata and catalog sources 
@@ -512,120 +513,109 @@ if config.get('fs', {}).get('allmodule', False):
 
     fs_config = FeatureStoreConfig() 
 
-    if config.get('fs', {}).get('tool', {}).get('fs_reconnect_to_database', False):
-        @mcp.tool(description="Reconnect to the Teradata database if the connection is lost.")
-        async def reconnect_to_database() -> ResponseType:
-            """Reconnect to Teradata database if connection is lost."""
-            global _tdconn
-            try:
-                _tdconn = td.TDConn()
-                td.teradataml_connection()
-                return format_text_response("Reconnected to Teradata database successfully.")
-            except Exception as e:
-                logger.error(f"Error reconnecting to database: {e}")
-                return format_error_response(str(e))
+    @mcp.tool(description="Reconnect to the Teradata database if the connection is lost.")
+    async def reconnect_to_database() -> ResponseType:
+        """Reconnect to Teradata database if connection is lost."""
+        global _tdconn
+        try:
+            _tdconn = td.TDConn()
+            td.teradataml_connection()
+            return format_text_response("Reconnected to Teradata database successfully.")
+        except Exception as e:
+            logger.error(f"Error reconnecting to database: {e}")
+            return format_error_response(str(e))
 
-    if config.get('fs', {}).get('tool', {}).get('fs_setFeatureStoreConfig', False):
-        @mcp.tool(description="Set or update the feature store configuration (database and data domain).")
-        async def fs_setFeatureStoreConfig(
-            data_domain: Optional[str] = None,
-            db_name: Optional[str] = None,
-            entity: Optional[str] = None,
-        ) -> ResponseType:
-            if db_name:
-                if tdfs4ds.connect(database=db_name):
-                    logger.info(f"connected to the feature store of the {db_name} database")
-                    # Reset data_domain if DB name changes
-                    if not (fs_config.db_name and fs_config.db_name.upper() == db_name.upper()):
-                        fs_config.data_domain = None
-                    
-                    fs_config.db_name = db_name
-                    logger.info(f"connected to the feature store of the {db_name} database")
-                    fs_config.feature_catalog = f"{db_name}.{tdfs4ds.FEATURE_CATALOG_NAME_VIEW}"
-                    logger.info(f"feature catalog {fs_config.feature_catalog}")
-                    fs_config.process_catalog = f"{db_name}.{tdfs4ds.PROCESS_CATALOG_NAME_VIEW}"
-                    logger.info(f"process catalog {fs_config.process_catalog}")
-                    fs_config.dataset_catalog = f"{db_name}.FS_V_FS_DATASET_CATALOG"  # <- fixed line
-                    logger.info(f"dataset catalog {fs_config.dataset_catalog}")
-
-            if fs_config.db_name is not None and data_domain is not None:
-                sql_query_ = f"SEL count(*) AS N FROM {fs_config.feature_catalog} WHERE UPPER(data_domain) = '{data_domain.upper()}'"
-                logger.info(f"{sql_query_}")
-                result = tdml.execute_sql(sql_query_)
-                logger.info(f"{result}")
-                if result.fetchall()[0][0] > 0:
-                    fs_config.data_domain = data_domain
-                else:
+    @mcp.tool(description="Set or update the feature store configuration (database and data domain).")
+    async def fs_setFeatureStoreConfig(
+        data_domain: Optional[str] = None,
+        db_name: Optional[str] = None,
+        entity: Optional[str] = None,
+    ) -> ResponseType:
+        if db_name:
+            if tdfs4ds.connect(database=db_name):
+                logger.info(f"connected to the feature store of the {db_name} database")
+                # Reset data_domain if DB name changes
+                if not (fs_config.db_name and fs_config.db_name.upper() == db_name.upper()):
                     fs_config.data_domain = None
+                
+                fs_config.db_name = db_name
+                logger.info(f"connected to the feature store of the {db_name} database")
+                fs_config.feature_catalog = f"{db_name}.{tdfs4ds.FEATURE_CATALOG_NAME_VIEW}"
+                logger.info(f"feature catalog {fs_config.feature_catalog}")
+                fs_config.process_catalog = f"{db_name}.{tdfs4ds.PROCESS_CATALOG_NAME_VIEW}"
+                logger.info(f"process catalog {fs_config.process_catalog}")
+                fs_config.dataset_catalog = f"{db_name}.FS_V_FS_DATASET_CATALOG"  # <- fixed line
+                logger.info(f"dataset catalog {fs_config.dataset_catalog}")
 
-            if fs_config.db_name is not None and fs_config.data_domain is not None and entity is not None:
-                sql_query_ = f"SEL count(*) AS N FROM {fs_config.feature_catalog} WHERE UPPER(data_domain) = '{data_domain.upper()}' AND ENTITY_NAME = '{entity.upper()}'"
-                logger.info(f"{sql_query_}")
-                result = tdml.execute_sql(sql_query_)
-                logger.info(f"{result}")
-                if result.fetchall()[0][0] > 0:
-                    fs_config.entity = entity
-            return format_text_response(f"Feature store config updated: {fs_config.dict(exclude_none=True)}")
+        if fs_config.db_name is not None and data_domain is not None:
+            sql_query_ = f"SEL count(*) AS N FROM {fs_config.feature_catalog} WHERE UPPER(data_domain) = '{data_domain.upper()}'"
+            logger.info(f"{sql_query_}")
+            result = tdml.execute_sql(sql_query_)
+            logger.info(f"{result}")
+            if result.fetchall()[0][0] > 0:
+                fs_config.data_domain = data_domain
+            else:
+                fs_config.data_domain = None
 
-    if config.get('fs', {}).get('tool', {}).get('fs_getFeatureStoreConfig', False):
-        @mcp.tool(description="Display the current feature store configuration (database and data domain).")
-        async def fs_getFeatureStoreConfig() -> ResponseType:
-            return format_text_response(f"Current feature store config: {fs_config.dict(exclude_none=True)}")
+        if fs_config.db_name is not None and fs_config.data_domain is not None and entity is not None:
+            sql_query_ = f"SEL count(*) AS N FROM {fs_config.feature_catalog} WHERE UPPER(data_domain) = '{data_domain.upper()}' AND ENTITY_NAME = '{entity.upper()}'"
+            logger.info(f"{sql_query_}")
+            result = tdml.execute_sql(sql_query_)
+            logger.info(f"{result}")
+            if result.fetchall()[0][0] > 0:
+                fs_config.entity = entity
+        return format_text_response(f"Feature store config updated: {fs_config.dict(exclude_none=True)}")
 
-    if config.get('fs', {}).get('tool', {}).get('fs_isFeatureStorePresent', False):
-        @mcp.tool(description=("Check if a feature store is present in the specified database." ))
-        async def fs_isFeatureStorePresent(
-            db_name: str = Field(..., description="Name of the database to check for a feature store.")
-        ) -> ResponseType:
-            return execute_db_tool(td.handle_fs_isFeatureStorePresent, db_name=db_name)
+    @mcp.tool(description="Display the current feature store configuration (database and data domain).")
+    async def fs_getFeatureStoreConfig() -> ResponseType:
+        return format_text_response(f"Current feature store config: {fs_config.dict(exclude_none=True)}")
 
-    if config.get('fs', {}).get('tool', {}).get('fs_featureStoreContent', False):
-        @mcp.tool(description=("Returns a summary of the feature store content. Use this to understand what data is available in the feature store"))
-        async def fs_featureStoreContent(
-        ) -> ResponseType:
-            return execute_db_tool(td.handle_fs_featureStoreContent, fs_config=fs_config)
+    @mcp.tool(description=("Check if a feature store is present in the specified database." ))
+    async def fs_isFeatureStorePresent(
+        db_name: str = Field(..., description="Name of the database to check for a feature store.")
+    ) -> ResponseType:
+        return execute_db_tool(td.handle_fs_isFeatureStorePresent, db_name=db_name)
 
-    if config.get('fs', {}).get('tool', {}).get('fs_getDataDomains', False):
-        @mcp.tool(description=( "List the available data domains. Requires a configured `db_name`  in the feature store config. Use this to explore which entities can be used when building a dataset."))
-        async def fs_getDataDomains(
-            entity: str = Field(..., description="The .")
-        ) -> ResponseType:
-            return execute_db_tool(td.handle_fs_getDataDomains, fs_config=fs_config)
+    @mcp.tool(description=("Returns a summary of the feature store content. Use this to understand what data is available in the feature store"))
+    async def fs_featureStoreContent(
+    ) -> ResponseType:
+        return execute_db_tool(td.handle_fs_featureStoreContent, fs_config=fs_config)
 
-    if config.get('fs', {}).get('tool', {}).get('fs_getFeatures', False):
-        @mcp.tool(description=("List the list of features. Requires a configured `db_name` and  `data_domain` in the feature store config. Use this to explore the features available ."))
-        async def fs_getFeatures(
-        ) -> ResponseType:
-            return execute_db_tool(td.handle_fs_getFeatures, fs_config=fs_config)
+    @mcp.tool(description=( "List the available data domains. Requires a configured `db_name`  in the feature store config. Use this to explore which entities can be used when building a dataset."))
+    async def fs_getDataDomains(
+        entity: str = Field(..., description="The .")
+    ) -> ResponseType:
+        return execute_db_tool(td.handle_fs_getDataDomains, fs_config=fs_config)
 
-    if config.get('fs', {}).get('tool', {}).get('fs_getAvailableDatasets', False):
-        @mcp.tool(description=("List the list of available datasets.Requires a configured `db_name` in the feature store config.Use this to explore the datasets that are available ."))
-        async def fs_getAvailableDatasets(
-        ) -> ResponseType:
-            return execute_db_tool(td.handle_fs_getAvailableDatasets, fs_config=fs_config)
+    @mcp.tool(description=("List the list of features. Requires a configured `db_name` and  `data_domain` in the feature store config. Use this to explore the features available ."))
+    async def fs_getFeatures(
+    ) -> ResponseType:
+        return execute_db_tool(td.handle_fs_getFeatures, fs_config=fs_config)
 
-    if config.get('fs', {}).get('tool', {}).get('fs_getFeatureDataModel', False):
-        @mcp.tool(description=("Return the schema of the feature store.Requires a feature store in the configured database (`db_name`)."))
-        async def fs_getFeatureDataModel(
-        ) -> ResponseType:
-            return execute_db_tool(td.handle_fs_getFeatureDataModel, fs_config=fs_config)
+    @mcp.tool(description=("List the list of available datasets.Requires a configured `db_name` in the feature store config.Use this to explore the datasets that are available ."))
+    async def fs_getAvailableDatasets(
+    ) -> ResponseType:
+        return execute_db_tool(td.handle_fs_getAvailableDatasets, fs_config=fs_config)
+
+    @mcp.tool(description=("Return the schema of the feature store.Requires a feature store in the configured database (`db_name`)."))
+    async def fs_getFeatureDataModel(
+    ) -> ResponseType:
+        return execute_db_tool(td.handle_fs_getFeatureDataModel, fs_config=fs_config)
 
 
-    if config.get('fs', {}).get('tool', {}).get('fs_getAvailableEntities', False):
-        @mcp.tool(description=("List the available entities for a given data domain. Requires a configured `db_name` and `data_domain` and  `entity` in the feature store config. Use this to explore which entities can be used when building a dataset."))
-        async def fs_getAvailableEntities(
-        ) -> ResponseType:
-            return execute_db_tool(td.handle_fs_getAvailableEntities, fs_config=fs_config)
+    @mcp.tool(description=("List the available entities for a given data domain. Requires a configured `db_name` and `data_domain` and  `entity` in the feature store config. Use this to explore which entities can be used when building a dataset."))
+    async def fs_getAvailableEntities(
+    ) -> ResponseType:
+        return execute_db_tool(td.handle_fs_getAvailableEntities, fs_config=fs_config)
 
-    if config.get('fs', {}).get('tool', {}).get('fs_createDataset', False):
-        @mcp.tool( description=("Create a dataset using selected features and an entity from the feature store. The dataset is created in the specified target database under the given name. Requires a configured feature store and data domain. Registers the dataset in the catalog automatically. Use this when you want to build and register a new dataset for analysis or modeling." ) )
-        async def fs_createDataset(
-            entity_name: str = Field(..., description="Entity for which the dataset will be created. Available entities are reported in the feature catalog."),
-            feature_selection: list[str] = Field(..., description="List of features to include in the dataset. Available features are reported in the feature catalog."),
-            dataset_name: str = Field(..., description="Name of the dataset to create."),
-            target_database: str = Field(..., description="Target database where the dataset will be created.")
-        ) -> ResponseType:
-            return execute_db_tool(td.handle_fs_createDataset, fs_config=fs_config, entity_name=entity_name, feature_selection=feature_selection, dataset_name=dataset_name, target_database=target_database)
+    @mcp.tool( description=("Create a dataset using selected features and an entity from the feature store. The dataset is created in the specified target database under the given name. Requires a configured feature store and data domain. Registers the dataset in the catalog automatically. Use this when you want to build and register a new dataset for analysis or modeling." ) )
+    async def fs_createDataset(
+        entity_name: str = Field(..., description="Entity for which the dataset will be created. Available entities are reported in the feature catalog."),
+        feature_selection: list[str] = Field(..., description="List of features to include in the dataset. Available features are reported in the feature catalog."),
+        dataset_name: str = Field(..., description="Name of the dataset to create."),
+        target_database: str = Field(..., description="Target database where the dataset will be created.")
+    ) -> ResponseType:
+        return execute_db_tool(td.handle_fs_createDataset, fs_config=fs_config, entity_name=entity_name, feature_selection=feature_selection, dataset_name=dataset_name, target_database=target_database)
 
 #------------------ Main ------------------#
 # Main function to start the MCP server
