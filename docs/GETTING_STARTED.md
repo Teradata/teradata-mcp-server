@@ -178,6 +178,14 @@ Caution: there is no default value, not no authorization needed by default.
 
 The default port is 8002.
 
+**Using uv:**
+```sh
+export DATABASE_URI=teradata://username:password@host:1025/databaseschema
+export MCPO_API_KEY=top-secret
+uvx mcpo --port 8002 --api-key "top-secret" -- uv run teradata-mcp-server 
+```
+
+or **using docker**:
 ```sh
 export DATABASE_URI=teradata://username:password@host:1025/databaseschema
 export MCPO_API_KEY=top-secret
