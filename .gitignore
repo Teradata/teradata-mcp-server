@@ -8,4 +8,5 @@ working/
 *.egg-info/
 **/.ipynb_checkpoints/
 env
-test_results/
+test_results/env
+env
