@@ -12,13 +12,13 @@ logger = logging.getLogger("teradata_mcp_server")
 
 # Load RAG configuration
 def load_rag_config():
-    """Load RAG configuration from rag_config.yaml"""
+    """Load RAG configuration from rag_config.yml"""
     try:
-        with open('rag_config.yaml', 'r') as file:  # Simple path like server.py
-            logger.info("Loading RAG config from: rag_config.yaml")
+        with open('rag_config.yml', 'r') as file:  # Simple path like server.py
+            logger.info("Loading RAG config from: rag_config.yml")
             return yaml.safe_load(file)
     except FileNotFoundError:
-        logger.warning("RAG config file not found: rag_config.yaml, using defaults")
+        logger.warning("RAG config file not found: rag_config.yml, using defaults")
         return get_default_rag_config()
     except Exception as e:
         logger.error(f"Error loading RAG config: {e}")
@@ -152,17 +152,21 @@ def handle_rag_executeWorkflow(
 
 
     This function handles the entire RAG pipeline:
-    1. Configuration setup (using configurable values from rag_config.yaml)
+    1. Configuration setup (using configurable values from rag_config.yml)
     2. Store user query (with /rag prefix stripping)
     3. Generate query embeddings (tokenization + embedding)
     4. Perform semantic search against chunk embeddings
     5. Return retrieved context chunks for answer generation
 
-    The function uses configuration values from rag_config.yaml with fallback defaults.
+    The function uses configuration values from rag_config.yml with fallback defaults.
 
-    Returns the top-k most relevant chunks with metadata for context-grounded answer generation.
+    Arguments:
+      question - user question to process
+      k - number of top-k results to return (optional, uses config default if not provided)
+
+    Returns:
+      Returns the top-k most relevant chunks with metadata for context-grounded answer generation.
     """
-    
 
     # Use configuration from loaded config
     config = RAG_CONFIG
@@ -309,17 +313,22 @@ def handle_rag_executeWorkflow_ivsm(
     Execute complete RAG workflow to answer user questions based on document context.
 
     This function handles the entire RAG pipeline using IVSM functions:
-    1. Configuration setup (using configurable values from rag_config.yaml)
+    1. Configuration setup (using configurable values from rag_config.yml)
     2. Store user query (with /rag prefix stripping)
     3. Tokenize query using ivsm.tokenizer_encode
     4. Create embedding view using ivsm.IVSM_score
     5. Convert embeddings to vector columns using ivsm.vector_to_columns
     6. Perform semantic search against chunk embeddings
 
-    The function uses configuration values from rag_config.yaml with fallback defaults.
+    The function uses configuration values from rag_config.yml with fallback defaults.
 
-    Returns the top-k most relevant chunks with metadata for context-grounded answer generation.
-    """
+    Arguments:
+      question - user question to process
+      k - number of top-k results to return (optional, uses config default if not provided
+
+    Returns:
+      Returns the top-k most relevant chunks with metadata for context-grounded answer generation.
+    """  
     
     # Use configuration from loaded config
     config = RAG_CONFIG

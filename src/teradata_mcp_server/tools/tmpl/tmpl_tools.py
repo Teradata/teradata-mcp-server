@@ -27,10 +27,7 @@ def handle_tmpl_nameOfTool(conn: TeradataConnection, argument: Optional[str], *a
     <description of what the tool is for>
 
     Arguments:
-      conn   - SQLAlchemy Connection
       arguments - arguments to analyze
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata

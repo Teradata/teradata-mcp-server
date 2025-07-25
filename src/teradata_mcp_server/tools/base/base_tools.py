@@ -24,7 +24,6 @@ def handle_base_readQuery(
     Execute a SQL query via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       sql    - SQL text, with optional bind-parameter placeholders
 
     Returns:
@@ -332,7 +331,6 @@ def handle_base_tableUsage(conn: TeradataConnection, db_name: Optional[str] = No
 
     Arguments:
       db_name - Database name
-      object_name - table or view name
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -419,10 +417,7 @@ def util_base_dynamicQuery(conn: TeradataConnection, sql_generator: callable, *a
     This tool is used to execute dynamic SQL queries that are generated at runtime by a generator function.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       sql_generator (callable) - a generator function that returns a SQL query string
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata

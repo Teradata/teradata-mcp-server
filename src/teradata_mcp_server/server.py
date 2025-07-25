@@ -436,12 +436,6 @@ if custom_glossary:
         else:
             return {"error": f"Glossary term not found: {term_name}"}
 
-# ------------------ RAG Prompts ------------------ #
-
-if any(re.match(pattern, 'rag_guidelines') for pattern in config.get('prompt',[])):
-    @mcp.prompt()
-    async def rag_guidelines() -> UserMessage:
-        return UserMessage(role="user", content=TextContent(type="text", text=td.rag_guidelines))
 
 
 #------------------ Enterprise Vector Store Tools  ------------------#

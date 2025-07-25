@@ -24,7 +24,16 @@ def handle_evs_similarity_search(
     *args,
     **kwargs,
 ) -> str:
+    """
+    Enterprise Vector Store similarity search
 
+    Arguments:
+      question - the query string to search for
+      top_k - number of top results to return
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
     logger.debug(f"EVS similarity_search: q='{question}', top_k={top_k}")
     vs = get_evs()
     try:

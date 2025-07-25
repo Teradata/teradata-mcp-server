@@ -23,10 +23,7 @@ def handle_sec_userDbPermissions(conn: TeradataConnection, user_name: str, *args
     Get permissions for a user.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       user_name - user name to analyze
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -71,10 +68,7 @@ def handle_sec_rolePermissions(conn: TeradataConnection, role_name: str, *args, 
     Get permissions for a role.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       role_name - role name to analyze
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -179,10 +173,7 @@ def handle_sec_userRoles(conn: TeradataConnection, user_name: str, *args, **kwar
     Get roles assigned to a user.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       user_name - user name to analyze
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata

@@ -19,10 +19,7 @@ def handle_qlty_missingValues(conn: TeradataConnection, table_name: str, *args, 
     Get the column names that having missing values in a table.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       table_name - table name to analyze
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -49,10 +46,7 @@ def handle_qlty_negativeValues(conn: TeradataConnection, table_name: str, *args,
     Get the column names that having negative values in a table.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       table_name - table name to analyze
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -80,11 +74,8 @@ def handle_qlty_distinctCategories(conn: TeradataConnection, table_name: str, co
     Get the destinct categories from column in a table.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       table_name - table name to analyze
       col_name - column name to analyze
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -114,11 +105,8 @@ def handle_qlty_standardDeviation(conn: TeradataConnection, table_name: str, col
     Get the standard deviation from column in a table.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       table_name - table name to analyze
       col_name - column name to analyze
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -148,10 +136,7 @@ def handle_qlty_columnSummary(conn: TeradataConnection, table_name: str, *args, 
     Get the column summary statistics for a table.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       table_name - table name to analyze
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -180,11 +165,8 @@ def handle_qlty_univariateStatistics(conn: TeradataConnection, table_name: str, 
     Get the univariate statistics for a table.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       table_name - table name to analyze
       col_name - column name to analyze
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -215,11 +197,8 @@ def handle_qlty_rowsWithMissingValues(conn: TeradataConnection, table_name: str,
     Get the rows with missing values in a table.
 
     Arguments:
-      conn   - SQLAlchemy Connection
       table_name - table name to analyze
       col_name - column name to analyze
-      *args  - Positional bind parameters
-      **kwargs - Named bind parameters
 
     Returns:
       ResponseType: formatted response with query results + metadata
