@@ -13,7 +13,6 @@ Assumes Teradata >=17.20.
 - dba_databaseSpace - returns Space allocated, space used and percentage used for a database
 - dba_databaseVersion - returns the database version information
 - dba_resusageSummary - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.
-- dba_resusageUserSummary - Get the system usage for a user
 - dba_flowControl - Get the Teradata system flow control metrics by day and hour
 - dba_featureUsage - Get the user feature usage metrics
 - dba_userDelay - Get the Teradata user delay metrics.

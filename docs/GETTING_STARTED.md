@@ -50,15 +50,14 @@ Deployment Choice
 
 The recommended choice will be to deploy Streamable-http in a docker container. [Jump to next section](#using-docker) for the docker option.
 
-## Step 4 - Decide on the tools/prompts you want to be availble (optional)
+## Step 4 - Decide on the tools/prompts you want to be availble (optional) to a profile
 
-Open the [configure_tools.yaml](../configure_tools.yml) file.  You can control:
-1. all tools and prompts in a module by setting the module allmodule setting to 
-    - True = module tools and prompts will be visible
-    - False = modile tools and prompts will not be available
-2. select tools/prompts from a module, the allmodule will need to be set to True.  Then set True or False for each tool or prompt.
+Open the [configure_tools.yaml](../configure_tools.yml) file.  The first level of the structure is the profile name, then the module name, then allmodule/tools/prompts
 
-All tools and prompts are enabled by default.
+For each module if you set allmodule to True then all tools and prompts will be visible unless you explicitly set the tool/prompt name to False.  If the allmodule is set to False, then nothing will be visible unless you explicitly set the tool/prompt name to True.
+
+If no profile is defined then the default profile will be "all" this will enable all tools and prompts.
+
 
 --------------------------------------------------------------------------------------
 ## Step 5 - Using Docker
@@ -166,7 +165,7 @@ export MCP_PATH=/mcp/
 
 **Step 3** - Run the server with uv in a terminal
 
-`uv run teradata-mcp-server`
+`uv run teradata-mcp-server --profile all`
 
 
 --------------------------------------------------------------------

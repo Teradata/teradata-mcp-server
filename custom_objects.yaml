@@ -1,5 +1,5 @@
 # Custom tool definitions here
-get_cust_activeUsers:
+cust_activeUsers:
   type: tool
   description: "Fetch currently active database users"
   sql: |
@@ -8,7 +8,7 @@ get_cust_activeUsers:
     WHERE UserName IS NOT NULL
     GROUP BY UserName;
 
-get_td_serverInfo:
+cust_td_serverInfo:
   type: tool
   description: "Get the Teradata software information: demonstrates how to use parameters for prepared statements."
   sql: |
@@ -17,7 +17,7 @@ get_td_serverInfo:
     infokey:
       description: "The key of the information to retrieve. Any of 'VERSION', 'RELEASE', 'LANGUAGE SUPPORT MODE' can be used."
 
-cube_db_space_metrics:
+cust_cube_db_space_metrics:
   type: cube
   description: "Get the Teradata database space metrics for tables and databases"
   sql: |

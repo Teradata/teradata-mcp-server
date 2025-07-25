@@ -16,9 +16,10 @@ A semantic layer in this context is a collection of custom tools, prompts, cubes
 - **Prompts:** Predefined user prompts for natural language interactions.
 - **Cubes:** Aggregation templates for business metrics, with dimensions and measures.
 - **Glossary:** Domain-specific terms, definitions, and synonyms, automatically enriched from cubes and tools.
+- **Profiles:** Named sets of tools, prompts, and resources that enable domain-specific server instantiations.
 
 ### Declarative Specification
-All customizations are defined in a YAML file (e.g., `sales_objects.yaml`, `finance_objects.yaml`). The file is a dictionary keyed by object name, with each entry specifying its type and details:
+All custom objects can be defined in a YAML file (e.g., `sales_objects.yaml`, `finance_objects.yaml`). The file is a dictionary keyed by object name, with each entry specifying its type and details:
 
 ```yaml
 sales_by_region:
@@ -61,8 +62,34 @@ glossary:
      - buyer
 ```
 
+Profiles are specified in the `profiles.yml` file at the project root. Each profile defines which tools, prompts, and resources are enabled for a given context (e.g., user group, domain, or use case). Profiles use regular expression patterns to match tool, prompt, and resource names, allowing flexible grouping and reuse. 
 
-## Implementation Details
+For example, the following `profiles.yml` enables different sets of tools for two contexts (sales and dba):
+
+```yaml
+sales:
+  tool:
+    - sales_.*
+  prompt:
+    - sales_.*
+  resource:
+    - sales_.*
+dba:
+  tool:
+    - dba_.*
+    - base_.*
+    - sec_.*
+  prompt:
+    - dba_.*
+```
+
+You can run the MCP server with the `--profile` command-line argument or the `PROFILE` environment variable to select a profile at startup. If the profile is unspecified or set to `all`, all tools, resources, and prompts are loaded by default.
+
+For example, to run the server with the pre-defined dba profile:
+
+`teradata-mcp-server --profile dba`
+
+## Custom Objects Implementation Details
 
 ### File Naming and Loading
 All customizations must be defined in files named `*_objects.yaml` (e.g., `sales_objects.yaml`, `finance_objects.yaml`).

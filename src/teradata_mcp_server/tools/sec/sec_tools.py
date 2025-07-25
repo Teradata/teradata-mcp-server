@@ -6,44 +6,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 logger = logging.getLogger("teradata_mcp_server")
-
-def serialize_teradata_types(obj: Any) -> Any:
-    """Convert Teradata-specific types to JSON serializable formats"""
-    if isinstance(obj, (date, datetime)):
-        return obj.isoformat()
-    if isinstance(obj, Decimal):
-        return float(obj)
-    return str(obj)
-
-def rows_to_json(cursor_description: Any, rows: List[Any]) -> List[Dict[str, Any]]:
-    """Convert database rows to JSON objects using column names as keys"""
-    if not cursor_description or not rows:
-        return []
-    
-    columns = [col[0] for col in cursor_description]
-    return [
-        {
-            col: serialize_teradata_types(value)
-            for col, value in zip(columns, row)
-        }
-        for row in rows
-    ]
-
-def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str:
-    """Create a standardized JSON response structure"""
-    if metadata:
-        response = {
-            "status": "success",
-            "metadata": metadata,
-            "results": data
-        }
-    else:
-        response = {
-            "status": "success",
-            "results": data
-        }
-
-    return json.dumps(response, default=serialize_teradata_types)
+from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
 
 #------------------ Do not make changes above  ------------------#
 
@@ -56,6 +19,18 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
 #       
 #     Returns: permissions assigned to user_name or error message
 def handle_sec_userDbPermissions(conn: TeradataConnection, user_name: str, *args, **kwargs):
+    """
+    Get permissions for a user.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      user_name - user name to analyze
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
     logger.debug(f"Tool: handle_sec_userDbPermissions: Args: user_name: {user_name}")
 
     with conn.cursor() as cur:
@@ -92,6 +67,18 @@ def handle_sec_userDbPermissions(conn: TeradataConnection, user_name: str, *args
 #
 #     Returns: permissions assigned to role_name or error message
 def handle_sec_rolePermissions(conn: TeradataConnection, role_name: str, *args, **kwargs):
+    """
+    Get permissions for a role.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      role_name - role name to analyze
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
     logger.debug(f"Tool: handle_sec_rolePermissions: Args: role_name: {role_name}")
 
     with conn.cursor() as cur:
@@ -188,6 +175,18 @@ def handle_sec_rolePermissions(conn: TeradataConnection, role_name: str, *args, 
 #
 #     Returns: roles assigned to user_name or error message
 def handle_sec_userRoles(conn: TeradataConnection, user_name: str, *args, **kwargs):
+    """
+    Get roles assigned to a user.
+
+    Arguments:
+      conn   - SQLAlchemy Connection
+      user_name - user name to analyze
+      *args  - Positional bind parameters
+      **kwargs - Named bind parameters
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
     logger.debug(f"Tool: handle_sec_userRoles: Args: user_name: {user_name}")
 
     with conn.cursor() as cur:
