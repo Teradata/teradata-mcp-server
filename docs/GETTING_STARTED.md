@@ -183,6 +183,7 @@ The default port is 8002.
 ```sh
 export DATABASE_URI=teradata://username:password@host:1025/databaseschema
 export MCPO_API_KEY=top-secret
+export TRANSPORT=stdio
 uvx mcpo --port 8002 --api-key "top-secret" -- uv run teradata-mcp-server 
 ```
 
