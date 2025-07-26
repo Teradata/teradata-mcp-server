@@ -13,10 +13,10 @@
     "theme": "Default",
     "selectedAuthType" : "oauth-personal",
 
-    "mepServers": {
-        "teradatasse": {
-            "type": "sse" ,
-            "url" : "http://127.0.0.1:8001/SSe"
+    "mcpServers": {
+        "teradata-http": {
+            "httpUrl" : "http://127.0.0.1:8001/mcp/",
+            "timeout" : 5000
         }
     }
 }

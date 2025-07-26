@@ -21,8 +21,6 @@ export MCP_PORT=8001
 export MCP_PATH=/mcp/
 
 uv run teradata-mcp-server
-
-docker compose up
 ```
 
 Add the server in VS Code:
@@ -30,17 +28,17 @@ Add the server in VS Code:
 - Open the Command Palette (View>Command Palette)
 - select "MCP: Add Server"
 - select "HTTP or Server Sent Events"
-- enter URL for the location of the server e.g. http://127.0.0.1:8001/mcp
-- enter name of the server for the id
+- enter URL for the location of the server e.g. http://127.0.0.1:8001/mcp/
+- enter name of the server for the id (e.g. teradata-http)
 - select user space
 - the settings.json file should open
 - add the args so that it looks like:
 ```
    "mcp": {
         "servers": {
-            "teradataSSE": {
-                "type": "sse",
-                "url": "http://127.0.0.1:8001/sse"
+            "teradata-http": {
+                "type": "http",
+                "url": "http://127.0.0.1:8001/mcp/"
             }
         }
     }

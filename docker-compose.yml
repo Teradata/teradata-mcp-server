@@ -15,10 +15,14 @@ services:
   teradata-rest-server:
     build: .
     image: teradata-mcp-server:latest
-    entrypoint: sh -c 'export MCP_TRANSPORT=stdio && mcpo --port 8002 --api-key "$MCPO_API_KEY" -- uv run teradata-mcp-server'
+    entrypoint: sh -c 'export MCP_TRANSPORT=streamable-http && mcpo --port 8002 --api-key "$MCPO_API_KEY" -- uv run teradata-mcp-server'
     environment:
       - DATABASE_URI=${DATABASE_URI}
-      - MCP_TRANSPORT=stdio
+      - LOGMECH=TD2
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PATH=/mcp/
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8001
       - MCPO_API_KEY
     ports:
       - "8002:8002"

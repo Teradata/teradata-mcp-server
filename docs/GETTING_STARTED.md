@@ -38,10 +38,11 @@ git pull origin main
 
 ![Choice](media/transport.png) 
 
-Transport Modes
-1. Stadard IO (stdio) - all communications are published to standard input and output, this is suitable for a standalong server running on your laptop.
-2. Server Side Events (SSE) - this transport mode is going to be decomissioned by the mcp standard hence we do not recommend using this.
-3. Streamable-Http (http) - this transport mode uses the http protocole for commuication, this is the recomended mode to use.
+Transport Modes (in order of preference)
+1. Streamable-Http (http) - this transport mode uses the http protocole for commuication, this is the recomended mode to use.
+2. Stadard IO (stdio) - all communications are published to standard input and output, this is suitable for a standalong server running on your laptop.
+3. Server Side Events (SSE) - this transport mode is going to be decomissioned by the mcp standard hence we do not recommend using this.
+
 
 Deployment Choice
 1. Docker Container - the container will manage the libraries and starting the service.
