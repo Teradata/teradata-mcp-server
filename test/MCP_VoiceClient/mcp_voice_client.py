@@ -93,7 +93,7 @@ class ToolProcessor:
         ])
 
         print("MCP session initialized:")
-        print(self.mcp_tools)
+        debug_print(self.mcp_tools)
 
     async def process_tool_async(self, tool_name, tool_content):
         """Process a tool call asynchronously and return the result"""
@@ -141,9 +141,9 @@ class ToolProcessor:
         # Invoke via MCP adapter's ainvoke()
         try:
             raw_result = await tool.ainvoke(params)
-            print(f"Successfully invoked tool. Raw response: {raw_result}")
+            debug_print(f"Successfully invoked tool. Raw response: {raw_result}")
         except Exception as e:
-            print(f"Error invoking tool '{tool_name}': {e}")
+            debug_print(f"Error invoking tool '{tool_name}': {e}")
             return {"error": f"Failed to invoke tool '{tool_name}'."}
 
         # Normalize result types
@@ -305,14 +305,12 @@ class BedrockStreamManager:
         tools_list = []
         for tool in self.tool_processor.mcp_tools.values():
             try:
-                # Convert Pydantic schema or dict to JSON string
-                if isinstance(tool.input_schema, dict):
-                    schema_dict = tool.input_schema
-                else:
-                    schema_dict = tool.input_schema.schema()
+                schema_dict = tool.args_schema
             except Exception:
                 schema_dict = {}
             schema_json = json.dumps(schema_dict)
+            #schema_obj  = schema_dict
+            
             tools_list.append({
                 "toolSpec": {
                     "name": tool.name,
@@ -630,7 +628,6 @@ class BedrockStreamManager:
                                     self.toolName = json_data['event']['toolUse']['toolName']
                                     self.toolUseId = json_data['event']['toolUse']['toolUseId']
                                     debug_print(f"Tool use detected: {self.toolName}, ID: {self.toolUseId}")
-                                    print("DEBUG toolUseContent:", self.toolUseContent)
                                 elif 'contentEnd' in json_data['event'] and json_data['event'].get('contentEnd', {}).get('type') == 'TOOL':
                                     debug_print("Processing tool use and sending result")
                                      # Start asynchronous tool processing - non-blocking
