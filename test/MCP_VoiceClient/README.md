@@ -79,10 +79,12 @@ python mcp_voice_client.py --debug
 
 ### How it works
 
+![alt text](voice-assistant-diagram.png)
+
 1. When you run the script, it will:
    - Connect to AWS Bedrock
    - Connect to the Teradata MCP server
-   - Initialize a streaming session
+   - Initialize two streaming sessions towards Bedrock and the Teradata MCP server
    - Start capturing audio from your microphone
    - Stream the audio to the Nova Sonic model
    - Issue tool calls to the MCP server as required over HTTP
