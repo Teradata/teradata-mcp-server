@@ -2,9 +2,9 @@
 
 ![Getting Started](media/MCP.png)
 
-This documet will cover the process and options for getting the teradata-mcp-server up and runing
+This document will cover the process and options for getting the teradata-mcp-server up and running
 
-Assumes that you have a running Teradata environment, you should have the following information for yout Teradata system:
+Assumes that you have a running Teradata environment, you should have the following information for your Teradata system:
 1. host address - IP address or DNS address for the location of the server
 2. user name - name you log into the teradata system with
 3. user password - password for the corresponding user name
@@ -14,7 +14,7 @@ Assumes that you have a running Teradata environment, you should have the follow
 Refer to the [git](https://git-scm.com/) website for download and installation instructions for your environment.
 
 ## Step 1 - Download the Software
-Clone the mcp-server repository with 
+Clone the mcp-server repository with: 
 
 On Windows
 ```
@@ -39,8 +39,8 @@ git pull origin main
 ![Choice](media/transport.png) 
 
 Transport Modes (in order of preference)
-1. Streamable-Http (http) - this transport mode uses the http protocole for commuication, this is the recomended mode to use.
-2. Stadard IO (stdio) - all communications are published to standard input and output, this is suitable for a standalong server running on your laptop.
+1. Streamable-Http (http) - this transport mode uses the http protocol for communication, this is the recomended mode to use.
+2. Standard IO (stdio) - all communications are published to standard input and output, this is suitable for a standalone server running on your laptop.
 3. Server Side Events (SSE) - this transport mode is going to be decomissioned by the mcp standard hence we do not recommend using this.
 
 
@@ -51,7 +51,7 @@ Deployment Choice
 
 The recommended choice will be to deploy Streamable-http in a docker container. [Jump to next section](#using-docker) for the docker option.
 
-## Step 4 - Decide on the tools/prompts you want to be availble (optional) to a profile
+## Step 4 - Decide on the tools/prompts you want to be available (optional) to a profile
 
 Open the [configure_tools.yaml](../configure_tools.yml) file.  The first level of the structure is the profile name, then the module name, then allmodule/tools/prompts
 
@@ -144,7 +144,7 @@ This is the port address used when using the sse or streamable-http transport mo
 This is the path used for streamable_http transport mode, default to `\mcp`
 
 10. **Enterprise Vector Store**
-These are the parameters required when using the enterprose vector store tools.
+These are the parameters required when using the enterprise vector store tools.
 
 TD_BASE_URL=        #Your UES_URI, strip off the trailing /open-analytics
 TD_PAT=             #Your PAT string
