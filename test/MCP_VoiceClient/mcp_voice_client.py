@@ -867,11 +867,15 @@ class AudioStreamer:
         #self.input_task = asyncio.create_task(self.process_input_audio())
         self.output_task = asyncio.create_task(self.play_output_audio())
         
-        # Wait for user to press Enter to stop
-        await asyncio.get_event_loop().run_in_executor(None, input)
-        
-        # Once input() returns, stop streaming
-        await self.stop_streaming()
+        # Wait for user to press Enter to stop (or be cancelled)
+        try:
+            await asyncio.get_event_loop().run_in_executor(None, input)
+        except asyncio.CancelledError:
+            # Exit quietly if cancelled
+            pass
+        finally:
+            # Ensure streaming is stopped
+            await self.stop_streaming()
     
     async def stop_streaming(self):
         """Stop streaming audio."""
@@ -902,7 +906,12 @@ class AudioStreamer:
         if self.p:
             self.p.terminate()
         
-        await self.stream_manager.close() 
+        await self.stream_manager.close()
+        # Cleanly exit MCP session context if still open
+        try:
+            await self.stream_manager.tool_processor.mcp_session_context.__aexit__(None, None, None)
+        except Exception:
+            pass
 
 
 async def main(debug=False):
@@ -934,6 +943,8 @@ async def main(debug=False):
     finally:
         # Clean up
         await audio_streamer.stop_streaming()
+        # Properly exit the MCP session context
+        # await stream_manager.tool_processor.mcp_session_context.__aexit__(None, None, None)
         
 
 if __name__ == "__main__":

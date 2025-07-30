@@ -236,7 +236,7 @@ custom_objects = {}
 custom_glossary = {}
 
 for file in custom_object_files:
-    with open(file) as f:
+    with open(file, encoding='utf-8', errors='replace') as f:
         loaded = yaml.safe_load(f)
         if loaded:
             custom_objects.update(loaded)  # Merge dictionaries
