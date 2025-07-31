@@ -58,6 +58,8 @@ test_qltyTools:
 qlty_databaseQuality:
   type: prompt
   description: "Database data quality assessment."
+  parameters:
+    database_name: database_name
   prompt: |
     # Name:  Database data quality assessment
 

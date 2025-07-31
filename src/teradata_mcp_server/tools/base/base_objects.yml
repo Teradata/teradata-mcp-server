@@ -58,6 +58,8 @@ test_baseTools:
 base_query:
   type: prompt
   description: "Help users interact with  Teradata databases effectively."
+  parameters:
+    qry: qry
   prompt: |
    " The assistant's goal is to help users interact with  Teradata databases effectively.
    Workflow:
@@ -164,6 +166,9 @@ base_query:
 base_tableBusinessDesc:
   type: prompt
   description: "You are a Teradata DBA who is an expert in describing the business use of tables in a database."
+  parameters:
+    table_name: table_name
+    database_name: database_name
   prompt: |
    You are a Teradata DBA who is an expert in describing the business use of tables in a database.
 
@@ -204,6 +209,8 @@ base_tableBusinessDesc:
 base_databaseBusinessDesc:
   type: prompt
   description: "You are a Teradata DBA who is an expert in describing the business use of databases."
+  parameters:
+    database_name: database_name
   prompt: |
    You are a Teradata DBA who is an expert in describing the business use of a database.
 

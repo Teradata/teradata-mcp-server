@@ -49,7 +49,7 @@ profile_name = os.getenv("PROFILE")
 with open('profiles.yml', 'r') as file:
     all_profiles = yaml.safe_load(file)
     if not profile_name:
-        print(f"No profile specified, load all tools, prompts and resources.")
+        print("No profile specified, load all tools, prompts and resources.")
         config={'tool': ['.*'], 'prompt': ['.*'], 'resource': ['.*']}
     elif profile_name not in all_profiles:
         raise ValueError(f"Profile '{profile_name}' not found in profiles.yml. Available: {list(all_profiles.keys())}.")

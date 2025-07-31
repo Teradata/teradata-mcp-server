@@ -13,7 +13,7 @@
 #
 # Required fields by type:
 #   tool:     type, description, sql, parameters
-#   prompt:   type, description, prompt
+#   prompt:   type, description, prompt, parameters
 #   cube:     type, description, sql, dimensions, measures
 #   glossary: type, definition, [synonyms]
 #
@@ -29,6 +29,8 @@
 # myPrompt:
 #   type: prompt
 #   description: "Prompt for summarizing sales data."
-#   prompt: "Summarize the sales data for the last quarter."
+#   parameters:
+#     Num_Quarters: Num_Quarters
+#   prompt: "Summarize the sales data for the last {Num_Quarters} quarter."
 #
 # ---------------------------------------------------------------------------
