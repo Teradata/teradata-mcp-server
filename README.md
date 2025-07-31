@@ -30,7 +30,7 @@ We are providing groupings of tools and associated helpful prompts
 
 **Step 1.** - Identify the running Teradata System, you need username, password and host details to populate "teradata://username:password@host:1025". If you do not have a Teradata system to conect to, then leverage [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics)
 
-**Step 2.** - To cofigure and run the MCP server, refer to the [Getting stated guide](docs/GETTING_STARTED.md).
+**Step 2.** - To cofigure and run the MCP server, refer to the [Getting started guide](docs/GETTING_STARTED.md).
 
 **Step 3.** - There are many client options availale, the [Client Guide](docs/client_guide/CLIENT_GUIDE.md) explains how to configure and run a sample of different clients.
 
