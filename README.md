@@ -9,24 +9,27 @@ The Teradata MCP server provides sets of tools and prompts, grouped as modules f
 
 ### Available tools and prompts
 
-We are providing groupings of tools and associated helpful prompts
-- **Base** tools, prompts and resources to interact with your Teradata platform:
+We are providing groupings of tools and associated helpful prompts to support all type of agentic applications on the data platform.
+
+![alt text](./docs/media/teradata-mcp-server.png)
+
+- **Search** tools, prompts and resources to search and manage vector stores.
+  - [RAG Tools](src/teradata_mcp_server/tools/rag/README.md) rapidly build RAG applications.
+- **Query** tools, prompts and resources to query and navigate your Teradata platform:
   - [Base Tools](src/teradata_mcp_server/tools/base/README.md)
-- **DBA** tools, prompts and resources to facilitate your platform administration tasks:
-  - [DBA Tools](src/teradata_mcp_server/tools/dba/README.md)
+- **Table** tools, to efficiently and predictably access structured data models:
+  - [Feature Store Tools](src/teradata_mcp_server/tools/fs/README.md) to access and manage the Teradata Enterprise Feature Store.
+  - [Semantic layer definitions](docs/CUSTOMIZING.md) to easily implement domain-specific tools, prompts and resources for your own business data models. 
 - **Data Quality** tools, prompts and resources accelerate exploratory data analysis:
   - [Data Quality Tools](src/teradata_mcp_server/tools/qlty/README.md)
-- **Security** tools, prompts and resources to resolve permissions:
+- **DBA** tools, prompts and resources to facilitate your platform administration tasks:
+  - [DBA Tools](src/teradata_mcp_server/tools/dba/README.md)
   - [Security Tools](src/teradata_mcp_server/tools/sec/README.md)
-- **Feature Store** tools, prompts and resources to manage the Enterprise Feature Store:
-  - [Feature Store Tools](src/teradata_mcp_server/tools/fs/README.md)
-- **RAG** tools, prompts and resources to manage vector store creation and use
-  - [RAG Tools](src/teradata_mcp_server/tools/rag/README.md)
-- **Custom Semantic Layer** to easily implement domain-specific tools, prompts and resources based on your business data. Refer to [semantic layer definition](docs/CUSTOMIZING.md)
+
 
 ## Getting Started
 
-![Getting Started](docs/media/MCP.png)
+![Getting Started](docs/media/MCP-quickstart.png)
 
 **Step 1.** - Identify the running Teradata System, you need username, password and host details to populate "teradata://username:password@host:1025". If you do not have a Teradata system to conect to, then leverage [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics)
 
