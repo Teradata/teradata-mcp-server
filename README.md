@@ -37,6 +37,13 @@ We are providing groupings of tools and associated helpful prompts to support al
 
 **Step 3.** - There are many client options availale, the [Client Guide](docs/client_guide/CLIENT_GUIDE.md) explains how to configure and run a sample of different clients.
 
+<br>
+
+[A Video Library](./docs/VIDEO_LIBRARY.md) has been curated to assist.
+
+<br>
+
+
 
 ### Quick start with Claude desktop
 If you want to quickly evaluate the tool, we recommend using Claude desktop, the uv package manager and [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics).
