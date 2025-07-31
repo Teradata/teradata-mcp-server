@@ -2,8 +2,6 @@
 
 This tool implements a voice assistant using Amazon Nova Sonic to interact with your Teradata system via the Teradata MCP server. This code is largely inspired from the [Amazon Nova Sonic Python Streaming Implementation](https://github.com/aws-samples/amazon-nova-samples/tree/main/speech-to-speech/sample-codes/console-python) repository.
 
-**Currently only tools without parameters are supported**
-
 ## Features
 
 - Real-time audio streaming from your microphone to AWS Bedrock
@@ -79,7 +77,7 @@ python mcp_voice_client.py --debug
 
 ### How it works
 
-![alt text](voice-assistant-diagram.png)
+![Conversational application pattern with Teradata and AWS Nova Sonic](voice-assistant-diagram.png)
 
 1. When you run the script, it will:
    - Connect to AWS Bedrock
