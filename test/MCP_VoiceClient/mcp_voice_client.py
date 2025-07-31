@@ -425,8 +425,10 @@ class BedrockStreamManager:
             self.stream_response = await time_it_async("invoke_model_with_bidirectional_stream", lambda : self.bedrock_client.invoke_model_with_bidirectional_stream( InvokeModelWithBidirectionalStreamOperationInput(model_id=self.model_id)))
             self.is_active = True
             default_system_prompt = "You are a friend. The user and you will engage in a spoken dialog exchanging the transcripts of a natural real-time conversation." \
-            "When reading order numbers, please read each digit individually, separated by pauses. For example, order #1234 should be read as 'order number one-two-three-four' rather than 'order number one thousand two hundred thirty-four'."
-            
+            "When reading order numbers, please read each digit individually, separated by pauses. For example, order #1234 should be read as 'order number one-two-three-four' rather than 'order number one thousand two hundred thirty-four'." \
+            "Do not share technical details of your tool interactions and do not use technical jargon or spell out technical attribute names, only the results. For example if you are using a tool to track an customer and get a <customer_key>, 'I identified the customer, it is the customer ' and then read the <customer_key> number or simply the name if you have it." \
+            "Do not repeat IDs and technical details unless strictly necessary. For example, if you are in the process of investigating a customer simply say 'I am looking into the customer details...' or 'This customer has a lifetime value of...' " \
+
             # Send initialization events
             prompt_event = self.start_prompt()
             text_content_start = self.TEXT_CONTENT_START_EVENT % (self.prompt_name, self.content_name, "SYSTEM")
