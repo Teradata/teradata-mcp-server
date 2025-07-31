@@ -49,7 +49,7 @@ Deployment Choice
 2. UV - UV will manage the libraries (this approach is more suitable for development)
 3. REST - The rest approach takes the docker container and wraps it in a Restful API
 
-The recommended choice will be to deploy Streamable-http in a docker container. [Jump to next section](#using-docker) for the docker option.
+The recommended choice will be to deploy Streamable-http in a docker container. [Jump to next section](#step-5---using-docker) for the docker option.
 
 ## Step 4 - Decide on the tools/prompts you want to be available (optional) to a profile
 
