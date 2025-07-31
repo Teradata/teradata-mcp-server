@@ -242,12 +242,33 @@ for file in custom_object_files:
             custom_objects.update(loaded)  # Merge dictionaries
 
 
-def make_custom_prompt(prompt_name: str, prompt: str, desc: str):
+def make_custom_prompt(name: str, obj: dict):
+    param_defs = obj.get("parameters", {})
+    prompt_parms = ""
+    if param_defs != {}:
+        for param_name, p in param_defs.items():
+            prompt_parms = f"{prompt_parms} {param_name}={p}, "
+        prompt_parms = prompt_parms[:-2]  # Remove trailing comma and space
+        logger.debug(f"\n\n Formatted prompt: {prompt_parms}")
+        logger.debug(f"\nPrompt: {obj.get('prompt', '')}")
+        usermsg = UserMessage(role="user", content=TextContent(type="text", text=obj.get("prompt", "")+f".format({prompt_parms})"))
+    else:
+        usermsg = UserMessage(role="user", content=TextContent(type="text", text=obj.get("prompt", "")))
+
+    logger.debug(f"\nUser Message: {usermsg}")
+
     async def _dynamic_prompt():
         # SQL is closed over without parameters
-        return UserMessage(role="user", content=TextContent(type="text", text=prompt))
-    _dynamic_prompt.__name__ = prompt_name
-    return mcp.prompt(description=desc)(_dynamic_prompt)
+        return usermsg
+    _dynamic_prompt.__name__ = name
+    return mcp.prompt(description=obj.get("description", ""))(_dynamic_prompt)
+
+# def make_custom_prompt(prompt_name: str, prompt: str, desc: str):
+#     async def _dynamic_prompt():
+#         # SQL is closed over without parameters
+#         return UserMessage(role="user", content=TextContent(type="text", text=prompt))
+#     _dynamic_prompt.__name__ = prompt_name
+#     return mcp.prompt(description=desc)(_dynamic_prompt)
 
 def make_custom_query_tool(name, tool):
     param_defs = tool.get("parameters", {})
@@ -376,7 +397,7 @@ for name, obj in custom_objects.items():
         globals()[name] = fn
         logger.info(f"Created tool: {name}")
     elif obj_type == "prompt"  and any(re.match(pattern, name) for pattern in config.get('prompt',[])):
-        fn = make_custom_prompt(name, obj["prompt"], obj.get("description", ""))
+        fn = make_custom_prompt(name, obj)
         globals()[name] = fn
         logger.info(f"Created prompt: {name}")
     elif obj_type == "cube"  and any(re.match(pattern, name) for pattern in config.get('tool',[])):
