@@ -1,4 +1,4 @@
-# Voice Client from the Teradata MCP server
+# Voice Assistant with the Teradata MCP server
 
 This tool implements a voice assistant using Amazon Nova Sonic to interact with your Teradata system via the Teradata MCP server. This code is largely inspired from the [Amazon Nova Sonic Python Streaming Implementation](https://github.com/aws-samples/amazon-nova-samples/tree/main/speech-to-speech/sample-codes/console-python) repository.
 
