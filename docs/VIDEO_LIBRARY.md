@@ -7,4 +7,6 @@ The video library is a curation of videos that the community believes would be v
 
 
 ## Installation
+[Installing on a mac](https://youtu.be/bx6q3iL6K4A) - this is a longer video walking you through the steps to install the server on your mac.
+
 

@@ -53,9 +53,9 @@ The recommended choice will be to deploy Streamable-http in a docker container. 
 
 ## Step 4 - Decide on the tools/prompts you want to be available (optional) to a profile
 
-Open the [configure_tools.yaml](../configure_tools.yml) file.  The first level of the structure is the profile name, then the module name, then allmodule/tools/prompts
+Open the [profiles.yml](../profiles.yml) file.  
 
-For each module if you set allmodule to True then all tools and prompts will be visible unless you explicitly set the tool/prompt name to False.  If the allmodule is set to False, then nothing will be visible unless you explicitly set the tool/prompt name to True.
+Profiles allow you to limit the tools / prompts / resources available to the server at spin up.  We provide a few different profiles and you can make changes as you see fit.
 
 If no profile is defined then the default profile will be "all" this will enable all tools and prompts.
 
