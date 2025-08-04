@@ -1,18 +1,16 @@
 import re
 import logging
-from typing import Optional, Any, Dict, List
+from typing import Optional
 from teradatasql import TeradataConnection
-import json
-from datetime import date, datetime
-from decimal import Decimal
 from sqlalchemy import text
-from sqlalchemy.engine import Engine, Connection
+from sqlalchemy.engine import Connection
 from sqlalchemy.engine import default
 from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
 
 logger = logging.getLogger("teradata_mcp_server")
 
 #------------------ Tool  ------------------#
+# Read query tool
 def handle_base_readQuery(
     conn: Connection,
     sql: str = None,
@@ -71,12 +69,11 @@ def handle_base_readQuery(
 
     return create_response(data, metadata)
         
-#------------------ Tool  ------------------#
-# Write SQL execution tool
-from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
-#       table_name (str) - name of the table to get the definition for
-#     Returns: ResponseType - formatted response with ddl results or error message
 
+
+
+#------------------ Tool  ------------------#
+# get DDL tool
 def handle_base_tableDDL(conn: TeradataConnection, db_name: str, table_name: str, *args, **kwargs):
     """
     Displays the DDL definition of a table via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
@@ -112,11 +109,6 @@ def handle_base_tableDDL(conn: TeradataConnection, db_name: str, table_name: str
         
 #------------------ Tool  ------------------#
 # Read column description tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries   
-#       db_name (str) - name of the database to list objects from
-#       obj_name (str) - name of the object to list columns from     
-#     Returns: formatted response with list of columns and data types or error message
 def handle_base_columnDescription(conn: TeradataConnection, db_name: str, obj_name: str, *args, **kwargs):
     """
     Shows detailed column information about a database table via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
@@ -197,11 +189,6 @@ def handle_base_columnDescription(conn: TeradataConnection, db_name: str, obj_na
 
 #------------------ Tool  ------------------#
 # Read table preview tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries   
-#       db_name (str) - name of the database to list objects from
-#       table_name (str) - name of the table to list columns from     
-#     Returns: formatted response string or error message
 def handle_base_tablePreview(conn: TeradataConnection, table_name: str, db_name: Optional[str] = None, *args, **kwargs):
     """
     This function returns data sample and inferred structure from a database table or view via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
@@ -240,11 +227,6 @@ def handle_base_tablePreview(conn: TeradataConnection, table_name: str, db_name:
 
 #------------------ Tool  ------------------#
 # Read table affinity tool
-#     Arguments:
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-#       db_name (str) - name of the database to list objects from
-#       obj_name (str) - name of the object to list columns from
-#     Returns: formatted response with list of tables and their usage or error message
 def handle_base_tableAffinity(conn: TeradataConnection, db_name: str, obj_name: str, *args, **kwargs):
     """
     Get tables commonly used together by database users, this is helpful to infer relationships between tables via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
@@ -321,10 +303,6 @@ def handle_base_tableAffinity(conn: TeradataConnection, db_name: str, obj_name: 
 
 #------------------ Tool  ------------------#
 # Read table usage tool
-#     Arguments:
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-#       db_name (str) - name of the database to list objects from
-#     Returns: formatted response with list of tables and their usage or error message
 def handle_base_tableUsage(conn: TeradataConnection, db_name: Optional[str] = None, *args, **kwargs):
     """
     Measure the usage of a table and views by users in a given schema, this is helpful to infer what database objects are most actively used or drive most value via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
@@ -405,13 +383,6 @@ def handle_base_tableUsage(conn: TeradataConnection, db_name: Optional[str] = No
 
 #------------------ Tool  ------------------#
 # Dynamic SQL execution tool
-# This tool is used to execute dynamic SQL queries that are generated at runtime by a generator function.
-# This is not intended to be directly exposed as a tool, but used to build other tools.
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries         
-#       sql_generator (callable) - a generator function that returns a SQL query string
-#       *args - additional positional arguments to pass to the generator function
-#     Returns: ResponseType - formatted response with query results or error message
 def util_base_dynamicQuery(conn: TeradataConnection, sql_generator: callable, *args, **kwargs):
     """
     This tool is used to execute dynamic SQL queries that are generated at runtime by a generator function.

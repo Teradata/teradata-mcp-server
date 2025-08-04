@@ -9,19 +9,16 @@ from typing import Optional, Any, Dict, List
 import json
 from datetime import date, datetime
 from decimal import Decimal
+from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
 
 logger = logging.getLogger("teradata_mcp_server")
-from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
+
 
 #------------------ Do not make changes above  ------------------#
 
 
 #------------------ Tool  ------------------#
 # <Name of Tool> tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-#       <arguments> - <description of arguments>
-#     Returns: <what it does> or error message    
 def handle_tmpl_nameOfTool(conn: TeradataConnection, argument: Optional[str], *args, **kwargs):
     """
     <description of what the tool is for>
