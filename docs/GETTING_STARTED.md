@@ -10,8 +10,10 @@ Assumes that you have a running Teradata environment, you should have the follow
 3. user password - password for the corresponding user name
 4. database - On Teradata systems this is typically the same as you user name
 
-## Step 0 - Installing git
-Refer to the [git](https://git-scm.com/) website for download and installation instructions for your environment.
+## Step 0 - Installing environment
+- Refer to the [git](https://git-scm.com/) website for download and installation instructions, git will be used to pull code from the github repository.
+- Refer to the [Installing uv](https://docs.astral.sh/uv/getting-started/installation/#standalone-installer) guide to assist with installing uv, uv is used to manage packages that are used.
+- Refer to the [Python.org](https://www.python.org/downloads/) for downloading and installing python 3.11 or greater.
 
 ## Step 1 - Download the Software
 Clone the mcp-server repository with: 
