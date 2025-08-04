@@ -1,6 +1,6 @@
 # MCP Server - Getting Started
 
-![Getting Started](media/MCP.png)
+![Getting Started](media/MCP-quickstart.png)
 
 This document will cover the process and options for getting the teradata-mcp-server up and running
 
@@ -51,14 +51,9 @@ Deployment Choice
 
 The recommended choice will be to deploy Streamable-http in a docker container. [Jump to next section](#step-5---using-docker) for the docker option.
 
-## Step 4 - Decide on the tools/prompts you want to be available (optional) to a profile
+## Step 4 - Customizing the server (optional)
 
-Open the [profiles.yml](../profiles.yml) file.  
-
-Profiles allow you to limit the tools / prompts / resources available to the server at spin up.  We provide a few different profiles and you can make changes as you see fit.
-
-If no profile is defined then the default profile will be "all" this will enable all tools and prompts.
-
+Refer to the [Customizing](CUSTOMIZING.md) instuctions 
 
 --------------------------------------------------------------------------------------
 ## Step 5 - Using Docker

@@ -1,6 +1,6 @@
 # Working with MCP Clients
 
-![Getting Started](../media/MCP.png)
+![Getting Started](../media/MCP-quickstart.png)
 
 This documet will cover the process and options for getting a client tool to connect to the teradata-mcp-server.  Note that you have many client options, we will cover some but not all.
 

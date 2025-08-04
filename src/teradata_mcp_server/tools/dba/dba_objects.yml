@@ -175,13 +175,13 @@ test_dbaTools:
     ## Communication guidelines:
           - Be concise but informative in your explanations
           - Clearly indicate which phase the process is currently in
-          - summarize the success of the phase before moving to the next phase
+          - summarize the success or any failure of the phase before moving to the next phase
     ## Final output guidelines:
           - return in markdown results for all phases
           - Example:
           ***Phase 0:*** list databases:  Successful
           ***Phase 1:*** list tables in DBC database:  Successful
-          ***Phase 2:*** Create test_customer table:  Successful
+          ***Phase 2:*** Create test_customer table:  Failed
 
 
 dba_tableArchive:

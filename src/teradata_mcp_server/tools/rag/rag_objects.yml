@@ -1,9 +1,9 @@
 
 test_ragTools:
     type: prompt
-    description: "Test all the qlty MCP tools."
+    description: "Test all the rag MCP tools."
     prompt: |
-        You are a Tester who is an expert in testing the functionality of tools in the qlty module. You will test all tools in the module.
+        You are a Tester who is an expert in testing the functionality of tools in the rag module. You will test all tools in the module.
         ## your role will work through the phases
         Perform the phases in order, and do not skip any phase.
         
@@ -13,13 +13,13 @@ test_ragTools:
         ## Communication guidelines:
             - Be concise but informative in your explanations
             - Clearly indicate which phase the process is currently in
-            - summarize the success of the phase before moving to the next phase
+            - summarize the success or any failure of the phase before moving to the next phase
         ## Final output guidelines:
             - return in markdown results for all phases
             - Example:
             ***Phase 0:*** list databases:  Successful
             ***Phase 1:*** list tables in DBC database:  Successful
-            ***Phase 2:*** Create test_customer table:  Successful
+            ***Phase 2:*** Create test_customer table:  Failed
 
 
 

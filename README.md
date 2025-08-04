@@ -72,6 +72,10 @@ If you want to quickly evaluate the tool, we recommend using Claude desktop, the
   }
 ```
 
+## Contributing
+Please refer to the [Contributing](./docs/CONTRIBUTING.md) guide and the [Developer Guide](./docs/developer_guide/DEVELOPER_GUIDE.md).
+
+
 ---------------------------------------------------------------------
 ## Certification
 <a href="https://glama.ai/mcp/servers/@Teradata/teradata-mcp-server">
