@@ -125,7 +125,12 @@ Two guides have been created to show how to add tools and prompts:
 ## Tools testing
 Every module will have at least one prompt that would be responsible for testing all of the tools in the module.  
 
+Use the tester profile to see the test prompts.
+
+`uv run teradata-mcp-server --profile tester`
+
 The following test prompt template should be modified and placed in the module_objects.ylm file (e.g. base_objects.yml), the name of the testig prompt should be test_\<module name\>Tools. (e.g. test_baseTools):
+
 
 ```
 test_baseTools:

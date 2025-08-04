@@ -22,37 +22,47 @@ test_baseTools:
    Perform the phases in order, and do not skip any phase.
    
    ## Phase 0 - Get a list of databases
-   - Get a list of databases from the user. Use the base_databaseList function to get the list.  The tool should return a list of databases in the Teradata system.
+   - Get a list of databases from the user. Use the base_databaseList function to get the list.  The tool should return a list of databases in the Teradata system, if no data is returned then fail this test.
    ## Phase 1 - Get the list of tables in each database
-   - For the DBC database, get the list of tables. Use the base_tableList function to get the list. The tool should return a list of tables in the DBC database.
+   - For the DBC database, get the list of tables. Use the base_tableList function to get the list. The tool should return a list of tables in the DBC database, if no data is returned then fail this test.
    ## Phase 2 - Create a test table in your default database
    - Create a customer table in your default database called test_customer, the table should have an Cust_id column. Use the base_writeQuery function to create the table. A test_customer table should be created.
    - Add 10 rows to the test_customer table. Use the base_writeQuery function to add the rows.
    ## Phase 3 - Test the query tool
-   - test the query tool by running a query on the test_customer table. Use the base_readQuery function to run the query. The query should return the 10 rows you added in the previous phase.
-   - test the query tool by running a query on the test_customer table with a filter. Use the base_readQuery function to run the query. The query should return only the rows that match the filter. (example of a filter is Cust_id > 5)
+   - test the query tool by running a query on the test_customer table. Use the base_readQuery function to run the query. The query should return the 10 rows you added in the previous phase, if no data is returned then fail this test.
+   - test the query tool by running a query on the test_customer table with a filter. Use the base_readQuery function to run the query. The query should return only the rows that match the filter, if no data is returned then fail this test. (example of a filter is Cust_id > 5)
    ## Phase 4 - Test the table DDL tool
-   - Get the DDL of the test_customer table. Use the base_tableDDL function to get the DDL. The tool should return the DDL of the test_customer table.
+   - Get the DDL of the test_customer table. Use the base_tableDDL function to get the DDL. The tool should return the DDL of the test_customer table, if no data is returned then fail this test.
    ## Phase 5 - Test the column description tool
-   - Get the column description of the test_customer table. Use the base_columnDescription function to get the columns description. The tool should return the column description of the test_customer table.
+   - Get the column description of the test_customer table. Use the base_columnDescription function to get the columns description. The tool should return the column description of the test_customer table, if no data is returned then fail this test.
    ## Phase 6 - Test the table preview tool
-   - Get the preview of the test_customer table. Use the base_tablePreview function to get the preview. The tool should return the first 5 rows of the test_customer table and the column information.
+   - Get the preview of the test_customer table. Use the base_tablePreview function to get the preview. The tool should return the first 5 rows of the test_customer table and the column information, if no data is returned then fail this test.
    ## Phase 7 - Test the table affinity tool
-   - Get the table affinity of the test_customer table. Use the base_tableAffinity function to get the affinity. The tool should return the table affinity of the test_customer table.
+   - Get the table affinity of the test_customer table. Use the base_tableAffinity function to get the affinity. The tool should return the table affinity of the test_customer table, if no data is returned then fail this test.
    ## Phase 8 - Test the table usage tool
-   - Get the table usage of the test_customer table. Use the base_tableUsage function to get the usage. The tool should return the table usage of the test_customer table.
+   - Get the table usage of the test_customer table. Use the base_tableUsage function to get the usage. The tool should return the table usage of the test_customer table, if no data is returned then fail this test.
    ## Phase 9 - Clean up
    - Drop the test_customer table. Use the base_writeQuery function to drop the table. The tool should return a success message.
    ## Communication guidelines:
          - Be concise but informative in your explanations
          - Clearly indicate which phase the process is currently in
          - summarize the success or any failure of the phase before moving to the next phase
-   ## Final output guidelines:
-         - return in markdown results for all phases
-         - Example:
-         ***Phase 0:*** list databases:  Successful
-         ***Phase 1:*** list tables in DBC database:  Successful
-         ***Phase 2:*** Create test_customer table:  Failed
+    ## Final output guidelines:
+          - return in markdown results for all phases as a table including the phase number, description, success or failure status, and a description of the outcome.
+          - if a tool does not return any results, then fail that test and indicate it in the outcome.
+    ## Example output:
+          - | Phase | Description | Status | Outcome |
+          - |-------|-------------|--------|---------|
+          - | 0     | Get a list of databases | Success | List of databases returned |
+          - | 1     | Get the list of tables in DBC database | Success | List of tables returned |
+          - | 2     | Create a test table in default database | Success | test_customer table created |
+          - | 3     | Test the query tool on test_customer table | Success | 10 rows returned |
+          - | 4     | Get the DDL of the test_customer table | Success | DDL returned |
+          - | 5     | Get the column description of the test_customer table | Success | Column description returned |
+          - | 6     | Get the preview of the test_customer table | Success | First 5 rows and column info returned |
+          - | 7     | Get the table affinity of the test_customer table | Success | Table affinity returned |
+          - | 8     | Get the table usage of the test_customer table | Success | Table usage returned |
+          - | 9     | Drop the test_customer table | Success | Table dropped successfully |
 
          
 base_query:

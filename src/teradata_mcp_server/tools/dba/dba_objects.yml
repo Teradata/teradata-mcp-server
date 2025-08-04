@@ -135,40 +135,40 @@ test_dbaTools:
     - Add 10 rows to the test_customer table using the base_writeQuery tool.
 
     ## Phase 1 - Get a list of all the SQL executed by a user
-    - Get a list of all the SQL executed by a user (e.g. demo_user) in the last 7 days using the dba_userSqlList tool. A list of all SQL statements should be returned
+    - Get a list of all the SQL executed by a user (e.g. demo_user) in the last 7 days using the dba_userSqlList tool. A list of all SQL statements should be returned, if no data is returned then fail this test
     
     ## Phase 2 - Get a list of all the SQL executed against a table
-    - Get a list of all the SQL executed against a table (e.g. test_customer) in the last 7 days using the dba_tableSqlList tool. A list of all SQL statements should be returned
+    - Get a list of all the SQL executed against a table (e.g. test_customer) in the last 7 days using the dba_tableSqlList tool. A list of all SQL statements should be returned, if no data is returned then fail this test
 
     ## Phase 3 - get a list of the current perm table space for a tables
-    - Get the current perm table space for a test_customer table using the dba_tableSpace tool. The current perm table space should be returned.
+    - Get the current perm table space for a test_customer table using the dba_tableSpace tool. The current perm table space should be returned, if no data is returned then fail this test.
 
     ## Phase 4 - get a list of the current perm database space for a database
-    - Get the current perm database space for a database (e.g. demo_user) using the dba_databaseSpace tool. The current perm database space should be returned.
+    - Get the current perm database space for a database (e.g. demo_user) using the dba_databaseSpace tool. The current perm database space should be returned, if no data is returned then fail this test.
 
     ## Phase 5 - get a list of the current database version
-    - Get the current database version using the dba_databaseVersion tool. The current database version should be returned. 
+    - Get the current database version using the dba_databaseVersion tool. The current database version should be returned, if no data is returned then fail this test. 
 
     ## Phase 6 - get a list of the system usage summary metrics
-    - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket using the dba_resusageSummary tool. The system usage summary metrics should be returned  
+    - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket using the dba_resusageSummary tool. The system usage summary metrics should be returned, if no data is returned then fail this test  
 
     ## Phase 7 - get a list of the system usage for a user
-    - Get the system usage for a user (e.g. demo_user) using the dba_resusageSummary tool. The system resusage for the user (e.g. demo_user) should be returned.
+    - Get the system usage for a user (e.g. demo_user) using the dba_resusageSummary tool. The system resusage for the user (e.g. demo_user) should be returned, if no data is returned then fail this test.
 
     ## Phase 8 - get a list of the system flow control metrics
-    - Get the Teradata system flow control metrics by day and hour using the dba_flowControl tool. The system flow control metrics should be returned.
+    - Get the Teradata system flow control metrics by day and hour using the dba_flowControl tool. The system flow control metrics should be returned, if no data is returned then fail this test.
 
     ## Phase 9 - get a list of the user feature usage metrics
-    - Get the user feature usage metrics using the dba_featureUsage tool. The user feature usage metrics should be returned.
+    - Get the user feature usage metrics using the dba_featureUsage tool. The user feature usage metrics should be returned, if no data is returned then fail this test.
 
     ## Phase 10 - get a list of the user delay metrics
-    - Get the Teradata user delay metrics using the dba_userDelay tool. The user delay metrics should be returned.
+    - Get the Teradata user delay metrics using the dba_userDelay tool. The user delay metrics should be returned, if no data is returned then fail this test.
 
     ## Phase 11 - get a list of the table usage impact by a user
-    - Get the usage of a table (e.g. test_customer) by a user (e.g. demo_user) using the dba_tableUsageImpact tool. The usage of the table by the user should be returned.
+    - Get the usage of a table (e.g. test_customer) by a user (e.g. demo_user) using the dba_tableUsageImpact tool. The usage of the table by the user should be returned, if no data is returned then fail this test.
 
     ## Phase 12 - get a list of the session information for a user
-    - Get the session information for a user (e.g. demo_user) using the dba_sessionInfo tool. The session information for the user should be returned.
+    - Get the session information for a user (e.g. demo_user) using the dba_sessionInfo tool. The session information for the user should be returned, if no data is returned then fail this test.
 
     ## Phase 13 - Clean up
     - Drop the test_customer table. Use the base_writeQuery function to drop the table. The tool should return a success message.
@@ -177,11 +177,24 @@ test_dbaTools:
           - Clearly indicate which phase the process is currently in
           - summarize the success or any failure of the phase before moving to the next phase
     ## Final output guidelines:
-          - return in markdown results for all phases
-          - Example:
-          ***Phase 0:*** list databases:  Successful
-          ***Phase 1:*** list tables in DBC database:  Successful
-          ***Phase 2:*** Create test_customer table:  Failed
+          - return in markdown results for all phases as a table including the phase number, description, success or failure status, and a description of the outcome.
+          - if a tool does not return any results, then fail that test and indicate it in the outcome.
+    ## Example output:
+
+          | Phase | Description | Status | Outcome |
+          |-------|-------------|--------|---------|
+          | 1     | Get a list of all the SQL executed against a table (e.g. test_customer) in the last 7 days | Successful |  |
+          | 2     | Get the current perm table space for a test_customer table | Successful |  |
+          | 3     | Get the current perm database space for a database (e.g. demo_user) | Successful |  |
+          | 4     | Get the current database version | Successful |  |
+          | 5     | Get the Teradata system usage summary metrics | Successful |  |
+          | 6     | Get the system usage for a user (e.g. demo_user) | Successful |  |
+          | 7     | Get the Teradata system flow control metrics | Successful |  |
+          | 8     | Get the user feature usage metrics | Successful |  |
+          | 9     | Get the Teradata user delay metrics | Successful |  |
+          | 10    | Get the usage of a table (e.g. test_customer) by a user (e.g. demo_user) | Successful |  |
+          | 11    | Get the session information for a user (e.g. demo_user) | Successful |  |
+          | 12    | Drop the test_customer table | Successful |  |
 
 
 dba_tableArchive:

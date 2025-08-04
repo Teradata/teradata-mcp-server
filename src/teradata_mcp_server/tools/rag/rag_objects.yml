@@ -15,11 +15,13 @@ test_ragTools:
             - Clearly indicate which phase the process is currently in
             - summarize the success or any failure of the phase before moving to the next phase
         ## Final output guidelines:
-            - return in markdown results for all phases
-            - Example:
-            ***Phase 0:*** list databases:  Successful
-            ***Phase 1:*** list tables in DBC database:  Successful
-            ***Phase 2:*** Create test_customer table:  Failed
+            - return in markdown results for all phases as a table including the phase number, description, success or failure status, and a description of the outcome.
+            - if a tool does not return any results, then fail that test and indicate it in the outcome.
+        ## Example output:
+            - | Phase | Description | Status | Outcome |
+            - |-------|-------------|--------|---------|
+            - | 0     | Set up test environment | Success | Test environment set up successfully |
+
 
 
 
