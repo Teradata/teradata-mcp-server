@@ -1,6 +1,5 @@
 import logging
 import yaml
-import os
 from typing import Optional, Any, Dict, List
 from teradatasql import TeradataConnection
 import json
@@ -10,6 +9,7 @@ from decimal import Decimal
 
 logger = logging.getLogger("teradata_mcp_server")
 
+#------------------ Tool  ------------------#
 # Load RAG configuration
 def load_rag_config():
     """Load RAG configuration from rag_config.yml"""
@@ -62,6 +62,7 @@ def get_default_rag_config():
 # Load config at module level
 RAG_CONFIG = load_rag_config()
 
+#------------------ Tool  ------------------#
 def build_search_query(vector_db, dst_table, chunk_embed_table, k, config):
     """Build dynamic search query based on available metadata fields in vector store"""
     # Get metadata fields from config
@@ -139,6 +140,8 @@ def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str
 
     return json.dumps(response, default=serialize_teradata_types)
 
+#------------------ Tool  ------------------#
+# Execute complete RAG workflow to answer user questions based on document context
 def handle_rag_executeWorkflow(
 
     conn: TeradataConnection,
@@ -302,6 +305,8 @@ def handle_rag_executeWorkflow(
 
     return create_response(data, metadata)
 
+#------------------ Tool  ------------------#
+# Execute complete RAG workflow to answer user questions based on document context using IVSM functions
 def handle_rag_executeWorkflow_ivsm(
     conn: TeradataConnection,
     question: str,
@@ -404,7 +409,7 @@ def handle_rag_executeWorkflow_ivsm(
 
 
         # Step 3: Tokenize query
-        logger.debug(f"Step 3: Tokenizing query using ivsm.tokenizer_encode")
+        logger.debug("Step 3: Tokenizing query using ivsm.tokenizer_encode")
         
         cur.execute(f"""
             REPLACE VIEW v_topics_tokenized AS
@@ -436,7 +441,7 @@ def handle_rag_executeWorkflow_ivsm(
         logger.debug("Tokenized view v_topics_tokenized created")
 
         # Step 4: Create embedding view
-        logger.debug(f"Step 4: Creating embedding view using ivsm.IVSM_score")
+        logger.debug("Step 4: Creating embedding view using ivsm.IVSM_score")
         
         cur.execute(f"""
             REPLACE VIEW v_topics_embeddings AS
@@ -462,7 +467,7 @@ def handle_rag_executeWorkflow_ivsm(
         logger.debug("Embedding view v_topics_embeddings created")
 
         # Step 5: Create query embedding table
-        logger.debug(f"Step 5: Creating query embedding table using ivsm.vector_to_columns")
+        logger.debug("Step 5: Creating query embedding table using ivsm.vector_to_columns")
         
         # Drop existing embeddings table
         drop_sql = f"DROP TABLE {db_name}.{dst_table}"

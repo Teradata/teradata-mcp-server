@@ -1,15 +1,11 @@
 import logging
 from teradatasql import TeradataConnection 
-from typing import Optional, Any, Dict, List
-import json
-from datetime import date, datetime
-from decimal import Decimal
 import tdfs4ds
-
+from teradata_mcp_server.tools.utils import rows_to_json, create_response
 
 
 logger = logging.getLogger("teradata_mcp_server")
-from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
+
 
 #------------------ Do not make changes above  ------------------#
 

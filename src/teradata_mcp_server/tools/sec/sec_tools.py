@@ -1,28 +1,20 @@
 import logging
 from teradatasql import TeradataConnection 
-from typing import Optional, Any, Dict, List
-import json
-from datetime import date, datetime
-from decimal import Decimal
+from teradata_mcp_server.tools.utils import rows_to_json, create_response
 
 logger = logging.getLogger("teradata_mcp_server")
-from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
+
 
 #------------------ Do not make changes above  ------------------#
 
 
 #------------------ Tool  ------------------#
 # get user permissions tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-#       user_name (str) - The username for which to retrieve permissions
-#       
-#     Returns: permissions assigned to user_name or error message
 def handle_sec_userDbPermissions(conn: TeradataConnection, user_name: str, *args, **kwargs):
     """
     Get permissions for a user.
 
-    Arguments:
+    Args:
       user_name - user name to analyze
 
     Returns:
@@ -58,16 +50,11 @@ def handle_sec_userDbPermissions(conn: TeradataConnection, user_name: str, *args
 
 #------------------ Tool  ------------------#
 # get role permissions tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-#       role_name (str) - The role name for which to retrieve permissions
-#
-#     Returns: permissions assigned to role_name or error message
 def handle_sec_rolePermissions(conn: TeradataConnection, role_name: str, *args, **kwargs):
     """
     Get permissions for a role.
 
-    Arguments:
+    Args:
       role_name - role name to analyze
 
     Returns:
@@ -163,16 +150,11 @@ def handle_sec_rolePermissions(conn: TeradataConnection, role_name: str, *args, 
 
 #------------------ Tool  ------------------#
 # get roles that a user belongs to tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-#       user_name (str) - The username for which to retrieve roles
-#
-#     Returns: roles assigned to user_name or error message
 def handle_sec_userRoles(conn: TeradataConnection, user_name: str, *args, **kwargs):
     """
     Get roles assigned to a user.
 
-    Arguments:
+    Args:
       user_name - user name to analyze
 
     Returns:
