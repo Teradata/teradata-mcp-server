@@ -14,31 +14,31 @@ test_qltyTools:
 
     ## Phase 1 - test the missing values tool
     - Use the qlty_missingValues tool to check for missing values in the test_customer table.
-    - The tool should return a list of column names with missing values.
+    - The tool should return a list of column names with missing values, if no data is returned then fail this test.
 
     ## Phase 2 - test the negative values tool
     - Use the qlty_negativeValues tool to check for negative values in the test_customer table.
-    - The tool should return a list of column names with negative values.
+    - The tool should return a list of column names with negative values, if no data is returned then fail this test.
 
     ## Phase 3 - test the distinct categories tool
     - Use the qlty_distinctCategories tool to get distinct categories in the customer_name column of the test_customer table.
-    - The tool should return a list of distinct categories.
+    - The tool should return a list of distinct categories, if no data is returned then fail this test.
 
     ## Phase 4 - test the standard deviation tool
     - Use the qlty_standardDeviation tool to get the mean and standard deviation for the customer_id column in the test_customer table.
-    - The tool should return the mean and standard deviation.
+    - The tool should return the mean and standard deviation, if no data is returned then fail this test.
 
     ## Phase 5 - test the column summary tool
     - Use the qlty_columnSummary tool to get the column summary statistics for the test_customer table.
-    - The tool should return the summary statistics for each column in the table. 
+    - The tool should return the summary statistics for each column in the table, if no data is returned then fail this test. 
 
     ## Phase 6 - test the univariate statistics tool
     - Use the qlty_univariateStatistics tool to get the univariate statistics for the test_customer table.
-    - The tool should return the univariate statistics for each column in the table.
+    - The tool should return the univariate statistics for each column in the table, if no data is returned then fail this test.
 
     ## Phase 7 - test the rows with missing values tool
     - Use the qlty_rowsWithMissingValues tool to get rows with missing values in the test_customer table.
-    - The tool should return the rows that have missing values in any column.
+    - The tool should return the rows that have missing values in any column, if no data is returned then fail this test.
 
     ## Phase 8 - Clean up
     - Drop the test_customer table. Use the base_writeQuery function to drop the table. The tool should return a success message.
@@ -46,13 +46,22 @@ test_qltyTools:
     ## Communication guidelines:
           - Be concise but informative in your explanations
           - Clearly indicate which phase the process is currently in
-          - summarize the success of the phase before moving to the next phase
+          - summarize the success or any failure of the phase before moving to the next phase
     ## Final output guidelines:
-          - return in markdown results for all phases
-          - Example:
-          ***Phase 0:*** list databases:  Successful
-          ***Phase 1:*** list tables in DBC database:  Successful
-          ***Phase 2:*** Create test_customer table:  Successful
+          - return in markdown results for all phases as a table including the phase number, description, success or failure status, and a description of the outcome.
+          - if a tool does not return any results, then fail that test and indicate it in the outcome.
+    ## Example output:
+          - | Phase | Description | Status | Outcome |
+          - |-------|-------------|--------|---------|
+          - | 0     | Set up test environment | Success | Test environment set up successfully |
+          - | 1     | Test missing values tool | Success | Missing values tool returned expected results |
+          - | 2     | Test negative values tool | Success | Negative values tool returned expected results |
+          - | 3     | Test distinct categories tool | Success | Distinct categories tool returned expected results |
+          - | 4     | Test standard deviation tool | Success | Standard deviation tool returned expected results |
+          - | 5     | Test column summary tool | Success | Column summary tool returned expected results |
+          - | 6     | Test univariate statistics tool | Success | Univariate statistics tool returned expected results |
+          - | 7     | Test rows with missing values tool | Success | Rows with missing values tool returned expected results |
+          - | 8     | Clean up test environment | Success | Test environment cleaned up successfully |
 
 
 qlty_databaseQuality:

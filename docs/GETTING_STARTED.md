@@ -1,6 +1,6 @@
 # MCP Server - Getting Started
 
-![Getting Started](media/MCP.png)
+![Getting Started](media/MCP-quickstart.png)
 
 This document will cover the process and options for getting the teradata-mcp-server up and running
 
@@ -10,8 +10,10 @@ Assumes that you have a running Teradata environment, you should have the follow
 3. user password - password for the corresponding user name
 4. database - On Teradata systems this is typically the same as you user name
 
-## Step 0 - Installing git
-Refer to the [git](https://git-scm.com/) website for download and installation instructions for your environment.
+## Step 0 - Installing environment
+- Refer to the [git](https://git-scm.com/) website for download and installation instructions, git will be used to pull code from the github repository.
+- Refer to the [Installing uv](https://docs.astral.sh/uv/getting-started/installation/#standalone-installer) guide to assist with installing uv, uv is used to manage packages that are used.
+- Refer to the [Python.org](https://www.python.org/downloads/) for downloading and installing python 3.11 or greater.
 
 ## Step 1 - Download the Software
 Clone the mcp-server repository with: 
@@ -51,14 +53,9 @@ Deployment Choice
 
 The recommended choice will be to deploy Streamable-http in a docker container. [Jump to next section](#step-5---using-docker) for the docker option.
 
-## Step 4 - Decide on the tools/prompts you want to be available (optional) to a profile
+## Step 4 - Customizing the server (optional)
 
-Open the [configure_tools.yaml](../configure_tools.yml) file.  The first level of the structure is the profile name, then the module name, then allmodule/tools/prompts
-
-For each module if you set allmodule to True then all tools and prompts will be visible unless you explicitly set the tool/prompt name to False.  If the allmodule is set to False, then nothing will be visible unless you explicitly set the tool/prompt name to True.
-
-If no profile is defined then the default profile will be "all" this will enable all tools and prompts.
-
+Refer to the [Customizing](CUSTOMIZING.md) instuctions 
 
 --------------------------------------------------------------------------------------
 ## Step 5 - Using Docker

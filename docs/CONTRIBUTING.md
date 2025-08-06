@@ -12,4 +12,4 @@ Make sure you have setup your environment based on the Developer Guide in this r
 - Code structure should be maintained. The structure of the repo and files has been carefully crafted, and any deviations from that should be only done when agreed upon by the entire team.
 
 ## Design Guidelines
-- Refer to Developer Guide.
+- Refer to [Developer Guide](./developer_guide/DEVELOPER_GUIDE.md).

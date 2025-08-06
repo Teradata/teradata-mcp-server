@@ -2,26 +2,34 @@ all:
   tool:
     - .*
   prompt:
+    - ^(?!test_).*
+  resource:
+    - .*
+
+tester:
+  tool:
+    - .*
+  prompt:
     - .*
   resource:
     - .*
 
 dba:
   tool:
-    - dba_*
-    - base_*
-    - sec_*
+    - ^dba_*
+    - ^base_*
+    - ^sec_*
   prompt:
-    - dba_*
+    - ^dba_*
 
 dataScientist:
   tool:
-    - base_*
-    - rag_*
-    - fs_*
-    - qlty_*
-    - sec_userDbPermissions
-    - dba_userSqlList
+    - ^base_*
+    - ^rag_*
+    - ^fs_*
+    - ^qlty_*
+    - ^sec_userDbPermissions
+    - ^dba_userSqlList
 
 eda:
   tool:

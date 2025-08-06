@@ -123,7 +123,14 @@ Two guides have been created to show how to add tools and prompts:
 <br>
 
 ## Tools testing
-Every module will have at least one prompt that would be responsible for testing all of the tools in the module.  The following template should be used in the module_objects.ylm file, the name of the testig prompt should be test_\<module name\>Tools:
+Every module will have at least one prompt that would be responsible for testing all of the tools in the module.  
+
+Use the tester profile to see the test prompts.
+
+`uv run teradata-mcp-server --profile tester`
+
+The following test prompt template should be modified and placed in the module_objects.ylm file (e.g. base_objects.yml), the name of the testig prompt should be test_\<module name\>Tools. (e.g. test_baseTools):
+
 
 ```
 test_baseTools:
@@ -136,38 +143,53 @@ test_baseTools:
    
    ## Phase 0 - Get a list of databases
    - Get a list of databases from the user. Use the base_databaseList function to get the list.  The tool should return a list of databases in the Teradata system.
+
    ## Phase 1 - Get the list of tables in each database
    - For the DBC database, get the list of tables. Use the base_tableList function to get the list. The tool should return a list of tables in the DBC database.
+
    ## Phase 2 - Create a test table in your default database
    - Create a customer table in your default database called test_customer, the table should have an Cust_id column. Use the base_writeQuery function to create the table. A test_customer table should be created.
    - Add 10 rows to the test_customer table. Use the base_writeQuery function to add the rows.
+
    ## Phase 3 - Test the query tool
    - test the query tool by running a query on the test_customer table. Use the base_readQuery function to run the query. The query should return the 10 rows you added in the previous phase.
    - test the query tool by running a query on the test_customer table with a filter. Use the base_readQuery function to run the query. The query should return only the rows that match the filter. (example of a filter is Cust_id > 5)
+
    ## Phase 4 - Test the table DDL tool
    - Get the DDL of the test_customer table. Use the base_tableDDL function to get the DDL. The tool should return the DDL of the test_customer table.
+
    ## Phase 5 - Test the column description tool
    - Get the column description of the test_customer table. Use the base_columnDescription function to get the columns description. The tool should return the column description of the test_customer table.
+
    ## Phase 6 - Test the table preview tool
    - Get the preview of the test_customer table. Use the base_tablePreview function to get the preview. The tool should return the first 5 rows of the test_customer table and the column information.
+
    ## Phase 7 - Test the table affinity tool
    - Get the table affinity of the test_customer table. Use the base_tableAffinity function to get the affinity. The tool should return the table affinity of the test_customer table.
+
    ## Phase 8 - Test the table usage tool
    - Get the table usage of the test_customer table. Use the base_tableUsage function to get the usage. The tool should return the table usage of the test_customer table.
+
    ## Phase 9 - Clean up
    - Drop the test_customer table. Use the base_writeQuery function to drop the table. The tool should return a success message.
+
    ## Communication guidelines:
          - Be concise but informative in your explanations
          - Clearly indicate which phase the process is currently in
-         - summarize the success of the phase before moving to the next phase
+         - summarize the success or any failure of the phase before moving to the next phase
    ## Final output guidelines:
          - return in markdown results for all phases
          - Example:
          ***Phase 0:*** list databases:  Successful
          ***Phase 1:*** list tables in DBC database:  Successful
-         ***Phase 2:*** Create test_customer table:  Successful
+         ***Phase 2:*** Create test_customer table:  Failed
 
 ```
+
+Before code is submitted, all test scripts should run with a successful outcome, this ensures that new code does not break old code.  All new code needs to have test prompts added to the module test prompt.
+
+You can run the test prompts via your client of choice.
+
 
 <br><br><br>
 

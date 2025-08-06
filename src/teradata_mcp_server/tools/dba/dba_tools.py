@@ -1,9 +1,6 @@
 import logging
 from teradatasql import TeradataConnection 
-from typing import Optional, Any, Dict, List
-import json
-from datetime import date, datetime
-from decimal import Decimal
+from typing import Optional, List
 
 from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
 
@@ -11,10 +8,6 @@ logger = logging.getLogger("teradata_mcp_server")
 
 #------------------ Tool  ------------------#
 # Get table SQL tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-#       user_name (str) - name of the user 
-#     Returns: formatted response with list of QueryText and UserIDs or error message    
 def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: Optional[int],  *args, **kwargs):
     """
     Get a list of SQL run against a table in the last number of days.
@@ -51,11 +44,7 @@ def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: 
         return create_response(data, metadata)
 
 #------------------ Tool  ------------------#
-# Get user SQL tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-#       user_name (str) - name of the user 
-#     Returns: formatted response with list of QueryText and UserIDs or error message    
+# Get user SQL tool  
 def handle_dba_userSqlList(conn: TeradataConnection, user_name: Optional[str] | None, no_days: Optional[int],  *args, **kwargs):
     """
     Get a list of SQL run by a user in the last number of days if a user name is provided, otherwise get list of all SQL in the last number of days.
@@ -98,12 +87,7 @@ def handle_dba_userSqlList(conn: TeradataConnection, user_name: Optional[str] | 
 
 
 #------------------ Tool  ------------------#
-# Get table space tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-#       table_name (str) - name of the table
-#       db_name (str) - name of the database 
-#     Returns: formatted response with list of tables and space information or database and space used or error message    
+# Get table space tool  
 def handle_dba_tableSpace(conn: TeradataConnection, db_name: Optional[str] | None , table_name: Optional[str] | None, *args, **kwargs):
     """
     Get table space used for a table if table name is provided or get table space for all tables in a database if a database name is provided."
@@ -161,11 +145,7 @@ def handle_dba_tableSpace(conn: TeradataConnection, db_name: Optional[str] | Non
 
 
 #------------------ Tool  ------------------#
-# Get database space tool
-#     Arguments: 
-#       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-#       db_name (str) - name of the database 
-#     Returns: formatted response with list of databases and space information or error message    
+# Get database space tool  
 def handle_dba_databaseSpace(conn: TeradataConnection, db_name: Optional[str] | None, *args, **kwargs):
     """
     Get database space if database name is provided, otherwise get all databases space allocations.
@@ -218,8 +198,6 @@ def handle_dba_databaseSpace(conn: TeradataConnection, db_name: Optional[str] | 
     
 #------------------ Tool  ------------------#
 # Resource usage summary tool
-#     Arguments: 
-#       dimensions (List[str]) - list of dimensions to aggregate the resource usage summary. All dimensions are: ["LogDate", "hourOfDay", "dayOfWeek", "workloadType", "workloadComplexity", "UserName", "AppId", "StatementType"]
 def handle_dba_resusageSummary(conn: TeradataConnection, 
                                  dimensions: Optional[List[str]] = None,
                                  user_name: Optional[str] = None,
@@ -348,9 +326,6 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
 
 #------------------ Tool  ------------------#
 # Get table usage impact tool
-#     Arguments:
-#       db_name (str) - name of the database
-#       user_name (str) - name of the user
 def handle_dba_tableUsageImpact(conn: TeradataConnection, db_name: Optional[str] = None, user_name: Optional[str] = None, *args, **kwargs):
     """
     Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time.
