@@ -21,11 +21,12 @@ logger = logging.getLogger("teradata_mcp_server")
 class TDConn:
     engine: Optional[Engine] = None
     connection_url: Optional[str] = None
+    tdml_context: Optional[bool] = False
 
     # Constructor
     #     It will read the connection URL from the environment variable DATABASE_URI
     #     It will parse the connection URL and create a SQLAlchemy engine connected to the database
-    def __init__(self, connection_url: Optional[str] = None):
+    def __init__(self, connection_url: Optional[str] = None, tdml_context: Optional[bool] = False):
         if connection_url is None and os.getenv("DATABASE_URI") is None:
             logger.warning("DATABASE_URI is not specified, database connection will not be established.")
             self.engine = None
@@ -64,9 +65,10 @@ class TDConn:
                 logger.error(f"Error creating database engine: {e}")
                 self.engine = None
 
-            # Create the teradataml context 
-            if "<EVS or EFS enabled>":
-                import teradataml as tdml # import of the teradataml package
+            # Create the teradataml context
+            self.tdml_context = tdml_context
+            if self.tdml_context:
+                import teradataml as tdml  # import of the teradataml package
                 tdml.create_context(tdsqlengine=self.engine)
 
     # Destructor

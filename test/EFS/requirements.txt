@@ -1,0 +1,5 @@
+tdfs4ds
+teradataml
+pandas
+json
+sqlalchemy

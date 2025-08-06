@@ -56,6 +56,19 @@ with open('profiles.yml', 'r') as file:
     else:
         config = all_profiles.get(profile_name)
 
+# Check if the EFS or EVS tools are enabled in the profiles
+if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
+    _enableEFS = True
+else:
+    _enableEFS = False
+
+if any(re.match(pattern, 'evs_*') for pattern in config.get('tool',[])):
+    _enableEVS = True
+else:
+    _enableEVS = False
+
+_requireTdmlContext = _enableEFS or _enableEVS
+
 # Set up logging
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
@@ -73,13 +86,16 @@ mcp = FastMCP("teradata-mcp-server")
 #global shutdown flag
 shutdown_in_progress = False
 
-# Initiate connection to Teradata
-_tdconn = td.TDConn()
+# Connect to the Teradata server
+# Initiate base connection
+_tdconn = td.TDConn(tdml_context=_requireTdmlContext)
 
-#afm-defect:
-_enableEVS = False
-# Only attempt to connect to EVS is the system has an EVS installed/configured
-if (len(os.getenv("VS_NAME", "").strip()) > 0):
+# If the feature store is enabled, set it up
+if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
+    fs_config = td.FeatureStoreConfig() 
+
+# If the enterprise vector store is enabled, set it up
+if _enableEVS and (len(os.getenv("VS_NAME", "").strip()) > 0):
     try:
         _evs    = td.get_evs()
         _enableEVS = True
@@ -126,7 +142,7 @@ def execute_db_tool(tool, *args, **kwargs):
     # (Re)initialize if needed
     if not getattr(_tdconn, "engine", None):
         logger.info("Reinitializing TDConn")
-        _tdconn = td.TDConn()
+        _tdconn = td.TDConn(tdml_context=_requireTdmlContext)
 
     # Check is the first argument of the tool is a SQLAlchemy Connection
     sig = inspect.signature(tool)
@@ -180,17 +196,22 @@ def execute_vs_tool(tool, *args, **kwargs) -> ResponseType:
 def make_tool_wrapper(func):
     """
     Given a handle_* function, return an async wrapper with:
-    - the same signature minus the first 'connection' param
-    - a call into execute_db_tool
+    - the same signature minus any 'conn' or 'fs_config' params
+    - injection of fs_config when declared, while conn injection is handled by execute_db_tool
     """
-
     sig = inspect.signature(func)
-    # Drop first param (connection) and skip 'tool_name' if present
-    first_param = next(iter(sig.parameters))
+
+    # Determine which parameters to inject and remove from the exposed signature
+    inject_kwargs = {}
+    removable = {"conn", "tool_name"}
+    if "fs_config" in sig.parameters:
+        inject_kwargs["fs_config"] = fs_config
+        removable.add("fs_config")
+
+    # Build the new signature without injected params
     params = [
         p for name, p in sig.parameters.items()
-        if name != first_param
-        and name != "tool_name" # skip tool_name if present as this allows to override the tool name for query tools declared in # the *_objects.yml files
+        if name not in removable
         and p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
     ]
     new_sig = sig.replace(parameters=params)
@@ -199,8 +220,8 @@ def make_tool_wrapper(func):
     async def wrapper(*args, **kwargs):
         ba = new_sig.bind_partial(*args, **kwargs)
         ba.apply_defaults()
-
-        return execute_db_tool(func, **ba.arguments)
+        # execute_db_tool handles injecting `conn`; we add fs_config if needed
+        return execute_db_tool(func, **inject_kwargs, **ba.arguments)
 
     wrapper.__signature__ = new_sig
     return wrapper
@@ -209,7 +230,7 @@ def make_tool_wrapper(func):
 def register_td_tools(config, td, mcp):
     patterns = config.get('tool', [])
     for name, func in inspect.getmembers(td, inspect.isfunction):
-        if not name.startswith("handle_") or name.startswith("handle_fs_"):
+        if not name.startswith("handle_"): #or name.startswith("handle_fs_"):
             continue
 
         tool_name = name[len("handle_"):]
@@ -456,23 +477,21 @@ if custom_glossary:
 
 
 
+@mcp.tool(description="Reconnect to the Teradata database if the connection is lost.")
+async def reconnect_to_database() -> ResponseType:
+    """Reconnect to Teradata database if connection is lost."""
+    global _tdconn
+    try:
+        _tdconn = td.TDConn(tdml_context=_requireTdmlContext)  # Recreate TDConn with tdml_context enabled
+        return format_text_response("Reconnected to Teradata database successfully.")
+    except Exception as e:
+        logger.error(f"Error reconnecting to database: {e}")
+        return format_error_response(str(e))
+        
 #--------------- Feature Store Tools ---------------#
 # Feature tools leveraging the tdfs4ds package.
 # Run only if the EFS tools are defined in the config
-if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
-    fs_config = td.FeatureStoreConfig() 
-
-    @mcp.tool(description="Reconnect to the Teradata database if the connection is lost.")
-    async def reconnect_to_database() -> ResponseType:
-        """Reconnect to Teradata database if connection is lost."""
-        global _tdconn
-        try:
-            _tdconn = td.TDConn()
-            td.teradataml_connection()
-            return format_text_response("Reconnected to Teradata database successfully.")
-        except Exception as e:
-            logger.error(f"Error reconnecting to database: {e}")
-            return format_error_response(str(e))
+if _enableEFS:
 
     @mcp.tool(description="Set or update the feature store configuration (database and data domain).")
     async def fs_setFeatureStoreConfig(
@@ -518,53 +537,6 @@ if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
     @mcp.tool(description="Display the current feature store configuration (database and data domain).")
     async def fs_getFeatureStoreConfig() -> ResponseType:
         return format_text_response(f"Current feature store config: {fs_config.dict(exclude_none=True)}")
-
-    @mcp.tool(description=("Check if a feature store is present in the specified database." ))
-    async def fs_isFeatureStorePresent(
-        db_name: str = Field(..., description="Name of the database to check for a feature store.")
-    ) -> ResponseType:
-        return execute_db_tool(td.handle_fs_isFeatureStorePresent, db_name=db_name)
-
-    @mcp.tool(description=("Returns a summary of the feature store content. Use this to understand what data is available in the feature store"))
-    async def fs_featureStoreContent(
-    ) -> ResponseType:
-        return execute_db_tool(td.handle_fs_featureStoreContent, fs_config=fs_config)
-
-    @mcp.tool(description=( "List the available data domains. Requires a configured `db_name`  in the feature store config. Use this to explore which entities can be used when building a dataset."))
-    async def fs_getDataDomains(
-        entity: str = Field(..., description="The .")
-    ) -> ResponseType:
-        return execute_db_tool(td.handle_fs_getDataDomains, fs_config=fs_config)
-
-    @mcp.tool(description=("List the list of features. Requires a configured `db_name` and  `data_domain` in the feature store config. Use this to explore the features available ."))
-    async def fs_getFeatures(
-    ) -> ResponseType:
-        return execute_db_tool(td.handle_fs_getFeatures, fs_config=fs_config)
-
-    @mcp.tool(description=("List the list of available datasets.Requires a configured `db_name` in the feature store config.Use this to explore the datasets that are available ."))
-    async def fs_getAvailableDatasets(
-    ) -> ResponseType:
-        return execute_db_tool(td.handle_fs_getAvailableDatasets, fs_config=fs_config)
-
-    @mcp.tool(description=("Return the schema of the feature store.Requires a feature store in the configured database (`db_name`)."))
-    async def fs_getFeatureDataModel(
-    ) -> ResponseType:
-        return execute_db_tool(td.handle_fs_getFeatureDataModel, fs_config=fs_config)
-
-
-    @mcp.tool(description=("List the available entities for a given data domain. Requires a configured `db_name` and `data_domain` and  `entity` in the feature store config. Use this to explore which entities can be used when building a dataset."))
-    async def fs_getAvailableEntities(
-    ) -> ResponseType:
-        return execute_db_tool(td.handle_fs_getAvailableEntities, fs_config=fs_config)
-
-    @mcp.tool( description=("Create a dataset using selected features and an entity from the feature store. The dataset is created in the specified target database under the given name. Requires a configured feature store and data domain. Registers the dataset in the catalog automatically. Use this when you want to build and register a new dataset for analysis or modeling." ) )
-    async def fs_createDataset(
-        entity_name: str = Field(..., description="Entity for which the dataset will be created. Available entities are reported in the feature catalog."),
-        feature_selection: list[str] = Field(..., description="List of features to include in the dataset. Available features are reported in the feature catalog."),
-        dataset_name: str = Field(..., description="Name of the dataset to create."),
-        target_database: str = Field(..., description="Target database where the dataset will be created.")
-    ) -> ResponseType:
-        return execute_db_tool(td.handle_fs_createDataset, fs_config=fs_config, entity_name=entity_name, feature_selection=feature_selection, dataset_name=dataset_name, target_database=target_database)
 
 #------------------ Main ------------------#
 # Main function to start the MCP server
