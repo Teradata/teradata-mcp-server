@@ -19,7 +19,7 @@ from mcp.server.fastmcp.prompts.base import TextContent, UserMessage
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection
 
-# Import the ai_tools module, clone-and-run friendly
+# Import the tools module with lazy loading support
 try:
     from teradata_mcp_server import tools as td
 except ImportError:
@@ -57,6 +57,12 @@ with open('profiles.yml') as file:
     else:
         config = all_profiles.get(profile_name)
 
+# Initialize module loader with profile configuration
+module_loader = td.initialize_module_loader(config)
+
+# Now initialize the TD connection after module loader is ready
+_tdconn = td.TDConn()
+
 # Set up logging
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
@@ -74,8 +80,8 @@ mcp = FastMCP("teradata-mcp-server")
 #global shutdown flag
 shutdown_in_progress = False
 
-# Initiate connection to Teradata
-_tdconn = td.TDConn()
+# Initiate connection to Teradata (delayed until after module loader is ready)
+_tdconn = None
 
 #afm-defect:
 _enableEVS = False
@@ -207,10 +213,18 @@ def make_tool_wrapper(func):
     return wrapper
 
 #------------------ Register objects defined as code under ./src/teradata_mcp_server/tools/  ------------------#
-def register_td_tools(config, td, mcp):
+def register_td_tools(config, module_loader, mcp):
+    """Register code-defined tools from loaded modules."""
     patterns = config.get('tool', [])
-    for name, func in inspect.getmembers(td, inspect.isfunction):
-        if not name.startswith("handle_") or name.startswith("handle_fs_"):
+
+    if not module_loader:
+        logger.warning("No module loader available, skipping code-defined tool registration")
+        return
+
+    # Get all functions from the loaded modules
+    all_functions = module_loader.get_all_functions()
+    for name, func in all_functions.items():
+        if not (inspect.isfunction(func) and name.startswith("handle_") and not name.startswith("handle_fs_")):
             continue
 
         tool_name = name[len("handle_"):]
@@ -222,16 +236,24 @@ def register_td_tools(config, td, mcp):
         logger.info(f"Created tool: {tool_name}")
 
 
-register_td_tools(config, td, mcp)
+register_td_tools(config, module_loader, mcp)
 
 
 #------------------ Register tools, resources and prompts declared in .yml files ------------------#
 
 custom_object_files = [file for file in os.listdir() if file.endswith("_objects.yaml")]
 
-# Also include all .yml files under ./src/teradata_mcp_server/tools/*/*.yml
-tool_yml_files = glob.glob(os.path.join(os.path.dirname(__file__), "tools", "*", "*.yml"))
-custom_object_files.extend(tool_yml_files)
+# Include .yml files only from modules required by the current profile
+if module_loader and profile_name:
+    # Use profile-aware loading only when a specific profile is selected
+    profile_yml_files = module_loader.get_required_yaml_paths()
+    custom_object_files.extend(profile_yml_files)
+    logger.info(f"Loading YAML files for profile '{profile_name}': {len(profile_yml_files)} files")
+else:
+    # Fallback: include all .yml files if no profile is specified or module loader is not available
+    tool_yml_files = glob.glob(os.path.join(os.path.dirname(__file__), "tools", "*", "*.yml"))
+    custom_object_files.extend(tool_yml_files)
+    logger.info(f"Loading all YAML files (no specific profile): {len(tool_yml_files)} files")
 
 custom_objects = {}
 custom_glossary = {}
@@ -559,11 +581,11 @@ if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
             logger.info(f"{result}")
             if result.fetchall()[0][0] > 0:
                 fs_config.entity = entity
-        return format_text_response(f"Feature store config updated: {fs_config.dict(exclude_none=True)}")
+        return format_text_response(f"Feature store config updated: {fs_config.model_dump(exclude_none=True)}")
 
     @mcp.tool(description="Display the current feature store configuration (database and data domain).")
     async def fs_getFeatureStoreConfig() -> ResponseType:
-        return format_text_response(f"Current feature store config: {fs_config.dict(exclude_none=True)}")
+        return format_text_response(f"Current feature store config: {fs_config.model_dump(exclude_none=True)}")
 
     @mcp.tool(description=("Check if a feature store is present in the specified database." ))
     async def fs_isFeatureStorePresent(
@@ -578,7 +600,6 @@ if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
 
     @mcp.tool(description=( "List the available data domains. Requires a configured `db_name`  in the feature store config. Use this to explore which entities can be used when building a dataset."))
     async def fs_getDataDomains(
-        entity: str = Field(..., description="The .")
     ) -> ResponseType:
         return execute_db_tool(td.handle_fs_getDataDomains, fs_config=fs_config)
 
