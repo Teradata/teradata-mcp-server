@@ -498,45 +498,18 @@ if _enableEFS:
         data_domain: Optional[str] = None,
         db_name: Optional[str] = None,
         entity: Optional[str] = None,
-    ) -> ResponseType:
-        if db_name:
-            if tdfs4ds.connect(database=db_name):
-                logger.info(f"connected to the feature store of the {db_name} database")
-                # Reset data_domain if DB name changes
-                if not (fs_config.db_name and fs_config.db_name.upper() == db_name.upper()):
-                    fs_config.data_domain = None
-                
-                fs_config.db_name = db_name
-                logger.info(f"connected to the feature store of the {db_name} database")
-                fs_config.feature_catalog = f"{db_name}.{tdfs4ds.FEATURE_CATALOG_NAME_VIEW}"
-                logger.info(f"feature catalog {fs_config.feature_catalog}")
-                fs_config.process_catalog = f"{db_name}.{tdfs4ds.PROCESS_CATALOG_NAME_VIEW}"
-                logger.info(f"process catalog {fs_config.process_catalog}")
-                fs_config.dataset_catalog = f"{db_name}.FS_V_FS_DATASET_CATALOG"  # <- fixed line
-                logger.info(f"dataset catalog {fs_config.dataset_catalog}")
-
-        if fs_config.db_name is not None and data_domain is not None:
-            sql_query_ = f"SEL count(*) AS N FROM {fs_config.feature_catalog} WHERE UPPER(data_domain) = '{data_domain.upper()}'"
-            logger.info(f"{sql_query_}")
-            result = tdml.execute_sql(sql_query_)
-            logger.info(f"{result}")
-            if result.fetchall()[0][0] > 0:
-                fs_config.data_domain = data_domain
-            else:
-                fs_config.data_domain = None
-
-        if fs_config.db_name is not None and fs_config.data_domain is not None and entity is not None:
-            sql_query_ = f"SEL count(*) AS N FROM {fs_config.feature_catalog} WHERE UPPER(data_domain) = '{data_domain.upper()}' AND ENTITY_NAME = '{entity.upper()}'"
-            logger.info(f"{sql_query_}")
-            result = tdml.execute_sql(sql_query_)
-            logger.info(f"{result}")
-            if result.fetchall()[0][0] > 0:
-                fs_config.entity = entity
-        return format_text_response(f"Feature store config updated: {fs_config.dict(exclude_none=True)}")
+    ) -> td.FeatureStoreConfig:
+        with _tdconn.engine.connect() as conn:
+            return fs_config.fs_setFeatureStoreConfig(
+                conn=conn,
+                db_name=db_name,
+                data_domain=data_domain,
+                entity=entity,
+            )
 
     @mcp.tool(description="Display the current feature store configuration (database and data domain).")
     async def fs_getFeatureStoreConfig() -> ResponseType:
-        return format_text_response(f"Current feature store config: {fs_config.dict(exclude_none=True)}")
+        return format_text_response(f"Current feature store config: {fs_config.model_dump(exclude_none=True)}")
 
 #------------------ Main ------------------#
 # Main function to start the MCP server

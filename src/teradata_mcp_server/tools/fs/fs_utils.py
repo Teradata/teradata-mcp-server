@@ -1,5 +1,13 @@
 from typing import Any, List, Optional
+from typing import Optional
 from pydantic import Field, BaseModel
+import tdfs4ds
+import logging
+from sqlalchemy.engine import Connection
+from sqlalchemy import text
+
+
+logger = logging.getLogger("teradata_mcp_server")
 
 class FeatureStoreConfig(BaseModel):
     """
@@ -45,3 +53,52 @@ class FeatureStoreConfig(BaseModel):
             "Used to list and manage available datasets within the feature store."
         )
     )
+
+    def fs_setFeatureStoreConfig(
+        self,
+        conn: Connection,
+        db_name: Optional[str] = None,
+        data_domain: Optional[str] = None,
+        entity: Optional[str] = None,
+    ) -> "FeatureStoreConfig":
+        if db_name:
+            if tdfs4ds.connect(database=db_name):
+                logger.info(f"connected to the feature store of the {db_name} database")
+                # Reset data_domain if DB name changes
+                if not (self.db_name and self.db_name.upper() == db_name.upper()):
+                    self.data_domain = None
+                
+                self.db_name = db_name
+                logger.info(f"connected to the feature store of the {db_name} database")
+                self.feature_catalog = f"{db_name}.{tdfs4ds.FEATURE_CATALOG_NAME_VIEW}"
+                logger.info(f"feature catalog {self.feature_catalog}")
+                self.process_catalog = f"{db_name}.{tdfs4ds.PROCESS_CATALOG_NAME_VIEW}"
+                logger.info(f"process catalog {self.process_catalog}")
+                self.dataset_catalog = f"{db_name}.FS_V_FS_DATASET_CATALOG"  # <- fixed line
+                logger.info(f"dataset catalog {self.dataset_catalog}")
+
+        if self.db_name is not None and data_domain is not None:
+            stmt = text(
+                f"SELECT COUNT(*) AS N FROM {self.feature_catalog} "
+                "WHERE UPPER(data_domain)=:domain"
+            )
+            result = conn.execute(stmt, {"domain": data_domain.upper()})
+            count = result.scalar_one_or_none() or 0
+            logger.info("Found %d matching data_domain rows", count)
+            if count > 0:
+                self.data_domain = data_domain
+            else:
+                self.data_domain = None
+
+        if self.db_name is not None and self.data_domain is not None and entity is not None:
+            stmt = text(
+                f"SELECT COUNT(*) AS N FROM {self.feature_catalog} "
+                "WHERE UPPER(data_domain)=:domain "
+                "AND ENTITY_NAME=:entity"
+            )
+            result = conn.execute(stmt, {"domain": self.data_domain.upper(), "entity": entity.upper()})
+            count = result.scalar_one_or_none() or 0
+            logger.info("Found %d matching entity rows", count)
+            if count > 0:
+                self.entity = entity
+        return self
