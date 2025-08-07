@@ -21,7 +21,6 @@ logger = logging.getLogger("teradata_mcp_server")
 class TDConn:
     engine: Optional[Engine] = None
     connection_url: Optional[str] = None
-    tdml_context: Optional[bool] = False
 
     # Constructor
     #     It will read the connection URL from the environment variable DATABASE_URI
@@ -67,9 +66,6 @@ class TDConn:
 
             # Create the teradataml context
             self.tdml_context = tdml_context
-            if self.tdml_context:
-                import teradataml as tdml  # import of the teradataml package
-                tdml.create_context(tdsqlengine=self.engine)
 
     # Destructor
     #     It will close the SQLAlchemy connection and engine

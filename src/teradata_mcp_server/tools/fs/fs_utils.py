@@ -6,7 +6,6 @@ import logging
 from sqlalchemy.engine import Connection
 from sqlalchemy import text
 
-
 logger = logging.getLogger("teradata_mcp_server")
 
 class FeatureStoreConfig(BaseModel):
@@ -61,6 +60,7 @@ class FeatureStoreConfig(BaseModel):
         data_domain: Optional[str] = None,
         entity: Optional[str] = None,
     ) -> "FeatureStoreConfig":
+
         if db_name:
             if tdfs4ds.connect(database=db_name):
                 logger.info(f"connected to the feature store of the {db_name} database")

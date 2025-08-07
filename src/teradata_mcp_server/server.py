@@ -11,7 +11,6 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.prompts.base import UserMessage, TextContent
 from dotenv import load_dotenv
 import tdfs4ds
-import teradataml as tdml
 import inspect
 from sqlalchemy.engine import Connection
 import argparse
@@ -67,8 +66,6 @@ if any(re.match(pattern, 'evs_*') for pattern in config.get('tool',[])):
 else:
     _enableEVS = False
 
-_requireTdmlContext = _enableEFS or _enableEVS
-
 # Set up logging
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
@@ -88,11 +85,13 @@ shutdown_in_progress = False
 
 # Connect to the Teradata server
 # Initiate base connection
-_tdconn = td.TDConn(tdml_context=_requireTdmlContext)
+_tdconn = td.TDConn()
 
 # If the feature store is enabled, set it up
-if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
+if _enableEFS:
     fs_config = td.FeatureStoreConfig() 
+    import teradataml as tdml  # import of the teradataml package
+    tdml.create_context(tdsqlengine=_tdconn.engine)
 
 # If the enterprise vector store is enabled, set it up
 if _enableEVS and (len(os.getenv("VS_NAME", "").strip()) > 0):
@@ -142,7 +141,12 @@ def execute_db_tool(tool, *args, **kwargs):
     # (Re)initialize if needed
     if not getattr(_tdconn, "engine", None):
         logger.info("Reinitializing TDConn")
-        _tdconn = td.TDConn(tdml_context=_requireTdmlContext)
+        _tdconn = td.TDConn()
+        if _enableEFS:
+            fs_config = td.FeatureStoreConfig() 
+            import teradataml as tdml  # import of the teradataml package
+            tdml.create_context(tdsqlengine=_tdconn.engine)
+
 
     # Check is the first argument of the tool is a SQLAlchemy Connection
     sig = inspect.signature(tool)

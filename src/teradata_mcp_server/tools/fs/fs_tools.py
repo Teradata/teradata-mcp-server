@@ -9,6 +9,7 @@ import tdfs4ds
 
 
 logger = logging.getLogger("teradata_mcp_server")
+
 from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
 
 #------------------ Do not make changes above  ------------------#
@@ -235,11 +236,12 @@ def handle_fs_getAvailableDatasets(conn: TeradataConnection, fs_config, *args, *
     """ 
     List the list of available datasets.Requires a configured `db_name` in the feature store config.Use this to explore the datasets that are available .
     """
+
     db_name = fs_config.db_name
     logger.info(f"Tool: handle_fs_getAvailableDatasets: Args: db_name: {db_name}")
     
     is_a_feature_store = False
-    
+
     try:
         is_a_feature_store = tdfs4ds.connect(database=db_name)
     except Exception as e:
@@ -248,13 +250,13 @@ def handle_fs_getAvailableDatasets(conn: TeradataConnection, fs_config, *args, *
 
     if not is_a_feature_store:
         return create_response({"error": f"There is no feature store in {db_name}"}, {"tool_name": "handle_fs_getAvailableDatasets", "db_name": db_name})
-    
+
     try:
         data = tdfs4ds.dataset_catalog().to_pandas()
     except Exception as e:
         logger.error(f"Error retrieving available datasets: {e}")
         return create_response({"error": str(e)}, {"tool_name": "handle_fs_getAvailableDatasets", "db_name": db_name})
-        
+
     metadata = {
         "tool_name": "fs_getAvailableDatasets",
         "db_name": db_name,
