@@ -41,3 +41,25 @@ build-backend = "setuptools.build_meta"
 
 [tool.uv]
 package = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "B", "UP"]
+ignore = [
+    "F403",  # Wildcard imports (temporarily ignore for gradual refactoring)
+    "F401",  # Unused imports in __init__.py files (common pattern for re-exports)
+    "E402",  # Module level import not at top (some tools have conditional imports)
+    "E501",  # Line too long (let formatter handle this)
+    "N816",  # Variable naming (existing legacy naming)
+    "N802",  # Function naming (preserve existing naming conventions)
+    "N803",  # Argument naming (preserve existing naming conventions)
+    "B905",  # zip() without explicit strict parameter (backwards compatibility)
+    "B008",  # Function call in default argument (existing pattern)
+    "F841",  # Unused variable (may be intentional in some cases)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"*/__init__.py" = ["F403", "F401"]  # Allow wildcard imports and unused imports in __init__.py

@@ -1,31 +1,28 @@
 import logging
-from teradatasql import TeradataConnection 
-from typing import Optional, Any, Dict, List
-import json
-from datetime import date, datetime
-from decimal import Decimal
+
 import tdfs4ds
+from teradatasql import TeradataConnection
 
-
+from teradata_mcp_server.tools.utils import create_response, rows_to_json
 
 logger = logging.getLogger("teradata_mcp_server")
-from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
+
 
 #------------------ Do not make changes above  ------------------#
 
 
 #------------------ Tool  ------------------#
 # Feature Store existence tool
-#     Arguments: 
+#     Arguments:
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       db_name - the database name to check for existenceAdd commentMore actions
-# #     Returns: True or False    
+# #     Returns: True or False
 def handle_fs_isFeatureStorePresent(conn: TeradataConnection, db_name: str, *args, **kwargs):
-    
+
     logger.info(f"Tool: handle_fs_isFeatureStorePresent: Args: db_name: {db_name}")
-    
+
     data = False
-    
+
     try:
         data = tdfs4ds.connect(database=db_name)
     except Exception as e:
@@ -40,24 +37,24 @@ def handle_fs_isFeatureStorePresent(conn: TeradataConnection, db_name: str, *arg
 
 #------------------ Tool  ------------------#
 # Feature Store available data domainAdd commentMore actions
-#     Arguments: 
+#     Arguments:
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-# #     Returns: True or False    
+# #     Returns: True or False
 def handle_fs_getDataDomains(conn: TeradataConnection, fs_config, *args, **kwargs):
     db_name = fs_config.db_name
     logger.info(f"Tool: handle_fs_getDataDomains: Args: db_name: {db_name}")
-    
+
     metadata = {
         "tool_name": "fs_getDataDomains",
         "db_name": fs_config.db_name,
     }
-    
+
     if not db_name:
         logger.error("Database name is not provided.")
         return create_response({"error": "The database name for the feature store is not specified."}, metadata)
-        
+
     data = False
-    
+
     try:
         is_a_feature_store = tdfs4ds.connect(database=db_name)
         if not is_a_feature_store:
@@ -65,7 +62,7 @@ def handle_fs_getDataDomains(conn: TeradataConnection, fs_config, *args, **kwarg
     except Exception as e:
         logger.error(f"Error connecting to Teradata Feature Store: {e}")
         return create_response({"error": str(e)}, {"tool_name": "handle_fs_getDataDomains", "db_name": db_name})
-    
+
     sql_query = f"""
     SELECT DISTINCT DATA_DOMAIN FROM {fs_config.feature_catalog}
     """
@@ -82,9 +79,9 @@ def handle_fs_getDataDomains(conn: TeradataConnection, fs_config, *args, **kwarg
 
 #------------------ Tool  ------------------#
 # Feature high level report of the feature store content
-#     Arguments: 
+#     Arguments:
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
-# #     Returns: True or False    
+# #     Returns: True or False
 def handle_fs_featureStoreContent(conn: TeradataConnection, fs_config, *args, **kwargs):
     db_name = fs_config.db_name
     logger.info(f"Tool: handle_fs_featureStoreContent: Args: db_name: {db_name}")
@@ -92,12 +89,12 @@ def handle_fs_featureStoreContent(conn: TeradataConnection, fs_config, *args, **
         "tool_name": "fs_featureStoreContent",
         "db_name": fs_config.db_name,
     }
-    
+
     if not db_name:
         logger.error("Database name is not provided.")
         return create_response({"error": "The database name for the feature store is not specified."}, metadata)
     data = False
-    
+
     try:
         is_a_feature_store = tdfs4ds.connect(database=db_name)
         if not is_a_feature_store:
@@ -105,13 +102,13 @@ def handle_fs_featureStoreContent(conn: TeradataConnection, fs_config, *args, **
     except Exception as e:
         logger.error(f"Error connecting to Teradata Feature Store with tdfs4ds {tdfs4ds.__version__}: {e}")
         return create_response({"error": str(e)}, {"tool_name": "handle_fs_featureStoreContent", "db_name": db_name})
-    
+
     sql_query = f"""
     SELECT DATA_DOMAIN, ENTITY_NAME, count(FEATURE_ID) AS FEATURE_COUNT
     FROM {fs_config.feature_catalog}
     GROUP BY DATA_DOMAIN, ENTITY_NAME
     """
-    
+
     with conn.cursor() as cur:
         rows = cur.execute(sql_query)
         data = rows_to_json(cur.description, rows.fetchall())
@@ -120,16 +117,16 @@ def handle_fs_featureStoreContent(conn: TeradataConnection, fs_config, *args, **
 
 #------------------ Tool  ------------------#
 # Feature Store: feature store schema
-#     Arguments: 
+#     Arguments:
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       db_name - the database name to check for existence
-# #     Returns: the feature store schema, mainly the catalogs    
+# #     Returns: the feature store schema, mainly the catalogs
 def handle_fs_getFeatureDataModel(conn: TeradataConnection, fs_config, *args, **kwargs):
     db_name = fs_config.db_name
     logger.info(f"Tool: handle_fs_getFeatureDataModel: Args: db_name: {db_name}")
-    
+
     is_a_feature_store = False
-    
+
     try:
         is_a_feature_store = tdfs4ds.connect(database=db_name)
     except Exception as e:
@@ -152,7 +149,7 @@ def handle_fs_getFeatureDataModel(conn: TeradataConnection, fs_config, *args, **
         'TABLE' : db_name + '.' + 'FS_V_FS_DATASET_CATALOG',
         'DESCRIPTION' : 'lists the available datasets'
     }
-    
+
     metadata = {
         "tool_name": "fs_getFeatureDataModel",
         "db_name": db_name,
@@ -161,16 +158,16 @@ def handle_fs_getFeatureDataModel(conn: TeradataConnection, fs_config, *args, **
 
 #------------------ Tool  ------------------#
 # Feature Store: get abailable entities
-#     Arguments: 
+#     Arguments:
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       db_name - the database name to check for existence
-# #     Returns: True or False    
+# #     Returns: True or False
 def handle_fs_getAvailableEntities(conn: TeradataConnection, fs_config, *args, **kwargs):
     db_name = fs_config.db_name
     logger.info(f"Tool: handle_fs_getAvailableEntities: Args: db_name: {db_name}")
-    
+
     is_a_feature_store = False
-    
+
     try:
         is_a_feature_store = tdfs4ds.connect(database=db_name)
     except Exception as e:
@@ -179,15 +176,15 @@ def handle_fs_getAvailableEntities(conn: TeradataConnection, fs_config, *args, *
 
     if not is_a_feature_store:
         return create_response({"error": f"There is no feature store in {db_name}"}, {"tool_name": "handle_fs_getAvailableEntities", "db_name": db_name})
-    
+
     # set the data domain:
     data_domain = fs_config.data_domain
     if data_domain is None or data_domain == '':
         return create_response({"error": "The data domain is not specified"}, {"tool_name": "handle_fs_getAvailableEntities", "db_name": db_name})
-    
+
     tdfs4ds.DATA_DOMAIN = data_domain
 
-    
+
 
     # get the entities
     from tdfs4ds.feature_store.feature_query_retrieval import get_list_entity
@@ -197,7 +194,7 @@ def handle_fs_getAvailableEntities(conn: TeradataConnection, fs_config, *args, *
     except Exception as e:
         logger.error(f"Error retrieving entities: {e}")
         return create_response({"error": str(e)}, {"tool_name": "handle_fs_getAvailableEntities", "db_name": db_name})
-        
+
     metadata = {
         "tool_name": "fs_getAvailableEntities",
         "db_name": db_name,
@@ -207,16 +204,16 @@ def handle_fs_getAvailableEntities(conn: TeradataConnection, fs_config, *args, *
 
 #------------------ Tool  ------------------#
 # Feature Store: get abailable entities
-#     Arguments: 
+#     Arguments:
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       db_name - the database name to check for existence
-# #     Returns: True or False    
+# #     Returns: True or False
 def handle_fs_getAvailableDatasets(conn: TeradataConnection, fs_config, *args, **kwargs):
     db_name = fs_config.db_name
     logger.info(f"Tool: handle_fs_getAvailableDatasets: Args: db_name: {db_name}")
-    
+
     is_a_feature_store = False
-    
+
     try:
         is_a_feature_store = tdfs4ds.connect(database=db_name)
     except Exception as e:
@@ -225,13 +222,13 @@ def handle_fs_getAvailableDatasets(conn: TeradataConnection, fs_config, *args, *
 
     if not is_a_feature_store:
         return create_response({"error": f"There is no feature store in {db_name}"}, {"tool_name": "handle_fs_getAvailableDatasets", "db_name": db_name})
-    
+
     try:
         data = tdfs4ds.dataset_catalog().to_pandas()
     except Exception as e:
         logger.error(f"Error retrieving available datasets: {e}")
         return create_response({"error": str(e)}, {"tool_name": "handle_fs_getAvailableDatasets", "db_name": db_name})
-        
+
     metadata = {
         "tool_name": "fs_getAvailableDatasets",
         "db_name": db_name,
@@ -240,17 +237,17 @@ def handle_fs_getAvailableDatasets(conn: TeradataConnection, fs_config, *args, *
 
 #------------------ Tool  ------------------#
 # Feature Store: get abailable entities
-#     Arguments: 
+#     Arguments:
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       db_name - the database name to check for existence
-# #     Returns: True or False    
+# #     Returns: True or False
 def handle_fs_getFeatures(conn: TeradataConnection, fs_config, *args, **kwargs):
     db_name = fs_config.db_name
     logger.info(f"Tool: handle_fs_getFeatures: Args: db_name: {db_name}")
-    
+
     if not db_name:
         return create_response({"error": "Database name is not specified"}, {"tool_name": "handle_fs_getFeatures"})
-    
+
     try:
         is_a_feature_store = tdfs4ds.connect(database=db_name)
     except Exception as e:
@@ -267,7 +264,7 @@ def handle_fs_getFeatures(conn: TeradataConnection, fs_config, *args, **kwargs):
 
     if not data_domain:
         return create_response({"error": "The data domain is not specified"}, {"tool_name": "handle_fs_getFeatures", "db_name": db_name})
-    
+
     if not entity:
         return create_response({"error": "The entity name is not specified"}, {"tool_name": "handle_fs_getFeatures", "db_name": db_name})
 
@@ -300,16 +297,16 @@ def handle_fs_getFeatures(conn: TeradataConnection, fs_config, *args, **kwargs):
 
 #------------------ Tool  ------------------#
 # Feature Store: dataset creation tool
-#     Arguments: 
+#     Arguments:
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       db_name - the database name to check for existence
-# #     Returns: True or False    
+# #     Returns: True or False
 def handle_fs_createDataset(conn: TeradataConnection, fs_config, entity_name: str, feature_selection: str, dataset_name: str, target_database: str, *args, **kwargs):
     db_name = fs_config.db_name
     logger.info(f"Tool: handle_fs_createDataset: Args: db_name: {db_name}")
-    
+
     is_a_feature_store = False
-    
+
     try:
         is_a_feature_store = tdfs4ds.connect(database=db_name)
     except Exception as e:
@@ -318,7 +315,7 @@ def handle_fs_createDataset(conn: TeradataConnection, fs_config, entity_name: st
 
     if not is_a_feature_store:
         return create_response({"error": f"There is no feature store in {db_name}"}, {"tool_name": "handle_fs_createDataset", "db_name": db_name})
-    
+
     # set the data domain:
     data_domain = fs_config.data_domain
     if data_domain is None or data_domain == '':
@@ -329,7 +326,7 @@ def handle_fs_createDataset(conn: TeradataConnection, fs_config, entity_name: st
 
     # get the feature version:
     from tdfs4ds.feature_store.feature_query_retrieval import get_feature_versions
-    
+
     try:
         feature_selection = get_feature_versions(
             entity_name = entity_name,
@@ -338,7 +335,7 @@ def handle_fs_createDataset(conn: TeradataConnection, fs_config, entity_name: st
     except Exception as e:
         logger.error(f"Error retrieving feature versions: {e}")
         return create_response({"error": str(e)}, {"tool_name": "handle_fs_createDataset", "db_name": db_name})
-    
+
     # build the dataset
     from tdfs4ds import build_dataset
     try:
@@ -352,7 +349,7 @@ def handle_fs_createDataset(conn: TeradataConnection, fs_config, entity_name: st
     except Exception as e:
         logger.error(f"Error creating dataset: {e}")
         return create_response({"error": str(e)}, {"tool_name": "handle_fs_createDataset", "db_name": db_name})
-    
+
 
     data = {
         'VIEW NAME' : target_database + '.' + dataset_name
@@ -362,7 +359,7 @@ def handle_fs_createDataset(conn: TeradataConnection, fs_config, entity_name: st
         "tool_name": "fs_createDataset",
         "db_name": db_name,
         "entity_name": entity_name,
-        "data_domain": data_domain, 
+        "data_domain": data_domain,
         "feature_selection": feature_selection,
         "dataset_name": dataset_name,
         "target_database": target_database

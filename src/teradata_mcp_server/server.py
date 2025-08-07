@@ -1,24 +1,25 @@
-import os
+import argparse
 import asyncio
-import logging
-import signal
+import functools
+import inspect
 import json
-import yaml
-from typing import Any, List, Optional
-from pydantic import Field, BaseModel
+import logging
+import os
+import re
+import signal
+from typing import Any, Optional
+
 import mcp.types as types
-from mcp.server.fastmcp import FastMCP
-from mcp.server.fastmcp.prompts.base import UserMessage, TextContent
-from dotenv import load_dotenv
 import tdfs4ds
 import teradataml as tdml
-import inspect
+import yaml
+from dotenv import load_dotenv
+from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.prompts.base import TextContent, UserMessage
+from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection
-import argparse
-import re
-import functools
 
-# Import the ai_tools module, clone-and-run friendly
+# Import the tools module with lazy loading support
 try:
     from teradata_mcp_server import tools as td
 except ImportError:
@@ -46,15 +47,21 @@ for key, value in vars(args).items():
 profile_name = os.getenv("PROFILE")
 
 # Load tool configuration from YAML file
-with open('profiles.yml', 'r') as file:
+with open('profiles.yml') as file:
     all_profiles = yaml.safe_load(file)
     if not profile_name:
-        print(f"No profile specified, load all tools, prompts and resources.")
+        print("No profile specified, load all tools, prompts and resources.")
         config={'tool': ['.*'], 'prompt': ['.*'], 'resource': ['.*']}
     elif profile_name not in all_profiles:
         raise ValueError(f"Profile '{profile_name}' not found in profiles.yml. Available: {list(all_profiles.keys())}.")
     else:
         config = all_profiles.get(profile_name)
+
+# Initialize module loader with profile configuration
+module_loader = td.initialize_module_loader(config)
+
+# Now initialize the TD connection after module loader is ready
+_tdconn = td.TDConn()
 
 # Set up logging
 os.makedirs("logs", exist_ok=True)
@@ -64,7 +71,7 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(),
               logging.FileHandler(os.path.join("logs", "teradata_mcp_server.log"))],
 )
-logger = logging.getLogger("teradata_mcp_server")    
+logger = logging.getLogger("teradata_mcp_server")
 logger.info("Starting Teradata MCP server")
 
 # Connect to MCP server
@@ -73,8 +80,8 @@ mcp = FastMCP("teradata-mcp-server")
 #global shutdown flag
 shutdown_in_progress = False
 
-# Initiate connection to Teradata
-_tdconn = td.TDConn()
+# Initiate connection to Teradata (delayed until after module loader is ready)
+_tdconn = None
 
 #afm-defect:
 _enableEVS = False
@@ -83,16 +90,16 @@ if (len(os.getenv("VS_NAME", "").strip()) > 0):
     try:
         _evs    = td.get_evs()
         _enableEVS = True
-    except:
-        logger.error("Unable to establish connection to EVS, disabling")
-        
+    except Exception as e:
+        logger.error(f"Unable to establish connection to EVS, disabling: {e}")
+
 #afm-defect: moved establish teradataml connection into main TDConn to enable auto-reconnect.
 #td.teradataml_connection()
 
 
 
 #------------------ Tool utilies  ------------------#
-ResponseType = List[types.TextContent | types.ImageContent | types.EmbeddedResource]
+ResponseType = list[types.TextContent | types.ImageContent | types.EmbeddedResource]
 
 def format_text_response(text: Any) -> ResponseType:
     """Format a text response."""
@@ -101,7 +108,7 @@ def format_text_response(text: Any) -> ResponseType:
             # Try to parse as JSON if it's a string
             parsed = json.loads(text)
             return [types.TextContent(
-                type="text", 
+                type="text",
                 text=json.dumps(parsed, indent=2, ensure_ascii=False)
             )]
         except json.JSONDecodeError:
@@ -169,13 +176,13 @@ def execute_vs_tool(tool, *args, **kwargs) -> ResponseType:
                 except Exception as retry_err:
                     logger.error(f"EVS retry failed: {retry_err}")
                     return format_error_response(f"After refresh, still failed: {retry_err}")
-    
+
             logger.error(f"EVS tool error: {e}")
             return format_error_response(str(e))
     else:
         return format_error_response("Enterprise Vector Store is not available on this server.")
 
-    
+
 
 def make_tool_wrapper(func):
     """
@@ -206,10 +213,18 @@ def make_tool_wrapper(func):
     return wrapper
 
 #------------------ Register objects defined as code under ./src/teradata_mcp_server/tools/  ------------------#
-def register_td_tools(config, td, mcp):
+def register_td_tools(config, module_loader, mcp):
+    """Register code-defined tools from loaded modules."""
     patterns = config.get('tool', [])
-    for name, func in inspect.getmembers(td, inspect.isfunction):
-        if not name.startswith("handle_") or name.startswith("handle_fs_"):
+
+    if not module_loader:
+        logger.warning("No module loader available, skipping code-defined tool registration")
+        return
+
+    # Get all functions from the loaded modules
+    all_functions = module_loader.get_all_functions()
+    for name, func in all_functions.items():
+        if not (inspect.isfunction(func) and name.startswith("handle_") and not name.startswith("handle_fs_")):
             continue
 
         tool_name = name[len("handle_"):]
@@ -221,16 +236,24 @@ def register_td_tools(config, td, mcp):
         logger.info(f"Created tool: {tool_name}")
 
 
-register_td_tools(config, td, mcp)
+register_td_tools(config, module_loader, mcp)
 
 
 #------------------ Register tools, resources and prompts declared in .yml files ------------------#
 
 custom_object_files = [file for file in os.listdir() if file.endswith("_objects.yaml")]
 
-# Also include all .yml files under ./src/teradata_mcp_server/tools/*/*.yml
-tool_yml_files = glob.glob(os.path.join(os.path.dirname(__file__), "tools", "*", "*.yml"))
-custom_object_files.extend(tool_yml_files)
+# Include .yml files only from modules required by the current profile
+if module_loader and profile_name:
+    # Use profile-aware loading only when a specific profile is selected
+    profile_yml_files = module_loader.get_required_yaml_paths()
+    custom_object_files.extend(profile_yml_files)
+    logger.info(f"Loading YAML files for profile '{profile_name}': {len(profile_yml_files)} files")
+else:
+    # Fallback: include all .yml files if no profile is specified or module loader is not available
+    tool_yml_files = glob.glob(os.path.join(os.path.dirname(__file__), "tools", "*", "*.yml"))
+    custom_object_files.extend(tool_yml_files)
+    logger.info(f"Loading all YAML files (no specific profile): {len(tool_yml_files)} files")
 
 custom_objects = {}
 custom_glossary = {}
@@ -462,26 +485,26 @@ if custom_glossary:
 if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
     class FeatureStoreConfig(BaseModel):
         """
-        Configuration class for the feature store. This model defines the metadata and catalog sources 
+        Configuration class for the feature store. This model defines the metadata and catalog sources
         used to organize and access features, processes, and datasets across data domains.
         """
 
-        data_domain: Optional[str] = Field(
+        data_domain: str | None = Field(
             default=None,
             description="The data domain associated with the feature store, grouping features within the same namespace."
         )
 
-        entity: Optional[str] = Field(
+        entity: str | None = Field(
             default=None,
             description="The list of entities, comma separated and in alphabetical order, upper case."
         )
 
-        db_name: Optional[str] = Field(
+        db_name: str | None = Field(
             default=None,
             description="Name of the database where the feature store is hosted."
         )
 
-        feature_catalog: Optional[str] = Field(
+        feature_catalog: str | None = Field(
             default=None,
             description=(
                 "Name of the feature catalog table. "
@@ -489,7 +512,7 @@ if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
             )
         )
 
-        process_catalog: Optional[str] = Field(
+        process_catalog: str | None = Field(
             default=None,
             description=(
                 "Name of the process catalog table. "
@@ -497,7 +520,7 @@ if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
             )
         )
 
-        dataset_catalog: Optional[str] = Field(
+        dataset_catalog: str | None = Field(
             default=None,
             description=(
                 "Name of the dataset catalog table. "
@@ -505,7 +528,7 @@ if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
             )
         )
 
-    fs_config = FeatureStoreConfig() 
+    fs_config = FeatureStoreConfig()
 
     @mcp.tool(description="Reconnect to the Teradata database if the connection is lost.")
     async def reconnect_to_database() -> ResponseType:
@@ -521,9 +544,9 @@ if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
 
     @mcp.tool(description="Set or update the feature store configuration (database and data domain).")
     async def fs_setFeatureStoreConfig(
-        data_domain: Optional[str] = None,
-        db_name: Optional[str] = None,
-        entity: Optional[str] = None,
+        data_domain: str | None = None,
+        db_name: str | None = None,
+        entity: str | None = None,
     ) -> ResponseType:
         if db_name:
             if tdfs4ds.connect(database=db_name):
@@ -531,7 +554,7 @@ if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
                 # Reset data_domain if DB name changes
                 if not (fs_config.db_name and fs_config.db_name.upper() == db_name.upper()):
                     fs_config.data_domain = None
-                
+
                 fs_config.db_name = db_name
                 logger.info(f"connected to the feature store of the {db_name} database")
                 fs_config.feature_catalog = f"{db_name}.{tdfs4ds.FEATURE_CATALOG_NAME_VIEW}"
@@ -558,11 +581,11 @@ if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
             logger.info(f"{result}")
             if result.fetchall()[0][0] > 0:
                 fs_config.entity = entity
-        return format_text_response(f"Feature store config updated: {fs_config.dict(exclude_none=True)}")
+        return format_text_response(f"Feature store config updated: {fs_config.model_dump(exclude_none=True)}")
 
     @mcp.tool(description="Display the current feature store configuration (database and data domain).")
     async def fs_getFeatureStoreConfig() -> ResponseType:
-        return format_text_response(f"Current feature store config: {fs_config.dict(exclude_none=True)}")
+        return format_text_response(f"Current feature store config: {fs_config.model_dump(exclude_none=True)}")
 
     @mcp.tool(description=("Check if a feature store is present in the specified database." ))
     async def fs_isFeatureStorePresent(
@@ -577,7 +600,6 @@ if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
 
     @mcp.tool(description=( "List the available data domains. Requires a configured `db_name`  in the feature store config. Use this to explore which entities can be used when building a dataset."))
     async def fs_getDataDomains(
-        entity: str = Field(..., description="The .")
     ) -> ResponseType:
         return execute_db_tool(td.handle_fs_getDataDomains, fs_config=fs_config)
 
@@ -619,7 +641,7 @@ if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
 #         If an error occurs during initialization, it logs a warning message.
 async def main():
     global _tdconn
-    
+
     mcp_transport = os.getenv("MCP_TRANSPORT", "stdio").lower()
     logger.info(f"MCP_TRANSPORT: {mcp_transport}")
 
@@ -634,7 +656,7 @@ async def main():
         # Windows doesn't support signals properly
         logger.warning("Signal handling not supported on Windows")
         pass
-    
+
     # Start the MCP server
     if mcp_transport == "sse":
         mcp.settings.host = os.getenv("MCP_HOST")
@@ -649,7 +671,7 @@ async def main():
         await mcp.run_streamable_http_async()
     else:
         logger.info("Starting MCP server on stdin/stdout")
-        await mcp.run_stdio_async()    
+        await mcp.run_stdio_async()
 
 #------------------ Shutdown ------------------#
 # Shutdown function to handle cleanup and exit
@@ -661,12 +683,12 @@ async def main():
 async def shutdown(sig=None):
     """Clean shutdown of the server."""
     global shutdown_in_progress, _tdconn
-    
+
     logger.info("Shutting down server")
     if shutdown_in_progress:
         logger.info("Forcing immediate exit")
         os._exit(1)  # Use immediate process termination instead of sys.exit
-    
+
     _tdconn.close()
     shutdown_in_progress = True
     if sig:

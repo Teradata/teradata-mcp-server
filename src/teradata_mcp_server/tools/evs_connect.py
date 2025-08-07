@@ -1,13 +1,14 @@
 # ── evs_connect.py ────────────────────────────────────────────
-import os 
 import logging
-from urllib.parse import urlparse
+import os
 from functools import lru_cache
+from urllib.parse import urlparse
 
-from teradataml import create_context, get_context, set_auth_token
-from teradatagenai import VectorStore, VSManager
-from .td_connect import TDConn                 
 from dotenv import load_dotenv
+from teradatagenai import VectorStore, VSManager
+from teradataml import create_context, get_context, set_auth_token
+
+from .td_connect import TDConn
 
 load_dotenv()
 
@@ -20,8 +21,8 @@ logger = logging.getLogger("evs_connect")
 def get_evs() -> VectorStore:
 
     if get_context() is None:
-        dbc = TDConn()                           
-        p = urlparse(dbc.connection_url)                    
+        dbc = TDConn()
+        p = urlparse(dbc.connection_url)
         create_context(host=p.hostname,
                        username=p.username,
                        password=p.password)
@@ -38,7 +39,7 @@ def get_evs() -> VectorStore:
 
     vs_name = os.getenv("VS_NAME","vs_demo")
     vs = VectorStore(vs_name)
-    df = VSManager.list().to_pandas() 
+    df = VSManager.list().to_pandas()
     if vs_name not in df["vs_name"].values:
         raise RuntimeError(
             f"Vector store '{vs_name}' does not exist. Please create it on the Vector Store side first.")

@@ -48,6 +48,7 @@ uv run src/teradata_mcp_server/server.py
 ```
 cd teradata-mcp-server
 uv sync --extra test
+source .venv/bin/activate
 cd test
 adk web
 ```
@@ -78,6 +79,7 @@ uv run src/teradata_mcp-server
 ```
 cd teradata-mcp-server
 uv sync --extra test
+source .venv/bin/activate
 uv run test/MCP_Client_Example/mcp_chatbot.py
 ```
 &nbsp;&nbsp;&nbsp;&nbsp;Step 4 - list the prompts by typing /prompts
