@@ -1,22 +1,23 @@
-import os
+import argparse
 import asyncio
-import logging
-import signal
+import functools
+import inspect
 import json
-import yaml
-from typing import Any, List, Optional
-from pydantic import Field, BaseModel
+import logging
+import os
+import re
+import signal
+from typing import Any, Optional
+
 import mcp.types as types
-from mcp.server.fastmcp import FastMCP
-from mcp.server.fastmcp.prompts.base import UserMessage, TextContent
-from dotenv import load_dotenv
 import tdfs4ds
 import teradataml as tdml
-import inspect
+import yaml
+from dotenv import load_dotenv
+from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.prompts.base import TextContent, UserMessage
+from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection
-import argparse
-import re
-import functools
 
 # Import the ai_tools module, clone-and-run friendly
 try:
@@ -46,10 +47,10 @@ for key, value in vars(args).items():
 profile_name = os.getenv("PROFILE")
 
 # Load tool configuration from YAML file
-with open('profiles.yml', 'r') as file:
+with open('profiles.yml') as file:
     all_profiles = yaml.safe_load(file)
     if not profile_name:
-        print(f"No profile specified, load all tools, prompts and resources.")
+        print("No profile specified, load all tools, prompts and resources.")
         config={'tool': ['.*'], 'prompt': ['.*'], 'resource': ['.*']}
     elif profile_name not in all_profiles:
         raise ValueError(f"Profile '{profile_name}' not found in profiles.yml. Available: {list(all_profiles.keys())}.")
@@ -64,7 +65,7 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(),
               logging.FileHandler(os.path.join("logs", "teradata_mcp_server.log"))],
 )
-logger = logging.getLogger("teradata_mcp_server")    
+logger = logging.getLogger("teradata_mcp_server")
 logger.info("Starting Teradata MCP server")
 
 # Connect to MCP server
@@ -83,16 +84,16 @@ if (len(os.getenv("VS_NAME", "").strip()) > 0):
     try:
         _evs    = td.get_evs()
         _enableEVS = True
-    except:
-        logger.error("Unable to establish connection to EVS, disabling")
-        
+    except Exception as e:
+        logger.error(f"Unable to establish connection to EVS, disabling: {e}")
+
 #afm-defect: moved establish teradataml connection into main TDConn to enable auto-reconnect.
 #td.teradataml_connection()
 
 
 
 #------------------ Tool utilies  ------------------#
-ResponseType = List[types.TextContent | types.ImageContent | types.EmbeddedResource]
+ResponseType = list[types.TextContent | types.ImageContent | types.EmbeddedResource]
 
 def format_text_response(text: Any) -> ResponseType:
     """Format a text response."""
@@ -101,7 +102,7 @@ def format_text_response(text: Any) -> ResponseType:
             # Try to parse as JSON if it's a string
             parsed = json.loads(text)
             return [types.TextContent(
-                type="text", 
+                type="text",
                 text=json.dumps(parsed, indent=2, ensure_ascii=False)
             )]
         except json.JSONDecodeError:
@@ -169,13 +170,13 @@ def execute_vs_tool(tool, *args, **kwargs) -> ResponseType:
                 except Exception as retry_err:
                     logger.error(f"EVS retry failed: {retry_err}")
                     return format_error_response(f"After refresh, still failed: {retry_err}")
-    
+
             logger.error(f"EVS tool error: {e}")
             return format_error_response(str(e))
     else:
         return format_error_response("Enterprise Vector Store is not available on this server.")
 
-    
+
 
 def make_tool_wrapper(func):
     """
@@ -462,26 +463,26 @@ if custom_glossary:
 if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
     class FeatureStoreConfig(BaseModel):
         """
-        Configuration class for the feature store. This model defines the metadata and catalog sources 
+        Configuration class for the feature store. This model defines the metadata and catalog sources
         used to organize and access features, processes, and datasets across data domains.
         """
 
-        data_domain: Optional[str] = Field(
+        data_domain: str | None = Field(
             default=None,
             description="The data domain associated with the feature store, grouping features within the same namespace."
         )
 
-        entity: Optional[str] = Field(
+        entity: str | None = Field(
             default=None,
             description="The list of entities, comma separated and in alphabetical order, upper case."
         )
 
-        db_name: Optional[str] = Field(
+        db_name: str | None = Field(
             default=None,
             description="Name of the database where the feature store is hosted."
         )
 
-        feature_catalog: Optional[str] = Field(
+        feature_catalog: str | None = Field(
             default=None,
             description=(
                 "Name of the feature catalog table. "
@@ -489,7 +490,7 @@ if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
             )
         )
 
-        process_catalog: Optional[str] = Field(
+        process_catalog: str | None = Field(
             default=None,
             description=(
                 "Name of the process catalog table. "
@@ -497,7 +498,7 @@ if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
             )
         )
 
-        dataset_catalog: Optional[str] = Field(
+        dataset_catalog: str | None = Field(
             default=None,
             description=(
                 "Name of the dataset catalog table. "
@@ -505,7 +506,7 @@ if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
             )
         )
 
-    fs_config = FeatureStoreConfig() 
+    fs_config = FeatureStoreConfig()
 
     @mcp.tool(description="Reconnect to the Teradata database if the connection is lost.")
     async def reconnect_to_database() -> ResponseType:
@@ -521,9 +522,9 @@ if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
 
     @mcp.tool(description="Set or update the feature store configuration (database and data domain).")
     async def fs_setFeatureStoreConfig(
-        data_domain: Optional[str] = None,
-        db_name: Optional[str] = None,
-        entity: Optional[str] = None,
+        data_domain: str | None = None,
+        db_name: str | None = None,
+        entity: str | None = None,
     ) -> ResponseType:
         if db_name:
             if tdfs4ds.connect(database=db_name):
@@ -531,7 +532,7 @@ if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
                 # Reset data_domain if DB name changes
                 if not (fs_config.db_name and fs_config.db_name.upper() == db_name.upper()):
                     fs_config.data_domain = None
-                
+
                 fs_config.db_name = db_name
                 logger.info(f"connected to the feature store of the {db_name} database")
                 fs_config.feature_catalog = f"{db_name}.{tdfs4ds.FEATURE_CATALOG_NAME_VIEW}"
@@ -619,7 +620,7 @@ if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
 #         If an error occurs during initialization, it logs a warning message.
 async def main():
     global _tdconn
-    
+
     mcp_transport = os.getenv("MCP_TRANSPORT", "stdio").lower()
     logger.info(f"MCP_TRANSPORT: {mcp_transport}")
 
@@ -634,7 +635,7 @@ async def main():
         # Windows doesn't support signals properly
         logger.warning("Signal handling not supported on Windows")
         pass
-    
+
     # Start the MCP server
     if mcp_transport == "sse":
         mcp.settings.host = os.getenv("MCP_HOST")
@@ -649,7 +650,7 @@ async def main():
         await mcp.run_streamable_http_async()
     else:
         logger.info("Starting MCP server on stdin/stdout")
-        await mcp.run_stdio_async()    
+        await mcp.run_stdio_async()
 
 #------------------ Shutdown ------------------#
 # Shutdown function to handle cleanup and exit
@@ -661,12 +662,12 @@ async def main():
 async def shutdown(sig=None):
     """Clean shutdown of the server."""
     global shutdown_in_progress, _tdconn
-    
+
     logger.info("Shutting down server")
     if shutdown_in_progress:
         logger.info("Forcing immediate exit")
         os._exit(1)  # Use immediate process termination instead of sys.exit
-    
+
     _tdconn.close()
     shutdown_in_progress = True
     if sig:

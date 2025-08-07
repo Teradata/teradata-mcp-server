@@ -8,7 +8,9 @@ Lightweight MCP server tools for Teradata.
 __version__ = "0.1.0"
 
 import asyncio
+
 from . import server
+
 
 def main():
     """Main entry point for the package."""

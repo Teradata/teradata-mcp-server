@@ -7,7 +7,6 @@ Assumes Teradata >=17.20.
 **Base** tools:
 
   - base_readQuery - runs a read query
-  - base_writeQuery - runs a write query
   - base_tableDDL - returns the show table results
   - base_databaseList - returns a list of all databases
   - base_tableList - returns a list of tables in a database

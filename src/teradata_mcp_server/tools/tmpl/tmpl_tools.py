@@ -4,12 +4,10 @@ If the tool is a simple (parameterized) query or cube, it should it should be de
 """
 
 import logging
-from teradatasql import TeradataConnection 
-from typing import Optional, Any, Dict, List
-import json
-from datetime import date, datetime
-from decimal import Decimal
-from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
+
+from teradatasql import TeradataConnection
+
+from teradata_mcp_server.tools.utils import create_response, rows_to_json
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -19,7 +17,7 @@ logger = logging.getLogger("teradata_mcp_server")
 
 #------------------ Tool  ------------------#
 # <Name of Tool> tool
-def handle_tmpl_nameOfTool(conn: TeradataConnection, argument: Optional[str], *args, **kwargs):
+def handle_tmpl_nameOfTool(conn: TeradataConnection, argument: str | None, *args, **kwargs):
     """
     <description of what the tool is for>
 

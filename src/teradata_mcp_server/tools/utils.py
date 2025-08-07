@@ -1,17 +1,18 @@
 import json
-from typing import Any, Dict, List, Optional
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any, Optional
+
 
 def serialize_teradata_types(obj: Any) -> Any:
     """Convert Teradata-specific types to JSON serializable formats"""
-    if isinstance(obj, (date, datetime)):
+    if isinstance(obj, date | datetime):
         return obj.isoformat()
     if isinstance(obj, Decimal):
         return float(obj)
     return str(obj)
 
-def rows_to_json(cursor_description: Any, rows: List[Any]) -> List[Dict[str, Any]]:
+def rows_to_json(cursor_description: Any, rows: list[Any]) -> list[dict[str, Any]]:
     """Convert database rows to JSON objects using column names as keys"""
     if not cursor_description or not rows:
         return []
@@ -24,7 +25,7 @@ def rows_to_json(cursor_description: Any, rows: List[Any]) -> List[Dict[str, Any
         for row in rows
     ]
 
-def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str:
+def create_response(data: Any, metadata: dict[str, Any] | None = None) -> str:
     """Create a standardized JSON response structure"""
     if metadata:
         response = {
