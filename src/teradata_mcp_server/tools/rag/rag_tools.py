@@ -1,12 +1,11 @@
-import logging
-import yaml
-import os
-from typing import Optional, Any, Dict, List
-from teradatasql import TeradataConnection
 import json
+import logging
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 
+import yaml
+from teradatasql import TeradataConnection
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -14,7 +13,7 @@ logger = logging.getLogger("teradata_mcp_server")
 def load_rag_config():
     """Load RAG configuration from rag_config.yml"""
     try:
-        with open('rag_config.yml', 'r') as file:  # Simple path like server.py
+        with open('rag_config.yml') as file:  # Simple path like server.py
             logger.info("Loading RAG config from: rag_config.yml")
             return yaml.safe_load(file)
     except FileNotFoundError:
@@ -30,7 +29,7 @@ def get_default_rag_config():
         'version': 'byom',
         'databases': {
             'query_db': 'demo_db',
-            'model_db': 'demo_db', 
+            'model_db': 'demo_db',
             'vector_db': 'demo_db'
         },
         'tables': {
@@ -67,21 +66,21 @@ def build_search_query(vector_db, dst_table, chunk_embed_table, k, config):
     # Get metadata fields from config
     metadata_fields = config['vector_store_schema']['metadata_fields_in_vector_store']
     feature_columns = config['embedding']['feature_columns']
-    
+
     # Build SELECT clause dynamically - txt is always required
     select_fields = ["e_ref.txt AS reference_txt"]
-    
+
     # Add all metadata fields from vector store
     for field in metadata_fields:
         # Skip txt since it's already added as reference_txt
         if field != 'txt':
             select_fields.append(f"e_ref.{field} AS {field}")
-    
+
     # Always add similarity (calculated field)
     select_fields.append("(1.0 - dt.distance) AS similarity")
-    
+
     select_clause = ",\n            ".join(select_fields)
-    
+
     return f"""
         SELECT
             {select_clause}
@@ -103,17 +102,17 @@ def build_search_query(vector_db, dst_table, chunk_embed_table, k, config):
 
 def serialize_teradata_types(obj: Any) -> Any:
     """Convert Teradata-specific types to JSON serializable formats"""
-    if isinstance(obj, (date, datetime)):
+    if isinstance(obj, date | datetime):
         return obj.isoformat()
     if isinstance(obj, Decimal):
         return float(obj)
     return str(obj)
 
-def rows_to_json(cursor_description: Any, rows: List[Any]) -> List[Dict[str, Any]]:
+def rows_to_json(cursor_description: Any, rows: list[Any]) -> list[dict[str, Any]]:
     """Convert database rows to JSON objects using column names as keys"""
     if not cursor_description or not rows:
         return []
-    
+
     columns = [col[0] for col in cursor_description]
     return [
         {
@@ -123,7 +122,7 @@ def rows_to_json(cursor_description: Any, rows: List[Any]) -> List[Dict[str, Any
         for row in rows
     ]
 
-def create_response(data: Any, metadata: Optional[Dict[str, Any]] = None) -> str:
+def create_response(data: Any, metadata: dict[str, Any] | None = None) -> str:
     """Create a standardized JSON response structure"""
     if metadata:
         response = {
@@ -170,19 +169,19 @@ def handle_rag_executeWorkflow(
 
     # Use configuration from loaded config
     config = RAG_CONFIG
-    
+
     # Use config default if k not provided
     if k is None:
         k = config['retrieval']['default_k']
-    
+
     # Optional: Enforce max limit
     max_k = config['retrieval'].get('max_k', 100)
     if k > max_k:
         logger.warning(f"Requested k={k} exceeds max_k={max_k}, using max_k")
         k = max_k
-    
+
     logger.debug(f"handle_rag_executeWorkflow: question={question[:60]}..., k={k}")
-    
+
     # Extract config values
     db_name = config['databases']['query_db']
     table_name = config['tables']['query_table']
@@ -196,10 +195,10 @@ def handle_rag_executeWorkflow(
 
 
     with conn.cursor() as cur:
-        
+
         # Step 2: Store user query
         logger.debug(f"Step 2: Storing user query in {db_name}.{table_name}")
-        
+
         # Create table if it doesn't exist
         ddl = f"""
         CREATE TABLE {db_name}.{table_name} (
@@ -209,7 +208,7 @@ def handle_rag_executeWorkflow(
             PRIMARY KEY (id)
         )
         """
-        
+
         try:
             cur.execute(ddl)
             logger.debug(f"Table {db_name}.{table_name} created")
@@ -231,20 +230,20 @@ def handle_rag_executeWorkflow(
           END
         """
         cur.execute(insert_sql, [question, question, question])
-        
+
         # Get inserted ID and cleaned text
         cur.execute(f"SELECT MAX(id) AS id FROM {db_name}.{table_name}")
         new_id = cur.fetchone()[0]
-        
+
         cur.execute(f"SELECT txt FROM {db_name}.{table_name} WHERE id = ?", [new_id])
         cleaned_txt = cur.fetchone()[0]
-        
+
         logger.debug(f"Stored query with ID {new_id}: {cleaned_txt[:60]}...")
 
 
         # Step 3: Generate query embeddings
         logger.debug(f"Step 3: Generating embeddings in {db_name}.{dst_table}")
-        
+
         # Drop existing embeddings table
         drop_sql = f"DROP TABLE {db_name}.{dst_table}"
         try:
@@ -268,18 +267,18 @@ def handle_rag_executeWorkflow(
             ) AS a
         ) WITH DATA
         """
-        
+
         cur.execute(create_sql)
         logger.debug(f"Created embeddings table {db_name}.{dst_table}")
 
         # Step 4: Perform semantic search with dynamic query building
         logger.debug(f"Step 4: Performing semantic search with k={k}")
-        
+
         search_sql = build_search_query(vector_db, dst_table, chunk_embed_table, k, config)
-        
+
         rows = cur.execute(search_sql)
         data = rows_to_json(cur.description, rows.fetchall())
-        
+
         logger.debug(f"Retrieved {len(data)} chunks for semantic search")
 
     # Return results with comprehensive metadata
@@ -328,23 +327,23 @@ def handle_rag_executeWorkflow_ivsm(
 
     Returns:
       Returns the top-k most relevant chunks with metadata for context-grounded answer generation.
-    """  
-    
+    """
+
     # Use configuration from loaded config
     config = RAG_CONFIG
-    
+
     # Use config default if k not provided
     if k is None:
         k = config['retrieval']['default_k']
-    
+
     # Optional: Enforce max limit
     max_k = config['retrieval'].get('max_k', 100)
     if k > max_k:
         logger.warning(f"Requested k={k} exceeds max_k={max_k}, using max_k")
         k = max_k
-    
+
     logger.debug(f"handle_rag_executeWorkflow (IVSM): question={question[:60]}..., k={k}")
-    
+
     # Extract config values
     db_name = config['databases']['query_db']
     table_name = config['tables']['query_table']
@@ -357,10 +356,10 @@ def handle_rag_executeWorkflow_ivsm(
     chunk_embed_table = config['tables']['vector_table']
 
     with conn.cursor() as cur:
-        
+
         # Step 2: Store user query
         logger.debug(f"Step 2: Storing user query in {db_name}.{table_name}")
-        
+
         # Create table if it doesn't exist
         ddl = f"""
         CREATE TABLE {db_name}.{table_name} (
@@ -370,7 +369,7 @@ def handle_rag_executeWorkflow_ivsm(
             PRIMARY KEY (id)
         )
         """
-        
+
         try:
             cur.execute(ddl)
             logger.debug(f"Table {db_name}.{table_name} created")
@@ -392,20 +391,20 @@ def handle_rag_executeWorkflow_ivsm(
           END
         """
         cur.execute(insert_sql, [question, question, question])
-        
+
         # Get inserted ID and cleaned text
         cur.execute(f"SELECT MAX(id) AS id FROM {db_name}.{table_name}")
         new_id = cur.fetchone()[0]
-        
+
         cur.execute(f"SELECT txt FROM {db_name}.{table_name} WHERE id = ?", [new_id])
         cleaned_txt = cur.fetchone()[0]
-        
+
         logger.debug(f"Stored query with ID {new_id}: {cleaned_txt[:60]}...")
 
 
         # Step 3: Tokenize query
-        logger.debug(f"Step 3: Tokenizing query using ivsm.tokenizer_encode")
-        
+        logger.debug("Step 3: Tokenizing query using ivsm.tokenizer_encode")
+
         cur.execute(f"""
             REPLACE VIEW v_topics_tokenized AS
             (
@@ -432,12 +431,12 @@ def handle_rag_executeWorkflow_ivsm(
                 ) AS t
             );
         """)
-        
+
         logger.debug("Tokenized view v_topics_tokenized created")
 
         # Step 4: Create embedding view
-        logger.debug(f"Step 4: Creating embedding view using ivsm.IVSM_score")
-        
+        logger.debug("Step 4: Creating embedding view using ivsm.IVSM_score")
+
         cur.execute(f"""
             REPLACE VIEW v_topics_embeddings AS
             (
@@ -458,12 +457,12 @@ def handle_rag_executeWorkflow_ivsm(
                 ) AS s
             );
         """)
-        
+
         logger.debug("Embedding view v_topics_embeddings created")
 
         # Step 5: Create query embedding table
-        logger.debug(f"Step 5: Creating query embedding table using ivsm.vector_to_columns")
-        
+        logger.debug("Step 5: Creating query embedding table using ivsm.vector_to_columns")
+
         # Drop existing embeddings table
         drop_sql = f"DROP TABLE {db_name}.{dst_table}"
         try:
@@ -479,28 +478,28 @@ def handle_rag_executeWorkflow_ivsm(
             FROM ivsm.vector_to_columns(
                 ON v_topics_embeddings
                 USING
-                    ColumnsToPreserve('id', 'txt') 
+                    ColumnsToPreserve('id', 'txt')
                     VectorDataType('FLOAT32')
                     VectorLength({config['embedding']['vector_length']})
                     OutputColumnPrefix('{config['embedding']['vector_column_prefix']}')
 
                     InputColumnName('sentence_embedding')
-            ) a 
+            ) a
         ) WITH DATA
         """
-        
+
         cur.execute(create_sql)
         logger.debug(f"Created embeddings table {db_name}.{dst_table}")
 
 
         # Step 6: Perform semantic search with dynamic query building
         logger.debug(f"Step 6: Performing semantic search with k={k}")
-        
+
         search_sql = build_search_query(vector_db, dst_table, chunk_embed_table, k, config)
-        
+
         rows = cur.execute(search_sql)
         data = rows_to_json(cur.description, rows.fetchall())
-        
+
         logger.debug(f"Retrieved {len(data)} chunks for semantic search")
 
     # Return results with comprehensive metadata

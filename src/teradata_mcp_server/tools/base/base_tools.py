@@ -1,11 +1,11 @@
-import re
 import logging
-from typing import Optional
-from teradatasql import TeradataConnection
+import re
+
 from sqlalchemy import text
-from sqlalchemy.engine import Connection
-from sqlalchemy.engine import default
-from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
+from sqlalchemy.engine import Connection, default
+from teradatasql import TeradataConnection
+
+from teradata_mcp_server.tools.utils import create_response, rows_to_json
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -68,7 +68,7 @@ def handle_base_readQuery(
     }
 
     return create_response(data, metadata)
-        
+
 
 
 
@@ -84,7 +84,7 @@ def handle_base_tableDDL(conn: TeradataConnection, db_name: str, table_name: str
 
     Returns:
       ResponseType: formatted response with query results + metadata
-    """   
+    """
     logger.debug(f"Tool: handle_base_tableDDL: Args: db_name: {db_name}, table_name: {table_name}")
 
     if len(db_name) == 0:
@@ -106,7 +106,7 @@ def handle_base_tableDDL(conn: TeradataConnection, db_name: str, table_name: str
             "table": table_name
         }
         return create_response(data, metadata)
-        
+
 #------------------ Tool  ------------------#
 # Read column description tool
 def handle_base_columnDescription(conn: TeradataConnection, db_name: str, obj_name: str, *args, **kwargs):
@@ -119,7 +119,7 @@ def handle_base_columnDescription(conn: TeradataConnection, db_name: str, obj_na
 
     Returns:
       ResponseType: formatted response with query results + metadata
-    """ 
+    """
     logger.debug(f"Tool: handle_base_columnDescription: Args: db_name: {db_name}, obj_name: {obj_name}")
 
     if len(db_name) == 0:
@@ -189,7 +189,7 @@ def handle_base_columnDescription(conn: TeradataConnection, db_name: str, obj_na
 
 #------------------ Tool  ------------------#
 # Read table preview tool
-def handle_base_tablePreview(conn: TeradataConnection, table_name: str, db_name: Optional[str] = None, *args, **kwargs):
+def handle_base_tablePreview(conn: TeradataConnection, table_name: str, db_name: str | None = None, *args, **kwargs):
     """
     This function returns data sample and inferred structure from a database table or view via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
@@ -199,7 +199,7 @@ def handle_base_tablePreview(conn: TeradataConnection, table_name: str, db_name:
 
     Returns:
       ResponseType: formatted response with query results + metadata
-    """ 
+    """
     logger.debug(f"Tool: handle_base_tablePreview: Args: tablename: {table_name}, databasename: {db_name}")
 
     if db_name is not None:
@@ -237,7 +237,7 @@ def handle_base_tableAffinity(conn: TeradataConnection, db_name: str, obj_name: 
 
     Returns:
       ResponseType: formatted response with query results + metadata
-    """ 
+    """
     logger.debug(f"Tool: handle_base_tableAffinity: Args: db_name: {db_name}, obj_name: {obj_name}")
     table_affiity_sql="""
     LOCKING ROW for ACCESS
@@ -253,7 +253,7 @@ def handle_base_tableAffinity(conn: TeradataConnection, db_name: str, obj_name: 
                         FROM DBC.DBQLObjTbl /*  for DBC */
                         WHERE Objecttype in ('Tab', 'Viw')
                         AND ObjectTableName = '{table_name}'
-                        AND objectdatabasename = '{database_name}'                        
+                        AND objectdatabasename = '{database_name}'
                         AND ObjectTableName IS NOT NULL
                         AND ObjectColumnName IS NULL
                         -- AND LogDate BETWEEN '2017-01-01' AND '2017-08-01' /* uncomment for PDCR */
@@ -282,7 +282,7 @@ def handle_base_tableAffinity(conn: TeradataConnection, db_name: str, obj_name: 
     ORDER BY 3 DESC, 5 DESC
 --    having "QueryCount">10
     ;
-    
+
     """
     with conn.cursor() as cur:
         rows = cur.execute(table_affiity_sql.format(table_name=obj_name, database_name=db_name))
@@ -303,7 +303,7 @@ def handle_base_tableAffinity(conn: TeradataConnection, db_name: str, obj_name: 
 
 #------------------ Tool  ------------------#
 # Read table usage tool
-def handle_base_tableUsage(conn: TeradataConnection, db_name: Optional[str] = None, *args, **kwargs):
+def handle_base_tableUsage(conn: TeradataConnection, db_name: str | None = None, *args, **kwargs):
     """
     Measure the usage of a table and views by users in a given schema, this is helpful to infer what database objects are most actively used or drive most value via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
@@ -312,7 +312,7 @@ def handle_base_tableUsage(conn: TeradataConnection, db_name: Optional[str] = No
 
     Returns:
       ResponseType: formatted response with query results + metadata
-    """ 
+    """
     logger.debug("Tool: handle_base_tableUsage: Args: db_name:")
     if db_name:
         database_name_filter=f"AND objectdatabasename = '{db_name}'"
@@ -320,19 +320,19 @@ def handle_base_tableUsage(conn: TeradataConnection, db_name: Optional[str] = No
         database_name_filter=""
     table_usage_sql="""
     LOCKING ROW for ACCESS
-    sel 
+    sel
     DatabaseName
     ,TableName
     ,Weight as "QueryCount"
     ,100*"Weight" / sum("Weight") over(partition by 1) PercentTotal
-    ,case 
+    ,case
         when PercentTotal >=10 then 'High'
         when PercentTotal >=5 then 'Medium'
         else 'Low'
     end (char(6)) usage_freq
     ,FirstQueryDaysAgo
     ,LastQueryDaysAgo
-        
+
     from
     (
         SELECT   TRIM(QTU1.TableName)  AS "TableName"
@@ -355,14 +355,14 @@ def handle_base_tableUsage(conn: TeradataConnection, db_name: Optional[str] = No
                         ) AS QTU1
         INNER JOIN DBC.DBQLogTbl QU /* uncomment for DBC */
         ON QTU1.QueryID=QU.QueryID
-        AND (QU.AMPCPUTime + QU.ParserCPUTime) > 0 
-                        
+        AND (QU.AMPCPUTime + QU.ParserCPUTime) > 0
+
         GROUP BY 1,2
     ) a
     order by PercentTotal desc
     qualify PercentTotal>0
     ;
-    
+
     """
 
 
@@ -392,15 +392,15 @@ def util_base_dynamicQuery(conn: TeradataConnection, sql_generator: callable, *a
 
     Returns:
       ResponseType: formatted response with query results + metadata
-    """ 
+    """
     logger.debug(f"Tool: util_base_dynamicQuery: Args: sql: {sql_generator}")
 
     sql = sql_generator(*args, **kwargs)
-    with conn.cursor() as cur:    
+    with conn.cursor() as cur:
         rows = cur.execute(sql)  # type: ignore
         if rows is None:
             return create_response([])
-            
+
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
             "tool_name": sql_generator.__name__,

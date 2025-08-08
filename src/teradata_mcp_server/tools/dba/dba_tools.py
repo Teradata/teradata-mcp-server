@@ -1,14 +1,14 @@
 import logging
-from teradatasql import TeradataConnection 
-from typing import Optional, List
 
-from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
+from teradatasql import TeradataConnection
+
+from teradata_mcp_server.tools.utils import create_response, rows_to_json
 
 logger = logging.getLogger("teradata_mcp_server")
 
 #------------------ Tool  ------------------#
 # Get table SQL tool
-def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: Optional[int],  *args, **kwargs):
+def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: int | None,  *args, **kwargs):
     """
     Get a list of SQL run against a table in the last number of days.
 
@@ -26,10 +26,10 @@ def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: 
             logger.debug("No table name provided")
         else:
             logger.debug(f"Table name provided: {table_name}, returning SQL queries for this table.")
-            rows = cur.execute(f"""SELECT t1.QueryID, t1.ProcID, t1.CollectTimeStamp, t1.SqlTextInfo, t2.UserName 
-            FROM DBC.QryLogSqlV t1 
-            JOIN DBC.QryLogV t2 
-            ON t1.QueryID = t2.QueryID 
+            rows = cur.execute(f"""SELECT t1.QueryID, t1.ProcID, t1.CollectTimeStamp, t1.SqlTextInfo, t2.UserName
+            FROM DBC.QryLogSqlV t1
+            JOIN DBC.QryLogV t2
+            ON t1.QueryID = t2.QueryID
             WHERE t1.CollectTimeStamp >= CURRENT_TIMESTAMP - INTERVAL '{no_days}' DAY
             AND t1.SqlTextInfo LIKE '%{table_name}%'
             ORDER BY t1.CollectTimeStamp DESC;""")
@@ -44,8 +44,8 @@ def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: 
         return create_response(data, metadata)
 
 #------------------ Tool  ------------------#
-# Get user SQL tool  
-def handle_dba_userSqlList(conn: TeradataConnection, user_name: Optional[str] | None, no_days: Optional[int],  *args, **kwargs):
+# Get user SQL tool
+def handle_dba_userSqlList(conn: TeradataConnection, user_name: str | None | None, no_days: int | None,  *args, **kwargs):
     """
     Get a list of SQL run by a user in the last number of days if a user name is provided, otherwise get list of all SQL in the last number of days.
 
@@ -61,25 +61,25 @@ def handle_dba_userSqlList(conn: TeradataConnection, user_name: Optional[str] | 
     with conn.cursor() as cur:
         if user_name == "":
             logger.debug("No user name provided, returning all SQL queries.")
-            rows = cur.execute(f"""SELECT t1.QueryID, t1.ProcID, t1.CollectTimeStamp, t1.SqlTextInfo, t2.UserName 
-            FROM DBC.QryLogSqlV t1 
-            JOIN DBC.QryLogV t2 
-            ON t1.QueryID = t2.QueryID 
+            rows = cur.execute(f"""SELECT t1.QueryID, t1.ProcID, t1.CollectTimeStamp, t1.SqlTextInfo, t2.UserName
+            FROM DBC.QryLogSqlV t1
+            JOIN DBC.QryLogV t2
+            ON t1.QueryID = t2.QueryID
             WHERE t1.CollectTimeStamp >= CURRENT_TIMESTAMP - INTERVAL '{no_days}' DAY
             ORDER BY t1.CollectTimeStamp DESC;""")
         else:
             logger.debug(f"User name provided: {user_name}, returning SQL queries for this user.")
-            rows = cur.execute(f"""SELECT t1.QueryID, t1.ProcID, t1.CollectTimeStamp, t1.SqlTextInfo, t2.UserName 
-            FROM DBC.QryLogSqlV t1 
-            JOIN DBC.QryLogV t2 
-            ON t1.QueryID = t2.QueryID 
+            rows = cur.execute(f"""SELECT t1.QueryID, t1.ProcID, t1.CollectTimeStamp, t1.SqlTextInfo, t2.UserName
+            FROM DBC.QryLogSqlV t1
+            JOIN DBC.QryLogV t2
+            ON t1.QueryID = t2.QueryID
             WHERE t1.CollectTimeStamp >= CURRENT_TIMESTAMP - INTERVAL '{no_days}' DAY
             AND t2.UserName = '{user_name}'
             ORDER BY t1.CollectTimeStamp DESC;""")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
             "tool_name": "dba_userSqlList",
-            "user_name": user_name, 
+            "user_name": user_name,
             "no_days": no_days,
             "total_queries": len(data)
         }
@@ -87,8 +87,8 @@ def handle_dba_userSqlList(conn: TeradataConnection, user_name: Optional[str] | 
 
 
 #------------------ Tool  ------------------#
-# Get table space tool  
-def handle_dba_tableSpace(conn: TeradataConnection, db_name: Optional[str] | None , table_name: Optional[str] | None, *args, **kwargs):
+# Get table space tool
+def handle_dba_tableSpace(conn: TeradataConnection, db_name: str | None | None , table_name: str | None | None, *args, **kwargs):
     """
     Get table space used for a table if table name is provided or get table space for all tables in a database if a database name is provided."
 
@@ -104,34 +104,34 @@ def handle_dba_tableSpace(conn: TeradataConnection, db_name: Optional[str] | Non
     with conn.cursor() as cur:
         if (db_name == "") and (table_name == ""):
             logger.debug("No database or table name provided, returning all tables and space information.")
-            rows = cur.execute("""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm 
+            rows = cur.execute("""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm
             ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
-            FROM DBC.AllSpaceV 
-            GROUP BY DatabaseName, TableName 
+            FROM DBC.AllSpaceV
+            GROUP BY DatabaseName, TableName
             ORDER BY CurrentPerm1 desc;""")
         elif (db_name == ""):
             logger.debug(f"No database name provided, returning all space information for table: {table_name}.")
-            rows = cur.execute(f"""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm 
+            rows = cur.execute(f"""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm
             ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
-            FROM DBC.AllSpaceV 
-            WHERE TableName = '{table_name}' 
-            GROUP BY DatabaseName, TableName 
+            FROM DBC.AllSpaceV
+            WHERE TableName = '{table_name}'
+            GROUP BY DatabaseName, TableName
             ORDER BY CurrentPerm1 desc;""")
         elif (table_name == ""):
             logger.debug(f"No table name provided, returning all tables and space information for database: {db_name}.")
-            rows = cur.execute(f"""SELECT TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm 
+            rows = cur.execute(f"""SELECT TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm
             ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
-            FROM DBC.AllSpaceV 
-            WHERE DatabaseName = '{db_name}' 
-            GROUP BY TableName 
-            ORDER BY CurrentPerm1 desc;""")  
+            FROM DBC.AllSpaceV
+            WHERE DatabaseName = '{db_name}'
+            GROUP BY TableName
+            ORDER BY CurrentPerm1 desc;""")
         else:
             logger.debug(f"Database name: {db_name}, Table name: {table_name}, returning space information for this table.")
-            rows = cur.execute(f"""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm 
+            rows = cur.execute(f"""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm
             ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
-            FROM DBC.AllSpaceV 
-            WHERE DatabaseName = '{db_name}' AND TableName = '{table_name}' 
-            GROUP BY DatabaseName, TableName 
+            FROM DBC.AllSpaceV
+            WHERE DatabaseName = '{db_name}' AND TableName = '{table_name}'
+            GROUP BY DatabaseName, TableName
             ORDER BY CurrentPerm1 desc;""")
 
         data = rows_to_json(cur.description, rows.fetchall())
@@ -145,8 +145,8 @@ def handle_dba_tableSpace(conn: TeradataConnection, db_name: Optional[str] | Non
 
 
 #------------------ Tool  ------------------#
-# Get database space tool  
-def handle_dba_databaseSpace(conn: TeradataConnection, db_name: Optional[str] | None, *args, **kwargs):
+# Get database space tool
+def handle_dba_databaseSpace(conn: TeradataConnection, db_name: str | None | None, *args, **kwargs):
     """
     Get database space if database name is provided, otherwise get all databases space allocations.
 
@@ -162,28 +162,28 @@ def handle_dba_databaseSpace(conn: TeradataConnection, db_name: Optional[str] | 
         if (db_name == ""):
             logger.debug("No database name provided, returning all databases and space information.")
             rows = cur.execute("""
-                SELECT 
+                SELECT
                     DatabaseName,
                     CAST(SUM(MaxPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceAllocated_GB,
                     CAST(SUM(CurrentPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceUsed_GB,
                     CAST((SUM(MaxPerm) - SUM(CurrentPerm))/1024/1024/1024 AS DECIMAL(10,2)) AS FreeSpace_GB,
                     CAST((SUM(CurrentPerm) * 100.0 / NULLIF(SUM(MaxPerm),0)) AS DECIMAL(10,2)) AS PercentUsed
-                FROM DBC.DiskSpaceV 
-                WHERE MaxPerm > 0 
+                FROM DBC.DiskSpaceV
+                WHERE MaxPerm > 0
                 GROUP BY 1
                 ORDER BY 5 DESC;
             """)
         else:
             logger.debug(f"Database name: {db_name}, returning space information for this database.")
             rows = cur.execute(f"""
-                SELECT 
+                SELECT
                     DatabaseName,
                     CAST(SUM(MaxPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceAllocated_GB,
                     CAST(SUM(CurrentPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceUsed_GB,
                     CAST((SUM(MaxPerm) - SUM(CurrentPerm))/1024/1024/1024 AS DECIMAL(10,2)) AS FreeSpace_GB,
                     CAST((SUM(CurrentPerm) * 100.0 / NULLIF(SUM(MaxPerm),0)) AS DECIMAL(10,2)) AS PercentUsed
-                FROM DBC.DiskSpaceV 
-                WHERE MaxPerm > 0 
+                FROM DBC.DiskSpaceV
+                WHERE MaxPerm > 0
                 AND DatabaseName = '{db_name}'
                 GROUP BY 1;
             """)
@@ -195,15 +195,15 @@ def handle_dba_databaseSpace(conn: TeradataConnection, db_name: Optional[str] | 
             "total_databases": len(data)
         }
         return create_response(data, metadata)
-    
+
 #------------------ Tool  ------------------#
 # Resource usage summary tool
-def handle_dba_resusageSummary(conn: TeradataConnection, 
-                                 dimensions: Optional[List[str]] = None,
-                                 user_name: Optional[str] = None,
-                                 date:  Optional[str] = None,
-                                 dayOfWeek:  Optional[str] = None,
-                                 hourOfDay:  Optional[str] = None,
+def handle_dba_resusageSummary(conn: TeradataConnection,
+                                 dimensions: list[str] | None = None,
+                                 user_name: str | None = None,
+                                 date:  str | None = None,
+                                 dayOfWeek:  str | None = None,
+                                 hourOfDay:  str | None = None,
                                  *args, **kwargs):
 
     """
@@ -222,7 +222,7 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
     comment="Total system resource usage summary."
 
     # If dimensions is not None or empty, filter in the allowed dimensions
-    allowed_dimensions = ["LogDate", "hourOfDay", "dayOfWeek", "workloadType", "workloadComplexity","UserName","AppId","StatementType"]    
+    allowed_dimensions = ["LogDate", "hourOfDay", "dayOfWeek", "workloadType", "workloadComplexity","UserName","AppId","StatementType"]
     unsupported_dimensions = []
     if dimensions is not None:
         unsupported_dimensions = [dim for dim in dimensions if dim not in allowed_dimensions]
@@ -311,7 +311,7 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
         ) AS QryDetails
         {group_by_clause}
     """
-    with conn.cursor() as cur:   
+    with conn.cursor() as cur:
         logger.debug("Resource usage summary requested.")
         rows = cur.execute(query)
 
@@ -326,10 +326,10 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
 
 #------------------ Tool  ------------------#
 # Get table usage impact tool
-def handle_dba_tableUsageImpact(conn: TeradataConnection, db_name: Optional[str] = None, user_name: Optional[str] = None, *args, **kwargs):
+def handle_dba_tableUsageImpact(conn: TeradataConnection, db_name: str | None = None, user_name: str | None = None, *args, **kwargs):
     """
     Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time.
-    
+
     Arguments:
       db_name - database name to analyze
       user_name - user name to analyze
@@ -349,20 +349,20 @@ def handle_dba_tableUsageImpact(conn: TeradataConnection, db_name: Optional[str]
 
     table_usage_sql="""
     LOCKING ROW for ACCESS
-    sel 
+    sel
     DatabaseName
     ,TableName
     ,UserName
     ,Weight as "QueryCount"
     ,100*"Weight" / sum("Weight") over(partition by 1) PercentTotal
-    ,case 
+    ,case
         when PercentTotal >=10 then 'High'
         when PercentTotal >=5 then 'Medium'
         else 'Low'
     end (char(6)) usage_freq
     ,FirstQueryDaysAgo
     ,LastQueryDaysAgo
-        
+
     from
     (
         SELECT   TRIM(QTU1.TableName)  AS "TableName"
@@ -386,7 +386,7 @@ def handle_dba_tableUsageImpact(conn: TeradataConnection, db_name: Optional[str]
                         ) AS QTU1
         INNER JOIN DBC.DBQLogTbl QU /* uncomment for DBC */
         ON QTU1.QueryID=QU.QueryID
-        AND (QU.AMPCPUTime + QU.ParserCPUTime) > 0 
+        AND (QU.AMPCPUTime + QU.ParserCPUTime) > 0
         {user_name_filter}
 
         GROUP BY 1,2, 3
@@ -394,7 +394,7 @@ def handle_dba_tableUsageImpact(conn: TeradataConnection, db_name: Optional[str]
     order by PercentTotal desc
     qualify PercentTotal>0
     ;
-    
+
     """
 
     with conn.cursor() as cur:

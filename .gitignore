@@ -10,3 +10,4 @@ working/
 env
 test_results/
 custom*_objects.yaml
+CLAUDE.md
