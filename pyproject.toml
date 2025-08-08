@@ -30,10 +30,12 @@ test = [
 "litellm>=1.68.2",
 "nest-asyncio>=1.6.0",
 "google-adk>=1.3.0",
+"jinja2>=3.1.0",
 ]
 
 [project.scripts]
 teradata-mcp-server = "teradata_mcp_server:main"
+teradata-test = "teradata_mcp_server.testing.cli:main"
 
 [build-system]
 requires = ["setuptools>=65", "wheel"]
