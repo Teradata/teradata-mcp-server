@@ -1,5 +1,7 @@
 tdfs4ds
 teradataml
 pandas
-json
 sqlalchemy
+langchain_mcp_adapters
+mcp
+anyio

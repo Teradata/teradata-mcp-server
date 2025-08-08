@@ -330,7 +330,7 @@ def handle_fs_getFeatures(conn: TeradataConnection, fs_config, *args, **kwargs):
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       db_name - the database name to check for existence
 # #     Returns: True or False
-def handle_fs_createDataset(conn: TeradataConnection, fs_config, entity_name: str, feature_selection: str, dataset_name: str, target_database: str, *args, **kwargs):
+def handle_fs_createDataset(conn: TeradataConnection, fs_config, entity_name: str, feature_selection: list[str], dataset_name: str, target_database: str, *args, **kwargs):
     """ 
     Create a dataset using selected features and an entity from the feature store. The dataset is created in the specified target database under the given name. Requires a configured feature store and data domain. Registers the dataset in the catalog automatically. Use this when you want to build and register a new dataset for analysis or modeling.
     Args:
