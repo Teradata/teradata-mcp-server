@@ -1,0 +1,7 @@
+tdfs4ds
+teradataml
+pandas
+sqlalchemy
+langchain_mcp_adapters
+mcp
+anyio
