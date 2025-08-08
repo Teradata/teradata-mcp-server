@@ -36,7 +36,7 @@ async def run_all_tests():
     config.verbose_logging = True
     config.generate_html_report = True
     config.generate_json_report = True
-    config.output_directory = "test_results"
+    config.output_directory = "scripts/test_results"
     
     print(f"Configuration:")
     print(f"  Output Directory: {config.output_directory}")
@@ -113,7 +113,7 @@ async def simulate_test_run(runner):
     print("   export ANTHROPIC_API_KEY='your-key'")
     print("2. Configure your Teradata database:")
     print("   export DATABASE_URI='teradata://user:pass@host:1025/db'")
-    print("3. Run: python run_tests.py")
+    print("3. Run: python scripts/run_tests.py")
 
 def main():
     """Main entry point."""

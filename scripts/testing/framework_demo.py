@@ -216,7 +216,7 @@ def show_framework_summary():
         "src/teradata_mcp_server/testing/result.py",
         "src/teradata_mcp_server/testing/cli.py",
         "docs/TESTING_FRAMEWORK.md",
-        "test_config.yml"
+        "scripts/test_config.yml"
     ]
     
     for file_path in framework_files:
@@ -245,7 +245,7 @@ def main():
         print("1. Set up environment variables (ANTHROPIC_API_KEY, DATABASE_URI)")
         print("2. Install test dependencies: uv sync --extra test")
         print("3. Run actual tests: teradata-test run")
-        print("4. Check generated reports in test_results/ directory")
+        print("4. Check generated reports in scripts/test_results/ directory")
     else:
         print("❌ FRAMEWORK DEMONSTRATION HAD ISSUES")
         print("=" * 80)

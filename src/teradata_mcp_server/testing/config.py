@@ -26,7 +26,7 @@ class TestConfig:
     excluded_modules: List[str] = field(default_factory=list)
     
     # Output settings
-    output_directory: str = "test_results"
+    output_directory: str = "scripts/test_results"
     generate_html_report: bool = True
     generate_json_report: bool = True
     verbose_logging: bool = False

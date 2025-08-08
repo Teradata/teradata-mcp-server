@@ -215,7 +215,7 @@ async def generate_reports(results):
     
     # Setup configuration
     config = TestConfig()
-    config.output_directory = "test_results"
+    config.output_directory = "scripts/test_results"
     config.generate_html_report = True
     config.generate_json_report = True
     
@@ -309,7 +309,7 @@ async def main():
     print("   1. Configure real database: Update 'env' file with actual credentials")
     print("   2. Add LLM API key: Set ANTHROPIC_API_KEY or OPENAI_API_KEY")
     print("   3. Run live tests: python -m teradata_mcp_server.testing.cli run")
-    print("   4. Check reports: Open test_results/test_report_*.html")
+    print("   4. Check reports: Open scripts/test_results/test_report_*.html")
     
     return 0 if success else 1
 
