@@ -15,7 +15,7 @@ excluded_tests: []
 excluded_modules: []
 
 # Output settings
-output_directory: "test_results"
+output_directory: "scripts/test_results"
 generate_html_report: true
 generate_json_report: true
 verbose_logging: false

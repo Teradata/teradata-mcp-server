@@ -29,18 +29,22 @@ src/teradata_mcp_server/testing/
 
 ### Testing Scripts
 ```
-scripts/testing/
-├── README.md                              # Scripts documentation
-├── run_tests.py                           # Main test runner ⭐
-├── component_tests.py                     # Component validation
-├── demo_testing_framework.py             # Framework demo
-├── framework_demo.py                      # Interactive demo
-└── [other validation scripts...]         # Development tools
+scripts/
+├── run_tests.py                           # Test launcher
+├── test_config.yml                        # Test configuration  
+├── testing/                               # Testing framework scripts
+│   ├── README.md                          # Scripts documentation
+│   ├── run_tests.py                       # Main test runner ⭐
+│   ├── component_tests.py                 # Component validation
+│   ├── demo_testing_framework.py          # Framework demo
+│   ├── framework_demo.py                  # Interactive demo
+│   └── [other validation scripts...]     # Development tools
+└── test_results/                          # Generated reports
 ```
 
 ### Quick Launch
 ```
-run_tests.py                               # Launcher script (project root)
+scripts/run_tests.py                       # Launcher script
 ```
 
 ### Components
@@ -82,7 +86,7 @@ run_tests.py                               # Launcher script (project root)
 #### Simple Test Execution
 ```bash
 # Quick launcher from project root
-python run_tests.py
+python scripts/run_tests.py
 
 # Or run directly from scripts
 python scripts/testing/run_tests.py
@@ -114,7 +118,7 @@ teradata-test config create
 
 ### Configuration
 
-Create a `test_config.yml` file to customize test execution:
+Create a `scripts/test_config.yml` file to customize test execution:
 
 ```yaml
 # Test execution settings
@@ -132,7 +136,7 @@ excluded_tests: []
 excluded_modules: []
 
 # Output settings  
-output_directory: "test_results"
+output_directory: "scripts/test_results"
 generate_html_report: true
 generate_json_report: true
 verbose_logging: false
@@ -318,7 +322,7 @@ Features:
 **To view HTML report:**
 ```bash
 # The test runner automatically opens it, or manually:
-open test_results/test_report_YYYYMMDD_HHMMSS.html
+open scripts/test_results/test_report_YYYYMMDD_HHMMSS.html
 ```
 
 ### JSON Report
@@ -449,10 +453,10 @@ The testing framework includes several scripts for different purposes:
 
 ### Primary Scripts
 
-#### `run_tests.py` (Project Root)
+#### `scripts/run_tests.py` (Launcher)
 **Quick launcher script** - The easiest way to run tests.
 ```bash
-python run_tests.py
+python scripts/run_tests.py
 ```
 
 #### `scripts/testing/run_tests.py`
@@ -487,20 +491,23 @@ python scripts/testing/demo_testing_framework.py
 
 ```
 📁 Project Root
-├── 🚀 run_tests.py                          # Quick launcher
-├── 📁 scripts/testing/                      # Testing scripts
-│   ├── 📄 README.md                         # Scripts documentation
-│   ├── ⭐ run_tests.py                       # Main test runner
-│   ├── 🔧 component_tests.py                # Component validation
-│   ├── 📊 demo_testing_framework.py         # Framework demo
-│   └── 🛠️ [other validation scripts]        # Development tools
+├── 📁 scripts/                              # Scripts directory
+│   ├── 🚀 run_tests.py                      # Quick launcher
+│   ├── 📄 test_config.yml                   # Test configuration
+│   ├── 📁 testing/                          # Testing scripts
+│   │   ├── 📄 README.md                     # Scripts documentation
+│   │   ├── ⭐ run_tests.py                   # Main test runner
+│   │   ├── 🔧 component_tests.py            # Component validation
+│   │   ├── 📊 demo_testing_framework.py     # Framework demo
+│   │   └── 🛠️ [other validation scripts]    # Development tools
+│   └── 📁 test_results/                     # Generated reports
 ├── 📁 src/teradata_mcp_server/testing/      # Core framework
-└── 📁 test_results/                         # Generated reports
+└── 📁 client_examples/                      # Client implementations
 ```
 
 ### Script Selection Guide
 
-- **Regular Testing**: Use `python run_tests.py` (quick launcher)
+- **Regular Testing**: Use `python scripts/run_tests.py` (quick launcher)
 - **Development**: Use `scripts/testing/component_tests.py` for validation
 - **Demonstrations**: Use `scripts/testing/demo_testing_framework.py`
 - **CI/CD Integration**: Use `python scripts/testing/run_tests.py`
@@ -543,7 +550,7 @@ cat scripts/testing/README.md
 **Script Execution Issues**
 ```bash
 # Use the launcher from project root
-python run_tests.py
+python scripts/run_tests.py
 
 # Or run directly from scripts directory  
 python scripts/testing/run_tests.py

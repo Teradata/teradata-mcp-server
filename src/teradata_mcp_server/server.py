@@ -4,6 +4,9 @@ import functools
 import inspect
 import json
 import logging
+import logging.config
+import logging.handlers
+import atexit
 import os
 import re
 import signal
@@ -73,15 +76,92 @@ else:
 module_loader = td.initialize_module_loader(config)
 
 # Set up logging
+class CustomJSONFormatter(logging.Formatter):
+    """Custom JSON formatter that can handle extra dictionaries in log messages."""
+    
+    def format(self, record):
+        # Create base log entry
+        log_entry = {
+            "timestamp": self.formatTime(record, self.datefmt),
+            "name": record.name,
+            "level": record.levelname,
+            "module": record.module,
+            "line": record.lineno,
+            "message": record.getMessage(),
+        }
+        
+        # Check if there are extra fields in the record
+        # LogRecord objects can have additional attributes added to them
+        reserved_attrs = {
+            'name', 'msg', 'args', 'levelname', 'levelno', 'pathname', 'filename',
+            'module', 'lineno', 'funcName', 'created', 'msecs', 'relativeCreated',
+            'thread', 'threadName', 'processName', 'process', 'exc_info', 'exc_text',
+            'stack_info', 'getMessage', 'message'
+        }
+        
+        for key, value in record.__dict__.items():
+            if key not in reserved_attrs:
+                # Handle dictionary values by merging them
+                if isinstance(value, dict):
+                    log_entry.update(value)
+                else:
+                    log_entry[key] = value
+        
+        return json.dumps(log_entry, ensure_ascii=False)
+
 os.makedirs("logs", exist_ok=True)
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler(),
-              logging.FileHandler(os.path.join("logs", "teradata_mcp_server.log"))],
-)
+log_config = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {
+        "format": "[%(levelname)s|%(module)s|L%(lineno)d] %(asctime)s: %(message)s",
+        "datefmt": "%Y-%m-%dT%H:%M:%S%z"
+        },
+        "json": {
+            "()": CustomJSONFormatter,
+            "datefmt": "%Y-%m-%dT%H:%M:%S%z"
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "WARNING",
+            "formatter": "simple",
+            "stream": "ext://sys.stdout"
+        },
+        "file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "level": "DEBUG",
+            "filename": os.path.join("logs", "teradata_mcp_server.jsonl"),
+            "formatter": "json",
+            "maxBytes": 1000000,
+            "backupCount": 3
+        },
+        "queue_handler": {
+            "class": "logging.handlers.QueueHandler",
+            "handlers": [
+                "console",
+                "file"
+            ],
+            "respect_handler_level": True
+        },
+    },
+    "loggers": {
+        "teradata_mcp_server": {
+            "level": "DEBUG",
+            "handlers": ["queue_handler"],
+            "propagate": False
+        }
+    }
+}
+logging.config.dictConfig(log_config)
+queue_handler = logging.getHandlerByName("queue_handler")
+if queue_handler is not None:
+    queue_handler.listener.start()
+    atexit.register(queue_handler.listener.stop)
 logger = logging.getLogger("teradata_mcp_server")
-logger.info("Starting Teradata MCP server")
+logger.info("Starting Teradata MCP server", extra={"server_config": {"profile": profile_name}, "startup_time": "2025-08-09"})
 
 # Connect to MCP server
 mcp = FastMCP("teradata-mcp-server")

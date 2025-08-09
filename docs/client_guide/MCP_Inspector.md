@@ -5,7 +5,7 @@ MCP Inspector was developed by Anthropic to support the testing of servers.  It 
 Step 0 - In a terminal move into teradata-mcp-server directory From a terminal and start the server.
 ```
 cd teradata-mcp-server
-uv run src/teradata_mcp-server
+uv run src/teradata_mcp_server
 ```
 
 Step 1 - In a second terminal start the inspector, type the following in your terminal

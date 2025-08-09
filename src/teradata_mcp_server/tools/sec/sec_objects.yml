@@ -7,15 +7,15 @@ test_secTools:
     Perform the phases in order, and do not skip any phase.
 
     ## Phase 1 - test the user database permissions tool
-    - Use the sec_userDbPermissions tool to get the database permissions for a specific user (e.g. demo_user).
+    - Use the sec_userDbPermissions tool to get the database permissions for your user name(e.g. demo_user).
     - The tool should return a list of database permissions assigned to the user, if no data is returned then fail this test.
 
     ## Phase 2 - test the role permissions tool
-    - Use the sec_rolePermissions tool to get the role permissions for a specific user (e.g. demo_user).
+    - Use the sec_rolePermissions tool to get the role permissions for your user name (e.g. demo_user).
     - The tool should return a list of role permissions assigned to the user, if no data is returned then fail this test.
 
     ## Phase 3 - test the user roles tool
-    - Use the sec_userRoles tool to get the roles assigned to a specific user (e.g. demo_user).
+    - Use the sec_userRoles tool to get the roles assigned to your user name (e.g. demo_user).
     - The tool should return a list of roles assigned to the user, if no data is returned then fail this test.
 
 

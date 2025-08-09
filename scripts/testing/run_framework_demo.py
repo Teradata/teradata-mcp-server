@@ -52,7 +52,7 @@ async def run_testing_framework():
     
     # Initialize configuration
     config = TestConfig()
-    config.output_directory = "test_results"
+    config.output_directory = "scripts/test_results"
     config.generate_html_report = True
     config.generate_json_report = True
     config.verbose_logging = True
