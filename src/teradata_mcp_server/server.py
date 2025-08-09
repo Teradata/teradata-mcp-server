@@ -4,6 +4,9 @@ import functools
 import inspect
 import json
 import logging
+import logging.config
+import logging.handlers
+import atexit
 import os
 import re
 import signal
@@ -66,12 +69,52 @@ _tdconn = td.TDConn()
 
 # Set up logging
 os.makedirs("logs", exist_ok=True)
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler(),
-              logging.FileHandler(os.path.join("logs", "teradata_mcp_server.log"))],
-)
+log_config = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {
+        "format": "[%(levelname)s|%(module)s|L%(lineno)d] %(asctime)s: %(message)s",
+        "datefmt": "%Y-%m-%dT%H:%M:%S%z"
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "WARNING",
+            "formatter": "simple",
+            "stream": "ext://sys.stdout"
+        },
+        "file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "level": "DEBUG",
+            "filename": os.path.join("logs", "teradata_mcp_server.log"),
+            "formatter": "simple",
+            "maxBytes": 1000000,
+            "backupCount": 3
+        },
+        "queue_handler": {
+            "class": "logging.handlers.QueueHandler",
+            "handlers": [
+                "console",
+                "file"
+            ],
+            "respect_handler_level": True
+        },
+    },
+    "loggers": {
+        "teradata_mcp_server": {
+            "level": "DEBUG",
+            "handlers": ["queue_handler"],
+            "propagate": False
+        }
+    }
+}
+logging.config.dictConfig(log_config)
+queue_handler = logging.getHandlerByName("queue_handler")
+if queue_handler is not None:
+    queue_handler.listener.start()
+    atexit.register(queue_handler.listener.stop)
 logger = logging.getLogger("teradata_mcp_server")
 logger.info("Starting Teradata MCP server")
 
