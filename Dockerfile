@@ -2,12 +2,20 @@
 FROM --platform=linux/amd64 python:3.13-slim AS builder
 WORKDIR /app
 
+# Build arguments for optional modules
+ARG ENABLE_FS_MODULE=false
+ARG ENABLE_EVS_MODULE=false
+
 COPY pyproject.toml uv.lock* /app/
 RUN apt-get update && \
     apt-get install -y --no-install-recommends build-essential gcc && \
     pip install --upgrade pip && \
     pip install uv mcpo && \
-    uv sync && \
+    # Build uv sync command with conditional extras \
+    UV_EXTRAS="" && \
+    if [ "$ENABLE_FS_MODULE" = "true" ]; then UV_EXTRAS="$UV_EXTRAS --extra fs"; fi && \
+    if [ "$ENABLE_EVS_MODULE" = "true" ]; then UV_EXTRAS="$UV_EXTRAS --extra evs"; fi && \
+    uv sync $UV_EXTRAS && \
     uv build && \
     pip install . && \
     apt-get purge -y build-essential gcc && \

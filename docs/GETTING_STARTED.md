@@ -55,6 +55,13 @@ The recommended choice will be to deploy Streamable-http in a docker container. 
 
 ## Step 4 - Customizing the server (optional)
 
+The server supports optional modules for additional functionality:
+- **`fs`** - Teradata Enterprise Feature Store integration
+- **`evs`** - Teradata Enterprise Vector Store integration
+
+Install with uv (recommended): `uv sync --extra fs --extra evs`
+Or with pip: `pip install -e .[fs,evs]`
+
 Refer to the [Customizing](CUSTOMIZING.md) instuctions 
 
 --------------------------------------------------------------------------------------
@@ -71,6 +78,14 @@ The server expects the Teradata URI string via the `DATABASE_URI` environment va
 This starts only the core Teradata MCP server (with stdio or SSE communication):
 
 ```sh
+docker compose up
+```
+
+To include optional modules, set environment variables before building:
+
+```sh
+# Build with Feature Store and Vector Store support
+ENABLE_FS_MODULE=true ENABLE_EVS_MODULE=true docker compose build
 docker compose up
 ```
 

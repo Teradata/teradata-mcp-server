@@ -1,6 +1,10 @@
 services:
   teradata-mcp-server:
-    build: .
+    build:
+      context: .
+      args:
+        - ENABLE_FS_MODULE=${ENABLE_FS_MODULE:-false}
+        - ENABLE_EVS_MODULE=${ENABLE_EVS_MODULE:-false}
     image: teradata-mcp-server:latest
     environment:
       - DATABASE_URI=${DATABASE_URI}
@@ -13,7 +17,11 @@ services:
       - "${PORT:-8001}:8001"
 
   teradata-rest-server:
-    build: .
+    build:
+      context: .
+      args:
+        - ENABLE_FS_MODULE=${ENABLE_FS_MODULE:-false}
+        - ENABLE_EVS_MODULE=${ENABLE_EVS_MODULE:-false}
     image: teradata-mcp-server:latest
     entrypoint: sh -c 'export MCP_TRANSPORT=streamable-http && mcpo --port 8002 --api-key "$MCPO_API_KEY" -- uv run teradata-mcp-server'
     environment:
