@@ -1,0 +1,227 @@
+{
+  "test_cases": {
+    "base_readQuery": [
+      {
+        "name": "system_catalog_query",
+        "parameters": {
+          "sql": "SELECT TOP 5 DatabaseName, TableName FROM DBC.TablesV WHERE DatabaseName = 'DBC'"
+        }
+      },
+      {
+        "name": "current_timestamp",
+        "parameters": {
+          "sql": "SELECT CURRENT_TIMESTAMP"
+        }
+      },
+      {
+        "name": "version_info",
+        "parameters": {
+          "sql": "SELECT InfoKey, InfoData FROM DBC.DBCInfoV WHERE InfoKey = 'VERSION'"
+        }
+      }
+    ],
+    "base_tableList": [
+      {
+        "name": "system_database_tables",
+        "parameters": {
+          "db_name": "DBC"
+        }
+      }
+    ],
+    "base_databaseList": [
+      {
+        "name": "list_all_databases", 
+        "parameters": {}
+      }
+    ],
+    "base_tableDDL": [
+      {
+        "name": "system_table_ddl",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      }
+    ],
+    "base_columnDescription": [
+      {
+        "name": "system_table_columns",
+        "parameters": {
+          "db_name": "DBC",
+          "obj_name": "TablesV"
+        }
+      }
+    ],
+    "base_tablePreview": [
+      {
+        "name": "system_table_preview",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "DatabasesV"
+        }
+      }
+    ],
+    "dba_databaseSpace": [
+      {
+        "name": "dbc_database_space",
+        "parameters": {
+          "db_name": "DBC"
+        }
+      },
+      {
+        "name": "all_database_space",
+        "parameters": {
+          "db_name": "DBC"
+        }
+      }
+    ],
+    "dba_tableSpace": [
+      {
+        "name": "system_table_space",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      },
+      {
+        "name": "all_tables_space",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      }
+    ],
+    "dba_databaseVersion": [
+      {
+        "name": "get_version",
+        "parameters": {}
+      }
+    ],
+    "dba_sessionInfo": [
+      {
+        "name": "dbc_user_sessions",
+        "parameters": {
+          "user_name": "DBC"
+        }
+      }
+    ],
+    "sec_userDbPermissions": [
+      {
+        "name": "dbc_user_permissions",
+        "parameters": {
+          "user_name": "DBC"
+        }
+      }
+    ],
+    "sec_rolePermissions": [
+      {
+        "name": "public_role_permissions",
+        "parameters": {
+          "role_name": "PUBLIC"
+        }
+      }
+    ],
+    "sec_userRoles": [
+      {
+        "name": "dbc_user_roles",
+        "parameters": {
+          "user_name": "DBC"
+        }
+      }
+    ],
+    "cust_activeUsers": [
+      {
+        "name": "get_active_users",
+        "parameters": {}
+      }
+    ],
+    "cust_td_serverInfo": [
+      {
+        "name": "database_version",
+        "parameters": {
+          "infokey": "VERSION"
+        }
+      },
+      {
+        "name": "database_release",
+        "parameters": {
+          "infokey": "RELEASE"
+        }
+      }
+    ],
+    "qlty_missingValues": [
+      {
+        "name": "system_table_missing_values",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      }
+    ],
+    "qlty_distinctCategories": [
+      {
+        "name": "table_kinds",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables",
+          "col_name": "TableKind"
+        }
+      }
+    ],
+    "qlty_columnSummary": [
+      {
+        "name": "system_table_column_summary",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      }
+    ],
+    "sales_top_customers": [
+      {
+        "name": "default_top_customers",
+        "parameters": {}
+      }
+    ],
+    "sales_customer_profile": [
+      {
+        "name": "sample_customer",
+        "parameters": {
+          "customer_key": "1"
+        }
+      }
+    ],
+    "fs_isFeatureStorePresent": [
+      {
+        "name": "check_demo_fs",
+        "parameters": {
+          "db_name": "demo_fs"
+        }
+      }
+    ],
+    "fs_getFeatureStoreConfig": [
+      {
+        "name": "get_current_config",
+        "parameters": {}
+      }
+    ],
+    "evs_similarity_search": [
+      {
+        "name": "test_search",
+        "parameters": {
+          "question": "What is machine learning?",
+          "top_k": 3
+        }
+      }
+    ],
+    "rag_executeWorkflow": [
+      {
+        "name": "test_rag_query",
+        "parameters": {
+          "question": "What is the database architecture?",
+          "k": 5
+        }
+      }
+    ]
+  }
+}

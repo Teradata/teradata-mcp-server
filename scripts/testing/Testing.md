@@ -1,23 +1,41 @@
 # MCP Server Test Runner
 
-A parametric testing system for the Teradata MCP Server that automatically discovers available tools and runs test cases only for those tools.
-
-## How to test
-
-The testing framework will run teradata-mcp-server and test through stdio.
-
-```bash
-export DATABASE_URI="teradata://user:pass@host:1025/database"
-python run_mcp_tests.py "uv run teradata-mcp-server"
-```
-
-**No need to start the server separately!**
+A testing system for the Teradata MCP Server that runs defined tests for tools discovered in the MCP server.
 
 
-## How to add your test case
+## Run the tests
 
-If you add a tool, you need to at least add a test case for it.
-You can do so by appending to the `test_cases.json` file with your test cases using the following format:
+1. **Start your MCP server** (in a separate terminal):
+   ```bash
+   uv run teradata-mcp-server
+   ```
+
+2. **Run the tests**:
+   ```bash
+   python run_mcp_tests.py "uv run teradata-mcp-server"
+   ```
+
+3. **View results** in the console and detailed JSON output file
+
+## Overview
+
+The test runner provides:
+- **Dynamic Tool Discovery**: Automatically detects which tools are available on the server
+- **Parametric Testing**: Runs multiple test cases per tool with different parameters
+- **Smart Filtering**: Only executes tests for tools that exist in the current server configuration
+- **Simple Pass/Fail Logic**: Infers test results based on response content
+- **Comprehensive Reporting**: Generates detailed test reports with statistics
+
+## Files
+
+- `test_cases.json` - Test case definitions in JSON format
+- `run_mcp_tests.py` - Main test runner script
+- `test_results_*.json` - Generated test result files (timestamped)
+
+
+## Test Case Format
+
+The `test_cases.json` file defines test cases for each tool:
 
 ```json
 {
@@ -35,35 +53,42 @@ You can do so by appending to the `test_cases.json` file with your test cases us
 }
 ```
 
-Where:
-- `tool_name` is the name of the tool to test
-- `name` is the name of your test (if only one, simply keep it as your tool name)
-- `parameters` is the list of parameters expected by the tool.
+### Example Test Cases
 
-**Important** Test in `test_cases.json` cannot be dependent of custom data. Use systems tables and users. If you want to define test cases on your own business data, you can do so in a separate file, see *Adding new test cases* section below.
-
-## How it works
-
-The test runner provides:
-- **Automatic Server Management**: Starts and stops the MCP server automatically
-- **Dynamic Tool Discovery**: Automatically detects which tools are available on the server
-- **Parametric Testing**: Runs multiple test cases per tool with different parameters
-- **Smart Filtering**: Only executes tests for tools that exist in the current server configuration
-- **Simple Pass/Fail Logic**: Infers test results based on response content
-- **Comprehensive Reporting**: Generates detailed test reports with statistics
-
-When you run, the test runner automatically:
-- Starts the MCP server as a subprocess
-- Connects to it via stdin/stdout
-- Runs all tests
-- Shuts down the server when complete
-
-## Files
-
-- `test_cases.json` - Test case definitions in JSON format
-- `run_mcp_tests.py` - Main test runner script
-- `test_results_*.json` - Generated test result files (timestamped)
-
+```json
+{
+  "test_cases": {
+    "base_readQuery": [
+      {
+        "name": "simple_select",
+        "parameters": {
+          "sql": "SELECT 1 as test_column"
+        }
+      },
+      {
+        "name": "current_timestamp", 
+        "parameters": {
+          "sql": "SELECT CURRENT_TIMESTAMP"
+        }
+      }
+    ],
+    "sales_top_customers": [
+      {
+        "name": "top_10",
+        "parameters": {
+          "limit": 10
+        }
+      },
+      {
+        "name": "top_5",
+        "parameters": {
+          "limit": 5
+        }
+      }
+    ]
+  }
+}
+```
 
 ## Usage Examples
 
@@ -80,19 +105,19 @@ python run_mcp_tests.py "uv run teradata-mcp-server" "my_test_cases.json"
 ### Testing Different Profiles
 ```bash
 # Test with DBA profile
-python run_mcp_tests.py "uv run teradata-mcp-server --profile dba"
+PROFILE=dba python run_mcp_tests.py "uv run teradata-mcp-server"
 
 # Test with Feature Store enabled
 python run_mcp_tests.py "uv run teradata-mcp-server --profile fs"
 ```
 
-### Testing with Environment Variables
+### Testing Docker Deployment
 ```bash
-# Test with profile via environment variable
-PROFILE=dba python run_mcp_tests.py "uv run teradata-mcp-server"
+# Start Docker container first
+docker compose up -d
 
-# Test with optional modules enabled
-ENABLE_FS_MODULE=true python run_mcp_tests.py "uv run teradata-mcp-server"
+# Run tests against containerized server  
+python run_mcp_tests.py "docker exec -i teradata-mcp-server-1 teradata-mcp-server"
 ```
 
 ## Pass/Fail Logic
@@ -100,8 +125,8 @@ ENABLE_FS_MODULE=true python run_mcp_tests.py "uv run teradata-mcp-server"
 The test runner uses simple heuristics to determine test success:
 
 - **PASS**: Tool returns content without error indicators
-- **FAIL**: Tool returns content with error keywords (`error`, `failed`, `exception`) or exception thrown during tool execution
-- **WARNING**: Tool returns empty `results` content.
+- **FAIL**: Tool returns content with error keywords (`error`, `failed`, `exception`) or no content
+- **ERROR**: Exception thrown during tool execution
 
 ## Sample Output
 
@@ -130,7 +155,7 @@ TEST REPORT
 Total Tests: 6
 Passed: 6
 Failed: 0
-Warnings: 0
+Errors: 0
 Success Rate: 100.0%
 
 PERFORMANCE:
@@ -196,17 +221,6 @@ Test results are automatically saved to timestamped JSON files:
 }
 ```
 
-## How It Works
-
-The test runner uses MCP's stdio transport to communicate with the server:
-
-1. **Spawns server process** using the provided command
-2. **Connects via stdin/stdout** - no network ports needed
-3. **Queries available tools** using MCP's `list_tools` request
-4. **Executes test cases** using MCP's `call_tool` requests
-5. **Shuts down server**  process when done
-
-
 ## Integration with CI/CD
 
 The test runner returns appropriate exit codes:
@@ -217,15 +231,42 @@ This makes it suitable for automated testing pipelines:
 
 ```bash
 #!/bin/bash
-# Set up environment
-export DATABASE_URI="your_connection_string"
+# Start server in background
+uv run teradata-mcp-server &
+SERVER_PID=$!
 
-# Run tests (server is managed automatically)
-python scripts/testing/run_mcp_tests.py "uv run teradata-mcp-server"
+# Wait for server to start
+sleep 5
+
+# Run tests
+python run_mcp_tests.py "uv run teradata-mcp-server"
 TEST_RESULT=$?
+
+# Cleanup
+kill $SERVER_PID
 
 # Exit with test result
 exit $TEST_RESULT
 ```
 
+## Troubleshooting
 
+### Common Issues
+
+**"Failed to connect to MCP server"**
+- Ensure the server command is correct
+- Check that the server starts successfully
+- Verify no port conflicts exist
+
+**"No tests to run (no matching tools)"** 
+- Check that `test_cases.json` contains tools that exist on your server
+- Use tool discovery to see available tools: the script shows which tools have/don't have tests
+
+**"Tool not found" errors**
+- The tool may not be available in your current profile
+- Check your server configuration and enabled modules
+- Some tools require specific database connections or permissions
+
+### Debugging
+
+Add verbose output by modifying the script or checking the detailed JSON results file for more information about failures.

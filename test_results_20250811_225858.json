@@ -1,0 +1,326 @@
+{
+  "timestamp": "2025-08-11T22:58:58.010326",
+  "summary": {
+    "total": 29,
+    "passed": 25,
+    "failed": 4,
+    "errors": 0
+  },
+  "results": [
+    {
+      "tool": "base_readQuery",
+      "test": "system_catalog_query",
+      "status": "PASS",
+      "duration": 0.21381902694702148,
+      "response_length": 295,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "base_readQuery",
+      "test": "current_timestamp",
+      "status": "PASS",
+      "duration": 0.10777115821838379,
+      "response_length": 62,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "base_readQuery",
+      "test": "version_info",
+      "status": "PASS",
+      "duration": 0.12929105758666992,
+      "response_length": 51,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "base_tableList",
+      "test": "system_database_tables",
+      "status": "PASS",
+      "duration": 0.21689915657043457,
+      "response_length": 25476,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "base_databaseList",
+      "test": "list_all_databases",
+      "status": "PASS",
+      "duration": 0.1921851634979248,
+      "response_length": 4329,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "base_tableDDL",
+      "test": "system_table_ddl",
+      "status": "FAIL",
+      "duration": 0.11165285110473633,
+      "response_length": 1352,
+      "error": "JSON parse error: Expecting value: line 1 column 1 (char 0)",
+      "full_response": "Error: [Version 20.0.0.33] [Session 4667] [Teradata Database] [Error 3853] 'Tables' is not a table.\n at gosqldriver/teradatasql.formatError ErrorUtil.go:83\n at gosqldriver/teradatasql.(*teradataConnection).formatDatabaseError ErrorUtil.go:190\n at gosqldriver/teradatasql.(*teradataConnection).makeChainedDatabaseError ErrorUtil.go:206\n at gosqldriver/teradatasql.(*teradataConnection).processErrorParcel TeradataConnection.go:341\n at gosqldriver/teradatasql.(*TeradataRows).processResponseBundle TeradataRows.go:2553\n at gosqldriver/teradatasql.(*TeradataRows).executeSQLRequest TeradataRows.go:1029\n at gosqldriver/teradatasql.newTeradataRows TeradataRows.go:792\n at gosqldriver/teradatasql.(*teradataStatement).QueryContext TeradataStatement.go:122\n at gosqldriver/teradatasql.(*teradataConnection).QueryContext TeradataConnection.go:824\n at database/sql.ctxDriverQuery ctxutil.go:48\n at database/sql.(*DB).queryDC.func1 sql.go:1786\n at database/sql.withLock sql.go:3574\n at database/sql.(*DB).queryDC sql.go:1781\n at database/sql.(*Conn).QueryContext sql.go:2037\n at main.createRows goside.go:1080\n at main.goCreateRows goside.go:959\n at _cgoexp_ff5e33a08e40_goCreateRows _cgo_gotypes.go:417\n at runtime.cgocallbackg1 cgocall.go:446\n at runtime.cgocallbackg cgocall.go:350\n at runtime.cgocallback asm_arm64.s:1131\n at runtime.goexit asm_arm64.s:1223",
+      "response_status": "invalid_json"
+    },
+    {
+      "tool": "base_columnDescription",
+      "test": "system_table_columns",
+      "status": "PASS",
+      "duration": 0.3388240337371826,
+      "response_length": 4098,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "base_tablePreview",
+      "test": "system_table_preview",
+      "status": "PASS",
+      "duration": 0.2833211421966553,
+      "response_length": 2563,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "dba_databaseSpace",
+      "test": "dbc_database_space",
+      "status": "PASS",
+      "duration": 0.45357680320739746,
+      "response_length": 114,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "dba_databaseSpace",
+      "test": "all_database_space",
+      "status": "PASS",
+      "duration": 0.3191707134246826,
+      "response_length": 114,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "dba_tableSpace",
+      "test": "system_table_space",
+      "status": "PASS",
+      "duration": 0.40436887741088867,
+      "response_length": 0,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "dba_tableSpace",
+      "test": "all_tables_space",
+      "status": "PASS",
+      "duration": 0.3795037269592285,
+      "response_length": 0,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "dba_databaseVersion",
+      "test": "get_version",
+      "status": "PASS",
+      "duration": 0.10901284217834473,
+      "response_length": 164,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "dba_sessionInfo",
+      "test": "dbc_user_sessions",
+      "status": "PASS",
+      "duration": 0.14985918998718262,
+      "response_length": 0,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "sec_userDbPermissions",
+      "test": "dbc_user_permissions",
+      "status": "PASS",
+      "duration": 0.6370279788970947,
+      "response_length": 1035623,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "sec_rolePermissions",
+      "test": "public_role_permissions",
+      "status": "PASS",
+      "duration": 0.5734810829162598,
+      "response_length": 0,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "sec_userRoles",
+      "test": "dbc_user_roles",
+      "status": "PASS",
+      "duration": 0.32415223121643066,
+      "response_length": 0,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "cust_activeUsers",
+      "test": "get_active_users",
+      "status": "PASS",
+      "duration": 0.2642250061035156,
+      "response_length": 27,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "cust_td_serverInfo",
+      "test": "database_version",
+      "status": "PASS",
+      "duration": 0.13228297233581543,
+      "response_length": 29,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "cust_td_serverInfo",
+      "test": "database_release",
+      "status": "PASS",
+      "duration": 0.1307082176208496,
+      "response_length": 29,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "qlty_missingValues",
+      "test": "system_table_missing_values",
+      "status": "PASS",
+      "duration": 0.5869760513305664,
+      "response_length": 2604,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "qlty_distinctCategories",
+      "test": "table_kinds",
+      "status": "PASS",
+      "duration": 0.30341100692749023,
+      "response_length": 1271,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "qlty_columnSummary",
+      "test": "system_table_column_summary",
+      "status": "PASS",
+      "duration": 0.4511899948120117,
+      "response_length": 8460,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "sales_top_customers",
+      "test": "default_top_customers",
+      "status": "PASS",
+      "duration": 0.16095995903015137,
+      "response_length": 2919,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "sales_customer_profile",
+      "test": "sample_customer",
+      "status": "PASS",
+      "duration": 0.1397080421447754,
+      "response_length": 364,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "fs_isFeatureStorePresent",
+      "test": "check_demo_fs",
+      "status": "PASS",
+      "duration": 0.1568620204925537,
+      "response_length": 0,
+      "error": null,
+      "response_status": "success",
+      "has_error_in_results": false,
+      "full_response": null
+    },
+    {
+      "tool": "fs_getFeatureStoreConfig",
+      "test": "get_current_config",
+      "status": "FAIL",
+      "duration": 0.002348184585571289,
+      "response_length": 32,
+      "error": "JSON parse error: Expecting value: line 1 column 1 (char 0)",
+      "full_response": "Current feature store config: {}",
+      "response_status": "invalid_json"
+    },
+    {
+      "tool": "evs_similarity_search",
+      "test": "test_search",
+      "status": "FAIL",
+      "duration": 0.05350613594055176,
+      "response_length": 96,
+      "error": "JSON parse error: Expecting value: line 1 column 1 (char 0)",
+      "full_response": "Error: [Teradata][teradataml](TDML_2001) Following required arguments are missing: ['base_url'].",
+      "response_status": "invalid_json"
+    },
+    {
+      "tool": "rag_executeWorkflow",
+      "test": "test_rag_query",
+      "status": "FAIL",
+      "duration": 0.08948516845703125,
+      "response_length": 1362,
+      "error": "JSON parse error: Expecting value: line 1 column 1 (char 0)",
+      "full_response": "Error: [Version 20.0.0.33] [Session 4667] [Teradata Database] [Error 3802] Database 'demo_db' does not exist.\n at gosqldriver/teradatasql.formatError ErrorUtil.go:83\n at gosqldriver/teradatasql.(*teradataConnection).formatDatabaseError ErrorUtil.go:190\n at gosqldriver/teradatasql.(*teradataConnection).makeChainedDatabaseError ErrorUtil.go:206\n at gosqldriver/teradatasql.(*teradataConnection).processErrorParcel TeradataConnection.go:341\n at gosqldriver/teradatasql.(*TeradataRows).processResponseBundle TeradataRows.go:2553\n at gosqldriver/teradatasql.(*TeradataRows).executeSQLRequest TeradataRows.go:1029\n at gosqldriver/teradatasql.newTeradataRows TeradataRows.go:792\n at gosqldriver/teradatasql.(*teradataStatement).QueryContext TeradataStatement.go:122\n at gosqldriver/teradatasql.(*teradataConnection).QueryContext TeradataConnection.go:824\n at database/sql.ctxDriverQuery ctxutil.go:48\n at database/sql.(*DB).queryDC.func1 sql.go:1786\n at database/sql.withLock sql.go:3574\n at database/sql.(*DB).queryDC sql.go:1781\n at database/sql.(*Conn).QueryContext sql.go:2037\n at main.createRows goside.go:1080\n at main.goCreateRows goside.go:959\n at _cgoexp_ff5e33a08e40_goCreateRows _cgo_gotypes.go:417\n at runtime.cgocallbackg1 cgocall.go:446\n at runtime.cgocallbackg cgocall.go:350\n at runtime.cgocallback asm_arm64.s:1131\n at runtime.goexit asm_arm64.s:1223",
+      "response_status": "invalid_json"
+    }
+  ]
+}
