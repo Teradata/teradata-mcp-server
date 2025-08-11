@@ -31,6 +31,7 @@ class ModuleLoader:
     
     def __init__(self):
         self._loaded_modules: Dict[str, Any] = {}
+        self._failed_modules: set = set()  # Track modules that failed to load
         self._required_modules: set = set()
     
     def determine_required_modules(self, config: dict) -> List[str]:
@@ -48,6 +49,7 @@ class ModuleLoader:
         
         # Always load base modules for shared utilities
         required_modules.add('td_connect')
+        required_modules.add('base')  # Always load base tools for custom queries
         
         # Check each tool pattern against module prefixes
         for pattern in tool_patterns:
@@ -78,6 +80,10 @@ class ModuleLoader:
         if module_name in self._loaded_modules:
             return self._loaded_modules[module_name]
         
+        # Don't retry failed modules
+        if module_name in self._failed_modules:
+            return None
+        
         try:
             if module_name in self.MODULE_MAP:
                 module_path = self.MODULE_MAP[module_name]
@@ -102,7 +108,23 @@ class ModuleLoader:
                 return None
                 
         except ImportError as e:
-            logger.error(f"Failed to load module {module_name}: {e}")
+            # Mark module as failed to prevent retry
+            self._failed_modules.add(module_name)
+            
+            # Provide specific warnings for optional modules
+            error_msg = str(e).lower()
+            if module_name == 'fs':
+                if any(pkg in error_msg for pkg in ['teradataml', 'tdfs4ds']):
+                    logger.warning(f"Feature Store module not available - required packages not installed. Install with: uv sync --extra fs or pip install -e .[fs]")
+                else:
+                    logger.warning(f"Feature Store module not available - module missing or packages not installed. Install with: uv sync --extra fs or pip install -e .[fs]")
+            elif module_name == 'evs':
+                if 'teradatagenai' in error_msg:
+                    logger.warning(f"Enterprise Vector Store module not available - required packages not installed. Install with: uv sync --extra evs or pip install -e .[evs]")
+                else:
+                    logger.warning(f"Enterprise Vector Store module not available - module missing or packages not installed. Install with: uv sync --extra evs or pip install -e .[evs]")
+            else:
+                logger.error(f"Failed to load module {module_name}: {e}")
             return None
     
     def get_all_functions(self) -> Dict[str, Any]:

@@ -1,14 +1,18 @@
 {
   "mcpServers": {
-    "teradata_mcp_server": {
-      "type": "stdio",
+    "teradata-mcp-server": {
       "command": "uv",
       "args": [
         "--directory",
-        "/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/src/teradata_mcp_server/",
+        "<PATH_TO_DIRECTORY>/teradata-mcp-server",
         "run",
-        "server.py"
-      ]
-    }
+        "teradata-mcp-server"
+      ],
+      "env": {
+        "DATABASE_URI": "teradata://<USERNAME>:<PASSWORD>@<HOST_URL>:1025/<USERNAME>",
+        "PROFILE": "all",  
+        "MCP_TRANSPORT": "stdio"
+      }
   }
+}
 }

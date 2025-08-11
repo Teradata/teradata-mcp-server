@@ -13,13 +13,11 @@ import signal
 from typing import Any, Optional
 
 import mcp.types as types
-import tdfs4ds
-import teradataml as tdml
 import yaml
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.prompts.base import TextContent, UserMessage
-from pydantic import BaseModel, Field
+from pydantic import Field
 from sqlalchemy.engine import Connection
 
 # Import the tools module with lazy loading support
@@ -27,7 +25,6 @@ try:
     from teradata_mcp_server import tools as td
 except ImportError:
     import tools as td
-import glob
 
 load_dotenv()
 
@@ -166,23 +163,25 @@ logger.info("Starting Teradata MCP server", extra={"server_config": {"profile": 
 # Connect to MCP server
 mcp = FastMCP("teradata-mcp-server")
 
+# Initialize global variables
+fs_config = None
+shutdown_in_progress = False
+
 # Now initialize the TD connection after module loader is ready
 _tdconn = td.TDConn()
 
 if _enableEFS:
-    fs_config = td.FeatureStoreConfig() 
-    import teradataml as tdml  # import of the teradataml package
     try:
-        tdml.create_context(tdsqlengine=_tdconn.engine)
-    except Exception as e:
-        logger.warning(f"Error creating teradataml context: {e}")
+        import teradataml as tdml  # import of the teradataml package
+        fs_config = td.FeatureStoreConfig() 
+        try:
+            tdml.create_context(tdsqlengine=_tdconn.engine)
+        except Exception as e:
+            logger.warning(f"Error creating teradataml context: {e}")
+    except (AttributeError, ImportError, ModuleNotFoundError) as e:
+        logger.warning(f"Feature Store module not available - disabling EFS functionality: {e}")
+        _enableEFS = False
 
-
-#global shutdown flag
-shutdown_in_progress = False
-
-#afm-defect:
-_enableEVS = False
 # Only attempt to connect to EVS is the system has an EVS installed/configured
 if (len(os.getenv("VS_NAME", "").strip()) > 0):
     try:
@@ -233,12 +232,17 @@ def execute_db_tool(tool, *args, **kwargs):
         logger.info("Reinitializing TDConn")
         _tdconn = td.TDConn()
         if _enableEFS:
-            fs_config = td.FeatureStoreConfig() 
-            import teradataml as tdml  # import of the teradataml package
             try:
-                tdml.create_context(tdsqlengine=_tdconn.engine)
-            except Exception as e:
-                logger.warning(f"Error creating teradataml context: {e}")
+                global fs_config
+                fs_config = td.FeatureStoreConfig() 
+                import teradataml as tdml  # import of the teradataml package
+                try:
+                    tdml.create_context(tdsqlengine=_tdconn.engine)
+                except Exception as e:
+                    logger.warning(f"Error creating teradataml context: {e}")
+            except (AttributeError, ImportError, ModuleNotFoundError) as e:
+                logger.warning(f"Feature Store module not available during reconnection: {e}")
+                # Don't disable _enableEFS here as it might be temporary
 
 
     # Check is the first argument of the tool is a SQLAlchemy Connection
@@ -362,7 +366,16 @@ if module_loader and profile_name:
     logger.info(f"Loading YAML files for profile '{profile_name}': {len(profile_yml_files)} files")
 else:
     # Fallback: include all .yml files if no profile is specified or module loader is not available
-    tool_yml_files = glob.glob(os.path.join(os.path.dirname(__file__), "tools", "*", "*.yml"))
+    # Find all .yml files in tools subdirectories
+    tool_yml_files = []
+    tools_dir = os.path.join(os.path.dirname(__file__), "tools")
+    if os.path.exists(tools_dir):
+        for subdir in os.listdir(tools_dir):
+            subdir_path = os.path.join(tools_dir, subdir)
+            if os.path.isdir(subdir_path):
+                for file in os.listdir(subdir_path):
+                    if file.endswith('.yml'):
+                        tool_yml_files.append(os.path.join(subdir_path, file))
     custom_object_files.extend(tool_yml_files)
     logger.info(f"Loading all YAML files (no specific profile): {len(tool_yml_files)} files")
 
@@ -600,7 +613,7 @@ if _enableEFS:
         data_domain: Optional[str] = None,
         db_name: Optional[str] = None,
         entity: Optional[str] = None,
-    ) -> td.FeatureStoreConfig:
+    ):
         global _tdconn        
         with _tdconn.engine.connect() as conn:
             return fs_config.fs_setFeatureStoreConfig(
