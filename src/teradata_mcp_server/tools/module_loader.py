@@ -102,7 +102,20 @@ class ModuleLoader:
                 return None
                 
         except ImportError as e:
-            logger.error(f"Failed to load module {module_name}: {e}")
+            # Provide specific warnings for optional modules
+            error_msg = str(e).lower()
+            if module_name == 'fs':
+                if any(pkg in error_msg for pkg in ['teradataml', 'tdfs4ds']):
+                    logger.warning(f"Feature Store module not available - required packages not installed. Install with: uv sync --extra fs or pip install -e .[fs]")
+                else:
+                    logger.warning(f"Feature Store module not available - module missing or packages not installed. Install with: uv sync --extra fs or pip install -e .[fs]")
+            elif module_name == 'evs':
+                if 'teradatagenai' in error_msg:
+                    logger.warning(f"Enterprise Vector Store module not available - required packages not installed. Install with: uv sync --extra evs or pip install -e .[evs]")
+                else:
+                    logger.warning(f"Enterprise Vector Store module not available - module missing or packages not installed. Install with: uv sync --extra evs or pip install -e .[evs]")
+            else:
+                logger.error(f"Failed to load module {module_name}: {e}")
             return None
     
     def get_all_functions(self) -> Dict[str, Any]:

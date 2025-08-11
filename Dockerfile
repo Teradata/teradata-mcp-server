@@ -24,8 +24,11 @@ RUN apt-get update && \
 # Copy everything *except* src (excluded via .dockerignore)
 COPY . /app
 
-# Now copy src separately — this layer will be re-run only if src changes
+# Copy src with conditional module directories
 COPY ./src /app/src
+# Remove optional module directories if not enabled
+RUN if [ "$ENABLE_FS_MODULE" != "true" ]; then rm -rf /app/src/teradata_mcp_server/tools/fs; fi && \
+    if [ "$ENABLE_EVS_MODULE" != "true" ]; then rm -rf /app/src/teradata_mcp_server/tools/evs; fi
 # └──────────── End build stage ────────────┘
 
 # ┌───────────── Runtime stage ─────────────┐

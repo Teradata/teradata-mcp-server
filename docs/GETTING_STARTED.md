@@ -81,12 +81,19 @@ This starts only the core Teradata MCP server (with stdio or SSE communication):
 docker compose up
 ```
 
-To include optional modules, set environment variables before building:
+To include optional modules or specify a profile, set environment variables:
 
 ```sh
 # Build with Feature Store and Vector Store support
 ENABLE_FS_MODULE=true ENABLE_EVS_MODULE=true docker compose build
 docker compose up
+
+# Run with a specific profile (e.g., 'dba')
+PROFILE=dba docker compose up
+
+# Combine optional modules and profile
+ENABLE_FS_MODULE=true PROFILE=dba docker compose build
+PROFILE=dba docker compose up
 ```
 
 The server will be available on port 8001 (or the value of the `PORT` environment variable).

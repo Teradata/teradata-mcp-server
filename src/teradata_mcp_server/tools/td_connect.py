@@ -63,11 +63,6 @@ class TDConn:
                 logger.error(f"Error creating database engine: {e}")
                 self.engine = None
 
-            # Create the teradataml context
-            if "<EVS or EFS enabled>":
-                import teradataml as tdml  # import of the teradataml package
-                tdml.create_context(tdsqlengine=self.engine)
-
     # Destructor
     #     It will close the SQLAlchemy connection and engine
     def close(self):
