@@ -31,6 +31,7 @@ class ModuleLoader:
     
     def __init__(self):
         self._loaded_modules: Dict[str, Any] = {}
+        self._failed_modules: set = set()  # Track modules that failed to load
         self._required_modules: set = set()
     
     def determine_required_modules(self, config: dict) -> List[str]:
@@ -79,6 +80,10 @@ class ModuleLoader:
         if module_name in self._loaded_modules:
             return self._loaded_modules[module_name]
         
+        # Don't retry failed modules
+        if module_name in self._failed_modules:
+            return None
+        
         try:
             if module_name in self.MODULE_MAP:
                 module_path = self.MODULE_MAP[module_name]
@@ -103,6 +108,9 @@ class ModuleLoader:
                 return None
                 
         except ImportError as e:
+            # Mark module as failed to prevent retry
+            self._failed_modules.add(module_name)
+            
             # Provide specific warnings for optional modules
             error_msg = str(e).lower()
             if module_name == 'fs':
