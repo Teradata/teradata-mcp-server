@@ -66,7 +66,8 @@ If you want to quickly evaluate the tool, we recommend using Claude desktop, the
         "teradata-mcp-server"
       ],
       "env": {
-        "DATABASE_URI": "teradata://<USERNAME>:<PASSWORD>@<HOST_URL>:1025/<USERNAME>"
+        "DATABASE_URI": "teradata://<USERNAME>:<PASSWORD>@<HOST_URL>:1025/<USERNAME>",
+        "MCP_TRANSPORT": "stdio"
       }
     }
   }
