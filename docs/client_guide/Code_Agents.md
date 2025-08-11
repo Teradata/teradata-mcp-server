@@ -44,7 +44,7 @@ MCP_PATH=/mcp/
 cd teradata-mcp-server
 uv run src/teradata_mcp_server/server.py
 ```
-&nbsp;&nbsp;&nbsp;&nbsp; Step 3 - In a second terminal move into teradata_mcp_server/test/ADK_Client_Example directory From a terminal.
+&nbsp;&nbsp;&nbsp;&nbsp; Step 3 - In a second terminal move into teradata_mcp_server/scripts/client_examples/ADK_Client_Examples directory From a terminal.
 ```
 cd teradata-mcp-server
 uv sync --extra test
@@ -80,7 +80,7 @@ uv run src/teradata_mcp-server
 cd teradata-mcp-server
 uv sync --extra test
 source .venv/bin/activate
-uv run test/MCP_Client_Example/mcp_chatbot.py
+uv run scripts/client_examples/MCP_Client_Example/mcp_chatbot.py
 ```
 &nbsp;&nbsp;&nbsp;&nbsp;Step 4 - list the prompts by typing /prompts
 ```

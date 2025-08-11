@@ -94,7 +94,7 @@ New tool sets can be created in one of two ways:
 
 The template code should be copied and prefixes for directory name and files should be modified to align to your grouping name.  Refer to other tool sets for examples.
 
-[src/test/](./src/test/) - this will contain client tools for testing the server functionality
+[scripts/client_examples/](./scripts/client_examples/) - this will contain client tools for testing the server functionality
 
 [docs](./docs/) - contains package documentation.
 - CHANGE_LOG.md - maintains the change log of releases.

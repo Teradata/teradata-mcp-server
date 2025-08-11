@@ -198,11 +198,11 @@ Examples:
         """Manage configuration."""
         if args.config_action == 'create':
             config = TestConfig()
-            config_path = 'test_config.yml'
+            config_path = 'scripts/test_config.yml'
             config.save_to_file(config_path)
             print(f"Default configuration created: {config_path}")
         elif args.config_action == 'show':
-            config_path = getattr(args, 'config', 'test_config.yml')
+            config_path = getattr(args, 'config', 'scripts/test_config.yml')
             config = self._load_config(args)
             print(f"Configuration from {config_path}:")
             for key, value in config.__dict__.items():
@@ -212,7 +212,7 @@ Examples:
 
     def _load_config(self, args) -> TestConfig:
         """Load configuration from file or create default."""
-        config_path = getattr(args, 'config', 'test_config.yml')
+        config_path = getattr(args, 'config', 'scripts/test_config.yml')
         
         if Path(config_path).exists():
             return TestConfig.from_file(config_path)

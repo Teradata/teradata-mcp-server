@@ -10,7 +10,7 @@ This directory contains various scripts for testing and validating the Teradata 
 - **Purpose**: Complete testing framework execution with real test discovery
 - **Features**: Discovers all test prompts, executes realistic simulations, generates reports
 - **Usage**: `python scripts/testing/run_tests.py`
-- **Outputs**: Console report + JSON report in `test_results/`
+- **Outputs**: Console report + JSON report in `scripts/test_results/`
 
 ## 🔧 Development & Validation Scripts
 
@@ -108,5 +108,5 @@ scripts/testing/
 
 - **Framework Source**: `src/teradata_mcp_server/testing/`
 - **Documentation**: `docs/TESTING_FRAMEWORK.md`
-- **Configuration**: `test_config.yml`
-- **Reports Output**: `test_results/`
+- **Configuration**: `scripts/test_config.yml`
+- **Reports Output**: `scripts/test_results/`

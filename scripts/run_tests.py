@@ -11,7 +11,7 @@ from pathlib import Path
 def main():
     """Launch the main test runner."""
     # Path to the main test runner
-    main_script = Path(__file__).parent / "scripts" / "testing" / "run_tests.py"
+    main_script = Path(__file__).parent / "testing" / "run_tests.py"
     
     if not main_script.exists():
         print("❌ Main test runner not found at:", main_script)
@@ -24,7 +24,7 @@ def main():
     # Execute the main script
     try:
         result = subprocess.run([sys.executable, str(main_script)] + sys.argv[1:], 
-                              cwd=Path(__file__).parent)
+                              cwd=Path(__file__).parent.parent)
         return result.returncode
     except KeyboardInterrupt:
         print("\n⚠ Test execution interrupted by user")

@@ -26,8 +26,21 @@ test_baseTools:
    ## Phase 1 - Get the list of tables in each database
    - For the DBC database, get the list of tables. Use the base_tableList function to get the list. The tool should return a list of tables in the DBC database, if no data is returned then fail this test.
    ## Phase 2 - Create a test table in your default database
-   - Create a customer table in your default database called test_customer, the table should have an Cust_id column. Use the base_writeQuery function to create the table. A test_customer table should be created.
-   - Add 10 rows to the test_customer table. Use the base_writeQuery function to add the rows.
+   - what is your default database?
+   - Create a customer table in your default database called test_customer, use the following code: 
+    CREATE TABLE test_customer (Cust_id INTEGER, Customer_Name VARCHAR(50), Email VARCHAR(100), Phone VARCHAR(20),Registration_Date DATE); 
+ 
+   - Add rows to the test_customer table using the following SQL:
+    INSERT INTO test_customer VALUES (1, 'John Smith', 'john.smith@email.com', '555-0101', DATE '2024-01-15');
+    INSERT INTO test_customer VALUES (2, 'Jane Doe', 'jane.doe@email.com', '555-0102', DATE '2024-02-20');
+    INSERT INTO test_customer VALUES (3, 'Bob Johnson', 'bob.johnson@email.com', '555-0103', DATE '2024-03-10');
+    INSERT INTO test_customer VALUES (4, 'Alice Brown', 'alice.brown@email.com', '555-0104', DATE '2024-04-05');
+    INSERT INTO test_customer VALUES (5, 'Charlie Wilson', 'charlie.wilson@email.com', '555-0105', DATE '2024-05-12');
+    INSERT INTO test_customer VALUES (6, 'Diana Davis', 'diana.davis@email.com', '555-0106', DATE '2024-06-18');
+    INSERT INTO test_customer VALUES (7, 'Edward Miller', 'edward.miller@email.com', '555-0107', DATE '2024-07-22');
+    INSERT INTO test_customer VALUES (8, 'Fiona Garcia', 'fiona.garcia@email.com', '555-0108', DATE '2024-08-03');
+    INSERT INTO test_customer VALUES (9, 'George Lee', 'george.lee@email.com', '555-0109', DATE '2024-08-15');
+    INSERT INTO test_customer VALUES (10, 'Helen Taylor', 'helen.taylor@email.com', '555-0110', DATE '2024-08-25');
    ## Phase 3 - Test the query tool
    - test the query tool by running a query on the test_customer table. Use the base_readQuery function to run the query. The query should return the 10 rows you added in the previous phase, if no data is returned then fail this test.
    - test the query tool by running a query on the test_customer table with a filter. Use the base_readQuery function to run the query. The query should return only the rows that match the filter, if no data is returned then fail this test. (example of a filter is Cust_id > 5)
