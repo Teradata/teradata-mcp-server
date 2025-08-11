@@ -48,6 +48,7 @@ class ModuleLoader:
         
         # Always load base modules for shared utilities
         required_modules.add('td_connect')
+        required_modules.add('base')  # Always load base tools for custom queries
         
         # Check each tool pattern against module prefixes
         for pattern in tool_patterns:
