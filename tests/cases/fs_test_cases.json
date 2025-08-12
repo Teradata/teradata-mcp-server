@@ -21,12 +21,18 @@
     "fs_setFeatureStoreConfig": [
       {
         "name": "set_test_config",
-        "parameters":  {"db_name": "demo_user", "data_domain": "demo_dba", "entity_name": "tablename"}
+        "parameters":  {"db_name": "demo_user", "data_domain": "demo_dba", "entity": "tablename"}
       }
     ],    
     "fs_getFeatureStoreConfig": [
       {
         "name": "get_current_config",
+        "parameters": {}
+      }
+    ],
+    "fs_getFeatures": [
+      {
+        "name": "list_all_features",
         "parameters": {}
       }
     ],
@@ -68,12 +74,6 @@
     "fs_getFeatureDataModel": [
       {
         "name": "get_feature_model",
-        "parameters": {}
-      }
-    ],
-    "fs_getFeatures": [
-      {
-        "name": "list_all_features",
         "parameters": {}
       }
     ]

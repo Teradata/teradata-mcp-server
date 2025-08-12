@@ -319,21 +319,8 @@ class MCPTestRunner:
                         print(f"    JSON parse error: {e}")
                         print(f"    Server response: {response_text}")
                     
-                    # Extract meaningful error from server response
-                    error_msg = response_text.strip()
-                    
-                    # Try to extract the most relevant part of the error
-                    if "Error executing tool" in error_msg:
-                        # Extract the main error after "Error executing tool tool_name:"
-                        parts = error_msg.split(":", 2)
-                        if len(parts) >= 3:
-                            error_msg = parts[2].strip()
-                    elif "validation error" in error_msg.lower():
-                        # For Pydantic validation errors, extract the key info
-                        lines = error_msg.split('\n')
-                        if len(lines) > 1:
-                            # Get the validation error details (usually line 2)
-                            error_msg = lines[1].strip() if len(lines) > 1 else error_msg
+                    # Use first line of error response as the error message
+                    error_msg = response_text.strip().split('\n')[0]
                     
                     return {
                         "tool": tool_name,
