@@ -1,0 +1,412 @@
+{
+  "test_cases": {
+    "base_readQuery": [
+      {
+        "name": "system_catalog_query",
+        "parameters": {
+          "sql": "SELECT TOP 5 DatabaseName, TableName FROM DBC.TablesV WHERE DatabaseName = 'DBC'"
+        }
+      },
+      {
+        "name": "current_timestamp",
+        "parameters": {
+          "sql": "SELECT CURRENT_TIMESTAMP"
+        }
+      },
+      {
+        "name": "version_info",
+        "parameters": {
+          "sql": "SELECT InfoKey, InfoData FROM DBC.DBCInfoV WHERE InfoKey = 'VERSION'"
+        }
+      }
+    ],
+    "base_tableList": [
+      {
+        "name": "system_database_tables",
+        "parameters": {
+          "db_name": "DBC"
+        }
+      }
+    ],
+    "base_databaseList": [
+      {
+        "name": "list_all_databases", 
+        "parameters": {}
+      }
+    ],
+    "base_tableDDL": [
+      {
+        "name": "system_table_ddl",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      }
+    ],
+    "base_columnDescription": [
+      {
+        "name": "system_table_columns",
+        "parameters": {
+          "db_name": "DBC",
+          "obj_name": "TablesV"
+        }
+      }
+    ],
+    "base_tablePreview": [
+      {
+        "name": "system_table_preview",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "DatabasesV"
+        }
+      }
+    ],
+    "dba_databaseSpace": [
+      {
+        "name": "dbc_database_space",
+        "parameters": {
+          "db_name": "DBC"
+        }
+      },
+      {
+        "name": "all_database_space",
+        "parameters": {
+          "db_name": "DBC"
+        }
+      }
+    ],
+    "dba_tableSpace": [
+      {
+        "name": "system_table_space",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      },
+      {
+        "name": "all_tables_space",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      }
+    ],
+    "dba_databaseVersion": [
+      {
+        "name": "get_version",
+        "parameters": {}
+      }
+    ],
+    "dba_sessionInfo": [
+      {
+        "name": "dbc_user_sessions",
+        "parameters": {
+          "user_name": "DBC"
+        }
+      }
+    ],
+    "sec_userDbPermissions": [
+      {
+        "name": "dbc_user_permissions",
+        "parameters": {
+          "user_name": "DBC"
+        }
+      }
+    ],
+    "sec_rolePermissions": [
+      {
+        "name": "public_role_permissions",
+        "parameters": {
+          "role_name": "PUBLIC"
+        }
+      }
+    ],
+    "sec_userRoles": [
+      {
+        "name": "dbc_user_roles",
+        "parameters": {
+          "user_name": "DBC"
+        }
+      }
+    ],
+    "cust_activeUsers": [
+      {
+        "name": "get_active_users",
+        "parameters": {}
+      }
+    ],
+    "cust_td_serverInfo": [
+      {
+        "name": "database_version",
+        "parameters": {
+          "infokey": "VERSION"
+        }
+      },
+      {
+        "name": "database_release",
+        "parameters": {
+          "infokey": "RELEASE"
+        }
+      }
+    ],
+    "qlty_missingValues": [
+      {
+        "name": "system_table_missing_values",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      }
+    ],
+    "qlty_distinctCategories": [
+      {
+        "name": "table_kinds",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables",
+          "col_name": "TableKind"
+        }
+      }
+    ],
+    "qlty_columnSummary": [
+      {
+        "name": "system_table_column_summary",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      }
+    ],
+    "sales_top_customers": [
+      {
+        "name": "default_top_customers",
+        "parameters": {}
+      }
+    ],
+    "sales_customer_profile": [
+      {
+        "name": "sample_customer",
+        "parameters": {
+          "customer_key": "1"
+        }
+      }
+    ],
+    "fs_isFeatureStorePresent": [
+      {
+        "name": "check_demo_fs",
+        "parameters": {
+          "db_name": "demo_fs"
+        }
+      }
+    ],
+    "fs_getFeatureStoreConfig": [
+      {
+        "name": "get_current_config",
+        "parameters": {}
+      }
+    ],
+    "evs_similarity_search": [
+      {
+        "name": "test_search",
+        "parameters": {
+          "question": "What is machine learning?",
+          "top_k": 3
+        }
+      }
+    ],
+    "rag_executeWorkflow": [
+      {
+        "name": "test_rag_query",
+        "parameters": {
+          "question": "What is the database architecture?",
+          "k": 5
+        }
+      }
+    ],
+    "base_tableAffinity": [
+      {
+        "name": "system_table_affinity",
+        "parameters": {
+          "db_name": "DBC",
+          "obj_name": "TablesV"
+        }
+      }
+    ],
+    "base_tableUsage": [
+      {
+        "name": "dbc_database_usage",
+        "parameters": {
+          "db_name": "DBC"
+        }
+      },
+      {
+        "name": "all_databases_usage",
+        "parameters": {}
+      }
+    ],
+    "dba_featureUsage": [
+      {
+        "name": "get_feature_usage",
+        "parameters": {}
+      }
+    ],
+    "dba_flowControl": [
+      {
+        "name": "get_flow_control",
+        "parameters": {}
+      }
+    ],
+    "dba_resusageSummary": [
+      {
+        "name": "system_resource_usage",
+        "parameters": {}
+      }
+    ],
+    "dba_tableSqlList": [
+      {
+        "name": "tables_sql_activity",
+        "parameters": {
+          "table_name": "TablesV",
+          "no_days": 7
+        }
+      }
+    ],
+    "dba_tableUsageImpact": [
+      {
+        "name": "dbc_table_impact",
+        "parameters": {
+          "db_name": "DBC",
+          "user_name": "DBC"
+        }
+      }
+    ],
+    "dba_userDelay": [
+      {
+        "name": "get_user_delays",
+        "parameters": {}
+      }
+    ],
+    "dba_userSqlList": [
+      {
+        "name": "dbc_user_sql",
+        "parameters": {
+          "user_name": "DBC",
+          "no_days": 7
+        }
+      }
+    ],
+    "fs_createDataset": [
+      {
+        "name": "create_test_dataset",
+        "parameters": {
+          "dataset_name": "test_dataset",
+          "feature_list": ["feature1", "feature2"]
+        }
+      }
+    ],
+    "fs_featureStoreContent": [
+      {
+        "name": "get_fs_content",
+        "parameters": {}
+      }
+    ],
+    "fs_getAvailableDatasets": [
+      {
+        "name": "list_available_datasets",
+        "parameters": {}
+      }
+    ],
+    "fs_getAvailableEntities": [
+      {
+        "name": "list_available_entities",
+        "parameters": {}
+      }
+    ],
+    "fs_getDataDomains": [
+      {
+        "name": "list_data_domains",
+        "parameters": {}
+      }
+    ],
+    "fs_getFeatureDataModel": [
+      {
+        "name": "get_feature_model",
+        "parameters": {}
+      }
+    ],
+    "fs_getFeatures": [
+      {
+        "name": "list_all_features",
+        "parameters": {}
+      }
+    ],
+    "fs_setFeatureStoreConfig": [
+      {
+        "name": "set_test_config",
+        "parameters": {
+          "config": {"test_key": "test_value"}
+        }
+      }
+    ],
+    "get_cube_cust_cube_db_space_metrics": [
+      {
+        "name": "cube_space_metrics",
+        "parameters": {}
+      }
+    ],
+    "get_cube_sales_cube": [
+      {
+        "name": "sales_cube_data",
+        "parameters": {}
+      }
+    ],
+    "qlty_negativeValues": [
+      {
+        "name": "check_negative_values",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables",
+          "col_name": "TableId"
+        }
+      }
+    ],
+    "qlty_rowsWithMissingValues": [
+      {
+        "name": "rows_missing_values",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      }
+    ],
+    "qlty_standardDeviation": [
+      {
+        "name": "column_std_dev",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables",
+          "col_name": "TableId"
+        }
+      }
+    ],
+    "qlty_univariateStatistics": [
+      {
+        "name": "column_statistics",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables",
+          "col_name": "TableId"
+        }
+      }
+    ],
+    "rag_executeWorkflow_ivsm": [
+      {
+        "name": "test_ivsm_rag",
+        "parameters": {
+          "question": "What is the database schema?",
+          "k": 3
+        }
+      }
+    ]
+  }
+}
