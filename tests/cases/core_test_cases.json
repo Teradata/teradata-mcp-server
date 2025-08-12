@@ -1,0 +1,336 @@
+{
+  "test_cases": {
+    "base_readQuery": [
+      {
+        "name": "system_catalog_query",
+        "parameters": {
+          "sql": "SELECT TOP 5 DatabaseName, TableName FROM DBC.TablesV WHERE DatabaseName = 'DBC'"
+        }
+      },
+      {
+        "name": "current_timestamp",
+        "parameters": {
+          "sql": "SELECT CURRENT_TIMESTAMP"
+        }
+      },
+      {
+        "name": "version_info",
+        "parameters": {
+          "sql": "SELECT InfoKey, InfoData FROM DBC.DBCInfoV WHERE InfoKey = 'VERSION'"
+        }
+      }
+    ],
+    "base_tableList": [
+      {
+        "name": "system_database_tables",
+        "parameters": {
+          "db_name": "DBC"
+        }
+      }
+    ],
+    "base_databaseList": [
+      {
+        "name": "list_all_databases", 
+        "parameters": {}
+      }
+    ],
+    "base_tableDDL": [
+      {
+        "name": "system_table_ddl",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      }
+    ],
+    "base_columnDescription": [
+      {
+        "name": "system_table_columns",
+        "parameters": {
+          "db_name": "DBC",
+          "obj_name": "TablesV"
+        }
+      }
+    ],
+    "base_tablePreview": [
+      {
+        "name": "system_table_preview",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "DatabasesV"
+        }
+      }
+    ],
+    "base_tableAffinity": [
+      {
+        "name": "system_table_affinity",
+        "parameters": {
+          "db_name": "DBC",
+          "obj_name": "TablesV"
+        }
+      }
+    ],
+    "base_tableUsage": [
+      {
+        "name": "dbc_database_usage",
+        "parameters": {
+          "db_name": "DBC"
+        }
+      },
+      {
+        "name": "all_databases_usage",
+        "parameters": {}
+      }
+    ],
+    "dba_databaseSpace": [
+      {
+        "name": "dbc_database_space",
+        "parameters": {
+          "db_name": "DBC"
+        }
+      },
+      {
+        "name": "all_database_space",
+        "parameters": {
+          "db_name": "DBC"
+        }
+      }
+    ],
+    "dba_tableSpace": [
+      {
+        "name": "system_table_space",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      },
+      {
+        "name": "all_tables_space",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      }
+    ],
+    "dba_databaseVersion": [
+      {
+        "name": "get_version",
+        "parameters": {}
+      }
+    ],
+    "dba_sessionInfo": [
+      {
+        "name": "dbc_user_sessions",
+        "parameters": {
+          "user_name": "DBC"
+        }
+      }
+    ],
+    "dba_featureUsage": [
+      {
+        "name": "get_feature_usage",
+        "parameters": {}
+      }
+    ],
+    "dba_flowControl": [
+      {
+        "name": "get_flow_control",
+        "parameters": {}
+      }
+    ],
+    "dba_resusageSummary": [
+      {
+        "name": "system_resource_usage",
+        "parameters": {}
+      }
+    ],
+    "dba_tableSqlList": [
+      {
+        "name": "tables_sql_activity",
+        "parameters": {
+          "table_name": "TablesV",
+          "no_days": 7
+        }
+      }
+    ],
+    "dba_tableUsageImpact": [
+      {
+        "name": "dbc_table_impact",
+        "parameters": {
+          "db_name": "DBC",
+          "user_name": "DBC"
+        }
+      }
+    ],
+    "dba_userDelay": [
+      {
+        "name": "get_user_delays",
+        "parameters": {}
+      }
+    ],
+    "dba_userSqlList": [
+      {
+        "name": "dbc_user_sql",
+        "parameters": {
+          "user_name": "DBC",
+          "no_days": 7
+        }
+      }
+    ],
+    "sec_userDbPermissions": [
+      {
+        "name": "dbc_user_permissions",
+        "parameters": {
+          "user_name": "DBC"
+        }
+      }
+    ],
+    "sec_rolePermissions": [
+      {
+        "name": "public_role_permissions",
+        "parameters": {
+          "role_name": "PUBLIC"
+        }
+      }
+    ],
+    "sec_userRoles": [
+      {
+        "name": "dbc_user_roles",
+        "parameters": {
+          "user_name": "DBC"
+        }
+      }
+    ],
+    "cust_activeUsers": [
+      {
+        "name": "get_active_users",
+        "parameters": {}
+      }
+    ],
+    "cust_td_serverInfo": [
+      {
+        "name": "database_version",
+        "parameters": {
+          "infokey": "VERSION"
+        }
+      },
+      {
+        "name": "database_release",
+        "parameters": {
+          "infokey": "RELEASE"
+        }
+      }
+    ],
+    "qlty_missingValues": [
+      {
+        "name": "system_table_missing_values",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      }
+    ],
+    "qlty_distinctCategories": [
+      {
+        "name": "table_kinds",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables",
+          "col_name": "TableKind"
+        }
+      }
+    ],
+    "qlty_columnSummary": [
+      {
+        "name": "system_table_column_summary",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      }
+    ],
+    "qlty_negativeValues": [
+      {
+        "name": "check_negative_values",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables",
+          "col_name": "TableId"
+        }
+      }
+    ],
+    "qlty_rowsWithMissingValues": [
+      {
+        "name": "rows_missing_values",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      }
+    ],
+    "qlty_standardDeviation": [
+      {
+        "name": "column_std_dev",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables",
+          "col_name": "TableId"
+        }
+      }
+    ],
+    "qlty_univariateStatistics": [
+      {
+        "name": "column_statistics",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables",
+          "col_name": "TableId"
+        }
+      }
+    ],
+    "sales_top_customers": [
+      {
+        "name": "default_top_customers",
+        "parameters": {}
+      }
+    ],
+    "sales_customer_profile": [
+      {
+        "name": "sample_customer",
+        "parameters": {
+          "customer_key": "1"
+        }
+      }
+    ],
+    "get_cube_cust_cube_db_space_metrics": [
+      {
+        "name": "cube_space_metrics",
+        "parameters": {}
+      }
+    ],
+    "get_cube_sales_cube": [
+      {
+        "name": "sales_cube_data",
+        "parameters": {}
+      }
+    ],
+    "rag_executeWorkflow": [
+      {
+        "name": "test_rag_query",
+        "parameters": {
+          "question": "What is the database architecture?",
+          "k": 5
+        }
+      }
+    ],
+    "rag_executeWorkflow_ivsm": [
+      {
+        "name": "test_ivsm_rag",
+        "parameters": {
+          "question": "What is the database schema?",
+          "k": 3
+        }
+      }
+    ]
+  }
+}

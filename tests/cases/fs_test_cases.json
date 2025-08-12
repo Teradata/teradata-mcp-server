@@ -1,0 +1,71 @@
+{
+  "test_cases": {
+    "fs_isFeatureStorePresent": [
+      {
+        "name": "check_demo_fs",
+        "parameters": {
+          "db_name": "demo_fs"
+        }
+      }
+    ],
+    "fs_getFeatureStoreConfig": [
+      {
+        "name": "get_current_config",
+        "parameters": {}
+      }
+    ],
+    "fs_createDataset": [
+      {
+        "name": "create_test_dataset",
+        "parameters": {
+          "dataset_name": "test_dataset",
+          "feature_list": ["feature1", "feature2"]
+        }
+      }
+    ],
+    "fs_featureStoreContent": [
+      {
+        "name": "get_fs_content",
+        "parameters": {}
+      }
+    ],
+    "fs_getAvailableDatasets": [
+      {
+        "name": "list_available_datasets",
+        "parameters": {}
+      }
+    ],
+    "fs_getAvailableEntities": [
+      {
+        "name": "list_available_entities",
+        "parameters": {}
+      }
+    ],
+    "fs_getDataDomains": [
+      {
+        "name": "list_data_domains",
+        "parameters": {}
+      }
+    ],
+    "fs_getFeatureDataModel": [
+      {
+        "name": "get_feature_model",
+        "parameters": {}
+      }
+    ],
+    "fs_getFeatures": [
+      {
+        "name": "list_all_features",
+        "parameters": {}
+      }
+    ],
+    "fs_setFeatureStoreConfig": [
+      {
+        "name": "set_test_config",
+        "parameters": {
+          "config": {"test_key": "test_value"}
+        }
+      }
+    ]
+  }
+}

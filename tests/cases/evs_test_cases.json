@@ -1,0 +1,13 @@
+{
+  "test_cases": {
+    "evs_similarity_search": [
+      {
+        "name": "test_search",
+        "parameters": {
+          "question": "What is machine learning?",
+          "top_k": 3
+        }
+      }
+    ]
+  }
+}

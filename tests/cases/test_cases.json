@@ -222,6 +222,191 @@
           "k": 5
         }
       }
+    ],
+    "base_tableAffinity": [
+      {
+        "name": "system_table_affinity",
+        "parameters": {
+          "db_name": "DBC",
+          "obj_name": "TablesV"
+        }
+      }
+    ],
+    "base_tableUsage": [
+      {
+        "name": "dbc_database_usage",
+        "parameters": {
+          "db_name": "DBC"
+        }
+      },
+      {
+        "name": "all_databases_usage",
+        "parameters": {}
+      }
+    ],
+    "dba_featureUsage": [
+      {
+        "name": "get_feature_usage",
+        "parameters": {}
+      }
+    ],
+    "dba_flowControl": [
+      {
+        "name": "get_flow_control",
+        "parameters": {}
+      }
+    ],
+    "dba_resusageSummary": [
+      {
+        "name": "system_resource_usage",
+        "parameters": {}
+      }
+    ],
+    "dba_tableSqlList": [
+      {
+        "name": "tables_sql_activity",
+        "parameters": {
+          "table_name": "TablesV",
+          "no_days": 7
+        }
+      }
+    ],
+    "dba_tableUsageImpact": [
+      {
+        "name": "dbc_table_impact",
+        "parameters": {
+          "db_name": "DBC",
+          "user_name": "DBC"
+        }
+      }
+    ],
+    "dba_userDelay": [
+      {
+        "name": "get_user_delays",
+        "parameters": {}
+      }
+    ],
+    "dba_userSqlList": [
+      {
+        "name": "dbc_user_sql",
+        "parameters": {
+          "user_name": "DBC",
+          "no_days": 7
+        }
+      }
+    ],
+    "fs_createDataset": [
+      {
+        "name": "create_test_dataset",
+        "parameters": {
+          "dataset_name": "test_dataset",
+          "feature_list": ["feature1", "feature2"]
+        }
+      }
+    ],
+    "fs_featureStoreContent": [
+      {
+        "name": "get_fs_content",
+        "parameters": {}
+      }
+    ],
+    "fs_getAvailableDatasets": [
+      {
+        "name": "list_available_datasets",
+        "parameters": {}
+      }
+    ],
+    "fs_getAvailableEntities": [
+      {
+        "name": "list_available_entities",
+        "parameters": {}
+      }
+    ],
+    "fs_getDataDomains": [
+      {
+        "name": "list_data_domains",
+        "parameters": {}
+      }
+    ],
+    "fs_getFeatureDataModel": [
+      {
+        "name": "get_feature_model",
+        "parameters": {}
+      }
+    ],
+    "fs_getFeatures": [
+      {
+        "name": "list_all_features",
+        "parameters": {}
+      }
+    ],
+    "fs_setFeatureStoreConfig": [
+      {
+        "name": "set_test_config",
+        "parameters": {
+          "config": {"test_key": "test_value"}
+        }
+      }
+    ],
+    "get_cube_cust_cube_db_space_metrics": [
+      {
+        "name": "cube_space_metrics",
+        "parameters": {}
+      }
+    ],
+    "get_cube_sales_cube": [
+      {
+        "name": "sales_cube_data",
+        "parameters": {}
+      }
+    ],
+    "qlty_negativeValues": [
+      {
+        "name": "check_negative_values",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables",
+          "col_name": "TableId"
+        }
+      }
+    ],
+    "qlty_rowsWithMissingValues": [
+      {
+        "name": "rows_missing_values",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables"
+        }
+      }
+    ],
+    "qlty_standardDeviation": [
+      {
+        "name": "column_std_dev",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables",
+          "col_name": "TableId"
+        }
+      }
+    ],
+    "qlty_univariateStatistics": [
+      {
+        "name": "column_statistics",
+        "parameters": {
+          "db_name": "DBC",
+          "table_name": "Tables",
+          "col_name": "TableId"
+        }
+      }
+    ],
+    "rag_executeWorkflow_ivsm": [
+      {
+        "name": "test_ivsm_rag",
+        "parameters": {
+          "question": "What is the database schema?",
+          "k": 3
+        }
+      }
     ]
   }
 }

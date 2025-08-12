@@ -24,8 +24,8 @@ from mcp.client.stdio import stdio_client, StdioServerParameters
 
 
 class MCPTestRunner:
-    def __init__(self, test_cases_file: str = "test_cases.json", verbose: bool = False):
-        self.test_cases_file = test_cases_file
+    def __init__(self, test_cases_files: List[str] = ["tests/cases/core_test_cases.json"], verbose: bool = False):
+        self.test_cases_files = test_cases_files if isinstance(test_cases_files, list) else [test_cases_files]
         self.test_cases: Dict[str, List[Dict]] = {}
         self.available_tools: List[str] = []
         self.results: List[Dict] = []
@@ -43,12 +43,24 @@ class MCPTestRunner:
         return os.getcwd()
 
     async def load_test_cases(self):
-        """Load test cases from JSON file."""
+        """Load test cases from JSON files."""
         try:
-            with open(self.test_cases_file, 'r') as f:
-                data = json.load(f)
-                self.test_cases = data.get('test_cases', {})
-            print(f"✓ Loaded test cases for {len(self.test_cases)} tools")
+            for test_cases_file in self.test_cases_files:
+                if os.path.exists(test_cases_file):
+                    with open(test_cases_file, 'r') as f:
+                        data = json.load(f)
+                        file_test_cases = data.get('test_cases', {})
+                        # Merge test cases from this file
+                        for tool_name, cases in file_test_cases.items():
+                            if tool_name in self.test_cases:
+                                self.test_cases[tool_name].extend(cases)
+                            else:
+                                self.test_cases[tool_name] = cases
+                    print(f"✓ Loaded {len(file_test_cases)} tools from {test_cases_file}")
+                else:
+                    print(f"⚠ Test cases file not found: {test_cases_file}")
+            
+            print(f"✓ Total test cases loaded for {len(self.test_cases)} tools")
         except Exception as e:
             print(f"✗ Failed to load test cases: {e}")
             sys.exit(1)
@@ -56,7 +68,7 @@ class MCPTestRunner:
     async def connect_to_server(self, server_command: List[str]):
         """Connect to the MCP server."""
         try:
-            print(f"Connecting to MCP server: {' '.join(server_command)}")
+            print(f"Starting MCP server: {' '.join(server_command)}")
             
             project_root = self._find_project_root()
             # Require DATABASE_URI from environment
@@ -69,9 +81,9 @@ class MCPTestRunner:
             env_vars = {
                 **os.environ, 
                 "MCP_TRANSPORT": "stdio",
-                # Suppress server logging to reduce noise
                 "PYTHONPATH": os.environ.get("PYTHONPATH", ""),
-                "LOGGING_LEVEL": "WARNING"  # Reduce server log verbosity
+                # Show server logs during startup for debugging
+                "LOGGING_LEVEL": "INFO" if self.verbose else "WARNING"
             }
             
             server_params = StdioServerParameters(
@@ -81,6 +93,7 @@ class MCPTestRunner:
                 env=env_vars
             )
 
+            print("  Starting server process...")
             # Connect with proper context management
             if not self.exit_stack:
                 self.exit_stack = AsyncExitStack()
@@ -89,15 +102,39 @@ class MCPTestRunner:
                 stdio_client(server_params)
             )
             read, write = stdio_transport
+            print("  Server process started, establishing MCP session...")
+            
             self.session = await self.exit_stack.enter_async_context(
                 ClientSession(read, write)
             )
             
-            await asyncio.wait_for(self.session.initialize(), timeout=10.0)
-            print("✓ Connected to MCP server")
+            print("  Initializing MCP protocol...")
+            # Try multiple times with increasing timeouts
+            max_retries = 3
+            timeout_seconds = [5, 10, 15]
             
+            for attempt in range(max_retries):
+                try:
+                    await asyncio.wait_for(self.session.initialize(), timeout=timeout_seconds[attempt])
+                    print("✓ Connected to MCP server")
+                    return
+                except asyncio.TimeoutError:
+                    if attempt < max_retries - 1:
+                        print(f"  Initialization timeout ({timeout_seconds[attempt]}s), retrying... (attempt {attempt + 1}/{max_retries})")
+                        await asyncio.sleep(1)  # Brief pause before retry
+                    else:
+                        raise
+            
+        except asyncio.TimeoutError:
+            print("✗ Failed to connect to MCP server: Initialization timeout")
+            print("  The server may be taking longer to start. Try:")
+            print("  1. Check if the server command is correct")
+            print("  2. Verify DATABASE_URI is accessible")
+            print("  3. Run with --verbose for more details")
+            sys.exit(1)
         except Exception as e:
             print(f"✗ Failed to connect to MCP server: {e}")
+            print("  Server startup logs (if any):")
             if self.verbose:
                 import traceback
                 traceback.print_exc()
@@ -116,10 +153,15 @@ class MCPTestRunner:
             # Show which test cases we can run
             testable_tools = [tool for tool in self.available_tools if tool in self.test_cases]
             print(f"✓ Found test cases for {len(testable_tools)} tools")
-            
+
             if testable_tools:
-                print(f"  Tools with tests: {', '.join(sorted(testable_tools))}")
-                
+                print(f"\n✓ Tools with tests: {', '.join(sorted(testable_tools))}")
+
+            # Show which test cases we can run
+            if len(testable_tools) < len(self.available_tools):
+                missing_tools = set(self.available_tools) - set(testable_tools)
+                print(f"⚠ Tools without tests: {', '.join(sorted(missing_tools))}")
+
         except Exception as e:
             print(f"✗ Failed to discover tools: {e}")
             sys.exit(1)
@@ -350,7 +392,12 @@ class MCPTestRunner:
     def save_results(self):
         """Save detailed results to JSON file."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        results_file = f"test_results_{timestamp}.json"
+        
+        # Ensure var/test-reports directory exists
+        test_reports_dir = "var/test-reports"
+        os.makedirs(test_reports_dir, exist_ok=True)
+        
+        results_file = f"{test_reports_dir}/test_report_{timestamp}.json"
         
         detailed_results = {
             "timestamp": datetime.now().isoformat(),
@@ -383,15 +430,30 @@ class MCPTestRunner:
 async def main():
     """Main entry point."""
     if len(sys.argv) < 2:
-        print("Usage: python run_mcp_tests.py <server_command> [test_cases.json] [--verbose]")
-        print("Example: python run_mcp_tests.py 'uv run teradata-mcp-server'")
+        print("Usage: python tests/run_mcp_tests.py <server_command> [test_cases_file1] [test_cases_file2] [...] [--verbose]")
+        print("Examples:")
+        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server'")
+        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server' tests/cases/core_test_cases.json")
+        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server' tests/cases/core_test_cases.json tests/cases/fs_test_cases.json")
+        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server' tests/cases/evs_test_cases.json --verbose")
         sys.exit(1)
     
     server_command = sys.argv[1].split()
-    test_cases_file = sys.argv[2] if len(sys.argv) > 2 and not sys.argv[2].startswith('--') else "test_cases.json"
+    
+    # Parse test case files from arguments
+    test_cases_files = []
     verbose = "--verbose" in sys.argv
     
-    runner = MCPTestRunner(test_cases_file, verbose)
+    # Check for test case file arguments (anything that doesn't start with --)
+    for i in range(2, len(sys.argv)):
+        if not sys.argv[i].startswith('--'):
+            test_cases_files.append(sys.argv[i])
+    
+    # Default to core test cases if no files specified
+    if not test_cases_files:
+        test_cases_files = ["tests/cases/core_test_cases.json"]
+    
+    runner = MCPTestRunner(test_cases_files, verbose)
     
     try:
         await runner.load_test_cases()
