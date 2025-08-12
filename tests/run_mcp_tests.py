@@ -12,6 +12,7 @@ This script:
 import asyncio
 import json
 import os
+import subprocess
 import sys
 import time
 from contextlib import AsyncExitStack
@@ -27,6 +28,7 @@ class MCPTestRunner:
     def __init__(self, test_cases_files: List[str] = ["tests/cases/core_test_cases.json"], verbose: bool = False):
         self.test_cases_files = test_cases_files if isinstance(test_cases_files, list) else [test_cases_files]
         self.test_cases: Dict[str, List[Dict]] = {}
+        self.scripts: Dict[str, Dict] = {"pre_test": [], "post_test": []}
         self.available_tools: List[str] = []
         self.results: List[Dict] = []
         self.session: Optional[ClientSession] = None
@@ -50,13 +52,28 @@ class MCPTestRunner:
                     with open(test_cases_file, 'r') as f:
                         data = json.load(f)
                         file_test_cases = data.get('test_cases', {})
+                        file_scripts = data.get('scripts', {})
+                        
                         # Merge test cases from this file
                         for tool_name, cases in file_test_cases.items():
                             if tool_name in self.test_cases:
                                 self.test_cases[tool_name].extend(cases)
                             else:
                                 self.test_cases[tool_name] = cases
+                        
+                        # Merge scripts from this file
+                        for script_type in ['pre_test', 'post_test']:
+                            if script_type in file_scripts:
+                                if script_type not in self.scripts:
+                                    self.scripts[script_type] = []
+                                script_info = file_scripts[script_type].copy()
+                                script_info['source_file'] = test_cases_file
+                                self.scripts[script_type].append(script_info)
+                        
                     print(f"✓ Loaded {len(file_test_cases)} tools from {test_cases_file}")
+                    if file_scripts:
+                        script_count = len([s for s in file_scripts if s in ['pre_test', 'post_test']])
+                        print(f"✓ Loaded {script_count} scripts from {test_cases_file}")
                 else:
                     print(f"⚠ Test cases file not found: {test_cases_file}")
             
@@ -165,6 +182,61 @@ class MCPTestRunner:
         except Exception as e:
             print(f"✗ Failed to discover tools: {e}")
             sys.exit(1)
+
+    async def run_scripts(self, script_type: str):
+        """Run pre-test or post-test scripts."""
+        if script_type not in self.scripts or not self.scripts[script_type]:
+            return
+        
+        scripts_to_run = self.scripts[script_type]
+        print(f"\nRunning {script_type.replace('_', '-')} scripts...")
+        
+        for script in scripts_to_run:
+            command = script['command']
+            description = script.get('description', 'Running script')
+            source_file = script.get('source_file', 'unknown')
+            
+            print(f"  {description} (from {os.path.basename(source_file)})")
+            if self.verbose:
+                print(f"    Command: {command}")
+            
+            try:
+                # Run the command and capture output
+                result = subprocess.run(
+                    command,
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=300,  # 5 minute timeout
+                    env={**os.environ}  # Pass current environment including DATABASE_URI
+                )
+                
+                if result.returncode == 0:
+                    print(f"  ✓ Script completed successfully")
+                    if self.verbose and result.stdout.strip():
+                        print(f"    Output: {result.stdout.strip()}")
+                else:
+                    print(f"  ✗ Script failed with exit code {result.returncode}")
+                    if result.stderr.strip():
+                        print(f"    Error: {result.stderr.strip()}")
+                    if self.verbose and result.stdout.strip():
+                        print(f"    Output: {result.stdout.strip()}")
+                    
+                    # For pre-test scripts, exit on failure
+                    if script_type == 'pre_test':
+                        print(f"✗ Pre-test script failure, aborting test run")
+                        sys.exit(1)
+                        
+            except subprocess.TimeoutExpired:
+                print(f"  ✗ Script timed out after 5 minutes")
+                if script_type == 'pre_test':
+                    print(f"✗ Pre-test script timeout, aborting test run")
+                    sys.exit(1)
+            except Exception as e:
+                print(f"  ✗ Script execution failed: {e}")
+                if script_type == 'pre_test':
+                    print(f"✗ Pre-test script error, aborting test run") 
+                    sys.exit(1)
 
     async def run_test_case(self, tool_name: str, test_case: Dict) -> Dict:
         """Run a single test case."""
@@ -457,6 +529,7 @@ async def main():
     
     try:
         await runner.load_test_cases()
+        await runner.run_scripts('pre_test')
         await runner.connect_to_server(server_command)
         await runner.discover_tools()
         await runner.run_all_tests()
@@ -471,6 +544,7 @@ async def main():
         print("\n\nTest run interrupted by user")
     finally:
         await runner.cleanup()
+        await runner.run_scripts('post_test')
 
 
 if __name__ == "__main__":

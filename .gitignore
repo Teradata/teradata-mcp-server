@@ -11,4 +11,4 @@ env
 test_results/
 custom*_objects.yaml
 CLAUDE.md
-scripts/testing/test_results_*.json
+var/

@@ -616,17 +616,17 @@ if _enableEFS:
     ):
         global _tdconn        
         with _tdconn.engine.connect() as conn:
-            return fs_config.fs_setFeatureStoreConfig(
+            return td.create_response(fs_config.fs_setFeatureStoreConfig(
                 conn=conn,
                 db_name=db_name,
                 data_domain=data_domain,
                 entity=entity,
-            )
+            ))
 
     @mcp.tool(description="Display the current feature store configuration (database and data domain).")
     async def fs_getFeatureStoreConfig() -> ResponseType:
-        return format_text_response(f"Current feature store config: {fs_config.model_dump(exclude_none=True)}")
-    
+        return td.create_response(fs_config.model_dump(exclude_none=True), "Current feature store config")
+
 #------------------ Main ------------------#
 # Main function to start the MCP server
 #     Description: Initializes the MCP server and sets up signal handling for graceful shutdown.

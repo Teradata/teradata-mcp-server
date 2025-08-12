@@ -1,13 +1,29 @@
 {
+  "scripts": {
+    "pre_test": {
+      "command": "python tests/scripts/efs_setup.py --action setup",
+      "description": "Setup Feature Store test environment"
+    },
+    "post_test": {
+      "command": "python tests/scripts/efs_setup.py --action cleanupSQL", 
+      "description": "Display SQL commands to cleanup Feature Store test environment"
+    }
+  },
   "test_cases": {
     "fs_isFeatureStorePresent": [
       {
         "name": "check_demo_fs",
         "parameters": {
-          "db_name": "demo_fs"
+          "db_name": "demo_user"
         }
       }
     ],
+    "fs_setFeatureStoreConfig": [
+      {
+        "name": "set_test_config",
+        "parameters":  {"db_name": "demo_user", "data_domain": "demo_dba"}
+      }
+    ],    
     "fs_getFeatureStoreConfig": [
       {
         "name": "get_current_config",
@@ -18,9 +34,11 @@
       {
         "name": "create_test_dataset",
         "parameters": {
-          "dataset_name": "test_dataset",
-          "feature_list": ["feature1", "feature2"]
-        }
+                    "entity_name": "tablename",
+                    "feature_selection": "['currentperm', 'skew_pct']",
+                    "dataset_name": "test_efs_dataset",
+                    "target_database": "demo_user"
+                }
       }
     ],
     "fs_featureStoreContent": [
@@ -56,15 +74,7 @@
     "fs_getFeatures": [
       {
         "name": "list_all_features",
-        "parameters": {}
-      }
-    ],
-    "fs_setFeatureStoreConfig": [
-      {
-        "name": "set_test_config",
-        "parameters": {
-          "config": {"test_key": "test_value"}
-        }
+        "parameters": {"entity_name": "tablename"}
       }
     ]
   }

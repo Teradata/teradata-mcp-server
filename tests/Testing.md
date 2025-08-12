@@ -17,7 +17,7 @@ python tests/run_mcp_tests.py "uv run teradata-mcp-server"
 ## How to add your test case
 
 If you add a tool, you need to at least add a test case for it.
-You can do so by appending to the `test_cases.json` file with your test cases using the following format:
+You can do so by appending to the `core_test_cases.json` file with your test cases using the following format:
 
 ```json
 {
@@ -40,7 +40,7 @@ Where:
 - `name` is the name of your test (if only one, simply keep it as your tool name)
 - `parameters` is the list of parameters expected by the tool.
 
-**Important** Test in `test_cases.json` cannot be dependent of custom data. Use systems tables and users. If you want to define test cases on your own business data, you can do so in a separate file, see *Adding new test cases* section below.
+**Important** Test in `core_cases.json` cannot be dependent of custom data. Use systems tables and users. If you want to define test cases on your own business data or an optional module, you can do so in a separate file, see *Custom and add-on Test Cases File* section below.
 
 ## Overview
 
@@ -53,14 +53,14 @@ The test runner provides:
 
 ## Files
 
-- `tests/cases/test_cases.json` - Test case definitions in JSON format
+- `tests/cases/*_cases.json` - Test case definitions in JSON format
 - `tests/run_mcp_tests.py` - Main test runner script
 - `var/test-reports/test_report_*.json` - Generated test result files (timestamped)
 
 
 ## Test Case Format
 
-The `test_cases.json` file defines test cases for each tool:
+The `core_test_cases.json` file defines test cases for each tool:
 
 ```json
 {
@@ -143,11 +143,13 @@ PYTHONPATH=src python tests/run_mcp_tests.py "python -m teradata_mcp_server"
 You can add your own test cases into separate files, or invoke additional test modules.
 
 Currently available modules:
+- `core_test_cases.json` foundational test cases, default and mandatory cases for system integration testing.
 - `evs_test_cases.json` for Teradata Enterprise Vector Store testing.
 - `fs_test_cases.json` for Teradata Enterprise Feature Store testing.
 
+To specific modules, specify the module name in second position. eg.:
 ```bash
-python tests/run_mcp_tests.py "uv run teradata-mcp-server" "tests/cases/my_test_cases.json"
+python tests/run_mcp_tests.py "uv run teradata-mcp-server" "tests/cases/fs_test_cases.json"
 ```
 
 ### Verbose Output
@@ -214,9 +216,9 @@ Detailed results saved to: test_results_20250811_143022.json
 
 ## Adding New Test Cases
 
-1. **Edit `test_cases.json`** to add test cases for new tools
+1. **Edit `core_test_cases.json`** to add test cases for new tools
 2. **Follow the JSON format** with tool names as keys
-3. **Include realistic parameters** that the tool expects
+3. **Include parameters** that the tool expects
 4. **Test different scenarios** (valid inputs, edge cases)
 
 Example of adding a new tool:
@@ -241,6 +243,21 @@ Example of adding a new tool:
   }
 }
 ```
+
+You can add pre/post scripts (eg. to load the environment with specific datasets and clean it up afterwards) by adding a `scripts` section to your test definitions.
+
+```
+  "scripts": {
+    "pre_test": {
+      "command": "python tests/scripts/efs_setup.py --action setup",
+      "description": "Setup Feature Store test environment"
+    },
+    "post_test": {
+      "command": "python tests/scripts/efs_setup.py --action cleanupSQL", 
+      "description": "Display SQL commands to cleanup Feature Store test environment"
+    }
+  },
+  ```
 
 ## Result Files
 
@@ -295,24 +312,6 @@ kill $SERVER_PID
 # Exit with test result
 exit $TEST_RESULT
 ```
-
-## Troubleshooting
-
-### Common Issues
-
-**"Failed to connect to MCP server"**
-- Ensure the server command is correct
-- Check that the server starts successfully
-- Verify no port conflicts exist
-
-**"No tests to run (no matching tools)"** 
-- Check that `test_cases.json` contains tools that exist on your server
-- Use tool discovery to see available tools: the script shows which tools have/don't have tests
-
-**"Tool not found" errors**
-- The tool may not be available in your current profile
-- Check your server configuration and enabled modules
-- Some tools require specific database connections or permissions
 
 ### Debugging
 

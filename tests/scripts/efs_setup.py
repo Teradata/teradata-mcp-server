@@ -8,11 +8,10 @@ import os
 def main():
     parser = argparse.ArgumentParser(description="Teradata MCP Server")
     parser.add_argument('--database_uri', type=str, required=False, help='Database URI to connect to: teradata://username:password@host:1025/schemaname')
-    parser.add_argument('--action', type=str, choices=['setup', 'cleanup', 'test'], required=True, help='Action to perform: setup, test or cleanup')
+    parser.add_argument('--action', type=str, choices=['setup', 'cleanup'], required=True, help='Action to perform: setup, test or cleanup')
     # Extract known arguments and load them into the environment if provided
     args, unknown = parser.parse_known_args()
 
-    database_name = 'demo_user'
     data_domain = 'demo_dba'
     connection_url = args.database_uri or os.getenv("DATABASE_URI")
 
@@ -31,8 +30,8 @@ def main():
 
     if args.action=='setup':
         # Set up the feature store
-        tdfs4ds.setup(database=database_name)
-        tdfs4ds.connect(database=database_name)
+        tdfs4ds.setup(database=database)
+        tdfs4ds.connect(database=database)
 
         # Define the feature store domain
         tdfs4ds.DATA_DOMAIN=data_domain
@@ -40,7 +39,7 @@ def main():
 
         # Create features (table space and skew)
         df=DataFrame.from_query("SELECT databasename||'.'||tablename tablename, SUM(currentperm) currentperm, CAST((100-(AVG(currentperm)/MAX(currentperm)*100)) AS DECIMAL(5,2)) AS skew_pct FROM dbc.tablesizev GROUP BY 1;")
-        df = crystallize_view(df, view_name = 'efs_demo_dba_space', schema_name = database_name,output_view=True)
+        df = crystallize_view(df, view_name = 'efs_demo_dba_space', schema_name = database,output_view=True)
 
         # upload the features in the physical feature store
         tdfs4ds.upload_features(
@@ -53,12 +52,17 @@ def main():
         # Display our features
         tdfs4ds.feature_catalog()
 
+    elif args.action=='cleanupSQL':
+        list_of_tables = db_list_tables()
+        print("To cleanup the Feature Store tables and views from your system, execute the following SQL:")
+        [print(f"DROP VIEW {database}.{t}") for t in list_of_tables.TableName if t.startswith('FS_V')]
+        [print(f"DROP TABLE {database}.{t}") for t in list_of_tables.TableName if t.startswith('FS_') and not t.startswith('FS_V')]
+        print("Or you can run the cleanup action of this script with: `efs_setup.py --action cleanup`")
+
     elif args.action=='cleanup':
         list_of_tables = db_list_tables()
-        [execute_sql(f"DROP VIEW {database_name}.{t}") for t in list_of_tables.TableName if t.startswith('FS_V')]
-        [execute_sql(f"DROP TABLE {database_name}.{t}") for t in list_of_tables.TableName if t.startswith('FS_T')]
-        [execute_sql(f"DROP TABLE {database_name}.{t}") for t in list_of_tables.TableName if t.startswith('FS_T')]
-        [execute_sql(f"DROP TABLE {database_name}.{t}") for t in list_of_tables.TableName if t.startswith('FS_T')]
-
+        print("Dropping Feature Store tables and views...")
+        [execute_sql(f"DROP VIEW {database}.{t}") for t in list_of_tables.TableName if t.startswith('FS_V')]
+        [execute_sql(f"DROP TABLE {database}.{t}") for t in list_of_tables.TableName if t.startswith('FS_') and not t.startswith('FS_V')]
 if __name__ == '__main__':
     main()
