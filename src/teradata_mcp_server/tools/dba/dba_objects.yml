@@ -6,7 +6,12 @@ dba_databaseVersion:
 
 dba_flowControl:
   type: tool
-  description: " Get the Teradata flow control metrics."
+  description: "Get the Teradata flow control metrics for a specified date range."
+  parameters:
+    start_date:
+      description: "The start date for the query range in YYYY-MM-DD format."
+    end_date:
+      description: "The end date for the query range in YYYY-MM-DD format."
   sql: |
     SELECT A.THEDATE AS "Date"  
     , A.THETIME (FORMAT '99:99:99') AS "Time"      
@@ -37,13 +42,17 @@ dba_flowControl:
         AND A.THEDATE = C.THEDATE
     INNER JOIN SYS_CALENDAR.CALENDAR D  
         ON C.THEDATE = D.CALENDAR_DATE
-    --WHERE A.THEDATE BETWEEN '2019-03-25' AND '2018-03-31'
-    WHERE A.THEDATE > DATE - 7
+    WHERE A.THEDATE BETWEEN :start_date AND :end_date
     GROUP BY 1,2,3,4,5,6,7,8,9,10,11;    
 
 dba_featureUsage:
   type: tool
-  description: "Get the user feature usage metrics."
+  description: "Get the user feature usage metrics for a specified date range."
+  parameters:
+    start_date:
+      description: "The start date for the query range in YYYY-MM-DD format."
+    end_date:
+      description: "The end date for the query range in YYYY-MM-DD format."
   sql: |
     SELECT 
         CAST(A.Starttime as Date)  AS LogDate
@@ -55,7 +64,7 @@ dba_featureUsage:
 
     FROM DBC.DBQLOGTBL A, 
         DBC.QRYLOGFEATURELISTV B 
-    WHERE CAST(A.Starttime as Date) > DATE-30
+    WHERE CAST(A.Starttime as Date) BETWEEN :start_date AND :end_date
     GROUP BY 
         LogDate,
         USERNAME, 
@@ -64,7 +73,12 @@ dba_featureUsage:
 
 dba_userDelay:
   type: tool
-  description: "Get the Teradata user delay metrics."
+  description: "Get the Teradata user delay metrics for a specified date range."
+  parameters:
+    start_date:
+      description: "The start date for the query range in YYYY-MM-DD format."
+    end_date:
+      description: "The end date for the query range in YYYY-MM-DD format."
   sql: |
     Select
         CAST(a.Starttime as DATE) AS "Log Date"
@@ -93,7 +107,7 @@ dba_userDelay:
         from  DBC.DBQLogTbl a
         
         Where  DelayTime > 0
-        AND CAST(a.Starttime as DATE) between current_date - 30 and current_date - 1
+        AND CAST(a.Starttime as DATE) between :start_date AND :end_date
         Group By 1,2,3,4,5,6,7,8,9,10,11;  
 
 dba_sessionInfo:
