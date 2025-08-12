@@ -312,11 +312,27 @@ class MCPTestRunner:
                     }
                     
                 except json.JSONDecodeError as e:
-                    # Fallback for non-JSON responses - capture full response for failures
-                    print(f"FAIL (invalid JSON) ({duration:.2f}s)")
+                    # Fallback for non-JSON responses - these are typically server errors
+                    print(f"FAIL (server error) ({duration:.2f}s)")
                     if self.verbose:
                         print(f"    JSON parse error: {e}")
-                        print(f"    Full raw response: {response_text}")
+                        print(f"    Server response: {response_text}")
+                    
+                    # Extract meaningful error from server response
+                    error_msg = response_text.strip()
+                    
+                    # Try to extract the most relevant part of the error
+                    if "Error executing tool" in error_msg:
+                        # Extract the main error after "Error executing tool tool_name:"
+                        parts = error_msg.split(":", 2)
+                        if len(parts) >= 3:
+                            error_msg = parts[2].strip()
+                    elif "validation error" in error_msg.lower():
+                        # For Pydantic validation errors, extract the key info
+                        lines = error_msg.split('\n')
+                        if len(lines) > 1:
+                            # Get the validation error details (usually line 2)
+                            error_msg = lines[1].strip() if len(lines) > 1 else error_msg
                     
                     return {
                         "tool": tool_name,
@@ -324,9 +340,9 @@ class MCPTestRunner:
                         "status": "FAIL",
                         "duration": duration,
                         "response_length": len(response_text),
-                        "error": f"JSON parse error: {e}",
+                        "error": error_msg,
                         "full_response": response_text,  # Store full response for reporting
-                        "response_status": "invalid_json"
+                        "response_status": "server_error"
                     }
             else:
                 print(f"FAIL (no content) ({duration:.2f}s)")
@@ -371,8 +387,6 @@ class MCPTestRunner:
         for tool_name, test_cases in self.test_cases.items():
             if tool_name not in self.available_tools:
                 continue
-                
-            print(f"\n{tool_name} ({len(test_cases)} tests):")
             
             for test_case in test_cases:
                 result = await self.run_test_case(tool_name, test_case)

@@ -123,7 +123,7 @@ log_config = {
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "level": "WARNING",
+            "level": os.getenv("LOGGING_LEVEL", "WARNING"),
             "formatter": "simple",
             "stream": "ext://sys.stdout"
         },
@@ -150,6 +150,10 @@ log_config = {
             "handlers": ["queue_handler"],
             "propagate": False
         }
+    },
+    "root": {
+        "level": os.getenv("LOGGING_LEVEL", "WARNING"),
+        "handlers": ["console"]
     }
 }
 logging.config.dictConfig(log_config)

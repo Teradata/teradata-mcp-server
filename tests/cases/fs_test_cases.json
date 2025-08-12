@@ -5,7 +5,7 @@
       "description": "Setup Feature Store test environment"
     },
     "post_test": {
-      "command": "python tests/scripts/efs_setup.py --action cleanupSQL", 
+      "command": "python tests/scripts/efs_setup.py --action cleanup", 
       "description": "Display SQL commands to cleanup Feature Store test environment"
     }
   },
@@ -21,7 +21,7 @@
     "fs_setFeatureStoreConfig": [
       {
         "name": "set_test_config",
-        "parameters":  {"db_name": "demo_user", "data_domain": "demo_dba"}
+        "parameters":  {"db_name": "demo_user", "data_domain": "demo_dba", "entity_name": "tablename"}
       }
     ],    
     "fs_getFeatureStoreConfig": [
@@ -35,7 +35,7 @@
         "name": "create_test_dataset",
         "parameters": {
                     "entity_name": "tablename",
-                    "feature_selection": "['currentperm', 'skew_pct']",
+                    "feature_selection": ["currentperm", "skew_pct"],
                     "dataset_name": "test_efs_dataset",
                     "target_database": "demo_user"
                 }
@@ -74,7 +74,7 @@
     "fs_getFeatures": [
       {
         "name": "list_all_features",
-        "parameters": {"entity_name": "tablename"}
+        "parameters": {}
       }
     ]
   }

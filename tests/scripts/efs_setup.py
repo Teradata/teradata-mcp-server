@@ -8,7 +8,7 @@ import os
 def main():
     parser = argparse.ArgumentParser(description="Teradata MCP Server")
     parser.add_argument('--database_uri', type=str, required=False, help='Database URI to connect to: teradata://username:password@host:1025/schemaname')
-    parser.add_argument('--action', type=str, choices=['setup', 'cleanup'], required=True, help='Action to perform: setup, test or cleanup')
+    parser.add_argument('--action', type=str, choices=['setup', 'cleanup', 'cleanupSQL'], required=True, help='Action to perform: setup, test or cleanup')
     # Extract known arguments and load them into the environment if provided
     args, unknown = parser.parse_known_args()
 
@@ -55,8 +55,8 @@ def main():
     elif args.action=='cleanupSQL':
         list_of_tables = db_list_tables()
         print("To cleanup the Feature Store tables and views from your system, execute the following SQL:")
-        [print(f"DROP VIEW {database}.{t}") for t in list_of_tables.TableName if t.startswith('FS_V')]
-        [print(f"DROP TABLE {database}.{t}") for t in list_of_tables.TableName if t.startswith('FS_') and not t.startswith('FS_V')]
+        print([f"DROP VIEW {database}.{t}" for t in list_of_tables.TableName if t.startswith('FS_V')].join('\n'))
+        print([f"DROP TABLE {database}.{t}" for t in list_of_tables.TableName if t.startswith('FS_') and not t.startswith('FS_V')].join('\n'))
         print("Or you can run the cleanup action of this script with: `efs_setup.py --action cleanup`")
 
     elif args.action=='cleanup':

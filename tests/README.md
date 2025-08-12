@@ -8,7 +8,7 @@ The testing framework will run teradata-mcp-server and test through stdio.
 
 ```bash
 export DATABASE_URI="teradata://user:pass@host:1025/database"
-python run_mcp_tests.py "uv run teradata-mcp-server"
+python tests/run_mcp_tests.py "uv run teradata-mcp-server"
 ```
 
 **No need to start the server separately!**
@@ -17,7 +17,7 @@ python run_mcp_tests.py "uv run teradata-mcp-server"
 ## How to add your test case
 
 If you add a tool, you need to at least add a test case for it.
-You can do so by appending to the `test_cases.json` file with your test cases using the following format:
+You can do so by appending to the `core_test_cases.json` file with your test cases using the following format:
 
 ```json
 {
@@ -40,61 +40,135 @@ Where:
 - `name` is the name of your test (if only one, simply keep it as your tool name)
 - `parameters` is the list of parameters expected by the tool.
 
-**Important** Test in `test_cases.json` cannot be dependent of custom data. Use systems tables and users. If you want to define test cases on your own business data, you can do so in a separate file, see *Adding new test cases* section below.
+**Important** Test in `core_cases.json` cannot be dependent of custom data. Use systems tables and users. If you want to define test cases on your own business data or an optional module, you can do so in a separate file, see *Custom and add-on Test Cases File* section below.
 
-## How it works
+## Overview
 
 The test runner provides:
-- **Automatic Server Management**: Starts and stops the MCP server automatically
 - **Dynamic Tool Discovery**: Automatically detects which tools are available on the server
 - **Parametric Testing**: Runs multiple test cases per tool with different parameters
 - **Smart Filtering**: Only executes tests for tools that exist in the current server configuration
 - **Simple Pass/Fail Logic**: Infers test results based on response content
 - **Comprehensive Reporting**: Generates detailed test reports with statistics
 
-When you run, the test runner automatically:
-- Starts the MCP server as a subprocess
-- Connects to it via stdin/stdout
-- Runs all tests
-- Shuts down the server when complete
-
 ## Files
 
-- `test_cases.json` - Test case definitions in JSON format
-- `run_mcp_tests.py` - Main test runner script
-- `test_results_*.json` - Generated test result files (timestamped)
+- `tests/cases/*_cases.json` - Test case definitions in JSON format
+- `tests/run_mcp_tests.py` - Main test runner script
+- `var/test-reports/test_report_*.json` - Generated test result files (timestamped)
 
+
+## Test Case Format
+
+The `core_test_cases.json` file defines test cases for each tool:
+
+```json
+{
+  "test_cases": {
+    "tool_name": [
+      {
+        "name": "test_case_name",
+        "parameters": {
+          "param1": "value1",
+          "param2": "value2"
+        }
+      }
+    ]
+  }
+}
+```
+
+### Example Test Cases
+
+```json
+{
+  "test_cases": {
+    "base_readQuery": [
+      {
+        "name": "simple_select",
+        "parameters": {
+          "sql": "SELECT 1 as test_column"
+        }
+      },
+      {
+        "name": "current_timestamp", 
+        "parameters": {
+          "sql": "SELECT CURRENT_TIMESTAMP"
+        }
+      }
+    ],
+    "sales_top_customers": [
+      {
+        "name": "top_10",
+        "parameters": {
+          "limit": 10
+        }
+      },
+      {
+        "name": "top_5",
+        "parameters": {
+          "limit": 5
+        }
+      }
+    ]
+  }
+}
+```
 
 ## Usage Examples
 
 ### Basic Usage
+
+**Using UV (recommended for production):**
 ```bash
-python run_mcp_tests.py "uv run teradata-mcp-server"
+python tests/run_mcp_tests.py "uv run teradata-mcp-server"
 ```
 
-### Custom Test Cases File
+**Using Python directly (for development):**
 ```bash
-python run_mcp_tests.py "uv run teradata-mcp-server" "my_test_cases.json"
+# After installing in development mode (pip install -e .)
+python tests/run_mcp_tests.py "python -m teradata_mcp_server"
+
+# Or run the server file directly with PYTHONPATH
+PYTHONPATH=src python tests/run_mcp_tests.py "python src/teradata_mcp_server/server.py"
+```
+
+**Using Python with PYTHONPATH (for development from source):**
+```bash
+PYTHONPATH=src python tests/run_mcp_tests.py "python -m teradata_mcp_server"
+```
+
+### Custom and add-on Test Cases File
+
+You can add your own test cases into separate files, or invoke additional test modules.
+
+Currently available modules:
+- `core_test_cases.json` foundational test cases, default and mandatory cases for system integration testing.
+- `evs_test_cases.json` for Teradata Enterprise Vector Store testing.
+- `fs_test_cases.json` for Teradata Enterprise Feature Store testing.
+
+To specific modules, specify the module name in second position. eg.:
+```bash
+python tests/run_mcp_tests.py "uv run teradata-mcp-server" "tests/cases/fs_test_cases.json"
+```
+
+### Verbose Output
+```bash
+python tests/run_mcp_tests.py "uv run teradata-mcp-server" --verbose
 ```
 
 ### Testing Different Profiles
 ```bash
-# Test with DBA profile
-python run_mcp_tests.py "uv run teradata-mcp-server --profile dba"
+# Test with DBA profile (UV)
+PROFILE=dba python tests/run_mcp_tests.py "uv run teradata-mcp-server"
+
+# Test with DBA profile (Python)
+PROFILE=dba python tests/run_mcp_tests.py "python -m teradata_mcp_server"
 
 # Test with Feature Store enabled
-python run_mcp_tests.py "uv run teradata-mcp-server --profile fs"
+python tests/run_mcp_tests.py "uv run teradata-mcp-server --profile fs"
+python tests/run_mcp_tests.py "python -m teradata_mcp_server --profile fs"
 ```
-
-### Testing with Environment Variables
-```bash
-# Test with profile via environment variable
-PROFILE=dba python run_mcp_tests.py "uv run teradata-mcp-server"
-
-# Test with optional modules enabled
-ENABLE_FS_MODULE=true python run_mcp_tests.py "uv run teradata-mcp-server"
-```
-
 ## Pass/Fail Logic
 
 The test runner uses simple heuristics to determine test success:
@@ -130,7 +204,7 @@ TEST REPORT
 Total Tests: 6
 Passed: 6
 Failed: 0
-Warnings: 0
+Errors: 0
 Success Rate: 100.0%
 
 PERFORMANCE:
@@ -142,9 +216,9 @@ Detailed results saved to: test_results_20250811_143022.json
 
 ## Adding New Test Cases
 
-1. **Edit `test_cases.json`** to add test cases for new tools
+1. **Edit `core_test_cases.json`** to add test cases for new tools
 2. **Follow the JSON format** with tool names as keys
-3. **Include realistic parameters** that the tool expects
+3. **Include parameters** that the tool expects
 4. **Test different scenarios** (valid inputs, edge cases)
 
 Example of adding a new tool:
@@ -169,6 +243,21 @@ Example of adding a new tool:
   }
 }
 ```
+
+You can add pre/post scripts (eg. to load the environment with specific datasets and clean it up afterwards) by adding a `scripts` section to your test definitions.
+
+```
+  "scripts": {
+    "pre_test": {
+      "command": "python tests/scripts/efs_setup.py --action setup",
+      "description": "Setup Feature Store test environment"
+    },
+    "post_test": {
+      "command": "python tests/scripts/efs_setup.py --action cleanupSQL", 
+      "description": "Display SQL commands to cleanup Feature Store test environment"
+    }
+  },
+  ```
 
 ## Result Files
 
@@ -196,17 +285,6 @@ Test results are automatically saved to timestamped JSON files:
 }
 ```
 
-## How It Works
-
-The test runner uses MCP's stdio transport to communicate with the server:
-
-1. **Spawns server process** using the provided command
-2. **Connects via stdin/stdout** - no network ports needed
-3. **Queries available tools** using MCP's `list_tools` request
-4. **Executes test cases** using MCP's `call_tool` requests
-5. **Shuts down server**  process when done
-
-
 ## Integration with CI/CD
 
 The test runner returns appropriate exit codes:
@@ -217,15 +295,24 @@ This makes it suitable for automated testing pipelines:
 
 ```bash
 #!/bin/bash
-# Set up environment
-export DATABASE_URI="your_connection_string"
+# Start server in background
+uv run teradata-mcp-server &
+SERVER_PID=$!
 
-# Run tests (server is managed automatically)
-python scripts/testing/run_mcp_tests.py "uv run teradata-mcp-server"
+# Wait for server to start
+sleep 5
+
+# Run tests
+python run_mcp_tests.py "uv run teradata-mcp-server"
 TEST_RESULT=$?
+
+# Cleanup
+kill $SERVER_PID
 
 # Exit with test result
 exit $TEST_RESULT
 ```
 
+### Debugging
 
+Add verbose output by modifying the script or checking the detailed JSON results file for more information about failures.
