@@ -25,9 +25,21 @@ def rows_to_json(cursor_description: Any, rows: list[Any]) -> list[dict[str, Any
         for row in rows
     ]
 
-def create_response(data: Any, metadata: dict[str, Any] | None = None) -> str:
+def create_response(data: Any, metadata: dict[str, Any] | None = None, error: dict[str, Any] | None = None) -> str:
     """Create a standardized JSON response structure"""
-    if metadata:
+    if error:
+        if metadata:
+            response = {
+                "status": "error",
+                "message": error,
+                "metadata": metadata,
+            }
+        else:
+            response = {
+                "status": "error",
+                "message": error
+            }
+    elif metadata:
         response = {
             "status": "success",
             "metadata": metadata,

@@ -1,0 +1,22 @@
+{
+  "test_cases": {
+    "rag_executeWorkflow": [
+      {
+        "name": "test_rag_query",
+        "parameters": {
+          "question": "What is the database architecture?",
+          "k": 5
+        }
+      }
+    ],
+    "rag_executeWorkflow_ivsm": [
+      {
+        "name": "test_ivsm_rag",
+        "parameters": {
+          "question": "What is the database schema?",
+          "k": 3
+        }
+      }
+    ]
+  }
+}

@@ -39,7 +39,7 @@
         "name": "system_table_ddl",
         "parameters": {
           "db_name": "DBC",
-          "table_name": "Tables"
+          "table_name": "tvm"
         }
       }
     ],
@@ -285,50 +285,6 @@
           "db_name": "DBC",
           "table_name": "Tables",
           "col_name": "TableId"
-        }
-      }
-    ],
-    "sales_top_customers": [
-      {
-        "name": "default_top_customers",
-        "parameters": {}
-      }
-    ],
-    "sales_customer_profile": [
-      {
-        "name": "sample_customer",
-        "parameters": {
-          "customer_key": "1"
-        }
-      }
-    ],
-    "get_cube_cust_cube_db_space_metrics": [
-      {
-        "name": "cube_space_metrics",
-        "parameters": {}
-      }
-    ],
-    "get_cube_sales_cube": [
-      {
-        "name": "sales_cube_data",
-        "parameters": {}
-      }
-    ],
-    "rag_executeWorkflow": [
-      {
-        "name": "test_rag_query",
-        "parameters": {
-          "question": "What is the database architecture?",
-          "k": 5
-        }
-      }
-    ],
-    "rag_executeWorkflow_ivsm": [
-      {
-        "name": "test_ivsm_rag",
-        "parameters": {
-          "question": "What is the database schema?",
-          "k": 3
         }
       }
     ]

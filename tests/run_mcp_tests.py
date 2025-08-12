@@ -273,6 +273,9 @@ class MCPTestRunner:
                     response_status = response_json.get("status", "").lower()
                     results = response_json.get("results", {})
                     
+                    # Initialize variables
+                    has_warning = False
+                    
                     # Determine if test passed
                     if response_status == "success" and (not isinstance(results, dict) or "error" not in results):
                         status = "PASS"
@@ -280,9 +283,7 @@ class MCPTestRunner:
                         
                         # Check for empty results and log warning
                         results_length = len(str(results)) if results else 0
-                        has_warning = False
                         if results_length == 0 or (isinstance(results, (list, dict)) and len(results) == 0):
-                            print(f"    Warning: Empty results payload")
                             has_warning = True
                     else:
                         status = "FAIL"
@@ -291,9 +292,9 @@ class MCPTestRunner:
                         else:
                             error_msg = f"Status: {response_status}"
                         results_length = len(str(results)) if results else 0
-                    
-                    print(f"{status} ({duration:.2f}s)")
-                    
+
+                    print(f"{"⚠" if has_warning else ""}{status} ({duration:.2f}s)")
+
                     # Show full response in verbose mode for failures or errors
                     if self.verbose and status == "FAIL":
                         print(f"    Full response: {response_text}")
@@ -410,32 +411,8 @@ class MCPTestRunner:
             print("="*80)
             for result in self.results:
                 if result['status'] == 'FAIL':
-                    print(f"  ✗ {result['tool']}:{result['test']} - FAIL")
-                    
-                    # For JSON parse errors, show the actual server response as the error
-                    if result.get('error', '').startswith('JSON parse error') and 'full_response' in result and result['full_response']:
-                        first_line = result['full_response'].split('\n')[0]
-                        print(f"    Error: {first_line}")
-                    elif result['error']:
-                        print(f"    Error: {result['error']}")
-                    
-                    # Show first line of response for failures (if not already shown as error)
-                    if 'full_response' in result and result['full_response']:
-                        if not (result.get('error', '').startswith('JSON parse error')):
-                            first_line = result['full_response'].split('\n')[0]
-                            print(f"    Response: {first_line}")
-                    elif self.verbose and 'full_response' in result:
-                        response_content = result.get('full_response', 'No response content')
-                        first_line = response_content.split('\n')[0]
-                        print(f"    Response: {first_line}")
-                    
-                    # Show additional JSON response details if available
-                    if 'response_status' in result:
-                        print(f"    Response Status: {result['response_status']}")
-                    if 'has_error_in_results' in result and result['has_error_in_results']:
-                        print(f"    Has Error in Results: Yes")
-                    if result['response_length'] == 0:
-                        print(f"    Warning: Empty results payload")
+                    print(f"  ✗ {result['tool']}:{result['test']} - FAIL")                    
+                    print(f"    Error: {result['error'].split('\n')[0]}")
                     
                     print()  # Add blank line between failures for readability
 
@@ -447,9 +424,7 @@ class MCPTestRunner:
             print("="*80)
             for result in self.results:
                 if result.get('has_warning', False):
-                    print(f"  ⚠ {result['tool']}:{result['test']} - Empty results")
-                    print(f"    Test passed but returned no data")
-                    print()  # Add blank line between warnings for readability
+                    print(f"  ⚠ {result['tool']}:{result['test']} - Empty result set\n")
         
         # Performance summary
         total_time = sum(r['duration'] for r in self.results)
