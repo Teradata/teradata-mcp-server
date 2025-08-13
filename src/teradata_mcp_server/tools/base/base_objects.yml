@@ -181,7 +181,10 @@ base_query:
    `ALL`: The `ALL` keyword in SQL is used with set operations like `UNION ALL` to retain duplicate rows. Teradata supports `UNION ALL` and `EXCEPT ALL` operations., Examples: ['SELECT * FROM table1 UNION ALL SELECT * FROM table2;', 'SELECT * FROM employees WHERE department = \'Engineering\' UNION ALL SELECT * FROM contractors WHERE department = \'Engineering\';', 'SELECT customer_id FROM orders EXCEPT ALL SELECT customer_id FROM returns;', 'SELECT product_id, quantity FROM inventory UNION ALL SELECT product_id, quantity FROM backorder;']
    `LIKE`: The `LIKE` expression is used to determine if a string matches a specified pattern, allowing wildcard characters such as `_` to represent any single character and `%` to match any sequence of characters., Examples: ["SELECT 'abc' LIKE 'abc'; -- true", "SELECT 'abc' LIKE 'a%'; -- true", "SELECT 'abc' LIKE '_b_'; -- true", "SELECT 'abc' LIKE 'c'; -- false", "SELECT 'abc' LIKE 'c%'; -- false", "SELECT 'abc' LIKE '%c'; -- true", "SELECT 'abc' NOT LIKE '%c'; -- false", "SELECT UPPER('abc') LIKE '%C'; -- true"]
 
-   Your task is to solve the following problem: {qry}."
+   Your task is to solve the following problem: {query}."
+  parameters:
+    query:
+      description: "The problem or question that needs to be solved using Teradata database tools."
 
 
 base_tableBusinessDesc:
@@ -223,6 +226,11 @@ base_tableBusinessDesc:
             - ***Column1:*** `column1_descriptions`
             - ***Column2:*** `column2_descriptions`
             - ***Column3:*** `column3_descriptions`
+  parameters:
+    database_name:
+      description: "Database for the table to describe."
+    table_name:
+      description: "Table to describe."
 
 base_databaseBusinessDesc:
   type: prompt
@@ -260,3 +268,6 @@ base_databaseBusinessDesc:
          ***Database Name:*** `database_name`
 
          ***Description:*** `database_description`
+  parameters:
+    database_name:
+      description: "Database to describe."

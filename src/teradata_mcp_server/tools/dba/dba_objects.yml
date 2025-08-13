@@ -290,6 +290,11 @@ dba_databaseLineage :
     ## Final output guidelines:
         - return the list of tuples only.
         - do not return any explanation of results
+  parameters:
+    database_name:
+      description: "Name of the database to analyze for table lineage."
+    number_days:
+      description: "Number of days to look back for SQL execution history (e.g., 7, 30, 90)."
 
 dba_tableDropImpact:
   type: prompt
@@ -335,6 +340,13 @@ dba_tableDropImpact:
         - Sort the results by Usage Count in descending order
         - Include both users and dependent tables, with Type column indicating which is which
         - Do not include any additional explanation of results
+  parameters:
+    table_name:
+      description: "Name of the table to analyze for drop impact."
+    database_name:
+      description: "Name of the database containing the table."
+    number_days:
+      description: "Number of days to look back for SQL execution history (e.g., 7, 30, 90)."
 
 
 dba_databaseHealthAssessment :
