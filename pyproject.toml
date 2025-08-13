@@ -64,7 +64,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/teradata_mcp_server"]
-force-include = { "src/teradata_mcp_server/tools" = "teradata_mcp_server/tools" }
+include = [
+  "src/teradata_mcp_server/tools/**/*.yml",
+]
 
 [tool.uv]
 package = true
