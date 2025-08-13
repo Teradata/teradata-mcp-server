@@ -223,6 +223,11 @@ base_tableBusinessDesc:
             - ***Column1:*** `column1_descriptions`
             - ***Column2:*** `column2_descriptions`
             - ***Column3:*** `column3_descriptions`
+  parameters:
+    database_name:
+      description: "Database for the table to describe."
+    table_name:
+      description: "Table to describe."
 
 base_databaseBusinessDesc:
   type: prompt
@@ -260,3 +265,6 @@ base_databaseBusinessDesc:
          ***Database Name:*** `database_name`
 
          ***Description:*** `database_description`
+  parameters:
+    database_name:
+      description: "Database to describe."

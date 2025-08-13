@@ -393,12 +393,55 @@ for file in custom_object_files:
             custom_objects.update(loaded)  # Merge dictionaries
 
 
-def make_custom_prompt(prompt_name: str, prompt: str, desc: str):
-    async def _dynamic_prompt():
-        # SQL is closed over without parameters
-        return UserMessage(role="user", content=TextContent(type="text", text=prompt))
-    _dynamic_prompt.__name__ = prompt_name
-    return mcp.prompt(description=desc)(_dynamic_prompt)
+def make_custom_prompt(prompt_name: str, prompt: str, desc: str, parameters: dict = None):
+    if parameters is None or len(parameters) == 0:
+        # Original behavior for prompts without parameters
+        async def _dynamic_prompt():
+            return UserMessage(role="user", content=TextContent(type="text", text=prompt))
+        _dynamic_prompt.__name__ = prompt_name
+        return mcp.prompt(description=desc)(_dynamic_prompt)
+    else:
+        # New behavior for prompts with parameters
+        # 1. Build Parameter objects for the function signature
+        param_objects = []
+        annotations = {}
+        
+        for param_name in parameters.keys():
+            # For now, assume all parameters are strings as requested
+            type_hint = str
+            default = inspect.Parameter.empty  # All parameters are required for now
+            
+            param_objects.append(
+                inspect.Parameter(
+                    param_name,
+                    kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    default=default,
+                    annotation=type_hint
+                )
+            )
+            annotations[param_name] = type_hint
+        
+        # 2. Create the new signature
+        sig = inspect.Signature(param_objects)
+        
+        # 3. Define the dynamic prompt function
+        async def _dynamic_prompt(**kwargs):
+            # Validate all required parameters are present
+            missing = [name for name in parameters.keys() if name not in kwargs]
+            if missing:
+                raise ValueError(f"Missing parameters: {missing}")
+            
+            # Format the prompt string with the parameters
+            formatted_prompt = prompt.format(**kwargs)
+            return UserMessage(role="user", content=TextContent(type="text", text=formatted_prompt))
+        
+        # 4. Inject signature & annotations
+        _dynamic_prompt.__signature__ = sig
+        _dynamic_prompt.__annotations__ = annotations
+        _dynamic_prompt.__name__ = prompt_name
+        
+        # 5. Register with FastMCP using the prompt decorator
+        return mcp.prompt(description=desc)(_dynamic_prompt)
 
 def make_custom_query_tool(name, tool):
     param_defs = tool.get("parameters", {})
@@ -527,7 +570,7 @@ for name, obj in custom_objects.items():
         globals()[name] = fn
         logger.info(f"Created tool: {name}")
     elif obj_type == "prompt"  and any(re.match(pattern, name) for pattern in config.get('prompt',[])):
-        fn = make_custom_prompt(name, obj["prompt"], obj.get("description", ""))
+        fn = make_custom_prompt(name, obj["prompt"], obj.get("description", ""), obj.get("parameters", {}))
         globals()[name] = fn
         logger.info(f"Created prompt: {name}")
     elif obj_type == "cube"  and any(re.match(pattern, name) for pattern in config.get('tool',[])):

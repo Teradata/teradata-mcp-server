@@ -46,10 +46,8 @@ fs = [
 evs = [
     "teradatagenai>=20.0.0.0",
 ]
-# Development dependencies
+# Development dependencies 
 dev = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.20.0",
     "ruff>=0.1.0",
     "mypy>=1.5.0",
 ]
@@ -122,14 +120,4 @@ disallow_untyped_defs = false  # Gradually enable this
 ignore_missing_imports = true
 strict_optional = true
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = "--strict-markers --strict-config"
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests",
-    "unit: marks tests as unit tests",
-]
+
