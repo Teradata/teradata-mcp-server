@@ -1,6 +1,6 @@
 # MCP Workflow Prompt Guidelines
 
-To ensure that the Trusted Data Agent can reliably parse and execute multi-step workflows in an efficient "headless" mode, all workflow prompts must adhere to the following structural and semantic guidelines.
+To ensure that LLMs and Clients can reliably parse and execute multi-step workflows in an efficient "headless" mode, all workflow prompts must adhere to the following structural and semantic guidelines.
 
 ---
 
@@ -120,7 +120,7 @@ In this structure:
 
 ## 4. Example: Complete Workflow Prompt
 
-Here is a complete example of a well-formed workflow prompt that adheres to all guidelines from Chapters 1, 2, and 3. This structure enables the agent to parse the entire plan once and then execute it deterministically, only calling the LLM if an error occurs.
+Here is a complete example of a well-formed workflow prompt that adheres to all guidelines from Chapters 1, 2, and 3. This structure enables specialised clients to parse the entire plan once and then execute it deterministically, only calling the LLM if an error occurs.
 
 ### Workflow Prompt Parameters
 
