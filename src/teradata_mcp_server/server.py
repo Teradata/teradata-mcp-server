@@ -12,6 +12,7 @@ import re
 import signal
 import sys
 from typing import Any, Optional
+from importlib.resources import files as pkg_files
 
 import mcp.types as types
 import yaml
@@ -140,16 +141,17 @@ if queue_handler is not None:
     atexit.register(queue_handler.listener.stop)
 logger = logging.getLogger("teradata_mcp_server")
 
-# Load tool configuration from YAML file (after logger is initialized)
-with open('profiles.yml') as file:
+# Load tool configuration from packaged profiles.yml (works in wheel/sdist installs)
+with open('profiles.yml', encoding='utf-8') as file:
     all_profiles = yaml.safe_load(file)
-    if not profile_name:
-        logger.info("No profile specified, load all tools, prompts and resources.")
-        config={'tool': ['.*'], 'prompt': ['.*'], 'resource': ['.*']}
-    elif profile_name not in all_profiles:
-        raise ValueError(f"Profile '{profile_name}' not found in profiles.yml. Available: {list(all_profiles.keys())}.")
-    else:
-        config = all_profiles.get(profile_name)
+
+if not profile_name:
+    logger.info("No profile specified, load all tools, prompts and resources.")
+    config = {'tool': ['.*'], 'prompt': ['.*'], 'resource': ['.*']}
+elif profile_name not in all_profiles:
+    raise ValueError(f"Profile '{profile_name}' not found in profiles.yml. Available: {list(all_profiles.keys())}.")
+else:
+    config = all_profiles.get(profile_name)
 
 logger.info("Starting Teradata MCP server", extra={"server_config": {"profile": profile_name}, "startup_time": "2025-08-09"})
 
@@ -376,37 +378,43 @@ register_td_tools(config, module_loader, mcp)
 
 #------------------ Register tools, resources and prompts declared in .yml files ------------------#
 
-custom_object_files = [file for file in os.listdir() if file.endswith("_objects.yaml")]
+custom_object_files = [file for file in os.listdir() if file.endswith("_objects.yml")]
 
 # Include .yml files only from modules required by the current profile
 if module_loader and profile_name:
     # Use profile-aware loading only when a specific profile is selected
     profile_yml_files = module_loader.get_required_yaml_paths()
-    custom_object_files.extend(profile_yml_files)
+    custom_object_files.extend(profile_yml_files)  # may be filesystem paths; handled below
     logger.info(f"Loading YAML files for profile '{profile_name}': {len(profile_yml_files)} files")
 else:
-    # Fallback: include all .yml files if no profile is specified or module loader is not available
-    # Find all .yml files in tools subdirectories
-    tool_yml_files = []
-    tools_dir = os.path.join(os.path.dirname(__file__), "tools")
-    if os.path.exists(tools_dir):
-        for subdir in os.listdir(tools_dir):
-            subdir_path = os.path.join(tools_dir, subdir)
-            if os.path.isdir(subdir_path):
-                for file in os.listdir(subdir_path):
-                    if file.endswith('.yml'):
-                        tool_yml_files.append(os.path.join(subdir_path, file))
-    custom_object_files.extend(tool_yml_files)
-    logger.info(f"Loading all YAML files (no specific profile): {len(tool_yml_files)} files")
+    # Fallback: include all .yml files using importlib.resources to work from wheels
+    tool_yml_resources = []
+    tools_pkg_root = pkg_files("teradata_mcp_server").joinpath("tools")
+    if tools_pkg_root.is_dir():
+        for subpkg in tools_pkg_root.iterdir():
+            if subpkg.is_dir():
+                for entry in subpkg.iterdir():
+                    if entry.is_file() and entry.name.endswith('.yml'):
+                        tool_yml_resources.append(entry)
+    custom_object_files.extend(tool_yml_resources)
+    logger.info(f"Loading all YAML files (no specific profile): {len(tool_yml_resources)} files")
 
 custom_objects = {}
 custom_glossary = {}
 
 for file in custom_object_files:
-    with open(file, encoding='utf-8', errors='replace') as f:
-        loaded = yaml.safe_load(f)
+    try:
+        if hasattr(file, "read_text"):
+            # importlib.resources Traversable
+            text = file.read_text(encoding='utf-8')
+        else:
+            with open(file, encoding='utf-8', errors='replace') as f:
+                text = f.read()
+        loaded = yaml.safe_load(text)
         if loaded:
-            custom_objects.update(loaded)  # Merge dictionaries
+            custom_objects.update(loaded)
+    except Exception as e:
+        logger.error(f"Failed to load YAML from {file}: {e}")
 
 
 def make_custom_prompt(prompt_name: str, prompt: str, desc: str, parameters: dict = None):

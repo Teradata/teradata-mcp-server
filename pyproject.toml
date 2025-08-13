@@ -31,12 +31,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Testing framework with LLM integration for advanced testing
-testing = [
-    "anthropic>=0.49.0",
-    "openai>=1.75.0", 
-    "jinja2>=3.1.0",
-]
 # Feature Store functionality
 fs = [
     "teradataml>=20.0.0.5",
@@ -70,6 +64,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/teradata_mcp_server"]
+force-include = { "src/teradata_mcp_server/tools" = "teradata_mcp_server/tools" }
 
 [tool.uv]
 package = true
@@ -124,3 +119,11 @@ ignore_missing_imports = true
 strict_optional = true
 
 
+
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/teradata_mcp_server",
+  "README.md",
+  "LICENSE",
+]

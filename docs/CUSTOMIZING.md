@@ -19,7 +19,7 @@ A semantic layer in this context is a collection of custom tools, prompts, cubes
 - **Profiles:** Named sets of tools, prompts, and resources that enable domain-specific server instantiations.
 
 ### Declarative Specification
-All custom objects can be defined in a YAML file (e.g., `sales_objects.yaml`, `finance_objects.yaml`). The file is a dictionary keyed by object name, with each entry specifying its type and details:
+All custom objects can be defined in a YAML file (e.g., `sales_objects.yml`, `finance_objects.yml`). The file is a dictionary keyed by object name, with each entry specifying its type and details:
 
 ```yaml
 sales_by_region:
@@ -92,7 +92,7 @@ For example, to run the server with the pre-defined dba profile:
 ## Custom Objects Implementation Details
 
 ### File Naming and Loading
-All customizations must be defined in files named `*_objects.yaml` (e.g., `sales_objects.yaml`, `finance_objects.yaml`).
+All customizations must be defined in files named `*_objects.yml` (e.g., `sales_objects.yml`, `finance_objects.yml`).
 
 ### Supported Object Types and Attribute Rules
 Each entry in the YAML file is keyed by its name and must specify a `type`. Supported types and their required/optional attributes:
@@ -146,4 +146,4 @@ Each entry in the YAML file is keyed by its name and must specify a `type`. Supp
 
 ## Example
 
-See the provided [`custom_objects.yaml`](../custom_objects.yaml) (or your domain-specific YAML file) for a complete example.
+See the provided [`custom_objects.yml`](../custom_objects.yml) (or your domain-specific YAML file) for a complete example.
