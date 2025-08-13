@@ -1,6 +1,12 @@
 import logging
+from contextlib import redirect_stdout, redirect_stderr
+from io import StringIO
 
-import tdfs4ds
+# Suppress stdout/stderr during tdfs4ds import to prevent contamination of MCP JSON protocol
+stdout_buffer = StringIO()
+stderr_buffer = StringIO()
+with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+    import tdfs4ds
 from teradatasql import TeradataConnection
 
 from teradata_mcp_server.tools.utils import create_response, rows_to_json
@@ -208,7 +214,11 @@ def handle_fs_getAvailableEntities(conn: TeradataConnection, fs_config, *args, *
 
 
     # get the entities
-    from tdfs4ds.feature_store.feature_query_retrieval import get_list_entity
+    # Suppress stdout/stderr during tdfs4ds import to prevent contamination of MCP JSON protocol
+    stdout_buffer = StringIO()
+    stderr_buffer = StringIO()
+    with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+        from tdfs4ds.feature_store.feature_query_retrieval import get_list_entity
 
     try:
         data = get_list_entity()
@@ -363,7 +373,11 @@ def handle_fs_createDataset(conn: TeradataConnection, fs_config, entity_name: st
 
 
     # get the feature version:
-    from tdfs4ds.feature_store.feature_query_retrieval import get_feature_versions
+    # Suppress stdout/stderr during tdfs4ds import to prevent contamination of MCP JSON protocol
+    stdout_buffer = StringIO()
+    stderr_buffer = StringIO()
+    with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+        from tdfs4ds.feature_store.feature_query_retrieval import get_feature_versions
 
     try:
         feature_selection = get_feature_versions(
@@ -375,7 +389,11 @@ def handle_fs_createDataset(conn: TeradataConnection, fs_config, entity_name: st
         return create_response({"error": str(e)}, {"tool_name": "handle_fs_createDataset", "db_name": db_name})
 
     # build the dataset
-    from tdfs4ds import build_dataset
+    # Suppress stdout/stderr during tdfs4ds import to prevent contamination of MCP JSON protocol
+    stdout_buffer = StringIO()
+    stderr_buffer = StringIO()
+    with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+        from tdfs4ds import build_dataset
     try:
         dataset = build_dataset(
             entity_id         = entity_name,

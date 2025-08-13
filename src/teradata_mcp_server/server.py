@@ -11,8 +11,6 @@ import os
 import re
 import signal
 import sys
-from contextlib import redirect_stdout, redirect_stderr
-from io import StringIO
 from typing import Any, Optional
 
 import mcp.types as types
@@ -166,17 +164,8 @@ if any(re.match(pattern, 'evs_*') for pattern in config.get('tool',[])):
 else:
     _enableEVS = False
 
-# Initialize module loader with profile configuration (suppress stdout from tdfs4ds import)
-stdout_buffer = StringIO()
-stderr_buffer = StringIO()
-with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
-    module_loader = td.initialize_module_loader(config)
-
-# Log any captured output at debug level instead of printing to stdout
-if stdout_buffer.getvalue():
-    logger.debug(f"Module loader stdout: {stdout_buffer.getvalue()}")
-if stderr_buffer.getvalue():
-    logger.debug(f"Module loader stderr: {stderr_buffer.getvalue()}")
+# Load the tool modules
+module_loader = td.initialize_module_loader(config)
 
 # Connect to MCP server
 mcp = FastMCP("teradata-mcp-server")
@@ -191,22 +180,13 @@ _tdconn = td.TDConn()
 if _enableEFS:
     try:
         # Suppress stdout/stderr from teradataml imports and initialization
-        stdout_buffer = StringIO()
-        stderr_buffer = StringIO()
-        with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
-            import teradataml as tdml  # import of the teradataml package
-            fs_config = td.FeatureStoreConfig() 
-            try:
-                tdml.create_context(tdsqlengine=_tdconn.engine)
-            except Exception as e:
-                logger.warning(f"Error creating teradataml context: {e}")
+        import teradataml as tdml  # import of the teradataml package
+        fs_config = td.FeatureStoreConfig() 
+        try:
+            tdml.create_context(tdsqlengine=_tdconn.engine)
+        except Exception as e:
+            logger.warning(f"Error creating teradataml context: {e}")
         
-        # Log any captured output at debug level instead of printing to stdout
-        if stdout_buffer.getvalue():
-            logger.debug(f"teradataml stdout: {stdout_buffer.getvalue()}")
-        if stderr_buffer.getvalue():
-            logger.debug(f"teradataml stderr: {stderr_buffer.getvalue()}")
-            
     except (AttributeError, ImportError, ModuleNotFoundError) as e:
         logger.warning(f"Feature Store module not available - disabling EFS functionality: {e}")
         _enableEFS = False
@@ -440,12 +420,6 @@ def make_custom_prompt(prompt_name: str, prompt: str, desc: str, parameters: dic
           required: true            # optional, defaults to true
           type_hint: str            # optional, defaults to str
           default: "sample_db"      # optional, only used if provided
-
-    Notes:
-    - We use pydantic.Field to attach descriptions (and defaults) so FastMCP exposes
-      parameter metadata to MCP clients.
-    - Required parameters use Field(..., description=...).
-    - Optional parameters use Field(default=..., description=...).
     """
     if parameters is None or len(parameters) == 0:
         # Original behavior for prompts without parameters

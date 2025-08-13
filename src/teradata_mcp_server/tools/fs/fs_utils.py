@@ -1,10 +1,17 @@
 from typing import Any, List, Optional
 from typing import Optional
 from pydantic import Field, BaseModel
-import tdfs4ds
 import logging
 from sqlalchemy.engine import Connection
 from sqlalchemy import text
+from contextlib import redirect_stdout, redirect_stderr
+from io import StringIO
+
+# Suppress stdout/stderr during tdfs4ds import to prevent contamination of MCP JSON protocol
+stdout_buffer = StringIO()
+stderr_buffer = StringIO()
+with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+    import tdfs4ds
 
 logger = logging.getLogger("teradata_mcp_server")
 

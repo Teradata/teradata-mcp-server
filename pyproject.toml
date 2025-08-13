@@ -68,6 +68,9 @@ Repository = "https://github.com/Teradata/teradata-mcp-server.git"
 requires = ["hatchling>=1.17.0"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/teradata_mcp_server"]
+
 [tool.uv]
 package = true
 

@@ -6,7 +6,10 @@ WORKDIR /app
 ARG ENABLE_FS_MODULE=false
 ARG ENABLE_EVS_MODULE=false
 
-COPY pyproject.toml uv.lock* /app/
+# Copy essential files for dependency installation
+COPY pyproject.toml uv.lock* README.md /app/
+
+# Install system dependencies and Python dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends build-essential gcc && \
     pip install --upgrade pip && \
@@ -15,17 +18,19 @@ RUN apt-get update && \
     UV_EXTRAS="" && \
     if [ "$ENABLE_FS_MODULE" = "true" ]; then UV_EXTRAS="$UV_EXTRAS --extra fs"; fi && \
     if [ "$ENABLE_EVS_MODULE" = "true" ]; then UV_EXTRAS="$UV_EXTRAS --extra evs"; fi && \
-    uv sync $UV_EXTRAS && \
-    uv build && \
+    uv sync $UV_EXTRAS
+
+# Copy source code before building
+COPY ./src /app/src
+
+# Build and install the package
+RUN uv build && \
     pip install . && \
     apt-get purge -y build-essential gcc && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy everything *except* src (excluded via .dockerignore)
+# Copy everything else
 COPY . /app
-
-# Copy src with conditional module directories
-COPY ./src /app/src
 # Remove optional module directories if not enabled
 RUN if [ "$ENABLE_FS_MODULE" != "true" ]; then rm -rf /app/src/teradata_mcp_server/tools/fs; fi && \
     if [ "$ENABLE_EVS_MODULE" != "true" ]; then rm -rf /app/src/teradata_mcp_server/tools/evs; fi
