@@ -118,6 +118,7 @@ To assist tool users we would like to align tool, prompt, and resources to a nam
 
 Two guides have been created to show how to add tools and prompts:
 - [How to add new modules of tools](./HOW_TO_ADD_YOUR_FUNCTION.md)
+- [Guidelines on how to specify prompts](./PROMPT_DEFINITION_GUIDELINES.md)
 
 
 <br>
