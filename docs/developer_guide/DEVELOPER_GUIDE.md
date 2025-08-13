@@ -122,6 +122,14 @@ Two guides have been created to show how to add tools and prompts:
 
 <br>
 
+## Interactive testing using the MCP Inspector
+
+The MCP inspector provides you with a convenient way to browse and test tools, resources and prompts:
+
+```
+uv run mcp dev ./src/teradata_mcp_server/server.py
+```
+
 ## Tools testing
 
 Use the provided testing tool to run tests, add tests if you add a new tool.
