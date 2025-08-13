@@ -101,8 +101,8 @@ Each entry in the YAML file is keyed by its name and must specify a `type`. Supp
 - **Required:**
   - `type`: Must be `tool`
   - `sql`: SQL query string (it can be a prepared statement with parameters)
-  - `parameters`: Dictionary of parameter definitions
 - **Optional:**
+  - `parameters`: Dictionary of parameter name (key) and definitions (value) - if used in the sql
   - `description`: Text description of the tool
 
 #### Cube
@@ -119,6 +119,7 @@ Each entry in the YAML file is keyed by its name and must specify a `type`. Supp
   - `type`: Must be `prompt`
   - `prompt`: Text of the prompt
 - **Optional:**
+  - `parameters`: Dictionary of parameter name (key) and definitions (value) - if used in the prompt
   - `description`: Text description of the prompt
 
 #### Glossary

@@ -112,3 +112,6 @@ qlty_databaseQuality:
 
     # Final output
     A professional data quality dashboard that is easily navigable.
+  parameters:
+    database_name:
+      description: "Name of the database to assess for data quality."
