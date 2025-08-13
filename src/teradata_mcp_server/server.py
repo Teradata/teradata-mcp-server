@@ -10,6 +10,9 @@ import atexit
 import os
 import re
 import signal
+import sys
+from contextlib import redirect_stdout, redirect_stderr
+from io import StringIO
 from typing import Any, Optional
 
 import mcp.types as types
@@ -47,30 +50,6 @@ for key, value in vars(args).items():
 
 profile_name = os.getenv("PROFILE")
 
-# Load tool configuration from YAML file
-with open('profiles.yml') as file:
-    all_profiles = yaml.safe_load(file)
-    if not profile_name:
-        print("No profile specified, load all tools, prompts and resources.")
-        config={'tool': ['.*'], 'prompt': ['.*'], 'resource': ['.*']}
-    elif profile_name not in all_profiles:
-        raise ValueError(f"Profile '{profile_name}' not found in profiles.yml. Available: {list(all_profiles.keys())}.")
-    else:
-        config = all_profiles.get(profile_name)
-
-# Check if the EFS or EVS tools are enabled in the profiles
-if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
-    _enableEFS = True
-else:
-    _enableEFS = False
-
-if any(re.match(pattern, 'evs_*') for pattern in config.get('tool',[])):
-    _enableEVS = True
-else:
-    _enableEVS = False
-
-# Initialize module loader with profile configuration
-module_loader = td.initialize_module_loader(config)
 
 # Set up logging
 class CustomJSONFormatter(logging.Formatter):
@@ -162,7 +141,42 @@ if queue_handler is not None:
     queue_handler.listener.start()
     atexit.register(queue_handler.listener.stop)
 logger = logging.getLogger("teradata_mcp_server")
+
+# Load tool configuration from YAML file (after logger is initialized)
+with open('profiles.yml') as file:
+    all_profiles = yaml.safe_load(file)
+    if not profile_name:
+        logger.info("No profile specified, load all tools, prompts and resources.")
+        config={'tool': ['.*'], 'prompt': ['.*'], 'resource': ['.*']}
+    elif profile_name not in all_profiles:
+        raise ValueError(f"Profile '{profile_name}' not found in profiles.yml. Available: {list(all_profiles.keys())}.")
+    else:
+        config = all_profiles.get(profile_name)
+
 logger.info("Starting Teradata MCP server", extra={"server_config": {"profile": profile_name}, "startup_time": "2025-08-09"})
+
+# Check if the EFS or EVS tools are enabled in the profiles
+if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
+    _enableEFS = True
+else:
+    _enableEFS = False
+
+if any(re.match(pattern, 'evs_*') for pattern in config.get('tool',[])):
+    _enableEVS = True
+else:
+    _enableEVS = False
+
+# Initialize module loader with profile configuration (suppress stdout from tdfs4ds import)
+stdout_buffer = StringIO()
+stderr_buffer = StringIO()
+with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+    module_loader = td.initialize_module_loader(config)
+
+# Log any captured output at debug level instead of printing to stdout
+if stdout_buffer.getvalue():
+    logger.debug(f"Module loader stdout: {stdout_buffer.getvalue()}")
+if stderr_buffer.getvalue():
+    logger.debug(f"Module loader stderr: {stderr_buffer.getvalue()}")
 
 # Connect to MCP server
 mcp = FastMCP("teradata-mcp-server")
@@ -176,12 +190,23 @@ _tdconn = td.TDConn()
 
 if _enableEFS:
     try:
-        import teradataml as tdml  # import of the teradataml package
-        fs_config = td.FeatureStoreConfig() 
-        try:
-            tdml.create_context(tdsqlengine=_tdconn.engine)
-        except Exception as e:
-            logger.warning(f"Error creating teradataml context: {e}")
+        # Suppress stdout/stderr from teradataml imports and initialization
+        stdout_buffer = StringIO()
+        stderr_buffer = StringIO()
+        with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+            import teradataml as tdml  # import of the teradataml package
+            fs_config = td.FeatureStoreConfig() 
+            try:
+                tdml.create_context(tdsqlengine=_tdconn.engine)
+            except Exception as e:
+                logger.warning(f"Error creating teradataml context: {e}")
+        
+        # Log any captured output at debug level instead of printing to stdout
+        if stdout_buffer.getvalue():
+            logger.debug(f"teradataml stdout: {stdout_buffer.getvalue()}")
+        if stderr_buffer.getvalue():
+            logger.debug(f"teradataml stderr: {stderr_buffer.getvalue()}")
+            
     except (AttributeError, ImportError, ModuleNotFoundError) as e:
         logger.warning(f"Feature Store module not available - disabling EFS functionality: {e}")
         _enableEFS = False
@@ -238,12 +263,23 @@ def execute_db_tool(tool, *args, **kwargs):
         if _enableEFS:
             try:
                 global fs_config
-                fs_config = td.FeatureStoreConfig() 
-                import teradataml as tdml  # import of the teradataml package
-                try:
-                    tdml.create_context(tdsqlengine=_tdconn.engine)
-                except Exception as e:
-                    logger.warning(f"Error creating teradataml context: {e}")
+                # Suppress stdout/stderr from FeatureStoreConfig and teradataml during reconnection
+                stdout_buffer = StringIO()
+                stderr_buffer = StringIO()
+                with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+                    fs_config = td.FeatureStoreConfig() 
+                    import teradataml as tdml  # import of the teradataml package
+                    try:
+                        tdml.create_context(tdsqlengine=_tdconn.engine)
+                    except Exception as e:
+                        logger.warning(f"Error creating teradataml context: {e}")
+                
+                # Log any captured output at debug level
+                if stdout_buffer.getvalue():
+                    logger.debug(f"teradataml reconnection stdout: {stdout_buffer.getvalue()}")
+                if stderr_buffer.getvalue():
+                    logger.debug(f"teradataml reconnection stderr: {stderr_buffer.getvalue()}")
+                    
             except (AttributeError, ImportError, ModuleNotFoundError) as e:
                 logger.warning(f"Feature Store module not available during reconnection: {e}")
                 # Don't disable _enableEFS here as it might be temporary
@@ -394,6 +430,23 @@ for file in custom_object_files:
 
 
 def make_custom_prompt(prompt_name: str, prompt: str, desc: str, parameters: dict = None):
+    """
+    Build and register a FastMCP prompt, supporting optional parameters defined in YAML.
+
+    YAML structure example:
+      parameters:
+        database_name:
+          description: "Database to describe."
+          required: true            # optional, defaults to true
+          type_hint: str            # optional, defaults to str
+          default: "sample_db"      # optional, only used if provided
+
+    Notes:
+    - We use pydantic.Field to attach descriptions (and defaults) so FastMCP exposes
+      parameter metadata to MCP clients.
+    - Required parameters use Field(..., description=...).
+    - Optional parameters use Field(default=..., description=...).
+    """
     if parameters is None or len(parameters) == 0:
         # Original behavior for prompts without parameters
         async def _dynamic_prompt():
@@ -402,45 +455,53 @@ def make_custom_prompt(prompt_name: str, prompt: str, desc: str, parameters: dic
         return mcp.prompt(description=desc)(_dynamic_prompt)
     else:
         # New behavior for prompts with parameters
-        # 1. Build Parameter objects for the function signature
-        param_objects = []
-        annotations = {}
-        
-        for param_name in parameters.keys():
-            # For now, assume all parameters are strings as requested
-            type_hint = str
-            default = inspect.Parameter.empty  # All parameters are required for now
-            
+        # 1) Build inspect.Parameter objects with pydantic Field defaults carrying descriptions
+        param_objects: list[inspect.Parameter] = []
+        annotations: dict[str, Any] = {}
+
+        for param_name, meta in parameters.items():
+            # accept both dict and bare values; normalize
+            meta = meta or {}
+            type_hint = meta.get("type_hint", str)
+            required = meta.get("required", True)
+            desc_txt = meta.get("description", "")
+
+            if required and "default" not in meta:
+                default_value = Field(..., description=desc_txt)
+            else:
+                default_value = Field(default=meta.get("default", None), description=desc_txt)
+
             param_objects.append(
                 inspect.Parameter(
                     param_name,
                     kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                    default=default,
-                    annotation=type_hint
+                    default=default_value,
+                    annotation=type_hint,
                 )
             )
             annotations[param_name] = type_hint
-        
-        # 2. Create the new signature
+
         sig = inspect.Signature(param_objects)
-        
-        # 3. Define the dynamic prompt function
+
+        # 2) Define the dynamic prompt function
         async def _dynamic_prompt(**kwargs):
-            # Validate all required parameters are present
-            missing = [name for name in parameters.keys() if name not in kwargs]
+            # Validate required parameters explicitly (in case callers bypass defaults)
+            missing = [
+                name for name, meta in parameters.items()
+                if (meta or {}).get("required", True) and name not in kwargs
+            ]
             if missing:
                 raise ValueError(f"Missing parameters: {missing}")
-            
-            # Format the prompt string with the parameters
+
             formatted_prompt = prompt.format(**kwargs)
             return UserMessage(role="user", content=TextContent(type="text", text=formatted_prompt))
-        
-        # 4. Inject signature & annotations
+
+        # 3) Inject signature and annotations so FastMCP extracts metadata
         _dynamic_prompt.__signature__ = sig
         _dynamic_prompt.__annotations__ = annotations
         _dynamic_prompt.__name__ = prompt_name
-        
-        # 5. Register with FastMCP using the prompt decorator
+
+        # 4) Register with FastMCP
         return mcp.prompt(description=desc)(_dynamic_prompt)
 
 def make_custom_query_tool(name, tool):
