@@ -21,7 +21,7 @@ There are many client options that you can choose from, they each have different
 - [teradata-trusted-data-agent](https://github.com/rgeissen/teradata-trusted-data-agent)
 
 ## Audio Client
-- [MCP Voice Client](../../scripts/client_examples/MCP_VoiceClient/README.md)
+- [MCP Voice Client](../../examples/MCP_VoiceClient/README.md)
 
 ## Code Clients
 - [Visual Studio Code](./Visual_Studio_Code.md)
