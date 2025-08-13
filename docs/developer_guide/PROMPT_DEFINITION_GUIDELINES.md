@@ -120,15 +120,26 @@ In this structure:
 
 ## 4. Example: Complete Workflow Prompt
 
-Here is a complete example of a well-formed workflow prompt that adheres to all guidelines. This structure enables the agent to parse the entire plan once and then execute it deterministically, only calling the LLM if an error occurs.
+Here is a complete example of a well-formed workflow prompt that adheres to all guidelines from Chapters 1, 2, and 3. This structure enables the agent to parse the entire plan once and then execute it deterministically, only calling the LLM if an error occurs.
+
+### Workflow Prompt Parameters
+
+These are the parameters that the workflow prompt itself accepts as input:
+
+```yaml
+workflow_parameters:
+  db_name:
+    description: "The name of the database to be audited."
+    type: "string"
+    required: true
+```
+
+### Workflow Prompt
 
 ```markdown
 # Name: Database Schema and Quality Audit
 # Description:
 You are a Teradata DBA performing a full schema and quality audit on a given database.
-# Process
-- You will work through all the phases in order.
-- You will be assessing the {db_name} database and all the tables in it.
 
 ## Phase 1 - Get Database Objects
 - Get a list of tables in the {db_name} database using the `base_tableList` tool.
