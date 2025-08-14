@@ -271,3 +271,5 @@ base_databaseBusinessDesc:
   parameters:
     database_name:
       description: "Database to describe."
+      type_hint: str
+      required: false
