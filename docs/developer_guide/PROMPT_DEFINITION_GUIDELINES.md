@@ -87,34 +87,29 @@ For effective and robust workflows, parameters should be clearly defined within 
 tool_parameters:
   database_name:
     description: "The name of the database to connect to."
-    type: "string"
+    type_hint: str
     required: true
-    default: "default_db" # Optional: provides a fallback if not specified
   table_name:
     description: "The name of the table to perform operations on."
-    type: "string"
-    required: false # Can be omitted if a default is provided or it's genuinely optional
+    type_hint: str
+    required: false 
   analysis_level:
     description: "A numeric value indicating the depth or intensity of the analysis (e.g., 1 for basic, 5 for comprehensive)."
-    type: "integer" # Using an integer type
+    type_hint: int 
     required: true
-    default: 3
   output_format:
     description: "The desired format for the output data."
-    type: "string"
+    type_hint: str
     required: false
-    default: "json"
 ```
 
 In this structure:
 
 * `description`: Provides a human-readable explanation of the parameter's purpose.
 
-* `type`: Specifies the data type expected for the parameter (e.g., `string`, `integer`, `boolean`, `enum`).
+* `type_hint`: Specifies the data type expected for the parameter (e.g., `str`, `int`, `float`, `bool`).
 
 * `required`: A boolean (`true`/`false`) indicating whether the parameter **must** be provided for the tool to execute.
-
-* `default`: An optional value that will be used if the parameter is not explicitly provided in the workflow step.
 
 ---
 
@@ -130,7 +125,7 @@ These are the parameters that the workflow prompt itself accepts as input:
 workflow_parameters:
   db_name:
     description: "The name of the database to be audited."
-    type: "string"
+    type_hint: str
     required: true
 ```
 
