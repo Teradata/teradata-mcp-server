@@ -129,13 +129,13 @@
     "dba_featureUsage": [
       {
         "name": "get_feature_usage",
-        "parameters": {}
+        "parameters": {"start_date": "2025-08-01", "end_date": "2025-12-31"}
       }
     ],
     "dba_flowControl": [
       {
         "name": "get_flow_control",
-        "parameters": {}
+        "parameters": {"start_date": "2025-08-01", "end_date": "2025-12-31"}
       }
     ],
     "dba_resusageSummary": [
@@ -165,7 +165,7 @@
     "dba_userDelay": [
       {
         "name": "get_user_delays",
-        "parameters": {}
+        "parameters": {"start_date": "2025-08-01", "end_date": "2025-12-31"}
       }
     ],
     "dba_userSqlList": [
