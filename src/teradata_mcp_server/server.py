@@ -420,14 +420,13 @@ for file in custom_object_files:
 def make_custom_prompt(prompt_name: str, prompt: str, desc: str, parameters: dict = None):
     """
     Build and register a FastMCP prompt, supporting optional parameters defined in YAML.
-
     YAML structure example:
-      parameters:
-        database_name:
-          description: "Database to describe."
-          required: true            # optional, defaults to true
-          type_hint: str            # optional, defaults to str
-          default: "sample_db"      # optional, only used if provided
+    parameters:
+      database_name:
+        description: "Database to describe."
+        required: true  # optional, defaults to true
+        type_hint: str  # optional, defaults to str
+        default: "sample_db"  # optional, only used if provided
     """
     if parameters is None or len(parameters) == 0:
         # Original behavior for prompts without parameters
@@ -437,16 +436,23 @@ def make_custom_prompt(prompt_name: str, prompt: str, desc: str, parameters: dic
         return mcp.prompt(description=desc)(_dynamic_prompt)
     else:
         # New behavior for prompts with parameters
-        # 1) Build inspect.Parameter objects with pydantic Field defaults carrying descriptions
         param_objects: list[inspect.Parameter] = []
         annotations: dict[str, Any] = {}
 
         for param_name, meta in parameters.items():
-            # accept both dict and bare values; normalize
             meta = meta or {}
-            type_hint = meta.get("type_hint", str)
+            type_hint_raw = meta.get("type_hint", str)
+            # Convert string type hints to actual Python types
+            if isinstance(type_hint_raw, str):
+                try:
+                    type_hint = eval(type_hint_raw, {"str": str, "int": int, "float": float, "bool": bool})
+                except Exception:
+                    type_hint = str
+            else:
+                type_hint = type_hint_raw
             required = meta.get("required", True)
             desc_txt = meta.get("description", "")
+            desc_txt += f" (type: {type_hint_raw})"  # Optional enhancement
 
             if required and "default" not in meta:
                 default_value = Field(..., description=desc_txt)
@@ -465,26 +471,22 @@ def make_custom_prompt(prompt_name: str, prompt: str, desc: str, parameters: dic
 
         sig = inspect.Signature(param_objects)
 
-        # 2) Define the dynamic prompt function
         async def _dynamic_prompt(**kwargs):
-            # Validate required parameters explicitly (in case callers bypass defaults)
             missing = [
                 name for name, meta in parameters.items()
                 if (meta or {}).get("required", True) and name not in kwargs
             ]
             if missing:
                 raise ValueError(f"Missing parameters: {missing}")
-
             formatted_prompt = prompt.format(**kwargs)
             return UserMessage(role="user", content=TextContent(type="text", text=formatted_prompt))
 
-        # 3) Inject signature and annotations so FastMCP extracts metadata
         _dynamic_prompt.__signature__ = sig
         _dynamic_prompt.__annotations__ = annotations
         _dynamic_prompt.__name__ = prompt_name
 
-        # 4) Register with FastMCP
         return mcp.prompt(description=desc)(_dynamic_prompt)
+
 
 def make_custom_query_tool(name, tool):
     param_defs = tool.get("parameters", {})
