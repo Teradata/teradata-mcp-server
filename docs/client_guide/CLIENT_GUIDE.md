@@ -26,7 +26,8 @@ There are many client options that you can choose from, they each have different
 ## Code Clients
 - [Visual Studio Code](./Visual_Studio_Code.md)
 - [MCP Inspector](./MCP_Inspector.md) - For testing MCP server
-- [Code Agents](./Code_Agents.md) - Google ADK Agent & Pydanicai Agent
+- [Google ADK Client](../../examples/Simple_Agent/README.md)
+- [mcp client framework](../../examples/MCP_Client_Example/README.md)
 - [REST API](./Rest_API.md)
 - [Google Gemini CLI](./Google_Gemini_CLI.md)
 
