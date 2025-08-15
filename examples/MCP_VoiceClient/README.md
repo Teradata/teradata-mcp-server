@@ -45,7 +45,7 @@ With the virtual environment activated, install the required packages:
 python -m pip install -r requirements.txt --force-reinstall
 ```
 
-2. Configure AWS credentials:
+3. Configure AWS credentials:
 
 The application uses environment variables for AWS authentication. Set these before running the application:
 
