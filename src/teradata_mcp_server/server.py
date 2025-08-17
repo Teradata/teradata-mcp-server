@@ -1,22 +1,21 @@
 import argparse
 import asyncio
+import atexit
 import functools
 import inspect
 import json
 import logging
 import logging.config
 import logging.handlers
-import atexit
 import os
 import re
-import signal
 import sys
-from typing import Any, Optional
+import signal
 from importlib.resources import files as pkg_files
-
-import mcp.types as types
+from typing import Any
 import yaml
 from dotenv import load_dotenv
+from mcp import types
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.prompts.base import TextContent, UserMessage
 from pydantic import Field
@@ -53,7 +52,7 @@ profile_name = os.getenv("PROFILE")
 # Set up logging
 class CustomJSONFormatter(logging.Formatter):
     """Custom JSON formatter that can handle extra dictionaries in log messages."""
-    
+
     def format(self, record):
         # Create base log entry
         log_entry = {
@@ -64,7 +63,7 @@ class CustomJSONFormatter(logging.Formatter):
             "line": record.lineno,
             "message": record.getMessage(),
         }
-        
+
         # Check if there are extra fields in the record
         # LogRecord objects can have additional attributes added to them
         reserved_attrs = {
@@ -73,7 +72,7 @@ class CustomJSONFormatter(logging.Formatter):
             'thread', 'threadName', 'processName', 'process', 'exc_info', 'exc_text',
             'stack_info', 'getMessage', 'message'
         }
-        
+
         for key, value in record.__dict__.items():
             if key not in reserved_attrs:
                 # Handle dictionary values by merging them
@@ -81,7 +80,7 @@ class CustomJSONFormatter(logging.Formatter):
                     log_entry.update(value)
                 else:
                     log_entry[key] = value
-        
+
         return json.dumps(log_entry, ensure_ascii=False)
 
 os.makedirs("logs", exist_ok=True)
@@ -156,15 +155,8 @@ else:
 logger.info("Starting Teradata MCP server", extra={"server_config": {"profile": profile_name}, "startup_time": "2025-08-09"})
 
 # Check if the EFS or EVS tools are enabled in the profiles
-if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
-    _enableEFS = True
-else:
-    _enableEFS = False
-
-if any(re.match(pattern, 'evs_*') for pattern in config.get('tool',[])):
-    _enableEVS = True
-else:
-    _enableEVS = False
+_enableEFS = True if any(re.match(pattern, 'fs_*') for pattern in config.get('tool', [])) else False
+_enableEVS = True if any(re.match(pattern, 'evs_*') for pattern in config.get('tool', [])) else False
 
 # Load the tool modules
 module_loader = td.initialize_module_loader(config)
@@ -183,12 +175,12 @@ if _enableEFS:
     try:
         # Suppress stdout/stderr from teradataml imports and initialization
         import teradataml as tdml  # import of the teradataml package
-        fs_config = td.FeatureStoreConfig() 
+        fs_config = td.FeatureStoreConfig()
         try:
             tdml.create_context(tdsqlengine=_tdconn.engine)
         except Exception as e:
             logger.warning(f"Error creating teradataml context: {e}")
-        
+
     except (AttributeError, ImportError, ModuleNotFoundError) as e:
         logger.warning(f"Feature Store module not available - disabling EFS functionality: {e}")
         _enableEFS = False
@@ -249,19 +241,19 @@ def execute_db_tool(tool, *args, **kwargs):
                 stdout_buffer = StringIO()
                 stderr_buffer = StringIO()
                 with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
-                    fs_config = td.FeatureStoreConfig() 
+                    fs_config = td.FeatureStoreConfig()
                     import teradataml as tdml  # import of the teradataml package
                     try:
                         tdml.create_context(tdsqlengine=_tdconn.engine)
                     except Exception as e:
                         logger.warning(f"Error creating teradataml context: {e}")
-                
+
                 # Log any captured output at debug level
                 if stdout_buffer.getvalue():
                     logger.debug(f"teradataml reconnection stdout: {stdout_buffer.getvalue()}")
                 if stderr_buffer.getvalue():
                     logger.debug(f"teradataml reconnection stderr: {stderr_buffer.getvalue()}")
-                    
+
             except (AttributeError, ImportError, ModuleNotFoundError) as e:
                 logger.warning(f"Feature Store module not available during reconnection: {e}")
                 # Don't disable _enableEFS here as it might be temporary
@@ -417,7 +409,7 @@ for file in custom_object_files:
         logger.error(f"Failed to load YAML from {file}: {e}")
 
 
-def make_custom_prompt(prompt_name: str, prompt: str, desc: str, parameters: dict = None):
+def make_custom_prompt(prompt_name: str, prompt: str, desc: str, parameters: dict | None = None):
     """
     Build and register a FastMCP prompt, supporting optional parameters defined in YAML.
     YAML structure example:
@@ -607,7 +599,7 @@ def make_custom_cube_tool(name, cube):
     return mcp.tool(description=_dynamic_tool.__doc__)(_dynamic_tool)
 
 # Instantiate custom query tools from YAML
-custom_terms = []
+custom_terms: list[str] = []
 for name, obj in custom_objects.items():
     obj_type = obj.get("type")
     if obj_type == "tool" and any(re.match(pattern, name) for pattern in config.get('tool',[])):
@@ -702,11 +694,11 @@ if _enableEFS:
 
     @mcp.tool(description="Set or update the feature store configuration (database and data domain).")
     async def fs_setFeatureStoreConfig(
-        data_domain: Optional[str] = None,
-        db_name: Optional[str] = None,
-        entity: Optional[str] = None,
+        data_domain: str | None = None,
+        db_name: str | None = None,
+        entity: str | None = None,
     ):
-        global _tdconn        
+        global _tdconn
         with _tdconn.engine.connect() as conn:
             return td.create_response(fs_config.fs_setFeatureStoreConfig(
                 conn=conn,
@@ -741,7 +733,6 @@ async def main():
     except NotImplementedError:
         # Windows doesn't support signals properly
         logger.warning("Signal handling not supported on Windows")
-        pass
 
     # Start the MCP server
     if mcp_transport == "sse":

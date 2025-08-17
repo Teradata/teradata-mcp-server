@@ -13,8 +13,8 @@ logger = logging.getLogger("teradata_mcp_server")
 # Read query tool
 def handle_base_readQuery(
     conn: Connection,
-    sql: str = None,
-    tool_name: str = None,
+    sql: str | None = None,
+    tool_name: str | None = None,
     *args,
     **kwargs
 ):
@@ -33,10 +33,7 @@ def handle_base_readQuery(
     stmt = text(sql)
 
     # 2. Execute with bind parameters if provided
-    if kwargs:
-        result = conn.execute(stmt, kwargs)
-    else:
-        result = conn.execute(stmt)
+    result = conn.execute(stmt, kwargs) if kwargs else conn.execute(stmt)
 
     # 3. Fetch rows & column metadata
     cursor = result.cursor  # underlying DB-API cursor
@@ -313,11 +310,10 @@ def handle_base_tableUsage(conn: TeradataConnection, database_name: str | None =
     Returns:
       ResponseType: formatted response with query results + metadata
     """
+
     logger.debug("Tool: handle_base_tableUsage: Args: database_name:")
-    if database_name:
-        database_name_filter=f"AND objectdatabasename = '{database_name}'"
-    else:
-        database_name_filter=""
+    database_name_filter = f"AND objectdatabasename = '{database_name}'" if db_name else ""
+
     table_usage_sql="""
     LOCKING ROW for ACCESS
     sel

@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import List, Optional
 
 from .config import TestConfig
-from .runner import TestRunner
 from .reporter import TestReporter
+from .runner import TestRunner
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ Examples:
         # Run command
         run_parser = subparsers.add_parser('run', help='Run tests')
         run_parser.add_argument(
-            '--tests', nargs='+', 
+            '--tests', nargs='+',
             help='Specific test names to run'
         )
         run_parser.add_argument(
@@ -92,13 +92,13 @@ Examples:
         # Config command
         config_parser = subparsers.add_parser('config', help='Manage configuration')
         config_subparsers = config_parser.add_subparsers(dest='config_action')
-        
+
         config_subparsers.add_parser('create', help='Create default config file')
         config_subparsers.add_parser('show', help='Show current config')
 
         return parser
 
-    async def run(self, args: Optional[List[str]] = None) -> int:
+    async def run(self, args: list[str] | None = None) -> int:
         """Run the CLI with given arguments."""
         parsed_args = self.parser.parse_args(args)
 
@@ -133,7 +133,7 @@ Examples:
         """Run tests based on arguments."""
         # Load configuration
         config = self._load_config(args)
-        
+
         # Override config with command line arguments
         if args.output_dir:
             config.output_directory = args.output_dir
@@ -164,7 +164,7 @@ Examples:
 
         # Generate reports
         report_files = runner.reporter.generate_reports(results)
-        
+
         if config.generate_json_report and 'json' in report_files:
             logger.info(f"JSON report: {report_files['json']}")
         if config.generate_html_report and 'html' in report_files:
@@ -207,13 +207,13 @@ Examples:
             print(f"Configuration from {config_path}:")
             for key, value in config.__dict__.items():
                 print(f"  {key}: {value}")
-        
+
         return 0
 
     def _load_config(self, args) -> TestConfig:
         """Load configuration from file or create default."""
         config_path = getattr(args, 'config', 'scripts/test_config.yml')
-        
+
         if Path(config_path).exists():
             return TestConfig.from_file(config_path)
         else:

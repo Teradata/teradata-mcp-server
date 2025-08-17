@@ -336,17 +336,8 @@ def handle_dba_tableUsageImpact(conn: TeradataConnection, database_name: str | N
 
     """
     logger.debug("Tool: handle_dba_tableUsageImpact: Args: ")
-    if database_name:
-        database_name_filter=f"AND objectdatabasename = '{database_name}'"
-    else:
-        database_name_filter=""
-
-    if user_name:
-        user_name_filter=f"AND username = '{user_name}'"
-    else:
-        user_name_filter=""
-
-
+    database_name_filter = f"AND objectdatabasename = '{database_name}'" if database_name else ""
+    user_name_filter = f"AND username = '{user_name}'" if user_name else ""
     table_usage_sql="""
     LOCKING ROW for ACCESS
     sel

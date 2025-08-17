@@ -5,13 +5,13 @@ Test result data structures for the testing framework.
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 
 class TestStatus(Enum):
     """Test execution status."""
     PENDING = "pending"
-    RUNNING = "running" 
+    RUNNING = "running"
     PASSED = "passed"
     FAILED = "failed"
     ERROR = "error"
@@ -25,13 +25,13 @@ class TestPhaseResult:
     phase_number: int
     status: TestStatus
     start_time: datetime
-    end_time: Optional[datetime] = None
-    duration: Optional[float] = None
+    end_time: datetime | None = None
+    duration: float | None = None
     output: str = ""
-    error_message: Optional[str] = None
-    tool_calls: List[Dict[str, Any]] = field(default_factory=list)
+    error_message: str | None = None
+    tool_calls: list[dict[str, Any]] = field(default_factory=list)
 
-    def finish(self, status: TestStatus, output: str = "", error_message: Optional[str] = None):
+    def finish(self, status: TestStatus, output: str = "", error_message: str | None = None):
         """Mark phase as complete."""
         self.end_time = datetime.now()
         self.duration = (self.end_time - self.start_time).total_seconds()
@@ -41,25 +41,25 @@ class TestPhaseResult:
             self.error_message = error_message
 
 
-@dataclass 
+@dataclass
 class TestResult:
     """Complete test execution result."""
     test_name: str
     module_name: str
     status: TestStatus
     start_time: datetime
-    end_time: Optional[datetime] = None
-    duration: Optional[float] = None
-    phases: List[TestPhaseResult] = field(default_factory=list)
+    end_time: datetime | None = None
+    duration: float | None = None
+    phases: list[TestPhaseResult] = field(default_factory=list)
     overall_output: str = ""
-    error_message: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    error_message: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def add_phase(self, phase: TestPhaseResult):
         """Add a phase result."""
         self.phases.append(phase)
 
-    def finish(self, status: TestStatus, output: str = "", error_message: Optional[str] = None):
+    def finish(self, status: TestStatus, output: str = "", error_message: str | None = None):
         """Mark test as complete."""
         self.end_time = datetime.now()
         self.duration = (self.end_time - self.start_time).total_seconds()

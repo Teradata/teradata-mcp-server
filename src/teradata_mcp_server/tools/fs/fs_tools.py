@@ -1,5 +1,5 @@
 import logging
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 
 # Suppress stdout/stderr during tdfs4ds import to prevent contamination of MCP JSON protocol
@@ -13,7 +13,7 @@ from teradata_mcp_server.tools.utils import create_response, rows_to_json
 
 logger = logging.getLogger("teradata_mcp_server")
 
-from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
+from teradata_mcp_server.tools.utils import serialize_teradata_types
 
 #------------------ Do not make changes above  ------------------#
 
@@ -26,14 +26,14 @@ from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_js
 # #     Returns: True or False
 def handle_fs_isFeatureStorePresent(conn: TeradataConnection, database_name: str, *args, **kwargs):
     """ Check if a feature store is present in the specified database.
-    
+
     Args:
         database_name (str): The name of the database to check for the feature store.
     """
     
     logger.info(f"Tool: handle_fs_isFeatureStorePresent: Args: database_name: {database_name}")
 
-    data = False
+    data: list | bool = False
 
     try:
         data = tdfs4ds.connect(database=database_name)
@@ -69,7 +69,7 @@ def handle_fs_getDataDomains(conn: TeradataConnection, fs_config, *args, **kwarg
         logger.error("Database name is not provided.")
         return create_response({"error": "The database name for the feature store is not specified."}, metadata)
 
-    data = False
+    data: list | bool = False
 
     try:
         is_a_feature_store = tdfs4ds.connect(database=database_name)
@@ -99,7 +99,7 @@ def handle_fs_getDataDomains(conn: TeradataConnection, fs_config, *args, **kwarg
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 # #     Returns: True or False
 def handle_fs_featureStoreContent(conn: TeradataConnection, fs_config, *args, **kwargs):
-    """ 
+    """
     Returns a summary of the feature store content. Use this to understand what data is available in the feature store.
     """
 
@@ -113,7 +113,7 @@ def handle_fs_featureStoreContent(conn: TeradataConnection, fs_config, *args, **
     if not database_name:
         logger.error("Database name is not provided.")
         return create_response({"error": "The database name for the feature store is not specified."}, metadata)
-    data = False
+    data: list | bool = False
 
     try:
         is_a_feature_store = tdfs4ds.connect(database=database_name)
@@ -142,7 +142,7 @@ def handle_fs_featureStoreContent(conn: TeradataConnection, fs_config, *args, **
 #       database_name - the database name to check for existence
 # #     Returns: the feature store schema, mainly the catalogs
 def handle_fs_getFeatureDataModel(conn: TeradataConnection, fs_config, *args, **kwargs):
-    """ 
+    """
     Returns the feature store data model, including the feature catalog, process catalog, and dataset catalog.
     """
 
@@ -341,7 +341,7 @@ def handle_fs_getFeatures(conn: TeradataConnection, fs_config, *args, **kwargs):
 #       database_name - the database name to check for existence
 # #     Returns: True or False
 def handle_fs_createDataset(conn: TeradataConnection, fs_config, entity_name: str, feature_selection: list[str], dataset_name: str, target_database: str, *args, **kwargs):
-    """ 
+    """
     Create a dataset using selected features and an entity from the feature store. The dataset is created in the specified target database under the given name. Requires a configured feature store and data domain. Registers the dataset in the catalog automatically. Use this when you want to build and register a new dataset for analysis or modeling.
     Args:
         entity_name (str): Entity for which the dataset will be created. Available entities are reported in the feature catalog.

@@ -44,6 +44,7 @@ evs = [
 dev = [
     "ruff>=0.1.0",
     "mypy>=1.5.0",
+    "types-PyYAML",
 ]
 
 [project.scripts]
@@ -94,6 +95,7 @@ ignore = [
     "F403",  # Wildcard imports (temporarily ignore for gradual refactoring)
     "F401",  # Unused imports in __init__.py files (common pattern for re-exports)
     "E402",  # Module level import not at top (some tools have conditional imports)
+    "E501",  # strings over 120 characters
     "N816",  # Variable naming (existing legacy naming)
     "N802",  # Function naming (preserve existing naming conventions)
     "N803",  # Argument naming (preserve existing naming conventions)
@@ -103,6 +105,8 @@ ignore = [
     "PLR0913", # Too many arguments (common in database tools)
     "PLR0912", # Too many branches (common in conditional logic)
     "PLR0915", # Too many statements (common in setup functions)
+    "PLW0603", # Use of globals statements
+    "PLC0415", # Import statements outside the module top level scope
 ]
 
 [tool.ruff.lint.per-file-ignores]

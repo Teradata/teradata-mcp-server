@@ -65,7 +65,14 @@ def handle_qlty_negativeValues(conn: TeradataConnection, database_name: str | No
 #------------------ Tool  ------------------#
 # distinct categories tool
 
-def handle_qlty_distinctCategories(conn: TeradataConnection, database_name: str | None, table_name: str, column_name: str, *args, **kwargs):
+def handle_qlty_distinctCategories(
+    conn: TeradataConnection,
+    database_name: str | None,
+    table_name: str,
+    col_name: str,
+    *args,
+    **kwargs
+):
     """
     Get the destinct categories from column in a table.
 
@@ -95,8 +102,14 @@ def handle_qlty_distinctCategories(conn: TeradataConnection, database_name: str 
 
 #------------------ Tool  ------------------#
 # standard deviation tool
-
-def handle_qlty_standardDeviation(conn: TeradataConnection, database_name: str | None, table_name: str, column_name: str, *args, **kwargs):
+def handle_qlty_standardDeviation(
+    conn: TeradataConnection,
+    database_name: str | None,
+    table_name: str,
+    col_name: str,
+    *args,
+    **kwargs
+):
     """
     Get the standard deviation from column in a table.
 
@@ -157,8 +170,14 @@ def handle_qlty_columnSummary(conn: TeradataConnection, database_name: str | Non
 
 #------------------ Tool  ------------------#
 # Univariate statistics tool
-
-def handle_qlty_univariateStatistics(conn: TeradataConnection, database_name: str | None, table_name: str, column_name: str, *args, **kwargs):
+def handle_qlty_univariateStatistics(
+    conn: TeradataConnection,
+    database_name: str | None,
+    table_name: str,
+    col_name: str,
+    *args,
+    **kwargs
+):
     """
     Get the univariate statistics for a table.
 
@@ -189,8 +208,14 @@ def handle_qlty_univariateStatistics(conn: TeradataConnection, database_name: st
 
 #------------------ Tool  ------------------#
 # Get Rows with Miissing Values tool
-
-def handle_qlty_rowsWithMissingValues(conn: TeradataConnection, database_name: str | None, table_name: str, column_name: str, *args, **kwargs):
+def handle_qlty_rowsWithMissingValues(
+    conn: TeradataConnection,
+    database_name: str | None,
+    table_name: str,
+    col_name: str,
+    *args,
+    **kwargs
+):
     """
     Get the rows with missing values in a table.
 
