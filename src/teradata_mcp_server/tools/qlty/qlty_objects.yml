@@ -1,4 +1,3 @@
-
 test_qltyTools:
   type: prompt
   description: "Test all the qlty MCP tools."
@@ -114,4 +113,7 @@ qlty_databaseQuality:
     A professional data quality dashboard that is easily navigable.
   parameters:
     database_name:
+      name: database_name
       description: "Name of the database to assess for data quality."
+      required: true
+      type_hint: str

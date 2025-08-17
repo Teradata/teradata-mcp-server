@@ -71,56 +71,56 @@ def handle_base_readQuery(
 
 #------------------ Tool  ------------------#
 # get DDL tool
-def handle_base_tableDDL(conn: TeradataConnection, db_name: str, table_name: str, *args, **kwargs):
+def handle_base_tableDDL(conn: TeradataConnection, database_name: str, table_name: str, *args, **kwargs):
     """
     Displays the DDL definition of a table via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
     Arguments:
-      db_name - Database name
+      database_name - Database name
       table_name - table name
 
     Returns:
       ResponseType: formatted response with query results + metadata
     """
-    logger.debug(f"Tool: handle_base_tableDDL: Args: db_name: {db_name}, table_name: {table_name}")
+    logger.debug(f"Tool: handle_base_tableDDL: Args: database_name: {database_name}, table_name: {table_name}")
 
-    if len(db_name) == 0:
-        db_name = "%"
+    if len(database_name) == 0:
+        database_name = "%"
     if len(table_name) == 0:
         table_name = "%"
     # Only allow alphanumeric and underscore for safety
     valid_identifier = re.compile(r"^\w+$")
-    if not valid_identifier.match(db_name) or not valid_identifier.match(table_name):
+    if not valid_identifier.match(database_name) or not valid_identifier.match(table_name):
         logger.error("Invalid database or table name provided")
         raise ValueError("Invalid database or table name")
 
     with conn.cursor() as cur:
-        rows = cur.execute(f"show table {db_name}.{table_name}")
+        rows = cur.execute(f"show table {database_name}.{table_name}")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
             "tool_name": "base_tableDDL",
-            "database": db_name,
+            "database": database_name,
             "table": table_name
         }
         return create_response(data, metadata)
 
 #------------------ Tool  ------------------#
 # Read column description tool
-def handle_base_columnDescription(conn: TeradataConnection, db_name: str, obj_name: str, *args, **kwargs):
+def handle_base_columnDescription(conn: TeradataConnection, database_name: str, obj_name: str, *args, **kwargs):
     """
     Shows detailed column information about a database table via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
     Arguments:
-      db_name - Database name
+      database_name - Database name
       obj_name - table or view name
 
     Returns:
       ResponseType: formatted response with query results + metadata
     """
-    logger.debug(f"Tool: handle_base_columnDescription: Args: db_name: {db_name}, obj_name: {obj_name}")
+    logger.debug(f"Tool: handle_base_columnDescription: Args: database_name: {database_name}, obj_name: {obj_name}")
 
-    if len(db_name) == 0:
-        db_name = "%"
+    if len(database_name) == 0:
+        database_name = "%"
     if len(obj_name) == 0:
         obj_name = "%"
     with conn.cursor() as cur:
@@ -173,11 +173,11 @@ def handle_base_columnDescription(conn: TeradataConnection, db_name: str, obj_na
                 END as CType
             from DBC.ColumnsVX where upper(tableName) like upper(?) and upper(DatabaseName) like upper(?)
         """
-        rows = cur.execute(query, [obj_name, db_name])
+        rows = cur.execute(query, [obj_name, database_name])
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
             "tool_name": "base_columnDescription",
-            "database": db_name,
+            "database": database_name,
             "object": obj_name,
             "column_count": len(data)
         }
@@ -186,21 +186,21 @@ def handle_base_columnDescription(conn: TeradataConnection, db_name: str, obj_na
 
 #------------------ Tool  ------------------#
 # Read table preview tool
-def handle_base_tablePreview(conn: TeradataConnection, table_name: str, db_name: str | None = None, *args, **kwargs):
+def handle_base_tablePreview(conn: TeradataConnection, table_name: str, database_name: str | None = None, *args, **kwargs):
     """
     This function returns data sample and inferred structure from a database table or view via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
     Arguments:
       table_name - table or view name
-      db_name - Database name
+      database_name - Database name
 
     Returns:
       ResponseType: formatted response with query results + metadata
     """
-    logger.debug(f"Tool: handle_base_tablePreview: Args: tablename: {table_name}, databasename: {db_name}")
+    logger.debug(f"Tool: handle_base_tablePreview: Args: tablename: {table_name}, databasename: {database_name}")
 
-    if db_name is not None:
-        table_name = f"{db_name}.{table_name}"
+    if database_name is not None:
+        table_name = f"{database_name}.{table_name}"
     with conn.cursor() as cur:
         cur.execute(f'select top 5 * from {table_name}')
         columns = cur.description
@@ -208,7 +208,7 @@ def handle_base_tablePreview(conn: TeradataConnection, table_name: str, db_name:
 
         metadata = {
             "tool_name": "base_tablePreview",
-            "database": db_name,
+            "database": database_name,
             "table_name": table_name,
             "columns": [
                 {
@@ -224,18 +224,18 @@ def handle_base_tablePreview(conn: TeradataConnection, table_name: str, db_name:
 
 #------------------ Tool  ------------------#
 # Read table affinity tool
-def handle_base_tableAffinity(conn: TeradataConnection, db_name: str, obj_name: str, *args, **kwargs):
+def handle_base_tableAffinity(conn: TeradataConnection, database_name: str, obj_name: str, *args, **kwargs):
     """
     Get tables commonly used together by database users, this is helpful to infer relationships between tables via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
     Arguments:
-      db_name - Database name
+      database_name - Database name
       object_name - table or view name
 
     Returns:
       ResponseType: formatted response with query results + metadata
     """
-    logger.debug(f"Tool: handle_base_tableAffinity: Args: db_name: {db_name}, obj_name: {obj_name}")
+    logger.debug(f"Tool: handle_base_tableAffinity: Args: database_name: {database_name}, obj_name: {obj_name}")
     table_affiity_sql="""
     LOCKING ROW for ACCESS
     SELECT   TRIM(QTU2.DatabaseName)  AS "DatabaseName"
@@ -282,15 +282,15 @@ def handle_base_tableAffinity(conn: TeradataConnection, db_name: str, obj_name: 
 
     """
     with conn.cursor() as cur:
-        rows = cur.execute(table_affiity_sql.format(table_name=obj_name, database_name=db_name))
+        rows = cur.execute(table_affiity_sql.format(table_name=obj_name, database_name=database_name))
         data = rows_to_json(cur.description, rows.fetchall())
     if len(data):
-        affinity_info=f'This data contains the list of tables most commonly queried alongside object {db_name}.{obj_name}'
+        affinity_info=f'This data contains the list of tables most commonly queried alongside object {database_name}.{obj_name}'
     else:
-        affinity_info=f'Object {db_name}.{obj_name} is not often queried with any other table or queried at all, try other ways to infer its relationships.'
+        affinity_info=f'Object {database_name}.{obj_name} is not often queried with any other table or queried at all, try other ways to infer its relationships.'
     metadata = {
         "tool_name": "handle_base_tableAffinity",
-        "database": db_name,
+        "database": database_name,
         "object": obj_name,
         "table_count": len(data),
         "comment": affinity_info
@@ -300,18 +300,20 @@ def handle_base_tableAffinity(conn: TeradataConnection, db_name: str, obj_name: 
 
 #------------------ Tool  ------------------#
 # Read table usage tool
-def handle_base_tableUsage(conn: TeradataConnection, db_name: str | None = None, *args, **kwargs):
+def handle_base_tableUsage(conn: TeradataConnection, database_name: str | None = None, *args, **kwargs):
     """
     Measure the usage of a table and views by users in a given schema, this is helpful to infer what database objects are most actively used or drive most value via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
     Arguments:
-      db_name - Database name
+      database_name - Database name
 
     Returns:
       ResponseType: formatted response with query results + metadata
     """
-    logger.debug("Tool: handle_base_tableUsage: Args: db_name:")
-    database_name_filter = f"AND objectdatabasename = '{db_name}'" if db_name else ""
+
+    logger.debug("Tool: handle_base_tableUsage: Args: database_name:")
+    database_name_filter = f"AND objectdatabasename = '{database_name}'" if db_name else ""
+
     table_usage_sql="""
     LOCKING ROW for ACCESS
     sel
@@ -364,12 +366,12 @@ def handle_base_tableUsage(conn: TeradataConnection, db_name: str | None = None,
         rows = cur.execute(table_usage_sql.format(database_name_filter=database_name_filter))
         data = rows_to_json(cur.description, rows.fetchall())
     if len(data):
-        info=f'This data contains the list of tables most frequently queried objects in database schema {db_name}'
+        info=f'This data contains the list of tables most frequently queried objects in database schema {database_name}'
     else:
-        info=f'No tables have recently been queried in the database schema {db_name}.'
+        info=f'No tables have recently been queried in the database schema {database_name}.'
     metadata = {
         "tool_name": "handle_base_tableUsage",
-        "database": db_name,
+        "database": database_name,
         "table_count": len(data),
         "comment": info
     }

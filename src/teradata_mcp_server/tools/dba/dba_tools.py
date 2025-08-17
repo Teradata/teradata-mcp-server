@@ -88,28 +88,28 @@ def handle_dba_userSqlList(conn: TeradataConnection, user_name: str | None | Non
 
 #------------------ Tool  ------------------#
 # Get table space tool
-def handle_dba_tableSpace(conn: TeradataConnection, db_name: str | None | None , table_name: str | None | None, *args, **kwargs):
+def handle_dba_tableSpace(conn: TeradataConnection, database_name: str | None | None , table_name: str | None | None, *args, **kwargs):
     """
     Get table space used for a table if table name is provided or get table space for all tables in a database if a database name is provided."
 
     Arguments:
-      db_name - database name
+      database_name - database name
       table_name - table name
 
     Returns:
       ResponseType: formatted response with query results + metadata
     """
-    logger.debug(f"Tool: handle_dba_tableSpace: Args: db_name: {db_name}, table_name: {table_name}")
+    logger.debug(f"Tool: handle_dba_tableSpace: Args: database_name: {database_name}, table_name: {table_name}")
 
     with conn.cursor() as cur:
-        if (db_name == "") and (table_name == ""):
+        if (database_name == "") and (table_name == ""):
             logger.debug("No database or table name provided, returning all tables and space information.")
             rows = cur.execute("""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm
             ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
             FROM DBC.AllSpaceV
             GROUP BY DatabaseName, TableName
             ORDER BY CurrentPerm1 desc;""")
-        elif (db_name == ""):
+        elif (database_name == ""):
             logger.debug(f"No database name provided, returning all space information for table: {table_name}.")
             rows = cur.execute(f"""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm
             ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
@@ -118,26 +118,26 @@ def handle_dba_tableSpace(conn: TeradataConnection, db_name: str | None | None ,
             GROUP BY DatabaseName, TableName
             ORDER BY CurrentPerm1 desc;""")
         elif (table_name == ""):
-            logger.debug(f"No table name provided, returning all tables and space information for database: {db_name}.")
+            logger.debug(f"No table name provided, returning all tables and space information for database: {database_name}.")
             rows = cur.execute(f"""SELECT TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm
             ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
             FROM DBC.AllSpaceV
-            WHERE DatabaseName = '{db_name}'
+            WHERE DatabaseName = '{database_name}'
             GROUP BY TableName
             ORDER BY CurrentPerm1 desc;""")
         else:
-            logger.debug(f"Database name: {db_name}, Table name: {table_name}, returning space information for this table.")
+            logger.debug(f"Database name: {database_name}, Table name: {table_name}, returning space information for this table.")
             rows = cur.execute(f"""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm
             ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
             FROM DBC.AllSpaceV
-            WHERE DatabaseName = '{db_name}' AND TableName = '{table_name}'
+            WHERE DatabaseName = '{database_name}' AND TableName = '{table_name}'
             GROUP BY DatabaseName, TableName
             ORDER BY CurrentPerm1 desc;""")
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
             "tool_name": "dba_tableSpace",
-            "db_name": db_name,
+            "database_name": database_name,
             "table_name": table_name,
             "total_tables": len(data)
         }
@@ -146,20 +146,20 @@ def handle_dba_tableSpace(conn: TeradataConnection, db_name: str | None | None ,
 
 #------------------ Tool  ------------------#
 # Get database space tool
-def handle_dba_databaseSpace(conn: TeradataConnection, db_name: str | None | None, *args, **kwargs):
+def handle_dba_databaseSpace(conn: TeradataConnection, database_name: str | None | None, *args, **kwargs):
     """
     Get database space if database name is provided, otherwise get all databases space allocations.
 
     Arguments:
-      db_name - database name
+      database_name - database name
 
     Returns:
       ResponseType: formatted response with query results + metadata
     """
-    logger.debug(f"Tool: handle_dba_databaseSpace: Args: db_name: {db_name}")
+    logger.debug(f"Tool: handle_dba_databaseSpace: Args: database_name: {database_name}")
 
     with conn.cursor() as cur:
-        if (db_name == ""):
+        if (database_name == ""):
             logger.debug("No database name provided, returning all databases and space information.")
             rows = cur.execute("""
                 SELECT
@@ -174,7 +174,7 @@ def handle_dba_databaseSpace(conn: TeradataConnection, db_name: str | None | Non
                 ORDER BY 5 DESC;
             """)
         else:
-            logger.debug(f"Database name: {db_name}, returning space information for this database.")
+            logger.debug(f"Database name: {database_name}, returning space information for this database.")
             rows = cur.execute(f"""
                 SELECT
                     DatabaseName,
@@ -184,14 +184,14 @@ def handle_dba_databaseSpace(conn: TeradataConnection, db_name: str | None | Non
                     CAST((SUM(CurrentPerm) * 100.0 / NULLIF(SUM(MaxPerm),0)) AS DECIMAL(10,2)) AS PercentUsed
                 FROM DBC.DiskSpaceV
                 WHERE MaxPerm > 0
-                AND DatabaseName = '{db_name}'
+                AND DatabaseName = '{database_name}'
                 GROUP BY 1;
             """)
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
             "tool_name": "dba_databaseSpace",
-            "db_name": db_name,
+            "database_name": database_name,
             "total_databases": len(data)
         }
         return create_response(data, metadata)
@@ -326,17 +326,17 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
 
 #------------------ Tool  ------------------#
 # Get table usage impact tool
-def handle_dba_tableUsageImpact(conn: TeradataConnection, db_name: str | None = None, user_name: str | None = None, *args, **kwargs):
+def handle_dba_tableUsageImpact(conn: TeradataConnection, database_name: str | None = None, user_name: str | None = None, *args, **kwargs):
     """
     Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time.
 
     Arguments:
-      db_name - database name to analyze
+      database_name - database name to analyze
       user_name - user name to analyze
 
     """
     logger.debug("Tool: handle_dba_tableUsageImpact: Args: ")
-    database_name_filter = f"AND objectdatabasename = '{db_name}'" if db_name else ""
+    database_name_filter = f"AND objectdatabasename = '{database_name}'" if database_name else ""
     user_name_filter = f"AND username = '{user_name}'" if user_name else ""
     table_usage_sql="""
     LOCKING ROW for ACCESS
@@ -393,12 +393,12 @@ def handle_dba_tableUsageImpact(conn: TeradataConnection, db_name: str | None = 
         rows = cur.execute(table_usage_sql.format(database_name_filter=database_name_filter, user_name_filter=user_name_filter))
         data = rows_to_json(cur.description, rows.fetchall())
     if len(data):
-        info=f'This data contains the list of tables most frequently queried objects in database schema {db_name}'
+        info=f'This data contains the list of tables most frequently queried objects in database schema {database_name}'
     else:
-        info=f'No tables have recently been queried in the database schema {db_name}.'
+        info=f'No tables have recently been queried in the database schema {database_name}.'
     metadata = {
         "tool_name": "handle_dba_tableUsageImpact",
-        "database": db_name,
+        "database": database_name,
         "table_count": len(data),
         "comment": info
     }

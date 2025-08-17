@@ -183,7 +183,7 @@ def handle_rag_executeWorkflow(
     logger.debug(f"handle_rag_executeWorkflow: question={question[:60]}..., k={k}")
 
     # Extract config values
-    db_name = config['databases']['query_db']
+    database_name = config['databases']['query_db']
     table_name = config['tables']['query_table']
     dst_table = config['tables']['query_embedding_store']
     model_id = config['model']['model_id']
@@ -197,11 +197,11 @@ def handle_rag_executeWorkflow(
     with conn.cursor() as cur:
 
         # Step 2: Store user query
-        logger.debug(f"Step 2: Storing user query in {db_name}.{table_name}")
+        logger.debug(f"Step 2: Storing user query in {database_name}.{table_name}")
 
         # Create table if it doesn't exist
         ddl = f"""
-        CREATE TABLE {db_name}.{table_name} (
+        CREATE TABLE {database_name}.{table_name} (
             id INTEGER GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1) NOT NULL,
             txt VARCHAR(5000),
             created_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -211,18 +211,18 @@ def handle_rag_executeWorkflow(
 
         try:
             cur.execute(ddl)
-            logger.debug(f"Table {db_name}.{table_name} created")
+            logger.debug(f"Table {database_name}.{table_name} created")
         except Exception as e:
             error_msg = str(e).lower()
             if "already exists" in error_msg or "3803" in error_msg:
-                logger.debug(f"Table {db_name}.{table_name} already exists, skipping creation")
+                logger.debug(f"Table {database_name}.{table_name} already exists, skipping creation")
             else:
                 logger.error(f"Error creating table: {e}")
                 raise
 
         # Insert cleaned question
         insert_sql = f"""
-        INSERT INTO {db_name}.{table_name} (txt)
+        INSERT INTO {database_name}.{table_name} (txt)
         SELECT
           CASE
             WHEN TRIM(?) LIKE '/rag %' THEN SUBSTRING(TRIM(?) FROM 6)
@@ -232,32 +232,32 @@ def handle_rag_executeWorkflow(
         cur.execute(insert_sql, [question, question, question])
 
         # Get inserted ID and cleaned text
-        cur.execute(f"SELECT MAX(id) AS id FROM {db_name}.{table_name}")
+        cur.execute(f"SELECT MAX(id) AS id FROM {database_name}.{table_name}")
         new_id = cur.fetchone()[0]
 
-        cur.execute(f"SELECT txt FROM {db_name}.{table_name} WHERE id = ?", [new_id])
+        cur.execute(f"SELECT txt FROM {database_name}.{table_name} WHERE id = ?", [new_id])
         cleaned_txt = cur.fetchone()[0]
 
         logger.debug(f"Stored query with ID {new_id}: {cleaned_txt[:60]}...")
 
 
         # Step 3: Generate query embeddings
-        logger.debug(f"Step 3: Generating embeddings in {db_name}.{dst_table}")
+        logger.debug(f"Step 3: Generating embeddings in {database_name}.{dst_table}")
 
         # Drop existing embeddings table
-        drop_sql = f"DROP TABLE {db_name}.{dst_table}"
+        drop_sql = f"DROP TABLE {database_name}.{dst_table}"
         try:
             cur.execute(drop_sql)
-            logger.debug(f"Dropped existing table {db_name}.{dst_table}")
+            logger.debug(f"Dropped existing table {database_name}.{dst_table}")
         except Exception as e:
             logger.debug(f"DROP failed or table not found: {e}")
 
         # Create embeddings table using ONNXEmbeddings
         create_sql = f"""
-        CREATE TABLE {db_name}.{dst_table} AS (
+        CREATE TABLE {database_name}.{dst_table} AS (
             SELECT *
             FROM mldb.ONNXEmbeddings(
-                ON (SELECT id, txt FROM {db_name}.{table_name})
+                ON (SELECT id, txt FROM {database_name}.{table_name})
                 ON (SELECT model_id, model FROM {model_db}.{model_table} WHERE model_id = '{model_id}') DIMENSION
                 ON (SELECT model AS tokenizer FROM {model_db}.{tokenizer_table} WHERE model_id = '{model_id}') DIMENSION
                 USING
@@ -269,7 +269,7 @@ def handle_rag_executeWorkflow(
         """
 
         cur.execute(create_sql)
-        logger.debug(f"Created embeddings table {db_name}.{dst_table}")
+        logger.debug(f"Created embeddings table {database_name}.{dst_table}")
 
         # Step 4: Perform semantic search with dynamic query building
         logger.debug(f"Step 4: Performing semantic search with k={k}")
@@ -287,7 +287,7 @@ def handle_rag_executeWorkflow(
         "workflow_steps": ["config_set", "query_stored", "embeddings_generated", "semantic_search_completed"],
         "query_id": new_id,
         "cleaned_question": cleaned_txt,
-        "database": db_name,
+        "database": database_name,
         "query_table": table_name,
         "embedding_table": dst_table,
         "vector_table": chunk_embed_table,
@@ -345,7 +345,7 @@ def handle_rag_executeWorkflow_ivsm(
     logger.debug(f"handle_rag_executeWorkflow (IVSM): question={question[:60]}..., k={k}")
 
     # Extract config values
-    db_name = config['databases']['query_db']
+    database_name = config['databases']['query_db']
     table_name = config['tables']['query_table']
     dst_table = config['tables']['query_embedding_store']
     model_id = config['model']['model_id']
@@ -358,11 +358,11 @@ def handle_rag_executeWorkflow_ivsm(
     with conn.cursor() as cur:
 
         # Step 2: Store user query
-        logger.debug(f"Step 2: Storing user query in {db_name}.{table_name}")
+        logger.debug(f"Step 2: Storing user query in {database_name}.{table_name}")
 
         # Create table if it doesn't exist
         ddl = f"""
-        CREATE TABLE {db_name}.{table_name} (
+        CREATE TABLE {database_name}.{table_name} (
             id INTEGER GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1) NOT NULL,
             txt VARCHAR(5000),
             created_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -372,18 +372,18 @@ def handle_rag_executeWorkflow_ivsm(
 
         try:
             cur.execute(ddl)
-            logger.debug(f"Table {db_name}.{table_name} created")
+            logger.debug(f"Table {database_name}.{table_name} created")
         except Exception as e:
             error_msg = str(e).lower()
             if "already exists" in error_msg or "3803" in error_msg:
-                logger.debug(f"Table {db_name}.{table_name} already exists, skipping creation")
+                logger.debug(f"Table {database_name}.{table_name} already exists, skipping creation")
             else:
                 logger.error(f"Error creating table: {e}")
                 raise
 
         # Insert cleaned question
         insert_sql = f"""
-        INSERT INTO {db_name}.{table_name} (txt)
+        INSERT INTO {database_name}.{table_name} (txt)
         SELECT
           CASE
             WHEN TRIM(?) LIKE '/rag %' THEN SUBSTRING(TRIM(?) FROM 6)
@@ -393,10 +393,10 @@ def handle_rag_executeWorkflow_ivsm(
         cur.execute(insert_sql, [question, question, question])
 
         # Get inserted ID and cleaned text
-        cur.execute(f"SELECT MAX(id) AS id FROM {db_name}.{table_name}")
+        cur.execute(f"SELECT MAX(id) AS id FROM {database_name}.{table_name}")
         new_id = cur.fetchone()[0]
 
-        cur.execute(f"SELECT txt FROM {db_name}.{table_name} WHERE id = ?", [new_id])
+        cur.execute(f"SELECT txt FROM {database_name}.{table_name} WHERE id = ?", [new_id])
         cleaned_txt = cur.fetchone()[0]
 
         logger.debug(f"Stored query with ID {new_id}: {cleaned_txt[:60]}...")
@@ -414,7 +414,7 @@ def handle_rag_executeWorkflow_ivsm(
                 FROM ivsm.tokenizer_encode(
                     ON (
                         SELECT *
-                        FROM {db_name}.{table_name}
+                        FROM {database_name}.{table_name}
                         QUALIFY ROW_NUMBER() OVER (ORDER BY created_ts DESC) = 1
                     )
                     ON (
@@ -464,16 +464,16 @@ def handle_rag_executeWorkflow_ivsm(
         logger.debug("Step 5: Creating query embedding table using ivsm.vector_to_columns")
 
         # Drop existing embeddings table
-        drop_sql = f"DROP TABLE {db_name}.{dst_table}"
+        drop_sql = f"DROP TABLE {database_name}.{dst_table}"
         try:
             cur.execute(drop_sql)
-            logger.debug(f"Dropped existing table {db_name}.{dst_table}")
+            logger.debug(f"Dropped existing table {database_name}.{dst_table}")
         except Exception as e:
             logger.debug(f"DROP failed or table not found: {e}")
 
         # Create embeddings table using vector_to_columns
         create_sql = f"""
-        CREATE TABLE {db_name}.{dst_table} AS (
+        CREATE TABLE {database_name}.{dst_table} AS (
             SELECT *
             FROM ivsm.vector_to_columns(
                 ON v_topics_embeddings
@@ -489,7 +489,7 @@ def handle_rag_executeWorkflow_ivsm(
         """
 
         cur.execute(create_sql)
-        logger.debug(f"Created embeddings table {db_name}.{dst_table}")
+        logger.debug(f"Created embeddings table {database_name}.{dst_table}")
 
 
         # Step 6: Perform semantic search with dynamic query building
@@ -509,7 +509,7 @@ def handle_rag_executeWorkflow_ivsm(
         "workflow_steps": ["config_set", "query_stored", "query_tokenized", "embedding_view_created", "embedding_table_created", "semantic_search_completed"],
         "query_id": new_id,
         "cleaned_question": cleaned_txt,
-        "database": db_name,
+        "database": database_name,
         "query_table": table_name,
         "embedding_table": dst_table,
         "vector_table": chunk_embed_table,
