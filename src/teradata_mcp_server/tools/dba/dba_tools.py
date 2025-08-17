@@ -8,7 +8,7 @@ logger = logging.getLogger("teradata_mcp_server")
 
 #------------------ Tool  ------------------#
 # Get table SQL tool
-def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: int | None,  *args, **kwargs):
+def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: int | None = 7,  *args, **kwargs):
     """
     Get a list of SQL run against a table in the last number of days.
 
@@ -45,7 +45,7 @@ def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: 
 
 #------------------ Tool  ------------------#
 # Get user SQL tool
-def handle_dba_userSqlList(conn: TeradataConnection, user_name: str | None | None, no_days: int | None,  *args, **kwargs):
+def handle_dba_userSqlList(conn: TeradataConnection, user_name: str, no_days: int | None = 7,  *args, **kwargs):
     """
     Get a list of SQL run by a user in the last number of days if a user name is provided, otherwise get list of all SQL in the last number of days.
 
@@ -88,7 +88,7 @@ def handle_dba_userSqlList(conn: TeradataConnection, user_name: str | None | Non
 
 #------------------ Tool  ------------------#
 # Get table space tool
-def handle_dba_tableSpace(conn: TeradataConnection, database_name: str | None | None , table_name: str | None | None, *args, **kwargs):
+def handle_dba_tableSpace(conn: TeradataConnection, database_name: str | None, table_name: str | None, *args, **kwargs):
     """
     Get table space used for a table if table name is provided or get table space for all tables in a database if a database name is provided."
 
