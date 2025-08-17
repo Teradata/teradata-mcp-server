@@ -9,11 +9,10 @@ import logging.config
 import logging.handlers
 import os
 import re
-import signal
 import sys
+import signal
 from importlib.resources import files as pkg_files
-from typing import Any, Optional
-
+from typing import Any
 import yaml
 from dotenv import load_dotenv
 from mcp import types
@@ -156,15 +155,8 @@ else:
 logger.info("Starting Teradata MCP server", extra={"server_config": {"profile": profile_name}, "startup_time": "2025-08-09"})
 
 # Check if the EFS or EVS tools are enabled in the profiles
-if any(re.match(pattern, 'fs_*') for pattern in config.get('tool',[])):
-    _enableEFS = True
-else:
-    _enableEFS = False
-
-if any(re.match(pattern, 'evs_*') for pattern in config.get('tool',[])):
-    _enableEVS = True
-else:
-    _enableEVS = False
+_enableEFS = True if any(re.match(pattern, 'fs_*') for pattern in config.get('tool', [])) else False
+_enableEVS = True if any(re.match(pattern, 'evs_*') for pattern in config.get('tool', [])) else False
 
 # Load the tool modules
 module_loader = td.initialize_module_loader(config)

@@ -66,11 +66,11 @@ def handle_qlty_negativeValues(conn: TeradataConnection, db_name: str | None, ta
 # distinct categories tool
 
 def handle_qlty_distinctCategories(
-    conn: TeradataConnection, 
-    db_name: str | None, 
-    table_name: str, 
-    col_name: str, 
-    *args, 
+    conn: TeradataConnection,
+    db_name: str | None,
+    table_name: str,
+    col_name: str,
+    *args,
     **kwargs
 ):
     """
@@ -107,11 +107,11 @@ def handle_qlty_distinctCategories(
 # standard deviation tool
 
 def handle_qlty_standardDeviation(
-    conn: TeradataConnection, 
-    db_name: str | None, 
-    table_name: str, 
-    col_name: str, 
-    *args, 
+    conn: TeradataConnection,
+    db_name: str | None,
+    table_name: str,
+    col_name: str,
+    *args,
     **kwargs
 ):
     """
@@ -176,11 +176,11 @@ def handle_qlty_columnSummary(conn: TeradataConnection, db_name: str | None, tab
 # Univariate statistics tool
 
 def handle_qlty_univariateStatistics(
-    conn: TeradataConnection, 
-    db_name: str | None, 
-    table_name: str, 
-    col_name: str, 
-    *args, 
+    conn: TeradataConnection,
+    db_name: str | None,
+    table_name: str,
+    col_name: str,
+    *args,
     **kwargs
 ):
     """
@@ -218,11 +218,11 @@ def handle_qlty_univariateStatistics(
 # Get Rows with Miissing Values tool
 
 def handle_qlty_rowsWithMissingValues(
-    conn: TeradataConnection, 
-    db_name: str | None, 
-    table_name: str, 
-    col_name: str, 
-    *args, 
+    conn: TeradataConnection,
+    db_name: str | None,
+    table_name: str,
+    col_name: str,
+    *args,
     **kwargs
 ):
     """
