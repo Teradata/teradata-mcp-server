@@ -23,7 +23,7 @@ def handle_sec_userDbPermissions(conn: TeradataConnection, user_name: str, *args
     with conn.cursor() as cur:
         if user_name == "":
             logger.debug("No user_name argument provided")
-            rows = []
+            data = rows_to_json(None, [])
         else:
             logger.debug(f"Argument provided: {user_name}")
             rows = cur.execute(f"""
@@ -37,8 +37,7 @@ def handle_sec_userDbPermissions(conn: TeradataConnection, user_name: str, *args
                 FROM DBC.AllRightsV
                 WHERE UserName = '{user_name}'
                 ORDER BY DatabaseName, TableName, AccessRight;""")
-
-        data = rows_to_json(cur.description, rows.fetchall())
+            data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
             "tool_name": "sec_userDbPermissions",
             "argument": user_name,
@@ -63,7 +62,7 @@ def handle_sec_rolePermissions(conn: TeradataConnection, role_name: str, *args, 
     with conn.cursor() as cur:
         if role_name == "":
             logger.debug("No role_name argument provided")
-            rows = []
+            data = rows_to_json(None, [])
         else:
             logger.debug(f"Argument provided: {role_name}")
             rows = cur.execute(f"""
@@ -137,8 +136,7 @@ def handle_sec_rolePermissions(conn: TeradataConnection, role_name: str, *args, 
                 WHERE RN.Grantee = '{role_name}'
                 GROUP BY 1, 2, 3, 4
                 ORDER BY 1, 2, 3, 4;""")
-
-        data = rows_to_json(cur.description, rows.fetchall())
+            data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
             "tool_name": "sec_rolePermissions",
             "argument": role_name,
@@ -163,7 +161,7 @@ def handle_sec_userRoles(conn: TeradataConnection, user_name: str, *args, **kwar
     with conn.cursor() as cur:
         if user_name == "":
             logger.debug("No user_name argument provided")
-            rows = []
+            data = rows_to_json(None, [])
         else:
             logger.debug(f"Argument provided: {user_name}")
             rows = cur.execute(f"""
@@ -179,8 +177,7 @@ def handle_sec_userRoles(conn: TeradataConnection, user_name: str, *args, **kwar
                 JOIN DBC.RoleMembersV Rm
                 ON r.RoleName = Rm.RoleName
                 WHERE r.RoleName LIKE  '%{user_name}%' (NOT CASESPECIFIC);""")
-
-        data = rows_to_json(cur.description, rows.fetchall())
+            data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
             "tool_name": "sec_userRoles",
             "argument": user_name,

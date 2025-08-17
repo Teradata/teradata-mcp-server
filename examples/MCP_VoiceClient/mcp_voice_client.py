@@ -1,22 +1,23 @@
-import os
 import asyncio
 import base64
+import datetime
+import hashlib
+import inspect
 import json
+import os
+import random
+import time
 import uuid
 import warnings
+
 import pyaudio
 import pytz
-import random
-import hashlib
-import datetime
-import time
-import inspect
 from aws_sdk_bedrock_runtime.client import BedrockRuntimeClient, InvokeModelWithBidirectionalStreamOperationInput
-from aws_sdk_bedrock_runtime.models import InvokeModelWithBidirectionalStreamInputChunk, BidirectionalInputPayloadPart
 from aws_sdk_bedrock_runtime.config import Config, HTTPAuthSchemeResolver, SigV4AuthScheme
-from smithy_aws_core.credentials_resolvers.environment import EnvironmentCredentialsResolver
+from aws_sdk_bedrock_runtime.models import BidirectionalInputPayloadPart, InvokeModelWithBidirectionalStreamInputChunk
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.tools import load_mcp_tools
+from smithy_aws_core.credentials_resolvers.environment import EnvironmentCredentialsResolver
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
@@ -37,7 +38,7 @@ def debug_print(message):
         functionName = inspect.stack()[1].function
         if  functionName == 'time_it' or functionName == 'time_it_async':
             functionName = inspect.stack()[2].function
-        print('{:%Y-%m-%d %H:%M:%S.%f}'.format(datetime.datetime.now())[:-3] + ' ' + functionName + ' ' + message)
+        print(f'{datetime.datetime.now():%Y-%m-%d %H:%M:%S.%f}'[:-3] + ' ' + functionName + ' ' + message)
 
 def time_it(label, methodToRun):
     start_time = time.perf_counter()
@@ -99,11 +100,11 @@ class ToolProcessor:
         """Process a tool call asynchronously and return the result"""
         # Create a unique task ID
         task_id = str(uuid.uuid4())
-        
+
         # Create and store the task
         task = asyncio.create_task(self._run_tool(tool_name, tool_content))
         self.tasks[task_id] = task
-        
+
         try:
             # Wait for the task to complete
             result = await task
@@ -112,7 +113,7 @@ class ToolProcessor:
             # Clean up the task reference
             if task_id in self.tasks:
                 del self.tasks[task_id]
-    
+
     async def _run_tool(self, tool_name, tool_content):
         """Internal method to execute the tool logic"""
         debug_print(f"Processing tool: {tool_name}")
@@ -166,7 +167,7 @@ class ToolProcessor:
 
 class BedrockStreamManager:
     """Manages bidirectional streaming with AWS Bedrock using asyncio"""
-    
+
     # Event templates
     START_SESSION_EVENT = '''{
         "event": {
@@ -276,7 +277,7 @@ class BedrockStreamManager:
             "sessionEnd": {}
         }
     }'''
-    
+
     def start_prompt(self):
         """Create a promptStart event"""
         get_default_tool_schema = json.dumps({
@@ -310,7 +311,7 @@ class BedrockStreamManager:
                 schema_dict = {}
             schema_json = json.dumps(schema_dict)
             #schema_obj  = schema_dict
-            
+
             tools_list.append({
                 "toolSpec": {
                     "name": tool.name,
@@ -320,7 +321,7 @@ class BedrockStreamManager:
                     }
                 }
             })
-            
+
         prompt_start_event = {
             "event": {
                 "promptStart": {
@@ -346,9 +347,9 @@ class BedrockStreamManager:
                 }
             }
         }
-        
+
         return json.dumps(prompt_start_event)
-    
+
     def tool_result_event(self, content_name, content, role):
         """Create a tool result event"""
 
@@ -356,7 +357,7 @@ class BedrockStreamManager:
             content_json_string = json.dumps(content)
         else:
             content_json_string = content
-            
+
         tool_result_event = {
             "event": {
                 "toolResult": {
@@ -367,26 +368,26 @@ class BedrockStreamManager:
             }
         }
         return json.dumps(tool_result_event)
-   
+
     def __init__(self, model_id='amazon.nova-sonic-v1:0', region='us-east-1'):
         """Initialize the stream manager."""
         self.model_id = model_id
         self.region = region
-        
+
         # Replace RxPy subjects with asyncio queues
         self.audio_input_queue = asyncio.Queue()
         self.audio_output_queue = asyncio.Queue()
         self.output_queue = asyncio.Queue()
-        
+
         self.response_task = None
         self.stream_response = None
         self.is_active = False
         self.barge_in = False
         self.bedrock_client = None
-        
+
         # Audio playback components
         self.audio_player = None
-        
+
         # Text response components
         self.display_assistant_text = False
         self.role = None
@@ -401,7 +402,7 @@ class BedrockStreamManager:
 
         # Add a tool processor
         self.tool_processor = ToolProcessor()
-        
+
         # Add tracking for in-progress tool calls
         self.pending_tool_tasks = {}
 
@@ -415,12 +416,12 @@ class BedrockStreamManager:
             http_auth_schemes={"aws.auth#sigv4": SigV4AuthScheme()}
         )
         self.bedrock_client = BedrockRuntimeClient(config=config)
-    
+
     async def initialize_stream(self):
         """Initialize the bidirectional stream with Bedrock."""
         if not self.bedrock_client:
             self._initialize_client()
-        
+
         try:
             self.stream_response = await time_it_async("invoke_model_with_bidirectional_stream", lambda : self.bedrock_client.invoke_model_with_bidirectional_stream( InvokeModelWithBidirectionalStreamOperationInput(model_id=self.model_id)))
             self.is_active = True
@@ -434,40 +435,40 @@ class BedrockStreamManager:
             text_content_start = self.TEXT_CONTENT_START_EVENT % (self.prompt_name, self.content_name, "SYSTEM")
             text_content = self.TEXT_INPUT_EVENT % (self.prompt_name, self.content_name, default_system_prompt)
             text_content_end = self.CONTENT_END_EVENT % (self.prompt_name, self.content_name)
-            
+
             init_events = [self.START_SESSION_EVENT, prompt_event, text_content_start, text_content, text_content_end]
-            
+
             for event in init_events:
                 await self.send_raw_event(event)
                 # Small delay between init events
                 await asyncio.sleep(0.1)
-            
+
             # Start listening for responses
             self.response_task = asyncio.create_task(self._process_responses())
-            
+
             # Start processing audio input
             asyncio.create_task(self._process_audio_input())
-            
+
             # Wait a bit to ensure everything is set up
             await asyncio.sleep(0.1)
-            
+
             debug_print("Stream initialized successfully")
             return self
         except Exception as e:
             self.is_active = False
             print(f"Failed to initialize stream: {str(e)}")
             raise
-    
+
     async def send_raw_event(self, event_json):
         """Send a raw event JSON to the Bedrock stream."""
         if not self.stream_response or not self.is_active:
             debug_print("Stream not initialized or closed")
             return
-       
+
         event = InvokeModelWithBidirectionalStreamInputChunk(
             value=BidirectionalInputPayloadPart(bytes_=event_json.encode('utf-8'))
         )
-        
+
         try:
             await self.stream_response.input_stream.send(event)
             # For debugging large events, you might want to log just the type
@@ -483,35 +484,35 @@ class BedrockStreamManager:
             if DEBUG:
                 import traceback
                 traceback.print_exc()
-    
+
     async def send_audio_content_start_event(self):
         """Send a content start event to the Bedrock stream."""
         content_start_event = self.CONTENT_START_EVENT % (self.prompt_name, self.audio_content_name)
         await self.send_raw_event(content_start_event)
-    
+
     async def _process_audio_input(self):
         """Process audio input from the queue and send to Bedrock."""
         while self.is_active:
             try:
                 # Get audio data from the queue
                 data = await self.audio_input_queue.get()
-                
+
                 audio_bytes = data.get('audio_bytes')
                 if not audio_bytes:
                     debug_print("No audio bytes received")
                     continue
-                
+
                 # Base64 encode the audio data
                 blob = base64.b64encode(audio_bytes)
                 audio_event = self.AUDIO_EVENT_TEMPLATE % (
-                    self.prompt_name, 
-                    self.audio_content_name, 
+                    self.prompt_name,
+                    self.audio_content_name,
                     blob.decode('utf-8')
                 )
-                
+
                 # Send the event
                 await self.send_raw_event(audio_event)
-                
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -519,7 +520,7 @@ class BedrockStreamManager:
                 if DEBUG:
                     import traceback
                     traceback.print_exc()
-    
+
     def add_audio_chunk(self, audio_bytes):
         """Add an audio chunk to the queue."""
         self.audio_input_queue.put_nowait({
@@ -527,21 +528,21 @@ class BedrockStreamManager:
             'prompt_name': self.prompt_name,
             'content_name': self.audio_content_name
         })
-    
+
     async def send_audio_content_end_event(self):
         """Send a content end event to the Bedrock stream."""
         if not self.is_active:
             debug_print("Stream is not active")
             return
-        
+
         content_end_event = self.CONTENT_END_EVENT % (self.prompt_name, self.audio_content_name)
         await self.send_raw_event(content_end_event)
         debug_print("Audio ended")
-    
+
     async def send_tool_start_event(self, content_name, tool_use_id):
         """Send a tool content start event to the Bedrock stream."""
         content_start_event = self.TOOL_CONTENT_START_EVENT % (self.prompt_name, content_name, tool_use_id)
-        debug_print(f"Sending tool start event: {content_start_event}")  
+        debug_print(f"Sending tool start event: {content_start_event}")
         await self.send_raw_event(content_start_event)
 
     async def send_tool_result_event(self, content_name, tool_result):
@@ -550,23 +551,23 @@ class BedrockStreamManager:
         tool_result_event = self.tool_result_event(content_name=content_name, content=tool_result, role="TOOL")
         debug_print(f"Sending tool result event: {tool_result_event}")
         await self.send_raw_event(tool_result_event)
-    
+
     async def send_tool_content_end_event(self, content_name):
         """Send a tool content end event to the Bedrock stream."""
         tool_content_end_event = self.CONTENT_END_EVENT % (self.prompt_name, content_name)
         debug_print(f"Sending tool content event: {tool_content_end_event}")
         await self.send_raw_event(tool_content_end_event)
-    
+
     async def send_prompt_end_event(self):
         """Close the stream and clean up resources."""
         if not self.is_active:
             debug_print("Stream is not active")
             return
-        
+
         prompt_end_event = self.PROMPT_END_EVENT % (self.prompt_name)
         await self.send_raw_event(prompt_end_event)
         debug_print("Prompt ended")
-        
+
     async def send_session_end_event(self):
         """Send a session end event to the Bedrock stream."""
         if not self.is_active:
@@ -576,10 +577,10 @@ class BedrockStreamManager:
         await self.send_raw_event(self.SESSION_END_EVENT)
         self.is_active = False
         debug_print("Session ended")
-    
+
     async def _process_responses(self):
         """Process incoming responses from Bedrock."""
-        try:            
+        try:
             while self.is_active:
                 try:
                     output = await self.stream_response.await_output()
@@ -588,7 +589,7 @@ class BedrockStreamManager:
                         try:
                             response_data = result.value.bytes_.decode('utf-8')
                             json_data = json.loads(response_data)
-                            
+
                             # Handle different response types
                             if 'event' in json_data:
                                 if 'completionStart' in json_data['event']:
@@ -657,7 +658,7 @@ class BedrockStreamManager:
                     else:
                         print(f"Error receiving response: {e}")
                     break
-                    
+
         except Exception as e:
             print(f"Response processing error: {e}")
         finally:
@@ -667,61 +668,61 @@ class BedrockStreamManager:
         """Handle a tool request asynchronously"""
         # Create a unique content name for this tool response
         tool_content_name = str(uuid.uuid4())
-        
+
         # Create an asynchronous task for the tool execution
         task = asyncio.create_task(self._execute_tool_and_send_result(
             tool_name, tool_content, tool_use_id, tool_content_name))
-        
+
         # Store the task
         self.pending_tool_tasks[tool_content_name] = task
-        
+
         # Add error handling
         task.add_done_callback(
             lambda t: self._handle_tool_task_completion(t, tool_content_name))
-    
+
     def _handle_tool_task_completion(self, task, content_name):
         """Handle the completion of a tool task"""
         # Remove task from pending tasks
         if content_name in self.pending_tool_tasks:
             del self.pending_tool_tasks[content_name]
-        
+
         # Handle any exceptions
         if task.done() and not task.cancelled():
             exception = task.exception()
             if exception:
                 debug_print(f"Tool task failed: {str(exception)}")
-    
+
     async def _execute_tool_and_send_result(self, tool_name, tool_content, tool_use_id, content_name):
         """Execute a tool and send the result"""
         try:
             debug_print(f"Starting tool execution: {tool_name}")
-            
+
             # Process the tool - this doesn't block the event loop
             tool_result = await self.tool_processor.process_tool_async(tool_name, tool_content)
-            
+
             # Send the result sequence
             await self.send_tool_start_event(content_name, tool_use_id)
             await self.send_tool_result_event(content_name, tool_result)
             await self.send_tool_content_end_event(content_name)
-            
+
             debug_print(f"Tool execution complete: {tool_name}")
         except Exception as e:
             debug_print(f"Error executing tool {tool_name}: {str(e)}")
             # Try to send an error response if possible
             try:
                 error_result = {"error": f"Tool execution failed: {str(e)}"}
-                
+
                 await self.send_tool_start_event(content_name, tool_use_id)
                 await self.send_tool_result_event(content_name, error_result)
                 await self.send_tool_content_end_event(content_name)
             except Exception as send_error:
                 debug_print(f"Failed to send error response: {str(send_error)}")
-    
+
     async def close(self):
         """Close the stream properly."""
         if not self.is_active:
             return
-        
+
         # Cancel any pending tool tasks
         for task in self.pending_tool_tasks.values():
             task.cancel()
@@ -738,7 +739,7 @@ class BedrockStreamManager:
 
 class AudioStreamer:
     """Handles continuous microphone input and audio output using separate streams."""
-    
+
     def __init__(self, stream_manager):
         self.stream_manager = stream_manager
         self.is_streaming = False
@@ -779,7 +780,7 @@ class AudioStreamer:
         if self.is_streaming and in_data:
             # Schedule the task in the event loop
             asyncio.run_coroutine_threadsafe(
-                self.process_input_audio(in_data), 
+                self.process_input_audio(in_data),
                 self.loop
             )
         return (None, pyaudio.paContinue)
@@ -792,7 +793,7 @@ class AudioStreamer:
         except Exception as e:
             if self.is_streaming:
                 print(f"Error processing input audio: {e}")
-    
+
     async def play_output_audio(self):
         """Play audio responses from Nova Sonic"""
         while self.is_streaming:
@@ -809,36 +810,36 @@ class AudioStreamer:
                     # Small sleep after clearing
                     await asyncio.sleep(0.05)
                     continue
-                
+
                 # Get audio data from the stream manager's queue
                 audio_data = await asyncio.wait_for(
                     self.stream_manager.audio_output_queue.get(),
                     timeout=0.1
                 )
-                
+
                 if audio_data and self.is_streaming:
                     # Write directly to the output stream in smaller chunks
                     chunk_size = CHUNK_SIZE  # Use the same chunk size as the stream
-                    
+
                     # Write the audio data in chunks to avoid blocking too long
                     for i in range(0, len(audio_data), chunk_size):
                         if not self.is_streaming:
                             break
-                        
+
                         end = min(i + chunk_size, len(audio_data))
                         chunk = audio_data[i:end]
-                        
+
                         # Create a new function that captures the chunk by value
                         def write_chunk(data):
                             return self.output_stream.write(data)
-                        
+
                         # Pass the chunk to the function
                         await asyncio.get_event_loop().run_in_executor(None, write_chunk, chunk)
-                        
+
                         # Brief yield to allow other tasks to run
                         await asyncio.sleep(0.001)
-                    
-            except asyncio.TimeoutError:
+
+            except TimeoutError:
                 # No data available within timeout, just continue
                 continue
             except Exception as e:
@@ -847,28 +848,28 @@ class AudioStreamer:
                     import traceback
                     traceback.print_exc()
                 await asyncio.sleep(0.05)
-    
+
     async def start_streaming(self):
         """Start streaming audio."""
         if self.is_streaming:
             return
-        
+
         print("Starting audio streaming. Speak into your microphone...")
         print("Press Enter to stop streaming...")
-        
+
         # Send audio content start event
         await time_it_async("send_audio_content_start_event", lambda : self.stream_manager.send_audio_content_start_event())
-        
+
         self.is_streaming = True
-        
+
         # Start the input stream if not already started
         if not self.input_stream.is_active():
             self.input_stream.start_stream()
-        
+
         # Start processing tasks
         #self.input_task = asyncio.create_task(self.process_input_audio())
         self.output_task = asyncio.create_task(self.play_output_audio())
-        
+
         # Wait for user to press Enter to stop (or be cancelled)
         try:
             await asyncio.get_event_loop().run_in_executor(None, input)
@@ -878,12 +879,12 @@ class AudioStreamer:
         finally:
             # Ensure streaming is stopped
             await self.stop_streaming()
-    
+
     async def stop_streaming(self):
         """Stop streaming audio."""
         if not self.is_streaming:
             return
-            
+
         self.is_streaming = False
 
         # Cancel the tasks
@@ -907,7 +908,7 @@ class AudioStreamer:
             self.output_stream.close()
         if self.p:
             self.p.terminate()
-        
+
         await self.stream_manager.close()
         # Cleanly exit MCP session context if still open
         try:
@@ -939,7 +940,7 @@ async def main(debug=False):
     try:
         # This will run until the user presses Enter
         await audio_streamer.start_streaming()
-        
+
     except KeyboardInterrupt:
         print("Interrupted by user")
     finally:
@@ -947,11 +948,11 @@ async def main(debug=False):
         await audio_streamer.stop_streaming()
         # Properly exit the MCP session context
         # await stream_manager.tool_processor.mcp_session_context.__aexit__(None, None, None)
-        
+
 
 if __name__ == "__main__":
     import argparse
-    
+
     parser = argparse.ArgumentParser(description='Nova Sonic Python Streaming')
     parser.add_argument('--debug', action='store_true', help='Enable debug mode')
     args = parser.parse_args()

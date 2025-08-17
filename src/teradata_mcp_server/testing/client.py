@@ -3,11 +3,12 @@ LLM client for executing test prompts.
 """
 
 import asyncio
+import json
 import logging
 import os
-from typing import Dict, List, Any, Optional, AsyncGenerator
+from collections.abc import AsyncGenerator
 from datetime import datetime
-import json
+from typing import Any, Dict, List, Optional
 
 try:
     from anthropic import Anthropic, AsyncAnthropic
@@ -15,7 +16,7 @@ except ImportError:
     Anthropic = AsyncAnthropic = None
 
 try:
-    from openai import OpenAI, AsyncOpenAI
+    from openai import AsyncOpenAI, OpenAI
 except ImportError:
     OpenAI = AsyncOpenAI = None
 
@@ -23,7 +24,7 @@ from mcp import ClientSession
 from mcp.client.stdio import stdio_client
 
 from .config import TestConfig
-from .result import TestResult, TestPhaseResult, TestStatus
+from .result import TestPhaseResult, TestResult, TestStatus
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ class TestClient:
         self.config = config
         self.client = None
         self.mcp_session = None
-        
+
     async def initialize(self):
         """Initialize the LLM client."""
         if self.config.llm_provider == "anthropic":
@@ -45,19 +46,19 @@ class TestClient:
             if not api_key:
                 raise ValueError("ANTHROPIC_API_KEY environment variable required")
             self.client = AsyncAnthropic(api_key=api_key)
-            
+
         elif self.config.llm_provider == "openai":
             if not OpenAI:
-                raise ImportError("openai package not installed") 
+                raise ImportError("openai package not installed")
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
                 raise ValueError("OPENAI_API_KEY environment variable required")
             self.client = AsyncOpenAI(api_key=api_key)
-            
+
         else:
             raise ValueError(f"Unsupported LLM provider: {self.config.llm_provider}")
 
-    async def connect_to_mcp_server(self, server_command: List[str]):
+    async def connect_to_mcp_server(self, server_command: list[str]):
         """Connect to the MCP server."""
         try:
             # Start the MCP server process
@@ -84,7 +85,7 @@ class TestClient:
 
         try:
             logger.info(f"Starting test: {test_name}")
-            
+
             # Execute the test prompt with the LLM
             messages = [
                 {
@@ -100,7 +101,7 @@ class TestClient:
 
             # Parse the response to determine success/failure
             success = self._parse_test_result(response, test_result)
-            
+
             test_result.finish(
                 status=TestStatus.PASSED if success else TestStatus.FAILED,
                 output=response
@@ -115,7 +116,7 @@ class TestClient:
 
         return test_result
 
-    async def _execute_anthropic(self, messages: List[Dict], test_result: TestResult) -> str:
+    async def _execute_anthropic(self, messages: list[dict], test_result: TestResult) -> str:
         """Execute test with Anthropic Claude."""
         response = await self.client.messages.create(
             model=self.config.llm_model,
@@ -123,10 +124,10 @@ class TestClient:
             temperature=self.config.llm_temperature,
             messages=messages
         )
-        
+
         return response.content[0].text if response.content else ""
 
-    async def _execute_openai(self, messages: List[Dict], test_result: TestResult) -> str:
+    async def _execute_openai(self, messages: list[dict], test_result: TestResult) -> str:
         """Execute test with OpenAI."""
         response = await self.client.chat.completions.create(
             model=self.config.llm_model,
@@ -134,20 +135,20 @@ class TestClient:
             max_tokens=self.config.llm_max_tokens,
             temperature=self.config.llm_temperature
         )
-        
+
         return response.choices[0].message.content if response.choices else ""
 
     def _parse_test_result(self, response: str, test_result: TestResult) -> bool:
         """Parse LLM response to determine test success/failure."""
         # Look for phase indicators and success/failure keywords
         lines = response.lower().split('\n')
-        
+
         current_phase = None
         phase_results = {}
-        
+
         for line in lines:
             line = line.strip()
-            
+
             # Detect phase markers
             if 'phase' in line and any(char.isdigit() for char in line):
                 try:
@@ -161,14 +162,14 @@ class TestClient:
                     }
                 except (ValueError, IndexError):
                     pass
-            
+
             # Look for success/failure indicators
             if current_phase is not None:
                 if any(keyword in line for keyword in ['success', 'passed', 'completed successfully']):
                     phase_results[current_phase]['status'] = TestStatus.PASSED
                 elif any(keyword in line for keyword in ['failed', 'error', 'fail this test']):
                     phase_results[current_phase]['status'] = TestStatus.FAILED
-                
+
                 phase_results[current_phase]['output'] += line + '\n'
 
         # Create phase results
@@ -184,11 +185,11 @@ class TestClient:
             test_result.add_phase(phase_result)
 
         # Overall success if all phases passed or no explicit failures
-        failed_phases = sum(1 for phase in phase_results.values() 
+        failed_phases = sum(1 for phase in phase_results.values()
                           if phase['status'] == TestStatus.FAILED)
-        
+
         # Also check for general failure indicators in the response
         failure_keywords = ['failed', 'error', 'fail this test', 'unsuccessful']
         has_general_failure = any(keyword in response.lower() for keyword in failure_keywords)
-        
+
         return failed_phases == 0 and not has_general_failure

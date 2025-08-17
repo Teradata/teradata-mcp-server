@@ -6,7 +6,8 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 from jinja2 import Template
 
 from .config import TestConfig
@@ -21,10 +22,10 @@ class TestReporter:
     def __init__(self, config: TestConfig):
         self.config = config
 
-    def generate_reports(self, results: List[TestResult]) -> Dict[str, str]:
+    def generate_reports(self, results: list[TestResult]) -> dict[str, str]:
         """Generate all configured report formats."""
         generated_files = {}
-        
+
         if self.config.generate_json_report:
             json_file = self.generate_json_report(results)
             generated_files['json'] = json_file
@@ -39,10 +40,10 @@ class TestReporter:
 
         return generated_files
 
-    def generate_json_report(self, results: List[TestResult]) -> str:
+    def generate_json_report(self, results: list[TestResult]) -> str:
         """Generate JSON report."""
         output_file = self.config.get_output_dir() / f"test_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        
+
         report_data = {
             'timestamp': datetime.now().isoformat(),
             'config': self.config.__dict__,
@@ -86,10 +87,10 @@ class TestReporter:
         logger.info(f"JSON report generated: {output_file}")
         return str(output_file)
 
-    def generate_html_report(self, results: List[TestResult]) -> str:
+    def generate_html_report(self, results: list[TestResult]) -> str:
         """Generate HTML report."""
         output_file = self.config.get_output_dir() / f"test_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
-        
+
         html_template = """
 <!DOCTYPE html>
 <html lang="en">
@@ -191,10 +192,10 @@ class TestReporter:
         logger.info(f"HTML report generated: {output_file}")
         return str(output_file)
 
-    def generate_console_report(self, results: List[TestResult]) -> str:
+    def generate_console_report(self, results: list[TestResult]) -> str:
         """Generate console-friendly report."""
         summary = self._generate_summary(results)
-        
+
         lines = [
             "=" * 80,
             "TERADATA MCP TEST RESULTS",
@@ -215,28 +216,28 @@ class TestReporter:
         for result in results:
             status_icon = {
                 TestStatus.PASSED: "✓",
-                TestStatus.FAILED: "✗", 
+                TestStatus.FAILED: "✗",
                 TestStatus.ERROR: "⚠",
                 TestStatus.SKIPPED: "-"
             }.get(result.status, "?")
 
             duration = f"{result.duration:.2f}s" if result.duration else "N/A"
-            
+
             lines.append(f"{status_icon} {result.test_name:<30} [{result.module_name:<10}] {duration:>8}")
-            
+
             if result.phases:
                 lines.append(f"    Phases: {result.passed_phases}/{result.total_phases} passed")
-            
+
             if result.error_message:
                 lines.append(f"    Error: {result.error_message}")
-            
+
             lines.append("")
 
         report = "\n".join(lines)
         print(report)
         return report
 
-    def _generate_summary(self, results: List[TestResult]) -> Dict[str, Any]:
+    def _generate_summary(self, results: list[TestResult]) -> dict[str, Any]:
         """Generate summary statistics."""
         total = len(results)
         passed = sum(1 for r in results if r.status == TestStatus.PASSED)
