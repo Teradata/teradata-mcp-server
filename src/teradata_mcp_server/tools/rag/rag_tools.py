@@ -142,7 +142,7 @@ def handle_rag_executeWorkflow(
 
     conn: TeradataConnection,
     question: str,
-    k: int = None,
+    k: int | None = None,
     *args,
     **kwargs,
 ):
@@ -304,7 +304,7 @@ def handle_rag_executeWorkflow(
 def handle_rag_executeWorkflow_ivsm(
     conn: TeradataConnection,
     question: str,
-    k: int = None,
+    k: int | None = None,
     *args,
     **kwargs,
 ):

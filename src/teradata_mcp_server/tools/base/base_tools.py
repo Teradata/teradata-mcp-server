@@ -13,8 +13,8 @@ logger = logging.getLogger("teradata_mcp_server")
 # Read query tool
 def handle_base_readQuery(
     conn: Connection,
-    sql: str = None,
-    tool_name: str = None,
+    sql: str | None = None,
+    tool_name: str | None = None,
     *args,
     **kwargs
 ):

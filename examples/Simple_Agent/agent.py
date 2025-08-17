@@ -4,20 +4,27 @@
 #  The followin video is a good overview of ADK and how to use it:
 #  https://www.youtube.com/watch?v=P4VFL9nIaIA
 
-import os
-from google.adk.agents.llm_agent import LlmAgent 
-from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters, StreamableHTTPConnectionParams, SseConnectionParams, StdioConnectionParams
-from google.adk.models.lite_llm import LiteLlm
-import nest_asyncio
 import asyncio
+import os
+
+import nest_asyncio
 from dotenv import load_dotenv
+from google.adk.agents.llm_agent import LlmAgent
+from google.adk.models.lite_llm import LiteLlm
+from google.adk.tools.mcp_tool.mcp_toolset import (
+    MCPToolset,
+    SseConnectionParams,
+    StdioConnectionParams,
+    StdioServerParameters,
+    StreamableHTTPConnectionParams,
+)
 
 load_dotenv()
 nest_asyncio.apply()
 
 async def create_agent():
     """Defines the transport mode to be used."""
-    
+
     if os.getenv("MCP_TRANSPORT") == 'stdio':
         # .env file needs to have MCP_TRANSPORT=stdio
         connection_params=StdioConnectionParams(
@@ -54,12 +61,12 @@ async def create_agent():
     """Defines the model to be used."""
     # Using Bedrock model
     model=LiteLlm(
-            model='bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0',  
+            model='bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0',
             aws_access_key_id=os.getenv("aws_access_key_id"),
             aws_secret_access_key=os.getenv("aws_secret_access_key"),
-            region_name=os.getenv("aws_region", "us-west-2") 
+            region_name=os.getenv("aws_region", "us-west-2")
         )
-    
+
     # # Using Google model
     # model='gemini-2.0-flash'
 
@@ -81,7 +88,7 @@ async def create_agent():
         model=model,
         name='Simple_Agent',
         instruction='Help user with Teradata tasks',
-        tools=[toolset]  
+        tools=[toolset]
     )
 
     return agent

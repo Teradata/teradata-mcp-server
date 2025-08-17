@@ -1,5 +1,5 @@
 import logging
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 
 # Suppress stdout/stderr during tdfs4ds import to prevent contamination of MCP JSON protocol
@@ -13,7 +13,7 @@ from teradata_mcp_server.tools.utils import create_response, rows_to_json
 
 logger = logging.getLogger("teradata_mcp_server")
 
-from teradata_mcp_server.tools.utils import serialize_teradata_types, rows_to_json, create_response
+from teradata_mcp_server.tools.utils import serialize_teradata_types
 
 #------------------ Do not make changes above  ------------------#
 
@@ -30,10 +30,10 @@ def handle_fs_isFeatureStorePresent(conn: TeradataConnection, db_name: str, *arg
     Args:
         db_name (str): The name of the database to check for the feature store.
     """
-    
+
     logger.info(f"Tool: handle_fs_isFeatureStorePresent: Args: db_name: {db_name}")
 
-    data = False
+    data: list | bool = False
 
     try:
         data = tdfs4ds.connect(database=db_name)
@@ -69,7 +69,7 @@ def handle_fs_getDataDomains(conn: TeradataConnection, fs_config, *args, **kwarg
         logger.error("Database name is not provided.")
         return create_response({"error": "The database name for the feature store is not specified."}, metadata)
 
-    data = False
+    data: list | bool = False
 
     try:
         is_a_feature_store = tdfs4ds.connect(database=db_name)
@@ -113,7 +113,7 @@ def handle_fs_featureStoreContent(conn: TeradataConnection, fs_config, *args, **
     if not db_name:
         logger.error("Database name is not provided.")
         return create_response({"error": "The database name for the feature store is not specified."}, metadata)
-    data = False
+    data: list | bool = False
 
     try:
         is_a_feature_store = tdfs4ds.connect(database=db_name)

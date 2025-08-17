@@ -1,9 +1,11 @@
-import tdfs4ds
-from tdfs4ds.utils.lineage import crystallize_view
-from teradataml import create_context, DataFrame, execute_sql, db_list_tables
-from urllib.parse import urlparse
 import argparse
 import os
+from urllib.parse import urlparse
+
+import tdfs4ds
+from tdfs4ds.utils.lineage import crystallize_view
+from teradataml import DataFrame, create_context, db_list_tables, execute_sql
+
 
 def main():
     parser = argparse.ArgumentParser(description="Teradata MCP Server")

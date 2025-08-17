@@ -1,11 +1,11 @@
-from typing import Any, List, Optional
-from typing import Optional
-from pydantic import Field, BaseModel
 import logging
-from sqlalchemy.engine import Connection
-from sqlalchemy import text
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
+from typing import Any, List, Optional
+
+from pydantic import BaseModel, Field
+from sqlalchemy import text
+from sqlalchemy.engine import Connection
 
 # Suppress stdout/stderr during tdfs4ds import to prevent contamination of MCP JSON protocol
 stdout_buffer = StringIO()
@@ -21,22 +21,22 @@ class FeatureStoreConfig(BaseModel):
     used to organize and access features, processes, and datasets across data domains.
     """
 
-    data_domain: Optional[str] = Field(
+    data_domain: str | None = Field(
         default=None,
         description="The data domain associated with the feature store, grouping features within the same namespace."
     )
 
-    entity: Optional[str] = Field(
+    entity: str | None = Field(
         default=None,
         description="The list of entities, comma separated and in alphabetical order, upper case."
     )
 
-    db_name: Optional[str] = Field(
+    db_name: str | None = Field(
         default=None,
         description="Name of the database where the feature store is hosted."
     )
 
-    feature_catalog: Optional[str] = Field(
+    feature_catalog: str | None = Field(
         default=None,
         description=(
             "Name of the feature catalog table. "
@@ -44,7 +44,7 @@ class FeatureStoreConfig(BaseModel):
         )
     )
 
-    process_catalog: Optional[str] = Field(
+    process_catalog: str | None = Field(
         default=None,
         description=(
             "Name of the process catalog table. "
@@ -52,7 +52,7 @@ class FeatureStoreConfig(BaseModel):
         )
     )
 
-    dataset_catalog: Optional[str] = Field(
+    dataset_catalog: str | None = Field(
         default=None,
         description=(
             "Name of the dataset catalog table. "
@@ -63,9 +63,9 @@ class FeatureStoreConfig(BaseModel):
     def fs_setFeatureStoreConfig(
         self,
         conn: Connection,
-        db_name: Optional[str] = None,
-        data_domain: Optional[str] = None,
-        entity: Optional[str] = None,
+        db_name: str | None = None,
+        data_domain: str | None = None,
+        entity: str | None = None,
     ) -> "FeatureStoreConfig":
 
         if db_name:
@@ -74,7 +74,7 @@ class FeatureStoreConfig(BaseModel):
                 # Reset data_domain if DB name changes
                 if not (self.db_name and self.db_name.upper() == db_name.upper()):
                     self.data_domain = None
-                
+
                 self.db_name = db_name
                 logger.info(f"connected to the feature store of the {db_name} database")
                 self.feature_catalog = f"{db_name}.{tdfs4ds.FEATURE_CATALOG_NAME_VIEW}"
