@@ -1,4 +1,4 @@
-dba_databaseVersion:
+ba_databaseVersion:
   type: tool
   description: " Get Teradata database version information."
   sql: |
@@ -292,9 +292,15 @@ dba_databaseLineage :
         - do not return any explanation of results
   parameters:
     database_name:
+      name: database_name
       description: "Name of the database to analyze for table lineage."
+      required: true
+      type_hint: str
     number_days:
+      name: number_days
       description: "Number of days to look back for SQL execution history (e.g., 7, 30, 90)."
+      required: true
+      type_hint: str
 
 dba_tableDropImpact:
   type: prompt
@@ -342,19 +348,26 @@ dba_tableDropImpact:
         - Do not include any additional explanation of results
   parameters:
     table_name:
+      name: table_name
       description: "Name of the table to analyze for drop impact."
+      required: true
+      type_hint: str
     database_name:
+      name: database_name
       description: "Name of the database containing the table."
+      required: true
+      type_hint: str
     number_days:
+      name: number_days
       description: "Number of days to look back for SQL execution history (e.g., 7, 30, 90)."
+      required: true
+      type_hint: str
 
 
 dba_databaseHealthAssessment :
   type: prompt
   description: "You are a Teradata DBA who is an expert in assessing the health of a database."
   prompt: |
-    You are a Teradata DBA who is an expert in assessing the health of a database.
-
     Generate a comprehensive Teradata system health dashboard for the last 30 days, structured as an executive summary followed by detailed technical analysis. Create a visual dashboard using tables, charts, and color-coded indicators to highlight critical metrics and resource constraints. 
 
     Executive Summary Section: 

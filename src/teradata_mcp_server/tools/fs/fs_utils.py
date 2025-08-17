@@ -31,7 +31,7 @@ class FeatureStoreConfig(BaseModel):
         description="The list of entities, comma separated and in alphabetical order, upper case."
     )
 
-    db_name: Optional[str] = Field(
+    database_name: Optional[str] = Field(
         default=None,
         description="Name of the database where the feature store is hosted."
     )
@@ -63,28 +63,28 @@ class FeatureStoreConfig(BaseModel):
     def fs_setFeatureStoreConfig(
         self,
         conn: Connection,
-        db_name: Optional[str] = None,
+        database_name: Optional[str] = None,
         data_domain: Optional[str] = None,
         entity: Optional[str] = None,
     ) -> "FeatureStoreConfig":
 
-        if db_name:
-            if tdfs4ds.connect(database=db_name):
-                logger.info(f"connected to the feature store of the {db_name} database")
+        if database_name:
+            if tdfs4ds.connect(database=database_name):
+                logger.info(f"connected to the feature store of the {database_name} database")
                 # Reset data_domain if DB name changes
-                if not (self.db_name and self.db_name.upper() == db_name.upper()):
+                if not (self.database_name and self.database_name.upper() == database_name.upper()):
                     self.data_domain = None
                 
-                self.db_name = db_name
-                logger.info(f"connected to the feature store of the {db_name} database")
-                self.feature_catalog = f"{db_name}.{tdfs4ds.FEATURE_CATALOG_NAME_VIEW}"
+                self.database_name = database_name
+                logger.info(f"connected to the feature store of the {database_name} database")
+                self.feature_catalog = f"{database_name}.{tdfs4ds.FEATURE_CATALOG_NAME_VIEW}"
                 logger.info(f"feature catalog {self.feature_catalog}")
-                self.process_catalog = f"{db_name}.{tdfs4ds.PROCESS_CATALOG_NAME_VIEW}"
+                self.process_catalog = f"{database_name}.{tdfs4ds.PROCESS_CATALOG_NAME_VIEW}"
                 logger.info(f"process catalog {self.process_catalog}")
-                self.dataset_catalog = f"{db_name}.FS_V_FS_DATASET_CATALOG"  # <- fixed line
+                self.dataset_catalog = f"{database_name}.FS_V_FS_DATASET_CATALOG"  # <- fixed line
                 logger.info(f"dataset catalog {self.dataset_catalog}")
 
-        if self.db_name is not None and data_domain is not None:
+        if self.database_name is not None and data_domain is not None:
             stmt = text(
                 f"SELECT COUNT(*) AS N FROM {self.feature_catalog} "
                 "WHERE UPPER(data_domain)=:domain"
@@ -97,7 +97,7 @@ class FeatureStoreConfig(BaseModel):
             else:
                 self.data_domain = None
 
-        if self.db_name is not None and self.data_domain is not None and entity is not None:
+        if self.database_name is not None and self.data_domain is not None and entity is not None:
             stmt = text(
                 f"SELECT COUNT(*) AS N FROM {self.feature_catalog} "
                 "WHERE UPPER(data_domain)=:domain "

@@ -2,9 +2,9 @@ base_tableList:
   type: tool
   description: "Lists all tables in a database."
   sql: |
-    select TableName from dbc.TablesV tv where UPPER(tv.DatabaseName) = UPPER(:db_name) and tv.TableKind in ('T','V', 'O', 'Q');
+    select TableName from dbc.TablesV tv where UPPER(tv.DatabaseName) = UPPER(:database_name) and tv.TableKind in ('T','V', 'O', 'Q');
   parameters:
-    db_name:
+    database_name:
       description: "Database name to inspect."
 
 base_databaseList:
@@ -22,7 +22,7 @@ test_baseTools:
    Perform the phases in order, and do not skip any phase.
    
    ## Phase 0 - Get a list of databases
-   - Get a list of databases from the user. Use the base_databaseList function to get the list.  The tool should return a list of databases in the Teradata system, if no data is returned then fail this test.
+   - Get a list of databases from the user. Use the base_databaseList function to get the list. The tool should return a list of databases in the Teradata system, if no data is returned then fail this test.
    ## Phase 1 - Get the list of tables in each database
    - For the DBC database, get the list of tables. Use the base_tableList function to get the list. The tool should return a list of tables in the DBC database, if no data is returned then fail this test.
    ## Phase 2 - Create a test table in your default database
@@ -39,7 +39,7 @@ test_baseTools:
     INSERT INTO test_customer VALUES (6, 'Diana Davis', 'diana.davis@email.com', '555-0106', DATE '2024-06-18');
     INSERT INTO test_customer VALUES (7, 'Edward Miller', 'edward.miller@email.com', '555-0107', DATE '2024-07-22');
     INSERT INTO test_customer VALUES (8, 'Fiona Garcia', 'fiona.garcia@email.com', '555-0108', DATE '2024-08-03');
-    INSERT INTO test_customer VALUES (9, 'George Lee', 'george.lee@email.com', '555-0109', DATE '2024-08-15');
+    INSERT INTO test_customer VALUES (9, 'George Lee', 'george.lee@email.555-0109', DATE '2024-08-15');
     INSERT INTO test_customer VALUES (10, 'Helen Taylor', 'helen.taylor@email.com', '555-0110', DATE '2024-08-25');
    ## Phase 3 - Test the query tool
    - test the query tool by running a query on the test_customer table. Use the base_readQuery function to run the query. The query should return the 10 rows you added in the previous phase, if no data is returned then fail this test.
@@ -178,13 +178,16 @@ base_query:
    `AS`: The `AS` keyword in SQL is used to create an alias for columns or tables, helping to simplify query logic and improve readability., Examples: ['SELECT first_name AS name FROM employees;', 'SELECT department AS dept FROM company;', 'CREATE VIEW sales_report AS SELECT * FROM sales WHERE year = 2023;', 'SELECT product_name AS name, SUM(sales) AS total_sales FROM store GROUP BY product_name;', 'SELECT c.customer_id, c.name AS customer_name, o.order_id, o.total_amount AS amount FROM customers c INNER JOIN orders o ON c.customer_id = o.customer_id;']
    `DISTINCT`: The `DISTINCT` keyword is used in the SQL `SELECT` statement to ensure that only unique values are returned for specified columns, effectively removing duplicate rows from the result set., Examples: ['SELECT DISTINCT city FROM addresses;', 'SELECT DISTINCT city, state FROM addresses;', 'SELECT DISTINCT department FROM employees ORDER BY department;', 'SELECT COUNT(DISTINCT customer_id) FROM orders;']
    `IN`: The `IN` keyword is used in SQL to specify a list of discrete values for a column to match against, typically in a `WHERE` clause, allowing for multiple specific conditions to be evaluated at once., Examples: ["SELECT * FROM employees WHERE department IN ('HR', 'Engineering', 'Marketing');", 'SELECT id, name FROM students WHERE grade IN (10, 11, 12);', "DELETE FROM orders WHERE order_status IN ('Cancelled', 'Returned');", "UPDATE items SET status = 'Unavailable' WHERE item_id IN (1001, 1002, 1003);", "SELECT * FROM logs WHERE severity IN ('ERROR', 'CRITICAL') ORDER BY timestamp DESC;"]
-   `ALL`: The `ALL` keyword in SQL is used with set operations like `UNION ALL` to retain duplicate rows. Teradata supports `UNION ALL` and `EXCEPT ALL` operations., Examples: ['SELECT * FROM table1 UNION ALL SELECT * FROM table2;', 'SELECT * FROM employees WHERE department = \'Engineering\' UNION ALL SELECT * FROM contractors WHERE department = \'Engineering\';', 'SELECT customer_id FROM orders EXCEPT ALL SELECT customer_id FROM returns;', 'SELECT product_id, quantity FROM inventory UNION ALL SELECT product_id, quantity FROM backorder;']
+   `ALL`: The `ALL` keyword in SQL is used with set operations like `UNION ALL` to retain duplicate rows. Teradata supports `UNION ALL` and `EXCEPT ALL` operations., Examples: ['SELECT * FROM table1 UNION ALL SELECT * FROM table2;', 'SELECT * FROM employees WHERE department = \'Engineering\' UNION ALL SELECT FROM contractors WHERE department = \'Engineering\';', 'SELECT customer_id FROM orders EXCEPT ALL SELECT customer_id FROM returns;', 'SELECT product_id, quantity FROM inventory UNION ALL SELECT product_id, quantity FROM backorder;']
    `LIKE`: The `LIKE` expression is used to determine if a string matches a specified pattern, allowing wildcard characters such as `_` to represent any single character and `%` to match any sequence of characters., Examples: ["SELECT 'abc' LIKE 'abc'; -- true", "SELECT 'abc' LIKE 'a%'; -- true", "SELECT 'abc' LIKE '_b_'; -- true", "SELECT 'abc' LIKE 'c'; -- false", "SELECT 'abc' LIKE 'c%'; -- false", "SELECT 'abc' LIKE '%c'; -- true", "SELECT 'abc' NOT LIKE '%c'; -- false", "SELECT UPPER('abc') LIKE '%C'; -- true"]
 
    Your task is to solve the following problem: {query}."
   parameters:
     query:
+      name: query
       description: "The problem or question that needs to be solved using Teradata database tools."
+      required: true
+      type_hint: str
 
 
 base_tableBusinessDesc:
@@ -228,9 +231,15 @@ base_tableBusinessDesc:
             - ***Column3:*** `column3_descriptions`
   parameters:
     database_name:
+      name: database_name
       description: "Database for the table to describe."
+      required: true
+      type_hint: str
     table_name:
+      name: table_name
       description: "Table to describe."
+      required: true
+      type_hint: str
 
 base_databaseBusinessDesc:
   type: prompt
@@ -270,6 +279,7 @@ base_databaseBusinessDesc:
          ***Description:*** `database_description`
   parameters:
     database_name:
+      name: database_name
       description: "Database to describe."
       type_hint: str
       required: false
