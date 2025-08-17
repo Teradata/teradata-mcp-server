@@ -1,7 +1,6 @@
 import logging
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
-from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field
 from sqlalchemy import text
@@ -17,7 +16,7 @@ logger = logging.getLogger("teradata_mcp_server")
 
 class FeatureStoreConfig(BaseModel):
     """
-    Configuration class for the feature store. This model defines the metadata and catalog sources 
+    Configuration class for the feature store. This model defines the metadata and catalog sources
     used to organize and access features, processes, and datasets across data domains.
     """
 
@@ -68,21 +67,20 @@ class FeatureStoreConfig(BaseModel):
         entity: str | None = None,
     ) -> "FeatureStoreConfig":
 
-        if db_name:
-            if tdfs4ds.connect(database=db_name):
-                logger.info(f"connected to the feature store of the {db_name} database")
-                # Reset data_domain if DB name changes
-                if not (self.db_name and self.db_name.upper() == db_name.upper()):
-                    self.data_domain = None
+        if db_name and tdfs4ds.connect(database=db_name):
+            logger.info(f"connected to the feature store of the {db_name} database")
+            # Reset data_domain if DB name changes
+            if not (self.db_name and self.db_name.upper() == db_name.upper()):
+                self.data_domain = None
 
-                self.db_name = db_name
-                logger.info(f"connected to the feature store of the {db_name} database")
-                self.feature_catalog = f"{db_name}.{tdfs4ds.FEATURE_CATALOG_NAME_VIEW}"
-                logger.info(f"feature catalog {self.feature_catalog}")
-                self.process_catalog = f"{db_name}.{tdfs4ds.PROCESS_CATALOG_NAME_VIEW}"
-                logger.info(f"process catalog {self.process_catalog}")
-                self.dataset_catalog = f"{db_name}.FS_V_FS_DATASET_CATALOG"  # <- fixed line
-                logger.info(f"dataset catalog {self.dataset_catalog}")
+            self.db_name = db_name
+            logger.info(f"connected to the feature store of the {db_name} database")
+            self.feature_catalog = f"{db_name}.{tdfs4ds.FEATURE_CATALOG_NAME_VIEW}"
+            logger.info(f"feature catalog {self.feature_catalog}")
+            self.process_catalog = f"{db_name}.{tdfs4ds.PROCESS_CATALOG_NAME_VIEW}"
+            logger.info(f"process catalog {self.process_catalog}")
+            self.dataset_catalog = f"{db_name}.FS_V_FS_DATASET_CATALOG"  # <- fixed line
+            logger.info(f"dataset catalog {self.dataset_catalog}")
 
         if self.db_name is not None and data_domain is not None:
             stmt = text(

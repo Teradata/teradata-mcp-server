@@ -17,7 +17,6 @@ import sys
 import time
 from contextlib import AsyncExitStack
 from datetime import datetime
-from typing import Dict, List, Optional
 
 # MCP client imports
 from mcp.client.session import ClientSession
@@ -283,7 +282,7 @@ class MCPTestRunner:
 
                         # Check for empty results and log warning
                         results_length = len(str(results)) if results else 0
-                        if results_length == 0 or (isinstance(results, (list, dict)) and len(results) == 0):
+                        if results_length == 0 or (isinstance(results, list | dict) and len(results) == 0):
                             has_warning = True
                     else:
                         status = "FAIL"
@@ -293,7 +292,7 @@ class MCPTestRunner:
                             error_msg = f"Status: {response_status}"
                         results_length = len(str(results)) if results else 0
 
-                    print(f"{"⚠" if has_warning else ""}{status} ({duration:.2f}s)")
+                    print(f"{'⚠' if has_warning else ''}{status} ({duration:.2f}s)")
 
                     # Show full response in verbose mode for failures or errors
                     if self.verbose and status == "FAIL":

@@ -26,7 +26,7 @@ from teradata_mcp_server.tools.utils import serialize_teradata_types
 # #     Returns: True or False
 def handle_fs_isFeatureStorePresent(conn: TeradataConnection, db_name: str, *args, **kwargs):
     """ Check if a feature store is present in the specified database.
-    
+
     Args:
         db_name (str): The name of the database to check for the feature store.
     """
@@ -53,7 +53,7 @@ def handle_fs_isFeatureStorePresent(conn: TeradataConnection, db_name: str, *arg
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 # #     Returns: True or False
 def handle_fs_getDataDomains(conn: TeradataConnection, fs_config, *args, **kwargs):
-    """ 
+    """
     List the available data domains. Requires a configured `db_name`  in the feature store config. Use this to explore which entities can be used when building a dataset.
     """
 
@@ -99,7 +99,7 @@ def handle_fs_getDataDomains(conn: TeradataConnection, fs_config, *args, **kwarg
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 # #     Returns: True or False
 def handle_fs_featureStoreContent(conn: TeradataConnection, fs_config, *args, **kwargs):
-    """ 
+    """
     Returns a summary of the feature store content. Use this to understand what data is available in the feature store.
     """
 
@@ -142,7 +142,7 @@ def handle_fs_featureStoreContent(conn: TeradataConnection, fs_config, *args, **
 #       db_name - the database name to check for existence
 # #     Returns: the feature store schema, mainly the catalogs
 def handle_fs_getFeatureDataModel(conn: TeradataConnection, fs_config, *args, **kwargs):
-    """ 
+    """
     Returns the feature store data model, including the feature catalog, process catalog, and dataset catalog.
     """
 
@@ -187,7 +187,7 @@ def handle_fs_getFeatureDataModel(conn: TeradataConnection, fs_config, *args, **
 #       db_name - the database name to check for existence
 # #     Returns: True or False
 def handle_fs_getAvailableEntities(conn: TeradataConnection, fs_config, *args, **kwargs):
-    """ 
+    """
     List the available entities for a given data domain. Requires a configured `db_name` and `data_domain` and  `entity` in the feature store config. Use this to explore which entities can be used when building a dataset.
     """
     db_name = fs_config.db_name
@@ -240,7 +240,7 @@ def handle_fs_getAvailableEntities(conn: TeradataConnection, fs_config, *args, *
 #       db_name - the database name to check for existence
 # #     Returns: True or False
 def handle_fs_getAvailableDatasets(conn: TeradataConnection, fs_config, *args, **kwargs):
-    """ 
+    """
     List the list of available datasets.Requires a configured `db_name` in the feature store config.Use this to explore the datasets that are available .
     """
 
@@ -277,7 +277,7 @@ def handle_fs_getAvailableDatasets(conn: TeradataConnection, fs_config, *args, *
 #       db_name - the database name to check for existence
 # #     Returns: True or False
 def handle_fs_getFeatures(conn: TeradataConnection, fs_config, *args, **kwargs):
-    """ 
+    """
     List the list of features. Requires a configured `db_name` and  `data_domain` in the feature store config. Use this to explore the features available .
     """
 
@@ -341,7 +341,7 @@ def handle_fs_getFeatures(conn: TeradataConnection, fs_config, *args, **kwargs):
 #       db_name - the database name to check for existence
 # #     Returns: True or False
 def handle_fs_createDataset(conn: TeradataConnection, fs_config, entity_name: str, feature_selection: list[str], dataset_name: str, target_database: str, *args, **kwargs):
-    """ 
+    """
     Create a dataset using selected features and an entity from the feature store. The dataset is created in the specified target database under the given name. Requires a configured feature store and data domain. Registers the dataset in the catalog automatically. Use this when you want to build and register a new dataset for analysis or modeling.
     Args:
         entity_name (str): Entity for which the dataset will be created. Available entities are reported in the feature catalog.
