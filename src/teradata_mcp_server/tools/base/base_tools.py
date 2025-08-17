@@ -312,7 +312,7 @@ def handle_base_tableUsage(conn: TeradataConnection, database_name: str | None =
     """
 
     logger.debug("Tool: handle_base_tableUsage: Args: database_name:")
-    database_name_filter = f"AND objectdatabasename = '{database_name}'" if db_name else ""
+    database_name_filter = f"AND objectdatabasename = '{database_name}'" if database_name else ""
 
     table_usage_sql="""
     LOCKING ROW for ACCESS
