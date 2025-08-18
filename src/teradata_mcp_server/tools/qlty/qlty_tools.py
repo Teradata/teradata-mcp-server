@@ -69,7 +69,7 @@ def handle_qlty_distinctCategories(
     conn: TeradataConnection,
     database_name: str | None,
     table_name: str,
-    col_name: str,
+    column_name: str,
     *args,
     **kwargs
 ):
@@ -106,7 +106,7 @@ def handle_qlty_standardDeviation(
     conn: TeradataConnection,
     database_name: str | None,
     table_name: str,
-    col_name: str,
+    column_name: str,
     *args,
     **kwargs
 ):
@@ -174,7 +174,7 @@ def handle_qlty_univariateStatistics(
     conn: TeradataConnection,
     database_name: str | None,
     table_name: str,
-    col_name: str,
+    column_name: str,
     *args,
     **kwargs
 ):
@@ -212,7 +212,7 @@ def handle_qlty_rowsWithMissingValues(
     conn: TeradataConnection,
     database_name: str | None,
     table_name: str,
-    col_name: str,
+    column_name: str,
     *args,
     **kwargs
 ):
