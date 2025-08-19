@@ -22,9 +22,9 @@ test_baseTools:
    Perform the phases in order, and do not skip any phase.
    
    ## Phase 0 - Get a list of databases
-   - Get a list of databases from the user. Use the base_databaseList function to get the list. The tool should return a list of databases in the Teradata system, if no data is returned then fail this test.
+   - Get a list of databases from the user. Use the base_databaseList tool to get the list. The tool should return a list of databases in the Teradata system, if no data is returned then fail this test.
    ## Phase 1 - Get the list of tables in each database
-   - For the DBC database, get the list of tables. Use the base_tableList function to get the list. The tool should return a list of tables in the DBC database, if no data is returned then fail this test.
+   - For the DBC database, get the list of tables. Use the base_tableList tool to get the list. The tool should return a list of tables in the DBC database, if no data is returned then fail this test.
    ## Phase 2 - Create a test table in your default database
    - what is your default database?
    - Create a customer table in your default database called test_customer, use the following code: 
@@ -42,20 +42,20 @@ test_baseTools:
     INSERT INTO test_customer VALUES (9, 'George Lee', 'george.lee@email.555-0109', DATE '2024-08-15');
     INSERT INTO test_customer VALUES (10, 'Helen Taylor', 'helen.taylor@email.com', '555-0110', DATE '2024-08-25');
    ## Phase 3 - Test the query tool
-   - test the query tool by running a query on the test_customer table. Use the base_readQuery function to run the query. The query should return the 10 rows you added in the previous phase, if no data is returned then fail this test.
-   - test the query tool by running a query on the test_customer table with a filter. Use the base_readQuery function to run the query. The query should return only the rows that match the filter, if no data is returned then fail this test. (example of a filter is Cust_id > 5)
+   - test the query tool by running a query on the test_customer table. Use the base_readQuery tool to run the query. The query should return the 10 rows you added in the previous phase, if no data is returned then fail this test.
+   - test the query tool by running a query on the test_customer table with a filter. Use the base_readQuery tool to run the query. The query should return only the rows that match the filter, if no data is returned then fail this test. (example of a filter is Cust_id > 5)
    ## Phase 4 - Test the table DDL tool
-   - Get the DDL of the test_customer table. Use the base_tableDDL function to get the DDL. The tool should return the DDL of the test_customer table, if no data is returned then fail this test.
+   - Get the DDL of the test_customer table. Use the base_tableDDL tool to get the DDL. The tool should return the DDL of the test_customer table, if no data is returned then fail this test.
    ## Phase 5 - Test the column description tool
-   - Get the column description of the test_customer table. Use the base_columnDescription function to get the columns description. The tool should return the column description of the test_customer table, if no data is returned then fail this test.
+   - Get the column description of the test_customer table. Use the base_columnDescription tool to get the columns description. The tool should return the column description of the test_customer table, if no data is returned then fail this test.
    ## Phase 6 - Test the table preview tool
-   - Get the preview of the test_customer table. Use the base_tablePreview function to get the preview. The tool should return the first 5 rows of the test_customer table and the column information, if no data is returned then fail this test.
+   - Get the preview of the test_customer table. Use the base_tablePreview tool to get the preview. The tool should return the first 5 rows of the test_customer table and the column information, if no data is returned then fail this test.
    ## Phase 7 - Test the table affinity tool
-   - Get the table affinity of the test_customer table. Use the base_tableAffinity function to get the affinity. The tool should return the table affinity of the test_customer table, if no data is returned then fail this test.
+   - Get the table affinity of the test_customer table. Use the base_tableAffinity tool to get the affinity. The tool should return the table affinity of the test_customer table, if no data is returned then fail this test.
    ## Phase 8 - Test the table usage tool
-   - Get the table usage of the test_customer table. Use the base_tableUsage function to get the usage. The tool should return the table usage of the test_customer table, if no data is returned then fail this test.
+   - Get the table usage of the test_customer table. Use the base_tableUsage tool to get the usage. The tool should return the table usage of the test_customer table, if no data is returned then fail this test.
    ## Phase 9 - Clean up
-   - Drop the test_customer table. Use the base_writeQuery function to drop the table. The tool should return a success message.
+   - Drop the test_customer table. Use the base_readQuery tool to drop the table. The tool should return a success message.
    ## Communication guidelines:
          - Be concise but informative in your explanations
          - Clearly indicate which phase the process is currently in
@@ -204,7 +204,7 @@ base_tableBusinessDesc:
    - The database name is {database_name}
 
    ## Phase 1 - Get the table DDL
-   - Get the table DDL from the user. The DDL should be a single string, and it should not contain any new lines or special characters. Use the base_tableDDL function to get the DDL.
+   - Get the table DDL from the user. The DDL should be a single string, and it should not contain any new lines or special characters. Use the base_tableDDL tool to get the DDL.
 
    ## Phase 2 - Describe the table
    - Describe the table in a business context. The description should be a single string. 
@@ -254,11 +254,11 @@ base_databaseBusinessDesc:
    - the database name is {database_name}
 
    ## Phase 1 - get the list of tables
-   - Get the list of tables in the database. Use the base_tableList function to get the list.
+   - Get the list of tables in the database. Use the base_tableList tool to get the list.
 
    ## Phase 2 - describe the tables
    For each table, you will:
-   - Get the table DDL from the user. Use the base_tableDDL function to get the DDL.
+   - Get the table DDL from the user. Use the base_tableDDL tool to get the DDL.
    - Describe the table in a business context. The description should be a single string.
 
    ## Phase 3 - Describe the database
