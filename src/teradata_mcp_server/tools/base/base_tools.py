@@ -71,7 +71,7 @@ def handle_base_readQuery(
 
 #------------------ Tool  ------------------#
 # get DDL tool
-def handle_base_tableDDL(conn: TeradataConnection, database_name: str, table_name: str, *args, **kwargs):
+def handle_base_tableDDL(conn: TeradataConnection, database_name: str | None, table_name: str, *args, **kwargs):
     """
     Displays the DDL definition of a table via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
@@ -84,18 +84,10 @@ def handle_base_tableDDL(conn: TeradataConnection, database_name: str, table_nam
     """
     logger.debug(f"Tool: handle_base_tableDDL: Args: database_name: {database_name}, table_name: {table_name}")
 
-    if len(database_name) == 0:
-        database_name = "%"
-    if len(table_name) == 0:
-        table_name = "%"
-    # Only allow alphanumeric and underscore for safety
-    valid_identifier = re.compile(r"^\w+$")
-    if not valid_identifier.match(database_name) or not valid_identifier.match(table_name):
-        logger.error("Invalid database or table name provided")
-        raise ValueError("Invalid database or table name")
-
+    if database_name is not None:
+        table_name = f"{database_name}.{table_name}"
     with conn.cursor() as cur:
-        rows = cur.execute(f"show table {database_name}.{table_name}")
+        rows = cur.execute(f"show table {table_name}")
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
             "tool_name": "base_tableDDL",
@@ -106,7 +98,7 @@ def handle_base_tableDDL(conn: TeradataConnection, database_name: str, table_nam
 
 #------------------ Tool  ------------------#
 # Read column description tool
-def handle_base_columnDescription(conn: TeradataConnection, database_name: str, obj_name: str, *args, **kwargs):
+def handle_base_columnDescription(conn: TeradataConnection, database_name: str | None, obj_name: str, *args, **kwargs):
     """
     Shows detailed column information about a database table via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 

@@ -56,6 +56,7 @@ test_baseTools:
    - Get the table usage of the test_customer table. Use the base_tableUsage tool to get the usage. The tool should return the table usage of the test_customer table, if no data is returned then fail this test.
    ## Phase 9 - Clean up
    - Drop the test_customer table. Use the base_readQuery tool to drop the table. The tool should return a success message.
+
    ## Communication guidelines:
          - Be concise but informative in your explanations
          - Clearly indicate which phase the process is currently in
