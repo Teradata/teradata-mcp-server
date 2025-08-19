@@ -1,4 +1,4 @@
-ba_databaseVersion:
+dba_databaseVersion:
   type: tool
   description: " Get Teradata database version information."
   sql: |
