@@ -19,7 +19,7 @@ def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: 
     Returns:
       ResponseType: formatted response with query results + metadata
     """
-    logger.debug(f"Tool: handle_dba_tableSqlList: Args: table_name: {table_name}")
+    logger.debug(f"Tool: handle_dba_tableSqlList: Args: table_name: {table_name}, no_days: {no_days}")
 
     with conn.cursor() as cur:
         if table_name == "":
@@ -157,6 +157,8 @@ def handle_dba_databaseSpace(conn: TeradataConnection, database_name: str | None
       ResponseType: formatted response with query results + metadata
     """
     logger.debug(f"Tool: handle_dba_databaseSpace: Args: database_name: {database_name}")
+
+    database_name_filter = f"AND objectdatabasename = '{database_name}'" if database_name else ""
 
     with conn.cursor() as cur:
         if not database_name:
