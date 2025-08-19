@@ -160,8 +160,8 @@ test_dbaTools:
 
     ## Phase 1 - Get a list of all the SQL executed by a user
     - what is your user name?
-    - test the query tool by running a query on the test_customer table. Use the base_readQuery function to run the query. The query should return the 10 rows you added in the previous phase, if no data is returned then fail this test.
-    - test the query tool by running a query on the test_customer table with a filter. Use the base_readQuery function to run the query. The query should return only the rows that match the filter, if no data is returned then fail this test. (example of a filter is Cust_id > 5)
+    - test the query tool by running a query on the test_customer table. Use the base_readQuery tool to run the query. The query should return the 10 rows you added in the previous phase, if no data is returned then fail this test.
+    - test the query tool by running a query on the test_customer table with a filter. Use the base_readQuery tool to run the query. The query should return only the rows that match the filter, if no data is returned then fail this test. (example of a filter is Cust_id > 5)
     - Get a list of all the SQL executed by your user name (e.g. demo_user) in the last 7 days using the dba_userSqlList tool. A list of all SQL statements should be returned, if no data is returned then fail this test
     
     ## Phase 2 - Get a list of all the SQL executed against a table
@@ -198,7 +198,7 @@ test_dbaTools:
     - Get the session information for your user name (e.g. demo_user) using the dba_sessionInfo tool. The session information for the user should be returned, if no data is returned then fail this test.
 
     ## Phase 13 - Clean up
-    - Drop the test_customer table. Use the base_writeQuery function to drop the table. The tool should return a success message.
+    - Drop the test_customer table. Use the base_readQuery tool to drop the table. The tool should return a success message.
     ## Communication guidelines:
           - Be concise but informative in your explanations
           - Clearly indicate which phase the process is currently in
