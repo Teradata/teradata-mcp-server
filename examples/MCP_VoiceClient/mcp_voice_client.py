@@ -1,22 +1,21 @@
 import asyncio
 import base64
-import datetime
-import hashlib
 import inspect
 import json
 import os
-import random
 import time
 import uuid
 import warnings
+import yaml
+from datetime import datetime
 
 import pyaudio
-import pytz
 from aws_sdk_bedrock_runtime.client import BedrockRuntimeClient, InvokeModelWithBidirectionalStreamOperationInput
 from aws_sdk_bedrock_runtime.config import Config, HTTPAuthSchemeResolver, SigV4AuthScheme
 from aws_sdk_bedrock_runtime.models import BidirectionalInputPayloadPart, InvokeModelWithBidirectionalStreamInputChunk
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.tools import load_mcp_tools
+from langchain_mcp_adapters.prompts import load_mcp_prompt
 from smithy_aws_core.credentials_resolvers.environment import EnvironmentCredentialsResolver
 
 # Suppress warnings
@@ -29,38 +28,121 @@ CHANNELS = 1
 FORMAT = pyaudio.paInt16
 CHUNK_SIZE = 1024  # Number of frames per buffer
 
-# Debug mode flag
+# ============================================================================
+# GLOBAL CONFIGURATION & UTILITIES
+# ============================================================================
+
+# Application constants
 DEBUG = False
+DEFAULT_MCP_SERVER_URL = "http://127.0.0.1:8001/mcp"
 
 def debug_print(message):
-    """Print only if debug mode is enabled"""
+    """Print debug message with timestamp and function name"""
     if DEBUG:
-        functionName = inspect.stack()[1].function
-        if  functionName == 'time_it' or functionName == 'time_it_async':
-            functionName = inspect.stack()[2].function
-        print(f'{datetime.datetime.now():%Y-%m-%d %H:%M:%S.%f}'[:-3] + ' ' + functionName + ' ' + message)
+        func_name = inspect.stack()[1].function
+        if func_name in ('time_it', 'time_it_async'):
+            func_name = inspect.stack()[2].function
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+        print(f'{timestamp} {func_name} {message}')
 
-def time_it(label, methodToRun):
-    start_time = time.perf_counter()
-    result = methodToRun()
-    end_time = time.perf_counter()
-    debug_print(f"Execution time for {label}: {end_time - start_time:.4f} seconds")
+def time_it(label, method):
+    """Time a synchronous method execution"""
+    start = time.perf_counter()
+    result = method()
+    duration = time.perf_counter() - start
+    debug_print(f"Execution time for {label}: {duration:.4f} seconds")
     return result
 
-async def time_it_async(label, methodToRun):
-    start_time = time.perf_counter()
-    result = await methodToRun()
-    end_time = time.perf_counter()
-    debug_print(f"Execution time for {label}: {end_time - start_time:.4f} seconds")
+async def time_it_async(label, method):
+    """Time an asynchronous method execution"""
+    start = time.perf_counter()
+    result = await method()
+    duration = time.perf_counter() - start
+    debug_print(f"Execution time for {label}: {duration:.4f} seconds")
     return result
+
+# ============================================================================
+# PROFILE MANAGEMENT
+# ============================================================================
+
+class ProfileManager:
+    def __init__(self, profiles_file='profiles.yml'):
+        self.profiles_file = profiles_file
+        self.profiles = {}
+        self.script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.profiles_path = os.path.join(self.script_dir, profiles_file)
+        
+    def load_profiles(self):
+        """Load profiles from YAML file"""
+        try:
+            if os.path.exists(self.profiles_path):
+                with open(self.profiles_path, 'r', encoding='utf-8') as f:
+                    data = yaml.safe_load(f)
+                    self.profiles = data.get('profiles', {})
+                debug_print(f"Loaded {len(self.profiles)} profiles from {self.profiles_path}")
+            else:
+                debug_print(f"Profiles file not found: {self.profiles_path}")
+        except Exception as e:
+            print(f"Error loading profiles from {self.profiles_path}: {e}")
+            
+    def get_profile(self, profile_name):
+        """Get a specific profile by name"""
+        if not self.profiles:
+            self.load_profiles()
+            
+        if profile_name not in self.profiles:
+            raise ValueError(f"Profile '{profile_name}' not found in {self.profiles_file}")
+            
+        return self.profiles[profile_name]
+        
+    def get_profile_parameter(self, profile_name, parameter, default_value=None):
+        """Get a specific parameter from a profile"""
+        try:
+            profile = self.get_profile(profile_name)
+            return profile.get(parameter, default_value)
+        except ValueError:
+            return default_value
+            
+    def list_profiles(self):
+        """List all available profiles"""
+        if not self.profiles:
+            self.load_profiles()
+        return list(self.profiles.keys())
+        
+    def merge_with_args(self, profile_name, args_dict):
+        """Merge profile settings with command line arguments
+        Command line arguments take precedence over profile settings
+        """
+        if not profile_name:
+            return args_dict
+            
+        try:
+            profile = self.get_profile(profile_name)
+            
+            # Create merged config, profile values as base
+            merged_config = profile.copy()
+            
+            # Override with command line arguments (non-None values)
+            for key, value in args_dict.items():
+                if value is not None:
+                    merged_config[key] = value
+                    
+            return merged_config
+        except ValueError as e:
+            print(f"Profile error: {e}")
+            return args_dict
+
+# ============================================================================
+# MCP INTEGRATION
+# ============================================================================
 
 class ToolProcessor:
-    def __init__(self):
+    def __init__(self, mcp_server_url=DEFAULT_MCP_SERVER_URL):
         # Initialize MCP client and session
-        print("Initializing MCP client...")
+        print(f"Initializing MCP client with URL: {mcp_server_url}")
         self.mcp_client = MultiServerMCPClient({
             "mcp_server": {
-                "url": "http://127.0.0.1:8001/mcp",
+                "url": mcp_server_url,
                 "transport": "streamable_http"
             }
         })
@@ -73,27 +155,50 @@ class ToolProcessor:
 
     async def initialize_mcp_session(self):
         """Initialize the MCP session and load tools."""
-        # Enter the session context and keep it open
-        self.mcp_session = await self.mcp_session_context.__aenter__()
+        try:
+            # Enter the session context and keep it open
+            self.mcp_session = await self.mcp_session_context.__aenter__()
+            debug_print("MCP session context entered successfully")
+        except Exception as e:
+            print(f"FATAL: Could not establish MCP session. Error: {e}")
+            if DEBUG:
+                import traceback
+                traceback.print_exc()
+            raise
 
         # Load tools
         try:
             loaded_tools = await load_mcp_tools(self.mcp_session)
             print(f"Successfully loaded {len(loaded_tools)} tools.")
         except Exception as e:
-            print(f"FATAL: Could not load tools from the server. Error: {e}", exc_info=True)
-            return
+            print(f"FATAL: Could not load tools from the server. Error: {e}")
+            if DEBUG:
+                import traceback
+                traceback.print_exc()
+            # Try to clean up the session before raising
+            try:
+                await self.mcp_session_context.__aexit__(None, None, None)
+            except:
+                pass
+            raise
 
         if not loaded_tools:
             print("Fatal Error: No tools were loaded.")
-            return
+            # Try to clean up the session before raising
+            try:
+                await self.mcp_session_context.__aexit__(None, None, None)
+            except:
+                pass
+            raise ValueError("No MCP tools available")
 
         self.mcp_tools = {tool.name: tool for tool in loaded_tools}
         self.tools_context = "\n\n".join([
             f"Tool: `{tool.name}`\nDescription: {tool.description}" for tool in loaded_tools
         ])
-
+        
         print("MCP session initialized:")
+        if DEBUG:
+            print(f"Available MCP tools: {list(self.mcp_tools.keys())}")
         debug_print(self.mcp_tools)
 
     async def process_tool_async(self, tool_name, tool_content):
@@ -164,6 +269,10 @@ class ToolProcessor:
 
         # Fallback
         return {"result": raw_result}
+
+# ============================================================================
+# BEDROCK STREAMING
+# ============================================================================
 
 class BedrockStreamManager:
     """Manages bidirectional streaming with AWS Bedrock using asyncio"""
@@ -280,28 +389,6 @@ class BedrockStreamManager:
 
     def start_prompt(self):
         """Create a promptStart event"""
-        get_default_tool_schema = json.dumps({
-            "type": "object",
-            "properties": {},
-            "required": []
-        })
-
-        get_order_tracking_schema = json.dumps({
-            "type": "object",
-            "properties": {
-                "orderId": {
-                    "type": "string",
-                    "description": "The order number or ID to track"
-                },
-                "requestNotifications": {
-                    "type": "boolean",
-                    "description": "Whether to set up notifications for this order",
-                    "default": False
-                }
-            },
-            "required": ["orderId"]
-        })
-
         # Build dynamic toolConfiguration for MCP-loaded tools
         tools_list = []
         for tool in self.tool_processor.mcp_tools.values():
@@ -334,7 +421,7 @@ class BedrockStreamManager:
                         "sampleRateHertz": 24000,
                         "sampleSizeBits": 16,
                         "channelCount": 1,
-                        "voiceId": "matthew",
+                        "voiceId": self.voice_id,
                         "encoding": "base64",
                         "audioType": "SPEECH"
                     },
@@ -369,10 +456,26 @@ class BedrockStreamManager:
         }
         return json.dumps(tool_result_event)
 
-    def __init__(self, model_id='amazon.nova-sonic-v1:0', region='us-east-1'):
+    def __init__(self, model_id='amazon.nova-sonic-v1:0', region='us-east-1', language='en', voice_id=None, mcp_server_url=DEFAULT_MCP_SERVER_URL, system_prompt=None, mcp_prompt=None, profile_system_prompt=None):
         """Initialize the stream manager."""
         self.model_id = model_id
         self.region = region
+        self.custom_system_prompt = system_prompt  # From --system-prompt command line
+        self.profile_system_prompt = profile_system_prompt  # From profile
+        self.mcp_prompt = mcp_prompt
+        # Language + voice selection
+        self.language = (language or 'en').lower()
+        voice_map = {
+            'en': 'matthew',   # English (US)
+            'fr': 'ambre',     # French (FR)
+            'de': 'lennart',   # German (DE)
+            'it': 'beatrice',  # Italian (IT)
+            'es': 'carlos'     # Spanish (ES)
+        }
+        if voice_id is None:
+            self.voice_id = voice_map.get(self.language, 'matthew')
+        else:
+            self.voice_id = voice_id
 
         # Replace RxPy subjects with asyncio queues
         self.audio_input_queue = asyncio.Queue()
@@ -401,10 +504,49 @@ class BedrockStreamManager:
         self.toolName = ""
 
         # Add a tool processor
-        self.tool_processor = ToolProcessor()
+        self.tool_processor = ToolProcessor(mcp_server_url=mcp_server_url)
 
         # Add tracking for in-progress tool calls
         self.pending_tool_tasks = {}
+
+    async def load_mcp_prompt(self, prompt_name):
+        """Load a prompt from the MCP server using langchain-mcp-adapters"""
+        if not prompt_name or not self.tool_processor.mcp_session:
+            debug_print(f"Cannot load MCP prompt '{prompt_name}' - missing prompt name or MCP session")
+            return None
+            
+        try:
+            debug_print(f"Attempting to load MCP prompt: {prompt_name}")
+            
+            # Use load_mcp_prompt from langchain-mcp-adapters
+            # This returns a list of LangChain messages
+            prompt_messages = await load_mcp_prompt(
+                session=self.tool_processor.mcp_session, 
+                name=prompt_name
+            )
+            
+            debug_print(f"MCP prompt returned {len(prompt_messages)} messages")
+            
+            # Convert the messages to a single system prompt string
+            prompt_parts = []
+            for message in prompt_messages:
+                debug_print(f"Message type: {type(message)}, content: {message.content[:100]}...")
+                prompt_parts.append(message.content)
+            
+            if prompt_parts:
+                system_prompt = "\n".join(prompt_parts)
+                debug_print(f"Successfully loaded MCP prompt '{prompt_name}' with {len(system_prompt)} characters")
+                return system_prompt
+            else:
+                debug_print(f"MCP prompt '{prompt_name}' returned no content")
+                return None
+            
+        except Exception as e:
+            debug_print(f"Error loading MCP prompt '{prompt_name}': {e}")
+            if DEBUG:
+                import traceback
+                traceback.print_exc()
+            return None
 
     def _initialize_client(self):
         """Initialize the Bedrock client."""
@@ -425,16 +567,99 @@ class BedrockStreamManager:
         try:
             self.stream_response = await time_it_async("invoke_model_with_bidirectional_stream", lambda : self.bedrock_client.invoke_model_with_bidirectional_stream( InvokeModelWithBidirectionalStreamOperationInput(model_id=self.model_id)))
             self.is_active = True
-            default_system_prompt = "You are a friend. The user and you will engage in a spoken dialog exchanging the transcripts of a natural real-time conversation." \
-            "When reading order numbers, please read each digit individually, separated by pauses. For example, order #1234 should be read as 'order number one-two-three-four' rather than 'order number one thousand two hundred thirty-four'." \
-            "Do not share technical details of your tool interactions and do not use technical jargon or spell out technical attribute names, only the results. For example if you are using a tool to track an customer and get a <customer_key>, 'I identified the customer, it is the customer ' and then read the <customer_key> number or simply the name if you have it." \
-            "Do not repeat IDs and technical details unless strictly necessary. For example, if you are in the process of investigating a customer simply say 'I am looking into the customer details...' or 'This customer has a lifetime value of...' " \
+            
+            # Load system prompt in order of priority: 
+            # 1. --system-prompt (command line override)
+            # 2. MCP prompt from server (if mcp_prompt specified)
+            # 3. system_prompt from profile 
+            # 4. default system prompt
+            system_prompt = None
+            
+            if self.custom_system_prompt:
+                system_prompt = self.custom_system_prompt
+                debug_print("Using command line system prompt override")
+                print("Using custom system prompt from command line")
+            elif self.mcp_prompt:
+                # Try to load MCP prompt first
+                debug_print(f"Attempting to load MCP prompt: {self.mcp_prompt}")
+                mcp_system_prompt = await self.load_mcp_prompt(self.mcp_prompt)
+                if mcp_system_prompt:
+                    system_prompt = mcp_system_prompt
+                    debug_print(f"Successfully loaded MCP prompt: {self.mcp_prompt}")
+                    print(f"Using MCP prompt: {self.mcp_prompt}")
+                else:
+                    debug_print(f"Failed to load MCP prompt '{self.mcp_prompt}', checking for profile system_prompt")
+                    print(f"Warning: Could not load MCP prompt '{self.mcp_prompt}', trying profile system_prompt")
+            
+            # If still no system prompt, try profile system prompt, then default
+            if not system_prompt and self.profile_system_prompt:
+                system_prompt = self.profile_system_prompt
+                debug_print("Using system prompt from profile")
+                print("Using system prompt from profile")
+            elif not system_prompt:
+                system_prompt = "You are a friend. The user and you will engage in a spoken dialog exchanging the transcripts of a natural real-time conversation." \
+                "When reading order numbers, please read each digit individually, separated by pauses. For example, order #1234 should be read as 'order number one-two-three-four' rather than 'order number one thousand two hundred thirty-four'." \
+                "Do not share technical details of your tool interactions and do not use technical jargon or spell out technical attribute names, only the results. For example if you are using a tool to track an customer and get a <customer_key>, 'I identified the customer, it is the customer ' and then read the <customer_key> number or simply the name if you have it." \
+                "Do not repeat IDs and technical details unless strictly necessary. For example, if you are in the process of investigating a customer simply say 'I am looking into the customer details...' or 'This customer has a lifetime value of...' "
+                debug_print("Using default system prompt")
+                print("Using default system prompt")
+            
+            # Append current date and language steering
+            from datetime import datetime
+            import time
+            current_datetime = datetime.now()
+            current_date = current_datetime.strftime("%Y-%m-%d")
+            current_time = current_datetime.strftime("%H:%M")
+            timezone_name = time.tzname[0] if time.daylight == 0 else time.tzname[1]
+            
+            lang_map = {
+                'en': 'English',
+                'fr': 'French',
+                'de': 'German',
+                'it': 'Italian',
+                'es': 'Spanish'
+            }
+            selected_lang = lang_map.get(self.language, 'English')
+            
+            context_addition = (
+                f" Today is {current_date} at {current_time} {timezone_name}."
+                f" We are conversing in {selected_lang}. Respond in {selected_lang} unless the user explicitly asks for another language."
+            )
+            system_prompt = system_prompt + context_addition
+            
+            debug_print(f"Added context to system prompt: {context_addition}")
+            debug_print(f"Final system prompt length: {len(system_prompt)} characters")
 
             # Send initialization events
             prompt_event = self.start_prompt()
             text_content_start = self.TEXT_CONTENT_START_EVENT % (self.prompt_name, self.content_name, "SYSTEM")
-            text_content = self.TEXT_INPUT_EVENT % (self.prompt_name, self.content_name, default_system_prompt)
+            
+            # Debug: Log the system prompt being used
+            debug_print(f"System prompt length: {len(system_prompt)}")
+            debug_print(f"System prompt preview: {system_prompt[:200]}...")
+            
+            # Create text content event with proper JSON encoding
+            import json
+            text_content_dict = {
+                "event": {
+                    "textInput": {
+                        "promptName": self.prompt_name,
+                        "contentName": self.content_name,
+                        "content": system_prompt
+                    }
+                }
+            }
+            text_content = json.dumps(text_content_dict)
             text_content_end = self.CONTENT_END_EVENT % (self.prompt_name, self.content_name)
+            
+            # Debug: Validate JSON format of text_content
+            try:
+                import json
+                json.loads(text_content)
+                debug_print("Text content JSON is valid")
+            except json.JSONDecodeError as e:
+                debug_print(f"Text content JSON validation failed: {e}")
+                debug_print(f"Problematic JSON: {text_content[:500]}...")
 
             init_events = [self.START_SESSION_EVENT, prompt_event, text_content_start, text_content, text_content_end]
 
@@ -737,6 +962,10 @@ class BedrockStreamManager:
         if self.stream_response:
             await self.stream_response.input_stream.close()
 
+# ============================================================================
+# AUDIO PROCESSING
+# ============================================================================
+
 class AudioStreamer:
     """Handles continuous microphone input and audio output using separate streams."""
 
@@ -775,7 +1004,7 @@ class AudioStreamer:
 
         debug_print("output audio stream opened")
 
-    def input_callback(self, in_data, frame_count, time_info, status):
+    def input_callback(self, in_data, _frame_count, _time_info, _status):
         """Callback function that schedules audio processing in the asyncio event loop"""
         if self.is_streaming and in_data:
             # Schedule the task in the event loop
@@ -917,13 +1146,26 @@ class AudioStreamer:
             pass
 
 
-async def main(debug=False):
+# ============================================================================
+# MAIN APPLICATION
+# ============================================================================
+
+async def main(debug=False, language='en', voice_id=None, mcp_server_url=DEFAULT_MCP_SERVER_URL, system_prompt=None, mcp_prompt=None, profile_system_prompt=None):
     """Main function to run the application."""
     global DEBUG
     DEBUG = debug
 
     # Create stream manager
-    stream_manager = BedrockStreamManager(model_id='amazon.nova-sonic-v1:0', region='us-east-1')
+    stream_manager = BedrockStreamManager(
+        model_id='amazon.nova-sonic-v1:0', 
+        region='us-east-1', 
+        language=language, 
+        voice_id=voice_id,
+        mcp_server_url=mcp_server_url,
+        system_prompt=system_prompt,
+        mcp_prompt=mcp_prompt,
+        profile_system_prompt=profile_system_prompt
+    )
 
     # Create audio streamer
     audio_streamer = AudioStreamer(stream_manager)
@@ -932,10 +1174,22 @@ async def main(debug=False):
     # Load the available tools from the MCP server before starting the prompt. The
     # promptStart event uses the loaded tools to configure the tool list, so we
     # need to ensure tools are loaded before calling initialize_stream().
-    await stream_manager.tool_processor.initialize_mcp_session()
+    try:
+        await stream_manager.tool_processor.initialize_mcp_session()
+    except Exception as e:
+        print(f"Failed to initialize MCP session: {e}")
+        print("This could be due to:")
+        print("  - MCP server not running or not accessible")
+        print("  - Incorrect MCP server URL in profile")
+        print("  - Network connectivity issues")
+        return
 
     # Initialize the stream
-    await time_it_async("initialize_stream", stream_manager.initialize_stream)
+    try:
+        await time_it_async("initialize_stream", stream_manager.initialize_stream)
+    except Exception as e:
+        print(f"Failed to initialize Bedrock stream: {e}")
+        return
 
     try:
         # This will run until the user presses Enter
@@ -950,20 +1204,136 @@ async def main(debug=False):
         # await stream_manager.tool_processor.mcp_session_context.__aexit__(None, None, None)
 
 
+# ============================================================================
+# COMMAND LINE INTERFACE
+# ============================================================================
+
+class AppConfig:
+    """Handles application configuration from command line arguments and profiles"""
+    
+    def __init__(self):
+        self.profile_manager = ProfileManager()
+        
+    def parse_args(self):
+        """Parse command line arguments"""
+        import argparse
+        parser = argparse.ArgumentParser(description='Nova Sonic Python Streaming')
+        parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+        parser.add_argument('--profile', default=None, help='Profile name to use from profiles.yml')
+        parser.add_argument('--language', choices=['en','fr','de','it','es'], default=None, help='Interaction language used to auto-select a voice (default from profile or en).')
+        parser.add_argument('--voice-id', default=None, help='Override the auto-selected voice ID. If omitted, a voice is chosen from profile or --language (en→matthew, fr→ambre, de→lennart, it→beatrice, es→carlos).')
+        parser.add_argument('--mcp-server-url', default=None, help=f'MCP server URL (default from profile or {DEFAULT_MCP_SERVER_URL})')
+        parser.add_argument('--system-prompt', default=None, help='Custom system prompt (overrides profile)')
+        parser.add_argument('--mcp-prompt', default=None, help='MCP prompt name to load from server (overrides profile)')
+        parser.add_argument('--list-profiles', action='store_true', help='List available profiles and exit')
+        parser.add_argument('--list-tools', action='store_true', help='List available MCP tools and exit')
+        parser.add_argument('--test-connection', action='store_true', help='Test MCP server connection and exit')
+        return parser.parse_args()
+        
+    def get_config(self, args):
+        """Get final configuration by merging args with profile"""
+        args_dict = {
+            'language': args.language,
+            'voice_id': args.voice_id,
+            'mcp_server_url': args.mcp_server_url,
+            'system_prompt': args.system_prompt,
+            'mcp_prompt': args.mcp_prompt
+        }
+        
+        # Merge profile settings with command line arguments
+        if args.profile:
+            print(f"Using profile: {args.profile}")
+            try:
+                merged_config = self.profile_manager.merge_with_args(args.profile, args_dict)
+            except Exception as e:
+                print(f"Profile error: {e}")
+                exit(1)
+        else:
+            merged_config = args_dict
+            
+        # Apply defaults and extract profile system prompt
+        config = {
+            'debug': args.debug,
+            'language': merged_config.get('language') or 'en',
+            'voice_id': merged_config.get('voice_id'),
+            'mcp_server_url': merged_config.get('mcp_server_url') or DEFAULT_MCP_SERVER_URL,
+            'system_prompt': merged_config.get('system_prompt'),
+            'mcp_prompt': merged_config.get('mcp_prompt'),
+            'profile_system_prompt': None
+        }
+        
+        # Extract profile system prompt separately (for fallback)
+        if args.profile:
+            try:
+                profile = self.profile_manager.get_profile(args.profile)
+                config['profile_system_prompt'] = profile.get('system_prompt')
+            except ValueError:
+                pass
+                
+        return config
+
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description='Nova Sonic Python Streaming')
-    parser.add_argument('--debug', action='store_true', help='Enable debug mode')
-    args = parser.parse_args()
-    # Set your AWS credentials here or use environment variables
-    # os.environ['AWS_ACCESS_KEY_ID'] = "AWS_ACCESS_KEY_ID"
-    # os.environ['AWS_SECRET_ACCESS_KEY'] = "AWS_SECRET_ACCESS_KEY"
-    # os.environ['AWS_DEFAULT_REGION'] = "us-east-1"
-
+    app_config = AppConfig()
+    args = app_config.parse_args()
+    
+    # Handle list profiles request
+    if args.list_profiles:
+        profiles = app_config.profile_manager.list_profiles()
+        if profiles:
+            print("Available profiles:")
+            for profile in profiles:
+                print(f"  - {profile}")
+        else:
+            print("No profiles found in profiles.yml")
+        exit(0)
+    
+    # Handle list tools request
+    if args.list_tools:
+        # We need to initialize the MCP connection to list tools
+        import asyncio
+        
+        async def list_tools():
+            try:
+                # Get MCP server URL from args or defaults
+                mcp_server_url = args.mcp_server_url or DEFAULT_MCP_SERVER_URL
+                
+                # If profile is specified, get the server URL from there
+                if args.profile:
+                    profile_manager = ProfileManager()
+                    try:
+                        profile = profile_manager.get_profile(args.profile)
+                        mcp_server_url = profile.get('mcp_server_url', mcp_server_url)
+                    except ValueError:
+                        pass
+                
+                print(f"Connecting to MCP server: {mcp_server_url}")
+                tool_processor = ToolProcessor(mcp_server_url=mcp_server_url)
+                await tool_processor.initialize_mcp_session()
+                
+                if tool_processor.mcp_tools:
+                    print("Available MCP tools:")
+                    for name, tool in tool_processor.mcp_tools.items():
+                        print(f"  - {name}: {tool.description}")
+                else:
+                    print("No MCP tools found")
+                    
+                print("\nNote: MCP prompts are loaded on-demand and cannot be listed without knowing their names.")
+                    
+                # Clean up
+                await tool_processor.mcp_session_context.__aexit__(None, None, None)
+                
+            except Exception as e:
+                print(f"Error connecting to MCP server: {e}")
+        
+        asyncio.run(list_tools())
+        exit(0)
+    
+    # Get final configuration
+    config = app_config.get_config(args)
+    
     # Run the main function
     try:
-        asyncio.run(main(debug=args.debug))
+        asyncio.run(main(**config))
     except Exception as e:
         print(f"Application error: {e}")
         if args.debug:

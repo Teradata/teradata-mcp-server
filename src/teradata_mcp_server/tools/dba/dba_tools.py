@@ -161,19 +161,34 @@ def handle_dba_databaseSpace(conn: TeradataConnection, database_name: str | None
     database_name_filter = f"AND objectdatabasename = '{database_name}'" if database_name else ""
 
     with conn.cursor() as cur:
-        logger.debug(f"Database name: {database_name}, returning space information for this database.")
-        rows = cur.execute(f"""
-            SELECT
-                DatabaseName,
-                CAST(SUM(MaxPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceAllocated_GB,
-                CAST(SUM(CurrentPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceUsed_GB,
-                CAST((SUM(MaxPerm) - SUM(CurrentPerm))/1024/1024/1024 AS DECIMAL(10,2)) AS FreeSpace_GB,
-                CAST((SUM(CurrentPerm) * 100.0 / NULLIF(SUM(MaxPerm),0)) AS DECIMAL(10,2)) AS PercentUsed
-            FROM DBC.DiskSpaceV
-            WHERE MaxPerm > 0
-            {database_name_filter}
-            GROUP BY 1;
-        """)
+        if not database_name:
+            logger.debug("No database name provided, returning all databases and space information.")
+            rows = cur.execute("""
+                SELECT
+                    DatabaseName,
+                    CAST(SUM(MaxPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceAllocated_GB,
+                    CAST(SUM(CurrentPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceUsed_GB,
+                    CAST((SUM(MaxPerm) - SUM(CurrentPerm))/1024/1024/1024 AS DECIMAL(10,2)) AS FreeSpace_GB,
+                    CAST((SUM(CurrentPerm) * 100.0 / NULLIF(SUM(MaxPerm),0)) AS DECIMAL(10,2)) AS PercentUsed
+                FROM DBC.DiskSpaceV
+                WHERE MaxPerm > 0
+                GROUP BY 1
+                ORDER BY 5 DESC;
+            """)
+        else:
+            logger.debug(f"Database name: {database_name}, returning space information for this database.")
+            rows = cur.execute(f"""
+                SELECT
+                    DatabaseName,
+                    CAST(SUM(MaxPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceAllocated_GB,
+                    CAST(SUM(CurrentPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceUsed_GB,
+                    CAST((SUM(MaxPerm) - SUM(CurrentPerm))/1024/1024/1024 AS DECIMAL(10,2)) AS FreeSpace_GB,
+                    CAST((SUM(CurrentPerm) * 100.0 / NULLIF(SUM(MaxPerm),0)) AS DECIMAL(10,2)) AS PercentUsed
+                FROM DBC.DiskSpaceV
+                WHERE MaxPerm > 0
+                AND DatabaseName = '{database_name}'
+                GROUP BY 1;
+            """)
 
         data = rows_to_json(cur.description, rows.fetchall())
         metadata = {
