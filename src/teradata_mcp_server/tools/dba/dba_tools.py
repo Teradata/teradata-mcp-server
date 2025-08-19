@@ -159,7 +159,7 @@ def handle_dba_databaseSpace(conn: TeradataConnection, database_name: str | None
     logger.debug(f"Tool: handle_dba_databaseSpace: Args: database_name: {database_name}")
 
     with conn.cursor() as cur:
-        if (database_name == ""):
+        if not database_name:
             logger.debug("No database name provided, returning all databases and space information.")
             rows = cur.execute("""
                 SELECT

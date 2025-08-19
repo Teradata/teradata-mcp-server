@@ -527,52 +527,59 @@ def generate_cube_query_tool(name, cube):
     :param cube: The cube definition
     :return: A SQL query string generator function taking dimensions and measures as comma-separated strings.
     """
-    def _cube_query_tool(dimensions: str, measures: str) -> str:
+    def _cube_query_tool(dimensions: str, measures: str, filters: str) -> str:
         """
         Generate a SQL query string for the cube using the specified dimensions and measures.
 
         Args:
             dimensions (str): Comma-separated dimension names (keys in cube['dimensions']).
             measures (str): Comma-separated measure names (keys in cube['measures']).
+            filters (str): Comma-separated filter expressions (on either dimensions or measures).
 
         Returns:
             str: The generated SQL query.
         """
         dim_list_raw = [d.strip() for d in dimensions.split(",") if d.strip()]
-        met_list_raw = [m.strip() for m in measures.split(",") if m.strip()]
+        mes_list_raw = [m.strip() for m in measures.split(",") if m.strip()]
+        filter_list_raw = [f.strip() for f in filters.split(",") if f.strip()]
         # Get dimension expressions from dictionary
         dim_list = ",\n  ".join([
             cube["dimensions"][d]["expression"] if d in cube["dimensions"] else d
             for d in dim_list_raw
         ])
-        met_lines = []
-        for measure in met_list_raw:
+        mes_lines = []
+        for measure in mes_list_raw:
             mdef = cube["measures"].get(measure)
             if mdef is None:
                 raise ValueError(f"Measure '{measure}' not found in cube '{name}'.")
             expr = mdef["expression"]
-            met_lines.append(f"{expr} AS {measure}")
-        met_block = ",\n  ".join(met_lines)
+            mes_lines.append(f"{expr} AS {measure}")
+        met_block = ",\n  ".join(mes_lines)
         sql = (
-            "SELECT\n"
+            "SELECT * from\n"
+            "(SELECT\n"
             f"  {dim_list},\n"
             f"  {met_block}\n"
             "FROM (\n"
             f"{cube['sql'].strip()}\n"
             ") AS c\n"
-            f"GROUP BY {', '.join(dim_list_raw)};"
+            f"GROUP BY {', '.join(dim_list_raw)}"
+            ") AS a\n"
+            f"{'WHERE' if filter_list_raw else ''} {', '.join(filter_list_raw)};"
+
         )
         return sql
     return _cube_query_tool
 
 def make_custom_cube_tool(name, cube):
-    async def _dynamic_tool(dimensions, measures):
+    async def _dynamic_tool(dimensions, measures, filters=""):
         # Accept dimensions and measures as comma-separated strings, parse to lists
         return execute_db_tool(
             td.util_base_dynamicQuery,
             sql_generator=generate_cube_query_tool(name, cube),
             dimensions=dimensions,
-            measures=measures
+            measures=measures,
+            filters=filters
         )
     _dynamic_tool.__name__ = 'get_cube_' + name
     # Build allowed values and definitions for dimensions and measures
@@ -590,8 +597,12 @@ def make_custom_cube_tool(name, cube):
         dimensions (str): Comma-separated dimension names to group by. Allowed values:
 {chr(10).join(dim_lines)}
 
-        measures (str): Comma-separated measure names to aggregate (must match cube definition). Allowed values:
+        measures (str): Comma-separated measure names to aggregate. Allowed values:
 {chr(10).join(measure_lines)}
+
+        filters (str): Comma-separated filter expressions to apply to either dimensions or measures selected. The dimension or measure used must be in the dimension list to group by or measure list, use valid SQL expressions, for example:
+{chr(10).join([f"{d} = 'value'" for d in cube.get('dimensions', {}).keys()])}
+{chr(10).join([f"{m} > 1000" for m in list(cube.get('measures', {}).keys())])}
 
     Returns:
         Query result as a formatted response.
