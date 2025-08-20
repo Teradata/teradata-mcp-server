@@ -41,7 +41,9 @@ def handle_sec_userDbPermissions(conn: TeradataConnection, user_name: str, *args
         metadata = {
             "tool_name": "sec_userDbPermissions",
             "argument": user_name,
+            "num_permissions": len(data)
         }
+        logger.debug(f"Tool: handle_sec_userDbPermissions: metadata: {metadata}")
         return create_response(data, metadata)
 
 
@@ -140,7 +142,9 @@ def handle_sec_rolePermissions(conn: TeradataConnection, role_name: str, *args, 
         metadata = {
             "tool_name": "sec_rolePermissions",
             "argument": role_name,
+            "num_permissions": len(data)
         }
+        logger.debug(f"Tool: handle_sec_rolePermissions: metadata: {metadata}")
         return create_response(data, metadata)
 
 
@@ -181,6 +185,8 @@ def handle_sec_userRoles(conn: TeradataConnection, user_name: str, *args, **kwar
         metadata = {
             "tool_name": "sec_userRoles",
             "argument": user_name,
+            "num_roles": len(data)
         }
+        logger.debug(f"Tool: handle_sec_userRoles: metadata: {metadata}")
         return create_response(data, metadata)
 

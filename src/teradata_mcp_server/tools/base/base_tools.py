@@ -63,7 +63,7 @@ def handle_base_readQuery(
         "columns": columns,
         "row_count": len(data),
     }
-
+    logger.debug(f"Tool: handle_base_readQuery: metadata: {metadata}")
     return create_response(data, metadata)
 
 
@@ -92,8 +92,10 @@ def handle_base_tableDDL(conn: TeradataConnection, database_name: str | None, ta
         metadata = {
             "tool_name": "base_tableDDL",
             "database": database_name,
-            "table": table_name
+            "table": table_name,
+            "rows": len(data)
         }
+        logger.debug(f"Tool: handle_base_tableDDL: metadata: {metadata}")
         return create_response(data, metadata)
 
 #------------------ Tool  ------------------#
@@ -173,6 +175,7 @@ def handle_base_columnDescription(conn: TeradataConnection, database_name: str |
             "object": obj_name,
             "column_count": len(data)
         }
+        logger.debug(f"Tool: handle_base_columnDescription: metadata: {metadata}")
         return create_response(data, metadata)
 
 
@@ -212,6 +215,7 @@ def handle_base_tablePreview(conn: TeradataConnection, table_name: str, database
             ],
             "sample_size": len(sample)
         }
+        logger.debug(f"Tool: handle_base_tablePreview: metadata: {metadata}")
         return create_response(sample, metadata)
 
 #------------------ Tool  ------------------#
@@ -287,6 +291,7 @@ def handle_base_tableAffinity(conn: TeradataConnection, database_name: str, obj_
         "table_count": len(data),
         "comment": affinity_info
     }
+    logger.debug(f"Tool: handle_base_tableAffinity: metadata: {metadata}")
     return create_response(data, metadata)
 
 
@@ -367,6 +372,7 @@ def handle_base_tableUsage(conn: TeradataConnection, database_name: str | None =
         "table_count": len(data),
         "comment": info
     }
+    logger.debug(f"Tool: handle_base_tableUsage: metadata: {metadata}")
     return create_response(data, metadata)
 
 #------------------ Tool  ------------------#
@@ -399,4 +405,5 @@ def util_base_dynamicQuery(conn: TeradataConnection, sql_generator: callable, *a
             ] if cur.description else [],
             "row_count": len(data)
         }
+        logger.debug(f"Tool: util_base_dynamicQuery: metadata: {metadata}")
         return create_response(data, metadata)
