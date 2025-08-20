@@ -41,6 +41,7 @@ def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: 
             "no_days": no_days,
             "total_queries": len(data)
         }
+        logger.debug(f"Tool: handle_dba_tableSqlList: metadata: {metadata}")
         return create_response(data, metadata)
 
 #------------------ Tool  ------------------#
@@ -83,6 +84,7 @@ def handle_dba_userSqlList(conn: TeradataConnection, user_name: str, no_days: in
             "no_days": no_days,
             "total_queries": len(data)
         }
+        logger.debug(f"Tool: handle_dba_userSqlList: metadata: {metadata}")
         return create_response(data, metadata)
 
 
@@ -141,6 +143,7 @@ def handle_dba_tableSpace(conn: TeradataConnection, database_name: str | None, t
             "table_name": table_name,
             "total_tables": len(data)
         }
+        logger.debug(f"Tool: handle_dba_tableSpace: metadata: {metadata}")
         return create_response(data, metadata)
 
 
@@ -196,6 +199,7 @@ def handle_dba_databaseSpace(conn: TeradataConnection, database_name: str | None
             "database_name": database_name,
             "total_databases": len(data)
         }
+        logger.debug(f"Tool: handle_dba_databaseSpace: metadata: {metadata}")
         return create_response(data, metadata)
 
 #------------------ Tool  ------------------#
@@ -313,6 +317,7 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
         ) AS QryDetails
         {group_by_clause}
     """
+    logger.debug(f"Tool: handle_dba_resusageSummary: Query: {query}")
     with conn.cursor() as cur:
         logger.debug("Resource usage summary requested.")
         rows = cur.execute(query)
@@ -321,8 +326,10 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
         metadata = {
             "tool_name": "dba_resusageSummary",
             "total_rows": len(data) ,
-            "comment": comment
+            "comment": comment,
+            "rows": len(data)
         }
+        logger.debug(f"Tool: handle_dba_resusageSummary: metadata: {metadata}")
         return create_response(data, metadata)
 
 
@@ -337,7 +344,7 @@ def handle_dba_tableUsageImpact(conn: TeradataConnection, database_name: str | N
       user_name - user name to analyze
 
     """
-    logger.debug("Tool: handle_dba_tableUsageImpact: Args: ")
+    logger.debug(f"Tool: handle_dba_tableUsageImpact: Args: database_name: {database_name}, user_name: {user_name}")
     database_name_filter = f"AND objectdatabasename = '{database_name}'" if database_name else ""
     user_name_filter = f"AND username = '{user_name}'" if user_name else ""
     table_usage_sql="""
@@ -389,7 +396,7 @@ def handle_dba_tableUsageImpact(conn: TeradataConnection, database_name: str | N
     ;
 
     """
-
+    logger.debug(f"Tool: handle_dba_tableUsageImpact: table_usage_sql: {table_usage_sql}")
     with conn.cursor() as cur:
         logger.debug("Database version information requested.")
         rows = cur.execute(table_usage_sql.format(database_name_filter=database_name_filter, user_name_filter=user_name_filter))
@@ -402,6 +409,8 @@ def handle_dba_tableUsageImpact(conn: TeradataConnection, database_name: str | N
         "tool_name": "handle_dba_tableUsageImpact",
         "database": database_name,
         "table_count": len(data),
-        "comment": info
+        "comment": info,
+        "rows": len(data)
     }
+    logger.debug(f"Tool: handle_dba_tableUsageImpact: metadata: {metadata}")
     return create_response(data, metadata)

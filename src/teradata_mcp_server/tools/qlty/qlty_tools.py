@@ -31,7 +31,9 @@ def handle_qlty_missingValues(conn: TeradataConnection, database_name: str | Non
             "tool_name": "qlty_missingValues",
             "database_name": database_name,
             "table_name": table_name,
+            "rows": len(data)
         }
+        logger.debug(f"Tool: handle_qlty_missingValues: Metadata: {metadata}")
         return create_response(data, metadata)
 
 #------------------ Tool  ------------------#
@@ -59,7 +61,9 @@ def handle_qlty_negativeValues(conn: TeradataConnection, database_name: str | No
             "tool_name": "qlty_negativeValues",
             "database_name": database_name,
             "table_name": table_name,
+            "rows": len(data)
         }
+        logger.debug(f"Tool: handle_qlty_negativeValues: Metadata: {metadata}")
         return create_response(data, metadata)
 
 #------------------ Tool  ------------------#
@@ -98,6 +102,7 @@ def handle_qlty_distinctCategories(
             "column_name": column_name,
             "distinct_categories": len(data)
         }
+        logger.debug(f"Tool: handle_qlty_distinctCategories: Metadata: {metadata}")
         return create_response(data, metadata)
 
 #------------------ Tool  ------------------#
@@ -134,8 +139,10 @@ def handle_qlty_standardDeviation(
             "database_name": database_name,
             "table_name": table_name,
             "column_name": column_name,
-            "stats_calculated": ["MEAN", "STD"]
+            "stats_calculated": ["MEAN", "STD"],
+            "rows": len(data)
         }
+        logger.debug(f"Tool: handle_qlty_standardDeviation: Metadata: {metadata}")
         return create_response(data, metadata)
 
 
@@ -164,7 +171,9 @@ def handle_qlty_columnSummary(conn: TeradataConnection, database_name: str | Non
             "tool_name": "qlty_columnSummary",
             "database_name": database_name,
             "table_name": table_name,
+            "rows": len(data)
         }
+        logger.debug(f"Tool: handle_qlty_columnSummary: Metadata: {metadata}")
         return create_response(data, metadata)
 
 
@@ -201,8 +210,10 @@ def handle_qlty_univariateStatistics(
             "database_name": database_name,
             "table_name": table_name,
             "column_name": column_name,
-            "stats_calculated": ["ALL"]
+            "stats_calculated": ["ALL"],
+            "rows": len(data)
         }
+        logger.debug(f"Tool: handle_qlty_univariateStatistics: Metadata: {metadata}")
         return create_response(data, metadata)
 
 
@@ -241,4 +252,5 @@ def handle_qlty_rowsWithMissingValues(
             "column_name": column_name,
             "rows_with_missing_values": len(data)
         }
+        logger.debug(f"Tool: handle_qlty_rowsWithMissingValues: Metadata: {metadata}")
         return create_response(data, metadata)

@@ -24,7 +24,7 @@
       {
         "name": "system_database_tables",
         "parameters": {
-          "db_name": "DBC"
+          "database_name": "DBC"
         }
       }
     ],
@@ -38,7 +38,7 @@
       {
         "name": "system_table_ddl",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "Tables"
         }
       }
@@ -47,7 +47,7 @@
       {
         "name": "system_table_columns",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "obj_name": "TablesV"
         }
       }
@@ -56,7 +56,7 @@
       {
         "name": "system_table_preview",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "DatabasesV"
         }
       }
@@ -65,13 +65,13 @@
       {
         "name": "dbc_database_space",
         "parameters": {
-          "db_name": "DBC"
+          "database_name": "DBC"
         }
       },
       {
         "name": "all_database_space",
         "parameters": {
-          "db_name": "DBC"
+          "database_name": "DBC"
         }
       }
     ],
@@ -79,14 +79,14 @@
       {
         "name": "system_table_space",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "Tables"
         }
       },
       {
         "name": "all_tables_space",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "Tables"
         }
       }
@@ -153,7 +153,7 @@
       {
         "name": "system_table_missing_values",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "Tables"
         }
       }
@@ -162,9 +162,9 @@
       {
         "name": "table_kinds",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "Tables",
-          "col_name": "TableKind"
+          "column_name": "TableKind"
         }
       }
     ],
@@ -172,7 +172,7 @@
       {
         "name": "system_table_column_summary",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "Tables"
         }
       }
@@ -195,7 +195,7 @@
       {
         "name": "check_demo_fs",
         "parameters": {
-          "db_name": "demo_fs"
+          "database_name": "demo_fs"
         }
       }
     ],
@@ -227,7 +227,7 @@
       {
         "name": "system_table_affinity",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "obj_name": "TablesV"
         }
       }
@@ -236,7 +236,7 @@
       {
         "name": "dbc_database_usage",
         "parameters": {
-          "db_name": "DBC"
+          "database_name": "DBC"
         }
       },
       {
@@ -275,7 +275,7 @@
       {
         "name": "dbc_table_impact",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "user_name": "DBC"
         }
       }
@@ -364,9 +364,9 @@
       {
         "name": "check_negative_values",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "Tables",
-          "col_name": "TableId"
+          "column_name": "TableId"
         }
       }
     ],
@@ -374,7 +374,7 @@
       {
         "name": "rows_missing_values",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "Tables"
         }
       }
@@ -383,9 +383,9 @@
       {
         "name": "column_std_dev",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "Tables",
-          "col_name": "TableId"
+          "column_name": "TableId"
         }
       }
     ],
@@ -393,9 +393,9 @@
       {
         "name": "column_statistics",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "Tables",
-          "col_name": "TableId"
+          "column_name": "TableId"
         }
       }
     ],
