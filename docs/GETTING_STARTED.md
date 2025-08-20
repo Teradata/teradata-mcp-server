@@ -36,7 +36,7 @@ cd teradata-mcp-server
 git pull origin main
 ```
 
-## Step 3 - You have a choice
+## Step 2 - You have a choice
 
 ![Choice](media/transport.png) 
 
@@ -53,7 +53,9 @@ Deployment Choice
 
 The recommended choice will be to deploy Streamable-http in a docker container. [Jump to next section](#step-5---using-docker) for the docker option.
 
-## Step 4 - Customizing the server (optional)
+<br>
+
+## Step 3 - Customizing the server (optional)
 
 The server supports optional modules for additional functionality:
 - **`fs`** - Teradata Enterprise Feature Store integration
@@ -64,8 +66,20 @@ Or with pip: `pip install -e .[fs,evs]`
 
 Refer to the [Customizing](CUSTOMIZING.md) instuctions 
 
+<br>
+
+## Step 4 - Starting your Server
+
+You should pick one of the approaches below:
+1. [Using Docker](#step-5a---using-docker) - Recommended.
+2. [Using uv](#step-5b---uv-environment-set-up) - Good for developers
+3. [Using rest](#step-5c---run-the-mcp-server-with-rest) - Good for operationalizing 
+4. [Running as a Service](#step-5d---run-the-mcp-server-as-a-service) - Good for operationalizing 
+
+
 --------------------------------------------------------------------------------------
-## Step 5 - Using Docker
+
+### Step 4a - Using Docker
 
 The server expects the Teradata URI string via the `DATABASE_URI` environment variable. You may:
 - update the `docker-compose.yaml` file or 
@@ -73,7 +87,7 @@ The server expects the Teradata URI string via the `DATABASE_URI` environment va
 
 `export DATABASE_URI=teradata://username:password@host:1025/databaseschema`
 
-### Run the MCP server with Streamable-Http (default)
+Run the MCP server with Streamable-Http (default)
 
 This starts only the core Teradata MCP server (with stdio or SSE communication):
 
@@ -97,10 +111,12 @@ PROFILE=dba docker compose up
 ```
 
 The server will be available on port 8001 (or the value of the `PORT` environment variable).
+
+You are now ready to connect your client, For details on how to set up client tools, refer to [Working with Clients](./client_guide/CLIENT_GUIDE.md)
 <br><br><br>
 
 --------------------------------------------------------------------------------------
-## Step 5 - UV Environment Set Up 
+### Step 4b - UV Environment Set Up 
 
 Make sure you have uv installed on your system, installation instructions can be found at https://github.com/astral-sh/uv .
 
@@ -187,9 +203,10 @@ export MCP_PATH=/mcp/
 
 `uv run teradata-mcp-server --profile all`
 
+You are now ready to connect your client, For details on how to set up client tools, refer to [Working with Clients](./client_guide/CLIENT_GUIDE.md)
 
 --------------------------------------------------------------------
-## Step 5 Run the MCP server with REST
+### Step 4c - Run the MCP server with REST
 
 Alternatively, you can expose your tools, prompts and resources as REST endpoints using the `rest` profile.
 
@@ -213,8 +230,10 @@ export MCPO_API_KEY=top-secret
 docker compose --profile rest up
 ```
 
+You are now ready to connect your client, For details on how to set up client tools, refer to [Working with Clients](./client_guide/CLIENT_GUIDE.md)
+
 ---------------------------------------------------------------------
-## Run the MCP Server as a service
+### Step 4d - Run the MCP Server as a service
 There are two options to configure the MCP server for automatic restart:
 
 ### Using Docker
@@ -254,7 +273,7 @@ WantedBy=multi-user.target
 7. ```sudo crontab -e```
 8. ```0 * * * * /bin/systemctl restart <your service name>.service```
 
-## Client set up
+You are now ready to connect your client, For details on how to set up client tools, refer to [Working with Clients](./client_guide/CLIENT_GUIDE.md)
 
-For details on how to set up client tools, refer to [Working with Clients](./client_guide/CLIENT_GUIDE.md)
+
 
