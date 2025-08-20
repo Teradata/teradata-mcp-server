@@ -24,8 +24,13 @@ from sqlalchemy.engine import Connection
 # Import the tools module with lazy loading support
 try:
     from teradata_mcp_server import tools as td
+    from teradata_mcp_server.auth import (
+        ensure_session, QueryBandBuilder, request_tracer, current_session
+    )
 except ImportError:
+    # Fallback imports for development
     import tools as td
+    from auth import ensure_session, QueryBandBuilder, request_tracer, current_session
 
 load_dotenv()
 
@@ -167,6 +172,7 @@ mcp = FastMCP("teradata-mcp-server")
 # Initialize global variables
 fs_config = None
 shutdown_in_progress = False
+enable_session_tracing = False  # Only enabled for streamable-http transport
 
 # Now initialize the TD connection after module loader is ready
 _tdconn = td.TDConn()
@@ -228,8 +234,32 @@ def execute_db_tool(tool, *args, **kwargs):
       - If annotated Connection, pass SQLAlchemy engine
       - Otherwise, pass raw DB-API connection
     The second option should be eventually retired as all tools move to SQLAlchemy.
+    
+    Phase 1 Session Integration:
+      - Optionally creates session from HTTP context
+      - Sets QueryBand for request tracing
+      - Tracks request execution for audit
     """
     global _tdconn
+    
+    # Extract tool name for tracing
+    tool_name = kwargs.pop('tool_name', getattr(tool, '__name__', 'unknown_tool'))
+    
+    # Try to get session context if session tracing is enabled (streamable-http only)
+    session = None
+    request_id = None
+    if enable_session_tracing:
+        logger.info(f"Executing tool: {tool_name} with session tracing enabled")
+        try:
+            session = ensure_session()
+            if session:
+                request_id = request_tracer.start_request(tool_name, {k: v for k, v in kwargs.items() if k != 'tool_name'})
+                logger.info(f"Created session for tool: {tool_name} with session tracing enabled")
+
+        except Exception as e:
+            logger.debug(f"Could not create session context: {e}")
+            session = None
+    
     # (Re)initialize if needed
     if not getattr(_tdconn, "engine", None):
         logger.info("Reinitializing TDConn")
@@ -238,6 +268,8 @@ def execute_db_tool(tool, *args, **kwargs):
             try:
                 global fs_config
                 # Suppress stdout/stderr from FeatureStoreConfig and teradataml during reconnection
+                from io import StringIO
+                from contextlib import redirect_stdout, redirect_stderr
                 stdout_buffer = StringIO()
                 stderr_buffer = StringIO()
                 with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
@@ -258,7 +290,6 @@ def execute_db_tool(tool, *args, **kwargs):
                 logger.warning(f"Feature Store module not available during reconnection: {e}")
                 # Don't disable _enableEFS here as it might be temporary
 
-
     # Check is the first argument of the tool is a SQLAlchemy Connection
     sig = inspect.signature(tool)
     first_param = next(iter(sig.parameters.values()))
@@ -269,19 +300,64 @@ def execute_db_tool(tool, *args, **kwargs):
         if use_sqla:
             # Use a Connection that has .execute()
             with _tdconn.engine.connect() as conn:
+                # Set QueryBand if session tracing is enabled and session is available
+                if session and enable_session_tracing:
+                    try:
+                        queryband = QueryBandBuilder.build_queryband(
+                            session=session,
+                            tool_name=tool_name
+                        )
+                        from sqlalchemy import text
+                        conn.execute(text(f"SET QUERY_BAND = '{queryband}' FOR TRANSACTION"))
+                        logger.debug(f"QueryBand set: {queryband}")
+
+                    except Exception as qb_error:
+                        logger.debug(f"Could not set QueryBand: {qb_error}")
+                
                 result = tool(conn, *args, **kwargs)
+
         else:
             # Raw DB-API path
             raw = _tdconn.engine.raw_connection()
             try:
+                # Set QueryBand if session tracing is enabled and session is available
+                if session and enable_session_tracing:
+                    try:
+                        queryband = QueryBandBuilder.build_queryband(
+                            session=session,
+                            tool_name=tool_name,
+                        )
+                        cursor = raw.cursor()
+                        cursor.execute(f"SET QUERY_BAND = '{queryband}' FOR TRANSACTION")
+                        cursor.close()
+                        logger.debug(f"QueryBand set: {queryband}")
+                    except Exception as qb_error:
+                        logger.debug(f"Could not set QueryBand: {qb_error}")
+                
                 result = tool(raw, *args, **kwargs)
             finally:
                 raw.close()
 
+        # Complete request tracing if enabled
+        if request_id:
+            result_summary = str(result)[:100] if result else "No result"
+            request_tracer.complete_request(request_id, result_summary=result_summary)
+
         return format_text_response(result)
 
     except Exception as e:
-        logger.error(f"Error in execute_db_tool: {e}", exc_info=True)
+        # Complete request tracing with error if enabled
+        if request_id:
+            request_tracer.complete_request(request_id, error=str(e))
+        
+        logger.error(f"Error in execute_db_tool: {e}", exc_info=True, extra={
+            "session_info": {
+                "session_id": session.session_id if session else None,
+                "user_id": session.user_id if session else None,
+                "tool_name": tool_name,
+                "request_id": request_id
+            } if session else {"tool_name": tool_name}
+        })
         return format_error_response(str(e))
 
 def execute_vs_tool(tool, *args, **kwargs) -> ResponseType:
@@ -366,8 +442,7 @@ def register_td_tools(config, module_loader, mcp):
 
 
 register_td_tools(config, module_loader, mcp)
-
-
+        
 #------------------ Register tools, resources and prompts declared in .yml files ------------------#
 
 custom_object_files = [file for file in os.listdir() if file.endswith("_objects.yml")]
@@ -746,18 +821,27 @@ async def main():
         logger.warning("Signal handling not supported on Windows")
 
     # Start the MCP server
+    global enable_session_tracing
+    
     if mcp_transport == "sse":
+        enable_session_tracing = False  # No session tracing for SSE
         mcp.settings.host = os.getenv("MCP_HOST")
         mcp.settings.port = int(os.getenv("MCP_PORT"))
         logger.info(f"Starting MCP server on {mcp.settings.host}:{mcp.settings.port}")
         await mcp.run_sse_async()
     elif mcp_transport == "streamable-http":
+        # Enable session tracing for HTTP transport
+        enable_session_tracing = True
+        
         mcp.settings.host = os.getenv("MCP_HOST")
         mcp.settings.port = int(os.getenv("MCP_PORT"))
         mcp.settings.streamable_http_path = os.getenv("MCP_PATH", "/mcp/")
         logger.info(f"Starting MCP server on {mcp.settings.host}:{mcp.settings.port} with path {mcp.settings.streamable_http_path}")
+        logger.info("Session tracing enabled for streamable-http transport")
         await mcp.run_streamable_http_async()
     else:
+        # stdio transport - no session tracing
+        enable_session_tracing = False
         logger.info("Starting MCP server on stdin/stdout")
         await mcp.run_stdio_async()
 
