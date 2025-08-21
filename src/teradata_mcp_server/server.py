@@ -11,26 +11,26 @@ import os
 import re
 import sys
 import signal
+from uuid import uuid4
+import hashlib
 from importlib.resources import files as pkg_files
 from typing import Any
 import yaml
 from dotenv import load_dotenv
 from mcp import types
-from mcp.server.fastmcp import FastMCP
-from mcp.server.fastmcp.prompts.base import TextContent, UserMessage
+from fastmcp import FastMCP
+from fastmcp.prompts.prompt import TextContent, Message
 from pydantic import Field
 from sqlalchemy.engine import Connection
+
+from fastmcp.server.middleware import Middleware, MiddlewareContext
 
 # Import the tools module with lazy loading support
 try:
     from teradata_mcp_server import tools as td
-    from teradata_mcp_server.auth import (
-        ensure_session, QueryBandBuilder, request_tracer, current_session
-    )
 except ImportError:
     # Fallback imports for development
     import tools as td
-    from auth import ensure_session, QueryBandBuilder, request_tracer, current_session
 
 load_dotenv()
 
@@ -51,7 +51,10 @@ for key, value in vars(args).items():
     if value is not None:
         os.environ[key.upper()] = str(value)
 
+
 profile_name = os.getenv("PROFILE")
+# Unique identifier for this server instance (no randomness)
+PROCESS_ID = f"{os.uname().nodename}:{os.getpid()}"
 
 
 # Set up logging
@@ -164,10 +167,93 @@ _enableEFS = True if any(re.match(pattern, 'fs_*') for pattern in config.get('to
 _enableEVS = True if any(re.match(pattern, 'evs_*') for pattern in config.get('tool', [])) else False
 
 # Load the tool modules
-module_loader = td.initialize_module_loader(config)
+module_loader = td.initialize_module_loader(config)    
 
+# ------------------ Request Context ------------------#
+from dataclasses import dataclass
+from typing import Optional
+from fastmcp.server.dependencies import get_http_headers, get_context
+
+@dataclass
+class RequestContext:
+    """Per-request data derived from HTTP headers and other sources.
+    Stored in FastMCP Context state so tools/utilities can retrieve it.
+    All header keys are normalized to lowercase.
+    """
+    headers: dict[str, str]
+    # Common derived fields
+    request_id: str | None = None
+    session_id: str | None = None
+    forwarded_for: str | None = None
+    user_agent: str | None = None
+    tenant: Optional[str] = None
+    # Auth summary (avoid storing raw secrets)
+    auth_scheme: str | None = None
+    auth_token_sha256: str | None = None
+    # Optional identity/roles if you add them later
+    user_id: Optional[str] = None
+
+class RequestContextMiddleware(Middleware):
+    """Extract HTTP headers once per MCP operation and stash them in Context state.
+    Tools can retrieve via `ctx.get_state("request_context")` or using
+    `get_context()` at runtime.
+    """
+    async def on_request(self, context: MiddlewareContext, call_next):
+        # Works for any MCP *request* (tool call, list, get, read)
+        raw_headers = get_http_headers() or {}
+        logger.debug(f"Parsing HTTP headers: {dict(raw_headers).keys()}")
+        # Normalize to lowercase keys for consistency
+        headers = {str(k).lower(): v for k, v in dict(raw_headers).items()}
+
+        # Common fields
+        request_id = headers.get("x-request-id") or headers.get("request-id")
+        correlation_id = headers.get("x-correlation-id") or headers.get("correlation-id")
+        session_id = headers.get("x-session-id") or correlation_id or request_id
+        forwarded_for = headers.get("x-forwarded-for")
+        user_agent = headers.get("user-agent")
+        tenant = headers.get("x-td-tenant") or headers.get("x-tenant")
+
+        # Authorization summary with hashed token
+        auth_hdr = headers.get("authorization")
+        auth_scheme = None
+        auth_token_sha256 = None
+        if auth_hdr:
+            parts = auth_hdr.split(" ", 1)
+            auth_scheme = parts[0]
+            token = parts[1] if len(parts) > 1 else ""
+            try:
+                auth_token_sha256 = hashlib.sha256(token.encode("utf-8")).hexdigest()
+            except Exception:
+                auth_token_sha256 = None
+
+        # Fallbacks for ids
+        if not request_id:
+            request_id = uuid4().hex
+        if not session_id:
+            # If client didn't provide a session, default to per-request id
+            session_id = request_id
+
+        rc = RequestContext(
+            headers=headers,
+            request_id=request_id,
+            session_id=session_id,
+            forwarded_for=forwarded_for,
+            user_agent=user_agent,
+            tenant=tenant,
+            auth_scheme=auth_scheme,
+            auth_token_sha256=auth_token_sha256,
+        )
+
+        if context.fastmcp_context:
+            context.fastmcp_context.set_state("request_context", rc)
+        return await call_next(context)
+
+# ------------------ MCP Server Start ------------------#
 # Connect to MCP server
 mcp = FastMCP("teradata-mcp-server")
+
+# Register middleware
+mcp.add_middleware(RequestContextMiddleware())  # <-- populates Context state
 
 # Initialize global variables
 fs_config = None
@@ -207,6 +293,65 @@ if (len(os.getenv("VS_NAME", "").strip()) > 0):
 #------------------ Tool utilies  ------------------#
 ResponseType = list[types.TextContent | types.ImageContent | types.EmbeddedResource]
 
+
+# Sanitizer for QUERY_BAND values
+def _sanitize_qb_value(val: str) -> str:
+    """Sanitize values for Teradata QUERY_BAND.
+    - Replace semicolons (delimiters) with underscores
+    - Escape single quotes
+    - Trim whitespace
+    """
+    if val is None:
+        return ""
+    s = str(val)
+    s = s.replace(";", "_")
+    s = s.replace("'", "''")
+    return s.strip()
+
+def _build_queryband_with_context(tool_name, request_context):
+    """
+    Build a Teradata QUERY_BAND string from the FastMCP request context.
+    Always starts with APPLICATION and TOOL_NAME, then appends context-derived keys.
+    """
+    parts: list[str] = []
+
+    def add(key: str, value):
+        if value is None:
+            return
+        parts.append(f"{key}={_sanitize_qb_value(value)};")
+
+    # Required leading keys
+    add("APPLICATION", mcp.name)
+    add("PROFILE", profile_name)
+    add("PROCESS_ID", PROCESS_ID)
+    add("TOOL_NAME", tool_name)
+
+    # Context-derived fields (optional)
+    if request_context is not None:
+        add("REQUEST_ID", getattr(request_context, "request_id", None))
+        add("SESSION_ID", getattr(request_context, "session_id", None))
+        add("TENANT", getattr(request_context, "tenant", None))
+
+        # Prefer the first IP in X-Forwarded-For if present
+        fwd = getattr(request_context, "forwarded_for", None)
+        client_ip = None
+        if isinstance(fwd, str) and fwd:
+            client_ip = fwd.split(",")[0].strip()
+        add("CLIENT_IP", client_ip)
+
+        add("USER_AGENT", getattr(request_context, "user_agent", None))
+        add("AUTH_SCHEME", getattr(request_context, "auth_scheme", None))
+
+        # Include a short fingerprint of the token hash if available (avoids leaking secrets)
+        auth_hash = getattr(request_context, "auth_token_sha256", None)
+        if isinstance(auth_hash, str) and auth_hash:
+            add("AUTH_HASH", auth_hash[:12])
+
+    # Static marker for observability
+    add("MCP_REQUEST", "true")
+
+    return "".join(parts)
+
 def format_text_response(text: Any) -> ResponseType:
     """Format a text response."""
     if isinstance(text, str):
@@ -244,21 +389,6 @@ def execute_db_tool(tool, *args, **kwargs):
     
     # Extract tool name for tracing
     tool_name = kwargs.pop('tool_name', getattr(tool, '__name__', 'unknown_tool'))
-    
-    # Try to get session context if session tracing is enabled (streamable-http only)
-    session = None
-    request_id = None
-    if enable_session_tracing:
-        logger.info(f"Executing tool: {tool_name} with session tracing enabled")
-        try:
-            session = ensure_session()
-            if session:
-                request_id = request_tracer.start_request(tool_name, {k: v for k, v in kwargs.items() if k != 'tool_name'})
-                logger.info(f"Created session for tool: {tool_name} with session tracing enabled")
-
-        except Exception as e:
-            logger.debug(f"Could not create session context: {e}")
-            session = None
     
     # (Re)initialize if needed
     if not getattr(_tdconn, "engine", None):
@@ -301,19 +431,24 @@ def execute_db_tool(tool, *args, **kwargs):
             # Use a Connection that has .execute()
             with _tdconn.engine.connect() as conn:
                 # Set QueryBand if session tracing is enabled and session is available
-                if session and enable_session_tracing:
+                if enable_session_tracing:
+                    # RequestContext originates from RequestContextMiddleware and includes request_id/session_id, etc.
+                    # Retrieve request context from FastMCP Context state (populated by RequestContextMiddleware)
+                    request_context = None
                     try:
-                        queryband = QueryBandBuilder.build_queryband(
-                            session=session,
-                            tool_name=tool_name
-                        )
+                        fctx = get_context()
+                        if fctx is not None:
+                            request_context = fctx.get_state("request_context")
+                    except Exception:
+                        request_context = None
+                    try:
+                        queryband = _build_queryband_with_context(tool_name=tool_name, request_context=request_context)
                         from sqlalchemy import text
                         conn.execute(text(f"SET QUERY_BAND = '{queryband}' FOR TRANSACTION"))
                         logger.debug(f"QueryBand set: {queryband}")
-
+                        logger.debug(f"Tool request context: {request_context}")
                     except Exception as qb_error:
                         logger.debug(f"Could not set QueryBand: {qb_error}")
-                
                 result = tool(conn, *args, **kwargs)
 
         else:
@@ -321,42 +456,39 @@ def execute_db_tool(tool, *args, **kwargs):
             raw = _tdconn.engine.raw_connection()
             try:
                 # Set QueryBand if session tracing is enabled and session is available
-                if session and enable_session_tracing:
+                if enable_session_tracing:
+                    # RequestContext originates from RequestContextMiddleware and includes request_id/session_id, etc.
+                    # Retrieve request context from FastMCP Context state (populated by RequestContextMiddleware)
+                    request_context = None
                     try:
-                        queryband = QueryBandBuilder.build_queryband(
-                            session=session,
-                            tool_name=tool_name,
-                        )
+                        fctx = get_context()
+                        if fctx is not None:
+                            request_context = fctx.get_state("request_context")
+                    except Exception:
+                        request_context = None
+                    try:
+                        queryband = _build_queryband_with_context(tool_name=tool_name, request_context=request_context)
                         cursor = raw.cursor()
                         cursor.execute(f"SET QUERY_BAND = '{queryband}' FOR TRANSACTION")
                         cursor.close()
                         logger.debug(f"QueryBand set: {queryband}")
+                        logger.debug(f"Tool request context: {request_context}")
                     except Exception as qb_error:
                         logger.debug(f"Could not set QueryBand: {qb_error}")
-                
                 result = tool(raw, *args, **kwargs)
             finally:
                 raw.close()
 
-        # Complete request tracing if enabled
-        if request_id:
-            result_summary = str(result)[:100] if result else "No result"
-            request_tracer.complete_request(request_id, result_summary=result_summary)
-
         return format_text_response(result)
 
     except Exception as e:
-        # Complete request tracing with error if enabled
-        if request_id:
-            request_tracer.complete_request(request_id, error=str(e))
-        
         logger.error(f"Error in execute_db_tool: {e}", exc_info=True, extra={
             "session_info": {
-                "session_id": session.session_id if session else None,
-                "user_id": session.user_id if session else None,
-                "tool_name": tool_name,
-                "request_id": request_id
-            } if session else {"tool_name": tool_name}
+                #"session_id": session.session_id if session else None,
+                #"user_id": session.user_id if session else None,
+                "tool_name": tool_name
+                #"request_id": request_id
+            } 
         })
         return format_error_response(str(e))
 
@@ -442,7 +574,7 @@ def register_td_tools(config, module_loader, mcp):
 
 
 register_td_tools(config, module_loader, mcp)
-        
+                
 #------------------ Register tools, resources and prompts declared in .yml files ------------------#
 
 custom_object_files = [file for file in os.listdir() if file.endswith("_objects.yml")]
@@ -498,7 +630,7 @@ def make_custom_prompt(prompt_name: str, prompt: str, desc: str, parameters: dic
     if parameters is None or len(parameters) == 0:
         # Original behavior for prompts without parameters
         async def _dynamic_prompt():
-            return UserMessage(role="user", content=TextContent(type="text", text=prompt))
+            return Message(role="user", content=TextContent(type="text", text=prompt))
         _dynamic_prompt.__name__ = prompt_name
         return mcp.prompt(description=desc)(_dynamic_prompt)
     else:
@@ -546,7 +678,7 @@ def make_custom_prompt(prompt_name: str, prompt: str, desc: str, parameters: dic
             if missing:
                 raise ValueError(f"Missing parameters: {missing}")
             formatted_prompt = prompt.format(**kwargs)
-            return UserMessage(role="user", content=TextContent(type="text", text=formatted_prompt))
+            return Message(role="user", content=TextContent(type="text", text=formatted_prompt))
 
         _dynamic_prompt.__signature__ = sig
         _dynamic_prompt.__annotations__ = annotations
@@ -825,7 +957,7 @@ async def main():
     
     if mcp_transport == "sse":
         enable_session_tracing = False  # No session tracing for SSE
-        mcp.settings.host = os.getenv("MCP_HOST")
+        mcp.settings.host = os.getenv("MCP_HOST", "localhost")
         mcp.settings.port = int(os.getenv("MCP_PORT"))
         logger.info(f"Starting MCP server on {mcp.settings.host}:{mcp.settings.port}")
         await mcp.run_sse_async()
@@ -833,7 +965,7 @@ async def main():
         # Enable session tracing for HTTP transport
         enable_session_tracing = True
         
-        mcp.settings.host = os.getenv("MCP_HOST")
+        mcp.settings.host = os.getenv("MCP_HOST", "localhost")
         mcp.settings.port = int(os.getenv("MCP_PORT"))
         mcp.settings.streamable_http_path = os.getenv("MCP_PATH", "/mcp/")
         logger.info(f"Starting MCP server on {mcp.settings.host}:{mcp.settings.port} with path {mcp.settings.streamable_http_path}")
