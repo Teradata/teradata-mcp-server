@@ -347,9 +347,6 @@ def _build_queryband_with_context(tool_name, request_context):
         if isinstance(auth_hash, str) and auth_hash:
             add("AUTH_HASH", auth_hash[:12])
 
-    # Static marker for observability
-    add("MCP_REQUEST", "true")
-
     return "".join(parts)
 
 def format_text_response(text: Any) -> ResponseType:

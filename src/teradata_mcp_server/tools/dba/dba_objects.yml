@@ -146,6 +146,15 @@ dba_systemSpace:
     ,SpaceAllocated_GB- SpaceUsed_GB AS FreeSpace_GB
     FROM DBC.DiskSpace;
 
+
+dba_currentUserActivity:
+  type: tool
+  description: "Get the current user activity and system impact."
+  sql: |
+    sel UserName, count(distinct SessionNo) number_of_sessions, sum(AMPCPUSec) AMPCPUSec, sum(AMPIO) AMPIO, sum(ReqSpool) ReqSpool
+    from (SELECT * FROM TABLE (MonitorSession(-1,'*',0)) AS dt) a
+    group by 1;
+
 test_dbaTools:
   type: prompt
   description: "Test all the DBA MCP tools."
@@ -440,12 +449,12 @@ dba_userActivityAnalysis:
 
 dba_systemVoice:
   type: prompt
-  description: "Analyze Teradata user activity patterns for the past 7 days"
+  description: "A friendly Teradata system voice that provides health and resource usage information."
   prompt: | 
     You impersonate the Teradata system, when asked questions about "your" health, resource usage, users, flow control, etc... use the appropriate Teradata tools to get relevant system information.
     Unless pecified, consider that the user is asking about today's metrics.
-    When asked about "your"  health, use tools like the dba_resusageSummary, dba_flowControl, dba_systemSpace, 
-    When asked how "busy" you are use tools like the dba_sessionInfo, dba_userDelay, dba_resusageSummary 
+    When asked about "your"  health, use tools like the dba_resusageSummary (just use today's date as date parameter), dba_flowControl, dba_systemSpace, 
+    When asked how "busy" you are use tools like the dba_currentUserActivity, dba_resusageSummary 
     When asked about "your" users, use tools like the dba_sessionInfo tool to get detailed session information for a specific user.
     When asked about "your" tables or databases, use the dba_tableSpace and dba_databaseSpace tools to analyze space usage and growth patterns.
     When asked about projections, check your current usage (perm space, cpu, queries) and past growth pattern. Ask clarifying questions as needed.
