@@ -40,5 +40,7 @@ def handle_tmpl_nameOfTool(conn: TeradataConnection, argument: str | None, *args
         metadata = {
             "tool_name": "tmpl_nameOfTool",
             "argument": argument,
+            "rows": len(data)
         }
+        logger.debug(f"Tool: handle_tmpl_nameOfTool: metadata: {metadata}")
         return create_response(data, metadata)

@@ -45,10 +45,11 @@ def handle_fs_isFeatureStorePresent(conn: TeradataConnection, database_name: str
         "tool_name": "fs_isFeatureStorePresent",
         "database_name": database_name,
     }
+    logger.info(f"Tool: handle_fs_isFeatureStorePresent: Metadata: {metadata}")
     return create_response(data, metadata)
 
 #------------------ Tool  ------------------#
-# Feature Store available data domainAdd commentMore actions
+# Feature Store available data domains
 #     Arguments:
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 # #     Returns: True or False
@@ -90,7 +91,7 @@ def handle_fs_getDataDomains(conn: TeradataConnection, fs_config, *args, **kwarg
             "tool_name": "fs_getDataDomains",
             "database_name": fs_config.database_name,
         }
-
+        logger.info(f"Tool: handle_fs_getDataDomains: Metadata: {metadata}")
         return create_response(data, metadata)
 
 #------------------ Tool  ------------------#
@@ -133,6 +134,7 @@ def handle_fs_featureStoreContent(conn: TeradataConnection, fs_config, *args, **
         rows = cur.execute(sql_query)
         data = rows_to_json(cur.description, rows.fetchall())
 
+        logger.info(f"Tool: handle_fs_featureStoreContent: Metadata: {metadata}")
         return create_response(data, metadata)
 
 #------------------ Tool  ------------------#
@@ -178,6 +180,7 @@ def handle_fs_getFeatureDataModel(conn: TeradataConnection, fs_config, *args, **
         "tool_name": "fs_getFeatureDataModel",
         "database_name": database_name,
     }
+    logger.info(f"Tool: handle_fs_getFeatureDataModel: Metadata: {metadata}")
     return create_response(data, metadata)
 
 #------------------ Tool  ------------------#
@@ -231,10 +234,11 @@ def handle_fs_getAvailableEntities(conn: TeradataConnection, fs_config, *args, *
         "database_name": database_name,
         "data_domain": data_domain
     }
+    logger.info(f"Tool: handle_fs_getAvailableEntities: Metadata: {metadata}")
     return create_response(data, metadata)
 
 #------------------ Tool  ------------------#
-# Feature Store: get abailable entities
+# Feature Store: get available entities
 #     Arguments:
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       database_name - the database name to check for existence
@@ -268,10 +272,11 @@ def handle_fs_getAvailableDatasets(conn: TeradataConnection, fs_config, *args, *
         "tool_name": "fs_getAvailableDatasets",
         "database_name": database_name,
     }
+    logger.info(f"Tool: handle_fs_getAvailableDatasets: Metadata: {metadata}")
     return create_response(data, metadata)
 
 #------------------ Tool  ------------------#
-# Feature Store: get abailable entities
+# Feature Store: get available entities
 #     Arguments:
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 #       database_name - the database name to check for existence
@@ -332,6 +337,7 @@ def handle_fs_getFeatures(conn: TeradataConnection, fs_config, *args, **kwargs):
         "entity": entity,
         "num_features": len(data)
     }
+    logger.info(f"Tool: handle_fs_getFeatures: Metadata: {metadata}")
     return create_response(data, metadata)
 
 #------------------ Tool  ------------------#
@@ -420,4 +426,5 @@ def handle_fs_createDataset(conn: TeradataConnection, fs_config, entity_name: st
         "dataset_name": dataset_name,
         "target_database": target_database
     }
+    logger.info(f"Tool: handle_fs_createDataset: Metadata: {metadata}")
     return create_response(data, metadata)

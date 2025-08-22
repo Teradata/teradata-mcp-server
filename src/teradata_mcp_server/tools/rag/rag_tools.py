@@ -298,7 +298,7 @@ def handle_rag_executeWorkflow(
         "metadata_fields": config['vector_store_schema']['metadata_fields_in_vector_store'],
         "description": "Complete RAG workflow executed: config → store query → generate embeddings → semantic search"
     }
-
+    logger.debug(f"Tool: handle_rag_executeWorkflow: metadata: {metadata}")
     return create_response(data, metadata)
 
 def handle_rag_executeWorkflow_ivsm(
@@ -521,5 +521,5 @@ def handle_rag_executeWorkflow_ivsm(
         "metadata_fields": config['vector_store_schema']['metadata_fields_in_vector_store'],
         "description": "Complete RAG workflow executed using IVSM functions: config → store query → tokenize → create embedding view → create embedding table → semantic search"
     }
-
+    logger.debug(f"Tool: handle_rag_executeWorkflow_ivsm: metadata: {metadata}")
     return create_response(data, metadata)

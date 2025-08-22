@@ -24,7 +24,7 @@
       {
         "name": "system_database_tables",
         "parameters": {
-          "db_name": "DBC"
+          "database_name": "DBC"
         }
       }
     ],
@@ -38,7 +38,7 @@
       {
         "name": "system_table_ddl",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "tvm"
         }
       }
@@ -47,7 +47,7 @@
       {
         "name": "system_table_columns",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "obj_name": "TablesV"
         }
       }
@@ -56,7 +56,7 @@
       {
         "name": "system_table_preview",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "DatabasesV"
         }
       }
@@ -65,7 +65,7 @@
       {
         "name": "system_table_affinity",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "obj_name": "tvm"
         }
       }
@@ -74,7 +74,7 @@
       {
         "name": "dbc_database_usage",
         "parameters": {
-          "db_name": "DBC"
+          "database_name": "DBC"
         }
       },
       {
@@ -86,29 +86,37 @@
       {
         "name": "dbc_database_space",
         "parameters": {
-          "db_name": "DBC"
+          "database_name": "DBC"
         }
       },
       {
         "name": "all_database_space",
         "parameters": {
-          "db_name": "DBC"
+          "database_name": "DBC"
         }
       }
     ],
     "dba_tableSpace": [
       {
-        "name": "system_table_space",
+        "name": "system_table_space"
+      },
+      {
+        "name": "tvm_table_space",
         "parameters": {
-          "db_name": "DBC",
-          "table_name": "Tables"
+          "table_name": "TVM"
         }
       },
       {
-        "name": "all_tables_space",
+        "name": "dbc_tables_space",
         "parameters": {
-          "db_name": "DBC",
-          "table_name": "Tables"
+          "database_name": "DBC"
+        }
+      },
+      {
+        "name": "dbc_tvmtables_space",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "TVM"
         }
       }
     ],
@@ -122,7 +130,7 @@
       {
         "name": "dbc_user_sessions",
         "parameters": {
-          "user_name": "DBC"
+          "user_name": "demo_user"
         }
       }
     ],
@@ -130,8 +138,8 @@
       {
         "name": "get_feature_usage",
         "parameters": {
-          "start_date": "2023-01-01",
-          "end_date": "2023-12-31"
+          "start_date": "2025-01-01",
+          "end_date": "2025-12-31"
         }
       }
     ],
@@ -139,8 +147,8 @@
       {
         "name": "get_flow_control",
         "parameters": {
-          "start_date": "2023-01-01",
-          "end_date": "2023-12-31"
+          "start_date": "2025-01-01",
+          "end_date": "2025-12-31"
         }
       }
     ],
@@ -163,8 +171,8 @@
       {
         "name": "dbc_table_impact",
         "parameters": {
-          "db_name": "DBC",
-          "user_name": "DBC"
+          "database_name": "demo_user",
+          "user_name": "demo_user"
         }
       }
     ],
@@ -172,8 +180,8 @@
       {
         "name": "get_user_delays",
         "parameters": {
-          "start_date": "2023-01-01",
-          "end_date": "2023-12-31"
+          "start_date": "2025-01-01",
+          "end_date": "2025-12-31"
         }
       }
     ],
@@ -190,7 +198,7 @@
       {
         "name": "dbc_user_permissions",
         "parameters": {
-          "user_name": "DBC"
+          "user_name": "demo_user"
         }
       }
     ],
@@ -206,7 +214,7 @@
       {
         "name": "dbc_user_roles",
         "parameters": {
-          "user_name": "DBC"
+          "user_name": "demo_user"
         }
       }
     ],
@@ -234,7 +242,7 @@
       {
         "name": "system_table_missing_values",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "Tables"
         }
       }
@@ -243,9 +251,9 @@
       {
         "name": "table_kinds",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "Tables",
-          "col_name": "TableKind"
+          "column_name": "TableKind"
         }
       }
     ],
@@ -253,7 +261,7 @@
       {
         "name": "system_table_column_summary",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "Tables"
         }
       }
@@ -262,9 +270,9 @@
       {
         "name": "check_negative_values",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "Tables",
-          "col_name": "TableId"
+          "column_name": "TableId"
         }
       }
     ],
@@ -272,9 +280,9 @@
       {
         "name": "rows_missing_values",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "databasesV",
-          "col_name": "CommentString"
+          "column_name": "CommentString"
         }
       }
     ],
@@ -282,9 +290,9 @@
       {
         "name": "column_std_dev",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "databasesV",
-          "col_name": "PermSpace"
+          "column_name": "PermSpace"
         }
       }
     ],
@@ -292,9 +300,9 @@
       {
         "name": "column_statistics",
         "parameters": {
-          "db_name": "DBC",
+          "database_name": "DBC",
           "table_name": "databasesV",
-          "col_name": "PermSpace"
+          "column_name": "PermSpace"
         }
       }
     ]

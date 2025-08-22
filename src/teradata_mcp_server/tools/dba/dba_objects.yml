@@ -289,7 +289,7 @@ dba_databaseLineage :
     Get a list of tables in the Teradata system using base_tableList tool, ignore tables that: 
     - called All
 
-    ## Phase 1 - Collect SQL for the table
+    ## Phase 2 - Collect SQL for the table
     Cycle through the list of tables, following the following two steps in order
     Step 1. Get all the SQL that has executed against the table in the last {number_days} days using the dba_tableSqlList tool
     Step 2. Analyze the returned SQL by cycling through each SQL statement and extract
