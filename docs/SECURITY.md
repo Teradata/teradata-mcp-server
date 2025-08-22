@@ -19,19 +19,19 @@ Example of output in `dbc.qrylog.QueryBand`:
 
 The following parameters are included in the query band for each tool call:
 
-| Key           | Description                                                           |
-|---------------|-----------------------------------------------------------------------|
-| APPLICATION   | Name of the calling application (e.g., `teradata-mcp-server`)         |
-| PROFILE       | Profile or role associated with the user/session (if available)       |
-| PROCESS_ID    | Identifier for the process making the request                         |
-| TOOL_NAME     | Name of the tool or API endpoint invoked                              |
-| REQUEST_ID    | Unique identifier for the request                                     |
-| SESSION_ID    | Unique identifier for the session                                     |
-| TENANT        | Tenant or customer identifier (if applicable)                         |
-| CLIENT_IP     | IP address of the client making the request                           |
-| USER_AGENT    | User agent string from the client                                     |
-| AUTH_SCHEME   | Authentication scheme used (e.g., `Bearer`, `Basic`)                  |
-| AUTH_HASH     | Hashed value representing the authentication credential or token       |
+| Key         | Description                                                           | Source                                                                                      |
+|-------------|-----------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+| APPLICATION | Name of the calling application (e.g., `teradata-mcp-server`)         | FastMCP server name (`mcp.name`)                                                            |
+| PROFILE     | Profile or role associated with the server instance (if available)       | Selected profile for the server process                                                                |
+| PROCESS_ID  | Identifier for the process making the request                         | Hostname + process ID                                                                       |
+| TOOL_NAME   | Name of the tool or API endpoint invoked                              | Current tool name                                                                           |
+| REQUEST_ID  | Unique identifier for the request                                     | FastMCP request context ID (or UUID fallback)                                               |
+| SESSION_ID  | FastMCP session id (or request_id fallback)                           | FastMCP session id (or request_id fallback)                                                 |
+| TENANT      | Tenant or customer identifier (if applicable)                         | Header (`x-td-tenant` / `x-tenant`)                                                         |
+| CLIENT_IP   | IP address of the client making the request                           | Header (`x-forwarded-for`), if provided                                                     |
+| USER_AGENT  | User agent string from the client                                     | Header (`user-agent`)                                                                       |
+| AUTH_SCHEME | Authentication scheme used (e.g., `Bearer`, `Basic`)                  | Header (`authorization` scheme)                                                             |
+| AUTH_HASH   | Hashed value representing the authentication credential or token       | SHA-256 hash of the authorization token                                                     |
 
 Usage example:
 
@@ -77,5 +77,3 @@ The teradata-mcp-server community take security seriously.
 We apprciate your efforts to responsibly disclose your findings, and will make every effort to acknowledge your contribution.
 
 To report a security issue, please use the GitHub Security Advisory ["Report a Vulnerability"](https://github.com/Teradata/teradata-mcp-server/security/advisories)
-
-</file>

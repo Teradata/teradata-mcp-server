@@ -190,11 +190,15 @@ class RequestContext:
     # Auth summary (avoid storing raw secrets)
     auth_scheme: str | None = None
     auth_token_sha256: str | None = None
-    # Optional identity/roles if you add them later
+    # Future: user identity 
     user_id: Optional[str] = None
+    # Client-provided identifiers (kept separate from FastMCP session)
+    client_session_id: str | None = None
+    correlation_id: str | None = None
 
 class RequestContextMiddleware(Middleware):
-    """Extract HTTP headers once per MCP operation and stash them in Context state.
+    """
+    Extract HTTP headers once per MCP operation and stash them in Context state.
     Tools can retrieve via `ctx.get_state("request_context")` or using
     `get_context()` at runtime.
     """
@@ -205,13 +209,14 @@ class RequestContextMiddleware(Middleware):
         # Normalize to lowercase keys for consistency
         headers = {str(k).lower(): v for k, v in dict(raw_headers).items()}
 
-        # Common fields
-        request_id = headers.get("x-request-id") or headers.get("request-id")
+        # Client-provided identifiers (kept separate from FastMCP session)
         correlation_id = headers.get("x-correlation-id") or headers.get("correlation-id")
-        session_id = headers.get("x-session-id") or correlation_id or request_id
-        forwarded_for = headers.get("x-forwarded-for")
+        client_session_id = headers.get("x-session-id")
         user_agent = headers.get("user-agent")
         tenant = headers.get("x-td-tenant") or headers.get("x-tenant")
+
+        # X-Forwarded-For: record when provided (trust is evaluated downstream/audit)
+        forwarded_for = headers.get("x-forwarded-for")
 
         # Authorization summary with hashed token
         auth_hdr = headers.get("authorization")
@@ -226,12 +231,25 @@ class RequestContextMiddleware(Middleware):
             except Exception:
                 auth_token_sha256 = None
 
-        # Fallbacks for ids
-        if not request_id:
+        # Determine request_id strictly from FastMCP context (or generate uuid)
+        try:
+            if context.fastmcp_context and getattr(context.fastmcp_context, "request_id", None):
+                request_id = context.fastmcp_context.request_id
+            else:
+                request_id = uuid4().hex
+        except Exception:
             request_id = uuid4().hex
-        if not session_id:
-            # If client didn't provide a session, default to per-request id
-            session_id = request_id
+
+        # Prefer FastMCP-managed session ID; fall back to request_id if unavailable
+        try:
+            mcp_session = None
+            if context.fastmcp_context:
+                # session_id may be a property or a method depending on FastMCP version
+                sid_attr = getattr(context.fastmcp_context, "session_id", None)
+                mcp_session = sid_attr() if callable(sid_attr) else sid_attr
+        except Exception:
+            mcp_session = None
+        session_id = mcp_session or request_id
 
         rc = RequestContext(
             headers=headers,
@@ -242,6 +260,8 @@ class RequestContextMiddleware(Middleware):
             tenant=tenant,
             auth_scheme=auth_scheme,
             auth_token_sha256=auth_token_sha256,
+            client_session_id=client_session_id,
+            correlation_id=correlation_id,
         )
 
         if context.fastmcp_context:
@@ -253,7 +273,7 @@ class RequestContextMiddleware(Middleware):
 mcp = FastMCP("teradata-mcp-server")
 
 # Register middleware
-mcp.add_middleware(RequestContextMiddleware())  # <-- populates Context state
+mcp.add_middleware(RequestContextMiddleware())  # populates Context state
 
 # Initialize global variables
 fs_config = None
