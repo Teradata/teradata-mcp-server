@@ -278,7 +278,7 @@ mcp.add_middleware(RequestContextMiddleware())  # populates Context state
 # Initialize global variables
 fs_config = None
 shutdown_in_progress = False
-enable_session_tracing = False  # Only enabled for streamable-http transport
+enable_session_tracing = True  # Only enabled for streamable-http transport
 
 # Now initialize the TD connection after module loader is ready
 _tdconn = td.TDConn()
@@ -973,14 +973,12 @@ async def main():
     global enable_session_tracing
     
     if mcp_transport == "sse":
-        enable_session_tracing = False  # No session tracing for SSE
         mcp.settings.host = os.getenv("MCP_HOST", "localhost")
         mcp.settings.port = int(os.getenv("MCP_PORT"))
         logger.info(f"Starting MCP server on {mcp.settings.host}:{mcp.settings.port}")
         await mcp.run_sse_async()
     elif mcp_transport == "streamable-http":
         # Enable session tracing for HTTP transport
-        enable_session_tracing = True
         
         mcp.settings.host = os.getenv("MCP_HOST", "localhost")
         mcp.settings.port = int(os.getenv("MCP_PORT"))
@@ -990,7 +988,6 @@ async def main():
         await mcp.run_streamable_http_async()
     else:
         # stdio transport - no session tracing
-        enable_session_tracing = False
         logger.info("Starting MCP server on stdin/stdout")
         await mcp.run_stdio_async()
 
