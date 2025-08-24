@@ -148,7 +148,7 @@ dba_systemSpace:
 
 test_dbaTools:
   type: prompt
-  description: "Test all the DBA MCP tools."
+  description: "Test all the DBA MCP tools. (prompt_type: reporting)"
   prompt: |
     You are a Tester who is an expert in testing the functionality of tools in the dba module. You will test all tools in the module.
     ## your role will work through the phases
@@ -237,7 +237,7 @@ test_dbaTools:
 
 dba_tableArchive:
   type: prompt
-  description: "The following prompt is used to guide the Teradata DBA in finding opportunities for archiving data."
+  description: "The following prompt is used to guide the Teradata DBA in finding opportunities for archiving data. (prompt_type: reporting)"
   prompt: |
     You are a Teradata DBA who is an expert in finding opportunities for archiving data.
 
@@ -269,7 +269,7 @@ dba_tableArchive:
 
 dba_databaseLineage :
   type: prompt
-  description: "You are a Teradata DBA who is an expert in finding the lineage of tables in a database."
+  description: "You are a Teradata DBA who is an expert in finding the lineage of tables in a database. (prompt_type: context)"
   prompt: |
     You are a Teradata DBA who is an expert in finding the lineage of tables in a database.
 
@@ -315,7 +315,7 @@ dba_databaseLineage :
 
 dba_tableDropImpact:
   type: prompt
-  description: "You are a Teradata DBA who is an expert in finding the impact of dropping a table."
+  description: "You are a Teradata DBA who is an expert in finding the impact of dropping a table. (prompt_type: reporting)"
   prompt: |
 
     You will be assessing the {table_name} table in {database_name} database and all the SQL that has executed against it.
@@ -377,7 +377,7 @@ dba_tableDropImpact:
 
 dba_databaseHealthAssessment :
   type: prompt
-  description: "You are a Teradata DBA who is an expert in assessing the health of a database."
+  description: "You are a Teradata DBA who is an expert in assessing the health of a database. (prompt_type: reporting)"
   prompt: |
     Generate a comprehensive Teradata system health dashboard for the last 30 days, structured as an executive summary followed by detailed technical analysis. Create a visual dashboard using tables, charts, and color-coded indicators to highlight critical metrics and resource constraints. 
 
@@ -411,7 +411,7 @@ dba_databaseHealthAssessment :
 
 dba_userActivityAnalysis:
   type: prompt
-  description: "Analyze Teradata user activity patterns for the past 7 days"
+  description: "Analyze Teradata user activity patterns for the past 7 days (prompt_type: reporting)"
   prompt: |
     Analyze Teradata user activity patterns for the past 7 days, focusing on resource consumption and query behavior. Create a comprehensive analysis dashboard for DBA review with detailed breakdowns of user behavior and system impact.
 
@@ -440,7 +440,7 @@ dba_userActivityAnalysis:
 
 dba_systemVoice:
   type: prompt
-  description: "Analyze Teradata user activity patterns for the past 7 days"
+  description: "Analyze Teradata user activity patterns for the past 7 days (prompt_type: reporting)"
   prompt: | 
     You impersonate the Teradata system, when asked questions about "your" health, resource usage, users, flow control, etc... use the appropriate Teradata tools to get relevant system information.
     Unless pecified, consider that the user is asking about today's metrics.

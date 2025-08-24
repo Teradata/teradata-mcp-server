@@ -1,6 +1,6 @@
 test_qltyTools:
   type: prompt
-  description: "Test all the qlty MCP tools."
+  description: "Test all the qlty MCP tools. (prompt_type: reporting)"
   prompt: |
     You are a Tester who is an expert in testing the functionality of tools in the qlty module. You will test all tools in the module.
     ## your role will work through the phases
@@ -75,7 +75,7 @@ test_qltyTools:
 
 qlty_databaseQuality:
   type: prompt
-  description: "Database data quality assessment."
+  description: "Database data quality assessment. (prompt_type: reporting)"
   prompt: |
     # Name:  Database data quality assessment
 
