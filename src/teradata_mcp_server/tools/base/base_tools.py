@@ -67,6 +67,41 @@ def handle_base_readQuery(
     return create_response(data, metadata)
 
 
+#------------------ Tool  ------------------#
+# List tables tool
+def handle_base_tableList(conn: TeradataConnection, database_name: str | None = None, *args, **kwargs):
+    """
+    Lists all tables in a database.
+
+    Arguments:
+      database_name - Database name
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
+    logger.debug(f"Tool: handle_base_tableList: Args: database_name: {database_name}")
+
+    sql = "select TableName from dbc.TablesV tv where tv.TableKind in ('T','V', 'O', 'Q')"
+    params = []
+
+    if database_name:
+        sql += " and UPPER(tv.DatabaseName) = UPPER(?)"
+        params.append(database_name)
+
+    with conn.cursor() as cur:
+        rows = cur.execute(sql, params)
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "tool_name": "base_tableList",
+            "sql": sql.replace("?", f"'{database_name}'"),
+            "columns": [
+                {"name": col[0], "type": col[1].__name__ if hasattr(col[1], '__name__') else str(col[1])}
+                for col in cur.description
+            ] if cur.description else [],
+            "row_count": len(data)
+        }
+        logger.debug(f"Tool: handle_base_tableList: metadata: {metadata}")
+        return create_response(data, metadata)
 
 
 #------------------ Tool  ------------------#
@@ -243,7 +278,7 @@ def handle_base_tableAffinity(conn: TeradataConnection, database_name: str, obj_
                         SELECT   objectdatabasename AS DatabaseName
                             , ObjectTableName AS TableName
                             , QueryId
-                        FROM DBC.DBQLObjTbl /*  for DBC */
+                        FROM DBC.DBQLObjTbl /* for DBC */
                         WHERE Objecttype in ('Tab', 'Viw')
                         AND ObjectTableName = '{table_name}'
                         AND objectdatabasename = '{database_name}'
@@ -259,7 +294,7 @@ def handle_base_tableAffinity(conn: TeradataConnection, database_name: str, obj_
                             , ObjectTableName AS TableName
                             , QueryId
                             , CollectTimeStamp
-                        FROM DBC.DBQLObjTbl /*  for DBC */
+                        FROM DBC.DBQLObjTbl /* for DBC */
                         WHERE Objecttype in ('Tab', 'Viw')
                         AND ObjectTableName IS NOT NULL
                         AND ObjectColumnName IS NULL

@@ -1,7 +1,6 @@
-
 test_ragTools:
     type: prompt
-    description: "Test all the rag MCP tools."
+    description: "Test all the rag MCP tools. (prompt_type: reporting)"
     prompt: |
         You are a Tester who is an expert in testing the functionality of tools in the rag module. You will test all tools in the module.
         ## your role will work through the phases
@@ -27,7 +26,7 @@ test_ragTools:
 
 rag_guidelines:
     type: prompt
-    description: "Guidelines for Retrieval-Augmented Generation (RAG) mode."
+    description: "Guidelines for Retrieval-Augmented Generation (RAG) mode. (prompt_type: context)"
     prompt: |
         You are a Retrieval-Augmented Generation (RAG) assistant. Your answers must be grounded strictly and only in the context provided by the vector store.
 
@@ -225,5 +224,3 @@ rag_guidelines:
         - Embedding generation (tokenization + embedding)
         - Semantic search against chunk embeddings
         3. Answer using only the retrieved content chunks
-
-

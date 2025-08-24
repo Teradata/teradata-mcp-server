@@ -1,6 +1,6 @@
 test_evsTools:
   type: prompt
-  description: "Test all the evs MCP tools."
+  description: "Test all the evs MCP tools. (prompt_type: reporting)"
   prompt: |
     You are a Tester who is an expert in testing the functionality of tools in the evs module. You will test all tools in the module.
     ## your role will work through the phases
