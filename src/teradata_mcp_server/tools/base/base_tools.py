@@ -68,6 +68,35 @@ def handle_base_readQuery(
 
 
 #------------------ Tool  ------------------#
+# List databases tool
+def handle_base_databaseList(conn: TeradataConnection, *args, **kwargs):
+    """
+    Lists all databases in the Teradata System.
+
+    Returns:
+      ResponseType: formatted response with query results + metadata
+    """
+    logger.debug(f"Tool: handle_base_databaseList: Args: None")
+
+    sql = "select DataBaseName, DECODE(DBKind, 'U', 'User', 'D','DataBase') as DBType, CommentString from dbc.DatabasesV dv where OwnerName <> 'PDCRADM'"
+
+    with conn.cursor() as cur:
+        rows = cur.execute(sql)
+        data = rows_to_json(cur.description, rows.fetchall())
+        metadata = {
+            "tool_name": "base_databaseList",
+            "sql": sql,
+            "columns": [
+                {"name": col[0], "type": col[1].__name__ if hasattr(col[1], '__name__') else str(col[1])}
+                for col in cur.description
+            ] if cur.description else [],
+            "row_count": len(data)
+        }
+        logger.debug(f"Tool: handle_base_databaseList: metadata: {metadata}")
+        return create_response(data, metadata)
+
+
+#------------------ Tool  ------------------#
 # List tables tool
 def handle_base_tableList(conn: TeradataConnection, database_name: str | None = None, *args, **kwargs):
     """
