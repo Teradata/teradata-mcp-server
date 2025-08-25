@@ -111,6 +111,10 @@ For example, with Clause Desktop  `claude_desktop_config.json`, to assume the `d
     }
   }
 }
+```
+
+## Database Access
+:warning: **Work in progress**
 
 ### End user direct authentication
 Example: using Claude Desktop with [mcp-remote](https://www.npmjs.com/package/mcp-remote) to authentcate using a Baerer token:
