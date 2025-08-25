@@ -195,6 +195,8 @@ class RequestContext:
     # Client-provided identifiers (kept separate from FastMCP session)
     client_session_id: str | None = None
     correlation_id: str | None = None
+    # New: assumed user for proxy/impersonation
+    assume_user: Optional[str] = None
 
 class RequestContextMiddleware(Middleware):
     """
@@ -251,6 +253,17 @@ class RequestContextMiddleware(Middleware):
             mcp_session = None
         session_id = mcp_session or request_id
 
+        # Extract X-Assume-User header (case-insensitive, normalized)
+        assume_user = None
+        assume_user_value = headers.get("x-assume-user")
+        if assume_user_value is not None:
+            # Validate with regex
+            if re.match(r"^[A-Za-z0-9_]{1,30}$", assume_user_value):
+                assume_user = assume_user_value
+            else:
+                logger.warning("Invalid X-Assume-User header value; ignoring")
+                assume_user = None
+
         rc = RequestContext(
             headers=headers,
             request_id=request_id,
@@ -262,6 +275,7 @@ class RequestContextMiddleware(Middleware):
             auth_token_sha256=auth_token_sha256,
             client_session_id=client_session_id,
             correlation_id=correlation_id,
+            assume_user=assume_user,
         )
 
         if context.fastmcp_context:
@@ -367,6 +381,11 @@ def _build_queryband_with_context(tool_name, request_context):
         if isinstance(auth_hash, str) and auth_hash:
             add("AUTH_HASH", auth_hash[:12])
 
+        # Add PROXYUSER if assume_user is present
+        assume_user = getattr(request_context, "assume_user", None)
+        if assume_user:
+            add("PROXYUSER", assume_user)
+
     return "".join(parts)
 
 def format_text_response(text: Any) -> ResponseType:
@@ -446,21 +465,20 @@ def execute_db_tool(tool, *args, **kwargs):
     try:
         if use_sqla:
             # Use a Connection that has .execute()
+            from sqlalchemy import text
             with _tdconn.engine.connect() as conn:
-                # Set QueryBand if session tracing is enabled and session is available
+                request_context = None
                 if enable_session_tracing:
                     # RequestContext originates from RequestContextMiddleware and includes request_id/session_id, etc.
                     # Retrieve request context from FastMCP Context state (populated by RequestContextMiddleware)
-                    request_context = None
                     try:
                         fctx = get_context()
                         if fctx is not None:
                             request_context = fctx.get_state("request_context")
                     except Exception:
                         request_context = None
+                    queryband = _build_queryband_with_context(tool_name=tool_name, request_context=request_context)
                     try:
-                        queryband = _build_queryband_with_context(tool_name=tool_name, request_context=request_context)
-                        from sqlalchemy import text
                         conn.execute(text(f"SET QUERY_BAND = '{queryband}' FOR TRANSACTION"))
                         logger.debug(f"QueryBand set: {queryband}")
                         logger.debug(f"Tool request context: {request_context}")
@@ -472,19 +490,18 @@ def execute_db_tool(tool, *args, **kwargs):
             # Raw DB-API path
             raw = _tdconn.engine.raw_connection()
             try:
-                # Set QueryBand if session tracing is enabled and session is available
+                request_context = None
                 if enable_session_tracing:
                     # RequestContext originates from RequestContextMiddleware and includes request_id/session_id, etc.
                     # Retrieve request context from FastMCP Context state (populated by RequestContextMiddleware)
-                    request_context = None
                     try:
                         fctx = get_context()
                         if fctx is not None:
                             request_context = fctx.get_state("request_context")
                     except Exception:
                         request_context = None
+                    queryband = _build_queryband_with_context(tool_name=tool_name, request_context=request_context)
                     try:
-                        queryband = _build_queryband_with_context(tool_name=tool_name, request_context=request_context)
                         cursor = raw.cursor()
                         cursor.execute(f"SET QUERY_BAND = '{queryband}' FOR TRANSACTION")
                         cursor.close()
