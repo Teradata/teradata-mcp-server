@@ -97,7 +97,7 @@ uv run teradata-mcp-server --mcp_transport streamable-http --mcp_port 8001
 ```
 
 **FOR DEMO PURPOSE**
-In your client, indicate the end user name to assume in the http header.
+In your client, indicate the end user name to assume in the http header, using the `db_user` key.
 
 For example, with Clause Desktop  `claude_desktop_config.json`, to assume the `demo_user` user.
 
@@ -106,7 +106,7 @@ For example, with Clause Desktop  `claude_desktop_config.json`, to assume the `d
   "mcpServers": {
    "teradata_mcp_remote": {
       "command": "npx",
-      "args": ["mcp-remote", "http://localhost:8001/mcp/", "--header", "AssumeUser: ${DB_USER}"],
+      "args": ["mcp-remote", "http://localhost:8001/mcp/", "--header", "X-Assume-User: ${DB_USER}"],
       "env": { "DB_USER": "demo_user" }
     }
   }
