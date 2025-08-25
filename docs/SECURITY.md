@@ -1,21 +1,21 @@
-# Audit and security
+# Audit and Security
 
-All database tool calls are traced using [Teradata DBQL](https://docs.teradata.com/r/Enterprise_IntelliFlex_VMware/Database-Administration/Tracking-Query-Behavior-with-Database-Query-Logging-Operational-DBAs) and the MCP server implements query banding by default.
+All database tool calls are traced using [Teradata DBQL](https://docs.teradata.com/r/Enterprise_IntelliFlex_VMware/Database-Administration/Tracking-Query-Behavior-with-Database-Query-Logging-Operational-DBAs), and the MCP server implements query banding by default.
 
 We enable several mechanisms to manage database access (and RBAC policies):
-- End user via proxy user (recommended for general use):The MCP server uses a [Permanent proxy user](https://docs.teradata.com/r/Enterprise_IntelliFlex_VMware/SQL-Data-Control-Language/Statement-Syntax/GRANT-CONNECT-THROUGH/CONNECT-THROUGH-Usage-Notes/GRANT-CONNECT-THROUGH-Trusted-Sessions-and-User-Types/Permanent-Proxy-Users) to assume the privileges of the client user using their own database user. Requires user identification.
+- End user via proxy user (recommended for general use): The MCP server uses a [Permanent proxy user](https://docs.teradata.com/r/Enterprise_IntelliFlex_VMware/SQL-Data-Control-Language/Statement-Syntax/GRANT-CONNECT-THROUGH/CONNECT-THROUGH-Usage-Notes/GRANT-CONNECT-THROUGH-Trusted-Sessions-and-User-Types/Permanent-Proxy-Users) to assume the privileges of the client user using their own database user. Requires user identification.
 - Application user (best for application-specific deployments): a single database user is dedicated to the MCP Server instance.
-- End user direct authentication: The end user passes their database credentials (eg. JWT token) via the client.
+- End user direct authentication: The end user passes their database credentials (e.g., JWT) via the client.
 
 We enable several mechanisms to authenticate to the server:
 - No authentication (AUTH_MODE=none)
 - Basic authentication (AUTH_MODE=basic)
 - OAuth 2.1
-  - JWT without verification AUTH_MODE=oauth_no_verify)
+  - JWT without verification (AUTH_MODE=oauth_no_verify)
   - JWT with IDP verification (AUTH_MODE=oauth_verify)
   - Full OAuth with introspection (AUTH_MODE=oauth_full)
 
-## Tracing tool calls
+## Tracing Tool Calls
 
 By default, all tool calls are identified in the Teradata database with [QueryBand](https://docs.teradata.com/r/Enterprise_IntelliFlex_VMware/Database-Administration/Managing-Database-Resources-Operational-DBAs/Managing-Sessions-and-Transactions-with-Query-Banding/Finding-the-Origin-of-a-Query-Using-Query-Bands).
 
@@ -28,16 +28,16 @@ The following parameters are included in the query band for each tool call:
 | Key         | Description                                                           | Source                                                                                      |
 |-------------|-----------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
 | APPLICATION | Name of the calling application (e.g., `teradata-mcp-server`)         | FastMCP server name (`mcp.name`)                                                            |
-| PROFILE     | Profile or role associated with the server instance (if available)       | Selected profile for the server process                                                                |
+| PROFILE     | Profile or role associated with the server instance (if available)   | Selected profile for the server process                                                     |
 | PROCESS_ID  | Identifier for the process making the request                         | Hostname + process ID                                                                       |
 | TOOL_NAME   | Name of the tool or API endpoint invoked                              | Current tool name                                                                           |
-| REQUEST_ID  | Unique identifier for the request                                     | FastMCP request context ID (or UUID fallback)                                               |
-| SESSION_ID  | FastMCP session id (or request_id fallback)                           | FastMCP session id (or request_id fallback)                                                 |
-| TENANT      | Tenant or customer identifier (if applicable)                         | Header (`x-td-tenant` / `x-tenant`)                                                         |
-| CLIENT_IP   | IP address of the client making the request                           | Header (`x-forwarded-for`), if provided                                                     |
+| REQUEST_ID  | Unique identifier for the request                                     | FastMCP request context ID (or UUID fallback)                                              |
+| SESSION_ID  | FastMCP session ID (or request_id fallback)                          | FastMCP session ID (or request_id fallback)                                                |
+| TENANT      | Tenant or customer identifier (if applicable)                         | Header (`x-td-tenant` / `x-tenant`)                                                        |
+| CLIENT_IP   | IP address of the client making the request                           | Header (`x-forwarded-for`), if provided                                                    |
 | USER_AGENT  | User agent string from the client                                     | Header (`user-agent`)                                                                       |
-| AUTH_SCHEME | Authentication scheme used (e.g., `Bearer`, `Basic`)                  | Header (`authorization` scheme)                                                             |
-| AUTH_HASH   | Hashed value representing the authentication credential or token       | SHA-256 hash of the authorization token                                                     |
+| AUTH_SCHEME | Authentication scheme used (e.g., `Bearer`, `Basic`)                  | Header (`authorization` scheme)                                                            |
+| AUTH_HASH   | Hashed value representing the authentication credential or token      | SHA-256 hash of the authorization token                                                    |
 
 Usage example:
 
@@ -51,18 +51,17 @@ group by 1,2 order by 3 desc
 
 | Tool Name                  | User       | Requests | Avg Elapsed Time   |
 |----------------------------|------------|----------|--------------------|
-| dba_resusageSummary        | DEMO_USER  | 23       | 0:00:00.001304     |
-| dba_systemSpace            | DEMO_USER  | 10       | 0:00:00.000000     |
-| base_readQuery             | DEMO_USER  | 9        | 0:00:00.001111     |
-| base_tablePreview          | DEMO_USER  | 8        | 0:00:00.001250     |
-| base_tableList             | DEMO_USER  | 7        | 0:00:00.000000     |
-
+| dba_resusageSummary         | DEMO_USER  | 23       | 0:00:00.001304     |
+| dba_systemSpace             | DEMO_USER  | 10       | 0:00:00.000000     |
+| base_readQuery              | DEMO_USER  | 9        | 0:00:00.001111     |
+| base_tablePreview           | DEMO_USER  | 8        | 0:00:00.001250     |
+| base_tableList              | DEMO_USER  | 7        | 0:00:00.000000     |
 
 ## Database Access
 
-### Proxy user
+### Proxy User
 
-This requires you to create a proxy user for the MCP Server in advance, and associate existing databases users so the MCP Server user can assume their identity.
+This requires you to create a proxy user for the MCP Server in advance, and associate existing database users so the MCP Server user can assume their identity.
 
 Here is how you can do it:
 
@@ -75,7 +74,7 @@ CREATE USER mcp_svc AS
     ,ACCOUNT = 'service_account';
 ```
 
-If you use a system admin user to manage users and roles make sure that it has CTCONTROL rights on the proxy user
+If you use a system admin user to manage users and roles, make sure that it has CTCONTROL rights on the proxy user
 ```SQL
 GRANT CTCONTROL ON mcp_svc TO sysdba WITH GRANT OPTION;
 ```
@@ -89,17 +88,17 @@ GRANT CONNECT THROUGH mcp_svc
   --, PERMANENT alice   WITHOUT ROLE --Additional users here
 ```
 
-Now you can use this the proxy user in as the MCP Server database connection, eg.
+Now you can use this proxy user as the MCP Server database connection, e.g.:
 
 ```sh
 export DATABASE_URI="teradata://mcp_svc:mcp_svc@yourteradatasystem.teradata.com:1025"
 uv run teradata-mcp-server --mcp_transport streamable-http --mcp_port 8001
 ```
 
-:warning: **FOR DEMO PURPOSE** this needs to be integrated with an authentication mechanism to identify of the end user and determine the associated DB user!
-In your client, indicate the end user name to assume in the http header, using the `db_user` key.
+:warning: **FOR DEMO PURPOSES** this needs to be integrated with an authentication mechanism to identify the end user and determine the associated database user!  
+In your client, indicate the end user name to assume in the HTTP header, using the `db_user` key.
 
-For example, with Clause Desktop  `claude_desktop_config.json`, to assume the `demo_user` user.
+For example, with Clause Desktop `claude_desktop_config.json`, to assume the `demo_user` user:
 
 ```json
 {
@@ -113,30 +112,54 @@ For example, with Clause Desktop  `claude_desktop_config.json`, to assume the `d
 }
 ```
 
-### Application user
+### Application User
 
-This is the default mode for the MCP server: the server uses instantiates a connection pool to the database as specified in the DATABASE_URI string. This deployment method has the lowest database overhead and is optimal for high-throughput / low-latency applications.
+This is the default mode for the MCP server: the server instantiates a connection pool to the database as specified in the DATABASE_URI string. This deployment method has the lowest database overhead and is optimal for high-throughput / low-latency applications.
 
-:white_check_mark:	Ideal for application-specific instantiation with demanding SLAs. 
-- Consider co-locating the server deployment with the application (as well as stdio-based communication)
-- If exposed over a network interface (eg. streamable HTTP, SSE), implement sufficient network filtering and overlaying authentication mechanisms.
+:white_check_mark: Ideal for application-specific instantiation with demanding SLAs.  
+- Consider co-locating the server deployment with the application (as well as stdio-based communication)  
+- If exposed over a network interface (e.g., streamable HTTP, SSE), implement sufficient network filtering and overlaying authentication mechanisms.
 
-:warning: If no other authentication or database security mechanism are implemented, any user accessing the MCP Server instance 
+:warning: If no other authentication or database security mechanism is implemented, any user accessing the MCP Server instance may have access.
 
-Example over Streamable HTTP
+Example: server execution co-located  with Claude Desktop and communication over stdio (defined in `claude_desktop_config.json`)
+
+```json
+{
+  "mcpServers": {
+    "teradata": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "<PATH_TO_DIRECTORY>/teradata-mcp-server",
+        "run",
+        "teradata-mcp-server"
+      ],
+      "env": {
+        "DATABASE_URI": "teradata://<USERNAME>:<PASSWORD>@<HOST_URL>:1025/<USERNAME>",
+        "MCP_TRANSPORT": "stdio"
+      }
+    }
+  }
+```
+
+Example starting the server over Streamable HTTP, with a dedicated database user:
 
 ```sh
-export DATABASE_URI="teradata://demo_user:demo_user_password@yourteradatasystem.teradata.com:1025"
+export DATABASE_URI="teradata://mcp_applicationuser:mcp_applicationuser_password@yourteradatasystem.teradata.com:1025"
 uv run teradata-mcp-server --mcp_transport streamable-http --mcp_port 8001
 ```
 
+
 ## Authentication
+
 :warning: **Work in progress**
 
-### End user direct authentication
-Example: using Claude Desktop with [mcp-remote](https://www.npmjs.com/package/mcp-remote) to authentcate using a Baerer token:
+### End User Direct Authentication
 
-Add the server configuration in `claude_desktop_config.json`
+Example: using Claude Desktop with [mcp-remote](https://www.npmjs.com/package/mcp-remote) to authenticate using a Bearer token:
+
+Add the server configuration in `claude_desktop_config.json`:
 
 ```json
 {
@@ -152,8 +175,8 @@ Add the server configuration in `claude_desktop_config.json`
 
 ## Reporting a Vulnerability
 
-The teradata-mcp-server community take security seriously.
+The teradata-mcp-server community takes security seriously.
 
-We apprciate your efforts to responsibly disclose your findings, and will make every effort to acknowledge your contribution.
+We appreciate your efforts to responsibly disclose your findings and will make every effort to acknowledge your contribution.
 
 To report a security issue, please use the GitHub Security Advisory ["Report a Vulnerability"](https://github.com/Teradata/teradata-mcp-server/security/advisories)
