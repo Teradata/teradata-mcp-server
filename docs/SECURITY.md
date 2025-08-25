@@ -3,7 +3,7 @@
 All database tool calls are traced using [Teradata DBQL](https://docs.teradata.com/r/Enterprise_IntelliFlex_VMware/Database-Administration/Tracking-Query-Behavior-with-Database-Query-Logging-Operational-DBAs), and the MCP server implements query banding by default.
 
 We enable several mechanisms to manage database access (and RBAC policies):
-- End user via proxy user (recommended for general use): The MCP server uses a [Permanent proxy user](https://docs.teradata.com/r/Enterprise_IntelliFlex_VMware/SQL-Data-Control-Language/Statement-Syntax/GRANT-CONNECT-THROUGH/CONNECT-THROUGH-Usage-Notes/GRANT-CONNECT-THROUGH-Trusted-Sessions-and-User-Types/Permanent-Proxy-Users) to assume the privileges of the client user using their own database user. Requires user identification.
+- Service Account (recommended for general use): The MCP server uses a [Permanent proxy user](https://docs.teradata.com/r/Enterprise_IntelliFlex_VMware/SQL-Data-Control-Language/Statement-Syntax/GRANT-CONNECT-THROUGH/CONNECT-THROUGH-Usage-Notes/GRANT-CONNECT-THROUGH-Trusted-Sessions-and-User-Types/Permanent-Proxy-Users) to assume the privileges of the client user using their own database user. Requires user identification.
 - Application user (best for application-specific deployments): a single database user is dedicated to the MCP Server instance.
 - End user direct authentication: The end user passes their database credentials (e.g., JWT) via the client.
 
@@ -59,7 +59,7 @@ group by 1,2 order by 3 desc
 
 ## Database Access
 
-### Proxy User
+### Service Account
 
 This requires you to create a proxy user for the MCP Server in advance, and associate existing database users so the MCP Server user can assume their identity.
 
@@ -96,7 +96,7 @@ uv run teradata-mcp-server --mcp_transport streamable-http --mcp_port 8001
 ```
 
 :warning: **FOR DEMO PURPOSES** this needs to be integrated with an authentication mechanism to identify the end user and determine the associated database user!  
-In your client, indicate the end user name to assume in the HTTP header, using the `db_user` key.
+In your client, indicate the end user name to assume in the HTTP header, using the `X-Assume-User` key.
 
 For example, with Clause Desktop `claude_desktop_config.json`, to assume the `demo_user` user:
 
