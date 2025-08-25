@@ -151,11 +151,12 @@ uv run teradata-mcp-server --mcp_transport streamable-http --mcp_port 8001
 ```
 
 
-## Authentication
-
-:warning: **Work in progress**
-
 ### End User Direct Authentication
+
+:warning: **NOT IMPLEMENTED**
+
+In this case the end-user passes their database credentials via a bearer or JWT token to the MCP Server during a streamable HTTP session.
+The credentials are passed via the HTTP headers, and this prompts the MCP server to create (and close) a new connection for every request with the provided user credentials.
 
 Example: using Claude Desktop with [mcp-remote](https://www.npmjs.com/package/mcp-remote) to authenticate using a Bearer token:
 
@@ -173,6 +174,14 @@ Add the server configuration in `claude_desktop_config.json`:
 }
 ```
 
+## Authentication
+
+:warning: **NOT IMPLEMENTED** 
+
+  - JWT without verification (AUTH_MODE=oauth_no_verify) [this should be the same as "End User Direct Authentication" above]
+  - JWT with IDP verification (AUTH_MODE=oauth_verify)
+  - Full OAuth with introspection (AUTH_MODE=oauth_full)
+  
 ## Reporting a Vulnerability
 
 The teradata-mcp-server community takes security seriously.
