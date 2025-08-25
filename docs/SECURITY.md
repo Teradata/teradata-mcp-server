@@ -96,7 +96,7 @@ export DATABASE_URI="teradata://mcp_svc:mcp_svc@yourteradatasystem.teradata.com:
 uv run teradata-mcp-server --mcp_transport streamable-http --mcp_port 8001
 ```
 
-**FOR DEMO PURPOSE**
+:warning: **FOR DEMO PURPOSE** this needs to be integrated with an authentication mechanism to identify of the end user and determine the associated DB user!
 In your client, indicate the end user name to assume in the http header, using the `db_user` key.
 
 For example, with Clause Desktop  `claude_desktop_config.json`, to assume the `demo_user` user.
@@ -113,7 +113,7 @@ For example, with Clause Desktop  `claude_desktop_config.json`, to assume the `d
 }
 ```
 
-## Database Access
+## Authentication
 :warning: **Work in progress**
 
 ### End user direct authentication
