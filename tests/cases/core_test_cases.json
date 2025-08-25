@@ -98,11 +98,9 @@
     ],
     "dba_tableSpace": [
       {
-        "name": "system_table_space"
-      },
-      {
-        "name": "tvm_table_space",
+        "name": "system_table_space",
         "parameters": {
+          "database_name": "DBC",
           "table_name": "TVM"
         }
       },
@@ -111,12 +109,11 @@
         "parameters": {
           "database_name": "DBC"
         }
-      },
-      {
-        "name": "dbc_tvmtables_space",
+      }
+      ,{
+        "name": "all_tables_space",
         "parameters": {
-          "database_name": "DBC",
-          "table_name": "TVM"
+          "database_name": ""
         }
       }
     ],
@@ -271,8 +268,7 @@
         "name": "check_negative_values",
         "parameters": {
           "database_name": "DBC",
-          "table_name": "Tables",
-          "column_name": "TableId"
+          "table_name": "Tables"
         }
       }
     ],
