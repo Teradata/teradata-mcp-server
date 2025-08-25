@@ -1,7 +1,13 @@
 # Audit and security
 
+All database tool calls are traced using [Teradata DBQL](https://docs.teradata.com/r/Enterprise_IntelliFlex_VMware/Database-Administration/Tracking-Query-Behavior-with-Database-Query-Logging-Operational-DBAs) and the MCP server implements query banding by default.
 
-We enable several mechanisms to authenticate to the database:
+We enable several mechanisms to manage database access (and RBAC policies):
+- End user via proxy user (recommended for general use):The MCP server uses a [Permanent proxy user](https://docs.teradata.com/r/Enterprise_IntelliFlex_VMware/SQL-Data-Control-Language/Statement-Syntax/GRANT-CONNECT-THROUGH/CONNECT-THROUGH-Usage-Notes/GRANT-CONNECT-THROUGH-Trusted-Sessions-and-User-Types/Permanent-Proxy-Users) to assume the privileges of the client user using their own database user. Requires user identification.
+- Application user (best for application-specific deployments): a single database user is dedicated to the MCP Server instance.
+- End user direct authentication: The end user passes their database credentials (eg. JWT token) via the client.
+
+We enable several mechanisms to authenticate to the server:
 - No authentication (AUTH_MODE=none)
 - Basic authentication (AUTH_MODE=basic)
 - OAuth 2.1
@@ -52,8 +58,61 @@ group by 1,2 order by 3 desc
 | base_tableList             | DEMO_USER  | 7        | 0:00:00.000000     |
 
 
-## Authentication to the database
+## Database Access
 
+### Proxy user
+
+This requires you to create a proxy user for the MCP Server in advance, and associate existing databases users so the MCP Server user can assume their identity.
+
+Here is how you can do it:
+
+Create a proxy user for the MCP Server
+```SQL
+CREATE USER mcp_svc AS 
+    PASSWORD = mcp_svc
+    ,PERM = 10e9  -- Adjust as needed
+    ,SPOOL = 10e9  -- Adjust as needed
+    ,ACCOUNT = 'service_account';
+```
+
+If you use a system admin user to manage users and roles make sure that it has CTCONTROL rights on the proxy user
+```SQL
+GRANT CTCONTROL ON mcp_svc TO sysdba WITH GRANT OPTION;
+```
+
+Proxy sessions use the user’s default role. You can specify roles using the `WITH ROLE` option. 
+For more details, see [GRANT CONNECT THROUGH documentation](https://docs.teradata.com/r/Enterprise_IntelliFlex_VMware/SQL-Data-Control-Language/Statement-Syntax/GRANT-CONNECT-THROUGH).
+
+```SQL
+GRANT CONNECT THROUGH mcp_svc
+  TO PERMANENT demo_user WITHOUT ROLE;
+  --, PERMANENT alice   WITHOUT ROLE --Additional users here
+```
+
+Now you can use this the proxy user in as the MCP Server database connection, eg.
+
+```sh
+export DATABASE_URI="teradata://mcp_svc:mcp_svc@yourteradatasystem.teradata.com:1025"
+uv run teradata-mcp-server --mcp_transport streamable-http --mcp_port 8001
+```
+
+**FOR DEMO PURPOSE**
+In your client, indicate the end user name to assume in the http header.
+
+For example, with Clause Desktop  `claude_desktop_config.json`, to assume the `demo_user` user.
+
+```json
+{
+  "mcpServers": {
+   "teradata_mcp_remote": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://localhost:8001/mcp/", "--header", "AssumeUser: ${DB_USER}"],
+      "env": { "DB_USER": "demo_user" }
+    }
+  }
+}
+
+### End user direct authentication
 Example: using Claude Desktop with [mcp-remote](https://www.npmjs.com/package/mcp-remote) to authentcate using a Baerer token:
 
 Add the server configuration in `claude_desktop_config.json`
