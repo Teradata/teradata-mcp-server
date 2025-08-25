@@ -113,6 +113,23 @@ For example, with Clause Desktop  `claude_desktop_config.json`, to assume the `d
 }
 ```
 
+### Application user
+
+This is the default mode for the MCP server: the server uses instantiates a connection pool to the database as specified in the DATABASE_URI string. This deployment method has the lowest database overhead and is optimal for high-throughput / low-latency applications.
+
+:white_check_mark:	Ideal for application-specific instantiation with demanding SLAs. 
+- Consider co-locating the server deployment with the application (as well as stdio-based communication)
+- If exposed over a network interface (eg. streamable HTTP, SSE), implement sufficient network filtering and overlaying authentication mechanisms.
+
+:warning: If no other authentication or database security mechanism are implemented, any user accessing the MCP Server instance 
+
+Example over Streamable HTTP
+
+```sh
+export DATABASE_URI="teradata://demo_user:demo_user_password@yourteradatasystem.teradata.com:1025"
+uv run teradata-mcp-server --mcp_transport streamable-http --mcp_port 8001
+```
+
 ## Authentication
 :warning: **Work in progress**
 
