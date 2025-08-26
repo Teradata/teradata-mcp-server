@@ -1,26 +1,19 @@
 all:
   tool:
-    - ^(?!_).*
-  prompt:
-    - ^(?!(?:_|test_)).*
-  resource:
-    - ^(?!_).*
-
-superuser:
-  tool:
     - .*
   prompt:
-    - .*
+    - ^(?!test_).*
   resource:
     - .*
 
 tester:
   tool:
-    - ^(?!_).*
+    - .*
   prompt:
-    - ^(?!_).*
+    - .*
   resource:
-    - ^(?!_).*
+    - .*
+
 dba:
   tool:
     - ^dba_*
