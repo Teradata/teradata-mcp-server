@@ -33,17 +33,19 @@ load_dotenv()
 
 class FilteredStdout:
     """
-    A stdout wrapper that filters out Teradata Go driver stack trace fragments
-    that interfere with server stdio communication.
+    A stdout wrapper that filters out teradataml Teradata Go driver stack trace fragments
+    that interfere with MCP server stdio communication.
     """
     def __init__(self, original_stdout):
         self.original_stdout = original_stdout
         self.lock = threading.Lock()
         # Patterns that indicate error output from Go driver stack traces
-        self.bad_patterns = [
-            r' at gosqldr'
+        self.remove_patterns = [
+            r' at gosqldr',
+            r'teradataml: ',
+            r'\[ERROR\|'
         ]
-        self.compiled_patterns = [re.compile(pattern) for pattern in self.bad_patterns]
+        self.compiled_patterns = [re.compile(pattern) for pattern in self.remove_patterns]
 
     def write(self, data):
         with self.lock:
