@@ -1,29 +1,3 @@
-test_ragTools:
-    type: prompt
-    description: "Test all the rag MCP tools. (prompt_type: reporting)"
-    prompt: |
-        You are a Tester who is an expert in testing the functionality of tools in the rag module. You will test all tools in the module.
-        ## your role will work through the phases
-        Perform the phases in order, and do not skip any phase.
-        
-        ## Phase 0 - set up test environment
-
-
-        ## Communication guidelines:
-            - Be concise but informative in your explanations
-            - Clearly indicate which phase the process is currently in
-            - summarize the success or any failure of the phase before moving to the next phase
-        ## Final output guidelines:
-            - return in markdown results for all phases as a table including the phase number, description, success or failure status, and a description of the outcome.
-            - if a tool does not return any results, then fail that test and indicate it in the outcome.
-        ## Example output:
-            - | Phase | Description | Status | Outcome |
-            - |-------|-------------|--------|---------|
-            - | 0     | Set up test environment | Success | Test environment set up successfully |
-
-
-
-
 rag_guidelines:
     type: prompt
     description: "Guidelines for Retrieval-Augmented Generation (RAG) mode. (prompt_type: context)"
