@@ -25,9 +25,10 @@ _test_server:
             - Do not drop or modify any data or structures that you have not created yourself
 
         ## Final output guidelines:
+            - A 2-3 sentence summary of the overall testing plan executed and outcome.
             - Return in markdown results for all phases as a table including the phase number, description, success or failure status, and a description of the outcome.
             - If a tool does not return any results, log a warning.
-            - Provide a 2-3 sentence summary of the overall testing outcome and any recommendations to the user for next steps based on the patterns you observed in theresults.
+            - Provide a 2-3 sentence summary of the outcome and any recommendations to the user for next steps based on the patterns you observed in the results.
 
            Example output:
           | Phase | Description | Status | Outcome |
