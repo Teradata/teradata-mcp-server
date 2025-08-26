@@ -45,7 +45,7 @@ _testMyServer:
   parameters:
     domain:
       name: domain
-      description: 'The functional domain to test (eg. "data quality", "exploratory"...).'
+      description: 'Domain to test (eg. "all" "data quality", "exploratory"...).'
       required: true
       type_hint: str
       default: "all functionality"
