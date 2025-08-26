@@ -13,6 +13,7 @@ python tests/run_mcp_tests.py "uv run teradata-mcp-server"
 
 **No need to start the server separately!**
 
+Note: we also provide an interactive testing method via the prompt `_testMyServer` that you can use with your preferred tool and LLM. This is a good way to validate and explore your setup, but not sufficent to carry actual unit or system testing.
 
 ## How to add your test case
 

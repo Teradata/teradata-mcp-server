@@ -277,3 +277,10 @@ You are now ready to connect your client, For details on how to set up client to
 
 
 
+## Testing your server
+
+Connect your preferred client, and validate that you see the server tools, prompts and resources.
+
+If you want to rapidly check what's available, and does work or not, we provide an interactive testing method via the prompt `_testMyServer`. Simply load the prompt, specify a functional domain that you wish to test (or "all") and run.
+
+This is a good way to validate and explore your setup, but not sufficent to carry actual unit or system testing.

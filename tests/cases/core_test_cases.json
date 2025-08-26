@@ -97,25 +97,11 @@
       }
     ],
     "dba_tableSpace": [
-      {
-        "name": "system_table_space"
-      },
+
       {
         "name": "tvm_table_space",
         "parameters": {
-          "table_name": "TVM"
-        }
-      },
-      {
-        "name": "dbc_tables_space",
-        "parameters": {
-          "database_name": "DBC"
-        }
-      },
-      {
-        "name": "dbc_tvmtables_space",
-        "parameters": {
-          "database_name": "DBC",
+          "database_name": "dbc",
           "table_name": "TVM"
         }
       }

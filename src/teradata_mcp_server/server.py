@@ -11,6 +11,7 @@ import os
 import re
 import sys
 import signal
+import threading
 from importlib.resources import files as pkg_files
 from typing import Any
 import yaml
@@ -28,6 +29,66 @@ except ImportError:
     import tools as td
 
 load_dotenv()
+
+
+class FilteredStdout:
+    """
+    A stdout wrapper that filters out teradataml Teradata Go driver stack trace fragments
+    that interfere with MCP server stdio communication.
+    """
+    def __init__(self, original_stdout):
+        self.original_stdout = original_stdout
+        self.lock = threading.Lock()
+        # Patterns that indicate error output from Go driver stack traces
+        self.remove_patterns = [
+            r' at gosqldr',
+            r'teradataml: ',
+            r'\[ERROR\|'
+        ]
+        self.compiled_patterns = [re.compile(pattern) for pattern in self.remove_patterns]
+
+    def write(self, data):
+        with self.lock:
+            # Check if this data contains problematic patterns
+            if any(pattern.search(data) for pattern in self.compiled_patterns):
+                # Log it instead of writing to stdout
+                try:
+                    logger = logging.getLogger("teradata_mcp_server")
+                    logger.debug(f"Filtered stdout: {data.strip()}")
+                except:
+                    pass  # If logging fails, just suppress the output
+                return len(data)  # Pretend we wrote it
+            else:
+                # Safe data, write normally
+                return self.original_stdout.write(data)
+
+    def flush(self):
+        return self.original_stdout.flush()
+
+    def fileno(self):
+        return self.original_stdout.fileno()
+
+    def isatty(self):
+        return self.original_stdout.isatty()
+    
+    @property
+    def buffer(self):
+        """Delegate buffer access to original stdout for MCP compatibility."""
+        return self.original_stdout.buffer
+    
+    @property
+    def encoding(self):
+        """Delegate encoding access to original stdout for MCP compatibility."""
+        return getattr(self.original_stdout, 'encoding', 'utf-8')
+    
+    @property
+    def errors(self):
+        """Delegate errors access to original stdout for MCP compatibility.""" 
+        return getattr(self.original_stdout, 'errors', 'strict')
+
+    def __getattr__(self, name):
+        return getattr(self.original_stdout, name)
+
 
 
 # Parse command line arguments - if any they will override environment variables
@@ -48,6 +109,12 @@ for key, value in vars(args).items():
 
 profile_name = os.getenv("PROFILE")
 
+# Install the filtered stdout wrapper if the communication mode is stdio
+if os.getenv("MCP_TRANSPORT", "stdio").lower() == 'stdio' and not hasattr(sys.stdout, '_filtered_wrapper_installed'):
+    original_stdout = sys.stdout
+    filtered_stdout = FilteredStdout(original_stdout)
+    sys.stdout = filtered_stdout
+    sys.stdout._filtered_wrapper_installed = True
 
 # Set up logging
 class CustomJSONFormatter(logging.Formatter):
@@ -173,7 +240,6 @@ _tdconn = td.TDConn()
 
 if _enableEFS:
     try:
-        # Suppress stdout/stderr from teradataml imports and initialization
         import teradataml as tdml  # import of the teradataml package
         fs_config = td.FeatureStoreConfig()
         try:
@@ -237,22 +303,12 @@ def execute_db_tool(tool, *args, **kwargs):
         if _enableEFS:
             try:
                 global fs_config
-                # Suppress stdout/stderr from FeatureStoreConfig and teradataml during reconnection
-                stdout_buffer = StringIO()
-                stderr_buffer = StringIO()
-                with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
-                    fs_config = td.FeatureStoreConfig()
-                    import teradataml as tdml  # import of the teradataml package
-                    try:
-                        tdml.create_context(tdsqlengine=_tdconn.engine)
-                    except Exception as e:
-                        logger.warning(f"Error creating teradataml context: {e}")
-
-                # Log any captured output at debug level
-                if stdout_buffer.getvalue():
-                    logger.debug(f"teradataml reconnection stdout: {stdout_buffer.getvalue()}")
-                if stderr_buffer.getvalue():
-                    logger.debug(f"teradataml reconnection stderr: {stderr_buffer.getvalue()}")
+                fs_config = td.FeatureStoreConfig()
+                import teradataml as tdml  # import of the teradataml package
+                try:
+                    tdml.create_context(tdsqlengine=_tdconn.engine)
+                except Exception as e:
+                    logger.warning(f"Error creating teradataml context: {e}")
 
             except (AttributeError, ImportError, ModuleNotFoundError) as e:
                 logger.warning(f"Feature Store module not available during reconnection: {e}")
