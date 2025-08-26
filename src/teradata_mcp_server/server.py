@@ -21,7 +21,7 @@ from mcp.server.fastmcp.prompts.base import TextContent, UserMessage
 from pydantic import Field
 from sqlalchemy.engine import Connection
 from contextlib import redirect_stderr, redirect_stdout
-
+from io import StringIO
 
 # Import the tools module with lazy loading support
 try:
