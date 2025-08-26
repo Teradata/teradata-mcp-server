@@ -11,6 +11,7 @@ import os
 import re
 import sys
 import signal
+import threading
 from importlib.resources import files as pkg_files
 from typing import Any
 import yaml
@@ -20,8 +21,6 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.prompts.base import TextContent, UserMessage
 from pydantic import Field
 from sqlalchemy.engine import Connection
-from contextlib import redirect_stderr, redirect_stdout
-from io import StringIO
 
 # Import the tools module with lazy loading support
 try:
@@ -30,6 +29,88 @@ except ImportError:
     import tools as td
 
 load_dotenv()
+
+
+class FilteredStdout:
+    """
+    A stdout wrapper that filters out Teradata Go driver stack trace fragments
+    that cause JSON parsing errors in MCP communication.
+    """
+    def __init__(self, original_stdout):
+        self.original_stdout = original_stdout
+        self.lock = threading.Lock()
+        # Patterns that indicate problematic output from Go stack traces
+        self.bad_patterns = [
+            r'\[ERROR\|serv',
+            r' at gosqldr',
+            r' at databas',
+            r' at main\.[cg]',
+            r' at _cgoexp',
+            r' at runtime',
+            r'\[SQL:.*?\]',
+            r'\(Background on this error at:',
+            r'Traceback \(',
+            # Additional Go stack trace patterns
+            r' at go.*\.go:\d+',
+            r' at main\..*\(\)',
+            r'panic: ',
+        ]
+        self.compiled_patterns = [re.compile(pattern) for pattern in self.bad_patterns]
+
+    def write(self, data):
+        with self.lock:
+            # Check if this data contains problematic patterns
+            if any(pattern.search(data) for pattern in self.compiled_patterns):
+                # Log it instead of writing to stdout
+                try:
+                    logger = logging.getLogger("teradata_mcp_server")
+                    logger.debug(f"Filtered stdout: {data.strip()}")
+                except:
+                    pass  # If logging fails, just suppress the output
+                return len(data)  # Pretend we wrote it
+            else:
+                # Safe data, write normally
+                return self.original_stdout.write(data)
+
+    def flush(self):
+        return self.original_stdout.flush()
+
+    def fileno(self):
+        return self.original_stdout.fileno()
+
+    def isatty(self):
+        return self.original_stdout.isatty()
+    
+    @property
+    def buffer(self):
+        """Delegate buffer access to original stdout for MCP compatibility."""
+        return self.original_stdout.buffer
+    
+    @property
+    def encoding(self):
+        """Delegate encoding access to original stdout for MCP compatibility."""
+        return getattr(self.original_stdout, 'encoding', 'utf-8')
+    
+    @property
+    def errors(self):
+        """Delegate errors access to original stdout for MCP compatibility.""" 
+        return getattr(self.original_stdout, 'errors', 'strict')
+
+    def __getattr__(self, name):
+        return getattr(self.original_stdout, name)
+
+
+# Install the filtered stdout wrapper at the very beginning
+# This must happen before any database connections are made
+if not hasattr(sys.stdout, '_filtered_wrapper_installed'):
+    original_stdout = sys.stdout
+    filtered_stdout = FilteredStdout(original_stdout)
+    sys.stdout = filtered_stdout
+    sys.stdout._filtered_wrapper_installed = True
+
+
+
+
 
 
 # Parse command line arguments - if any they will override environment variables
@@ -171,17 +252,38 @@ fs_config = None
 shutdown_in_progress = False
 
 # Now initialize the TD connection after module loader is ready
-_tdconn = td.TDConn()
+# Protect initial TDConn creation from stdout pollution
+with suppress_fd_output() as startup_buffers:
+    _tdconn = td.TDConn()
+
+# Log any captured output from initial TDConn creation
+try:
+    startup_buffers['temp_stdout'].seek(0)
+    captured_stdout = startup_buffers['temp_stdout'].read()
+    if captured_stdout.strip():
+        logger.debug(f"Initial TDConn stdout: {captured_stdout}")
+except Exception:
+    pass
 
 if _enableEFS:
     try:
         # Suppress stdout/stderr from teradataml imports and initialization
-        import teradataml as tdml  # import of the teradataml package
-        fs_config = td.FeatureStoreConfig()
+        with suppress_fd_output() as efs_buffers:
+            import teradataml as tdml  # import of the teradataml package
+            fs_config = td.FeatureStoreConfig()
+            try:
+                tdml.create_context(tdsqlengine=_tdconn.engine)
+            except Exception as e:
+                logger.warning(f"Error creating teradataml context: {e}")
+        
+        # Log any captured output from EFS initialization
         try:
-            tdml.create_context(tdsqlengine=_tdconn.engine)
-        except Exception as e:
-            logger.warning(f"Error creating teradataml context: {e}")
+            efs_buffers['temp_stdout'].seek(0)
+            captured_stdout = efs_buffers['temp_stdout'].read()
+            if captured_stdout.strip():
+                logger.debug(f"EFS init stdout: {captured_stdout}")
+        except Exception:
+            pass
 
     except (AttributeError, ImportError, ModuleNotFoundError) as e:
         logger.warning(f"Feature Store module not available - disabling EFS functionality: {e}")
@@ -239,22 +341,12 @@ def execute_db_tool(tool, *args, **kwargs):
         if _enableEFS:
             try:
                 global fs_config
-                # Suppress stdout/stderr from FeatureStoreConfig and teradataml during reconnection
-                stdout_buffer = StringIO()
-                stderr_buffer = StringIO()
-                with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
-                    fs_config = td.FeatureStoreConfig()
-                    import teradataml as tdml  # import of the teradataml package
-                    try:
-                        tdml.create_context(tdsqlengine=_tdconn.engine)
-                    except Exception as e:
-                        logger.warning(f"Error creating teradataml context: {e}")
-
-                # Log any captured output at debug level
-                if stdout_buffer.getvalue():
-                    logger.debug(f"teradataml reconnection stdout: {stdout_buffer.getvalue()}")
-                if stderr_buffer.getvalue():
-                    logger.debug(f"teradataml reconnection stderr: {stderr_buffer.getvalue()}")
+                fs_config = td.FeatureStoreConfig()
+                import teradataml as tdml  # import of the teradataml package
+                try:
+                    tdml.create_context(tdsqlengine=_tdconn.engine)
+                except Exception as e:
+                    logger.warning(f"Error creating teradataml context: {e}")
 
             except (AttributeError, ImportError, ModuleNotFoundError) as e:
                 logger.warning(f"Feature Store module not available during reconnection: {e}")
@@ -712,13 +804,31 @@ if _enableEFS:
         entity: str | None = None,
     ):
         global _tdconn
-        with _tdconn.engine.connect() as conn:
-            return td.create_response(fs_config.fs_setFeatureStoreConfig(
-                conn=conn,
-                db_name=db_name,
-                data_domain=data_domain,
-                entity=entity,
-            ))
+        # Protect this direct database connection as well
+        try:
+            with suppress_fd_output() as fs_buffers:
+                with _tdconn.engine.connect() as conn:
+                    result = fs_config.fs_setFeatureStoreConfig(
+                        conn=conn,
+                        db_name=db_name,
+                        data_domain=data_domain,
+                        entity=entity,
+                    )
+            
+            # Log any captured output
+            try:
+                fs_buffers['temp_stdout'].seek(0)
+                captured_stdout = fs_buffers['temp_stdout'].read()
+                if captured_stdout.strip():
+                    logger.debug(f"fs_setFeatureStoreConfig stdout: {captured_stdout}")
+            except Exception:
+                pass
+                
+            return td.create_response(result)
+            
+        except Exception as e:
+            logger.error(f"Error in fs_setFeatureStoreConfig: {e}", exc_info=True)
+            return format_error_response(str(e))
 
     @mcp.tool(description="Display the current feature store configuration (database and data domain).")
     async def fs_getFeatureStoreConfig() -> ResponseType:
