@@ -1,0 +1,35 @@
+# Example custom profiles configuration
+# Copy this file to your working directory as "profiles.yml" to customize
+
+# Override or extend the packaged default profiles
+my_custom_profile:
+  tool:
+    - base_.*        # Include all base tools
+    - my_custom_.*   # Include your custom tools
+  prompt:
+    - my_custom_.*   # Include your custom prompts
+  resource:
+    - .*             # Include all resources
+
+# Example: Finance team profile
+finance:
+  tool:
+    - base_.*        # Basic database tools
+    - finance_.*     # Finance-specific tools
+    - qlty_.*        # Data quality tools
+  prompt:
+    - finance_.*     # Finance prompts
+  resource:
+    - finance_.*     # Finance resources
+
+# Example: Restricted read-only profile
+read_only:
+  tool:
+    - base_databaseList
+    - base_tableList
+    - base_tablePreview
+    - base_readQuery
+  prompt:
+    - read_only_.*
+  resource:
+    - .*

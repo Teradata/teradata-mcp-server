@@ -45,16 +45,50 @@ We are providing groupings of tools and associated helpful prompts to support al
 
 
 
-### Quick start with Claude desktop
-If you want to quickly evaluate the tool, we recommend using Claude desktop, the uv package manager and [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics).
+## Installation
 
-  
-1. Get your Teradata database credentials or create a free sandbox at [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics).
-2. Install [uv](https://docs.astral.sh/uv/getting-started/installation/). If you are on macOS, use Homebrew: `brew install uv`
-3. Clone this repository with `git clone https://github.com/Teradata/teradata-mcp-server.git`
-4. Install [Claude Desktop](https://claude.ai/download)
-5. Configure the claude_desktop_config.json (Settings>Developer>Edit Config) by adding the code below, updating the PATH_TO_DIRECTORY (where you cloned the repo in step 2) and database username, password and URL.
+### PyPI Installation (Recommended)
+
+The easiest way to get started is to install from PyPI:
+
+```bash
+pip install teradata-mcp-server
 ```
+
+### Quick start with Claude desktop
+
+Once installed, you can use the MCP server with Claude Desktop:
+
+1. Get your Teradata database credentials or create a free sandbox at [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics).
+2. Install [Claude Desktop](https://claude.ai/download)
+3. Configure the claude_desktop_config.json (Settings>Developer>Edit Config) by adding the configuration below, updating the database username, password and URL:
+
+```json
+{
+  "mcpServers": {
+    "teradata": {
+      "command": "teradata-mcp-server",
+      "args": ["--profile", "all"],
+      "env": {
+        "DATABASE_URI": "teradata://<USERNAME>:<PASSWORD>@<HOST_URL>:1025/<USERNAME>"
+      }
+    }
+  }
+}
+```
+
+### Build from Source (Development)
+
+For development or customization, you can build from source:
+
+1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/). If you are on macOS, use Homebrew: `brew install uv`
+2. Clone this repository: `git clone https://github.com/Teradata/teradata-mcp-server.git`
+3. Navigate to the directory: `cd teradata-mcp-server`
+4. Run the server: `uv run teradata-mcp-server`
+
+For Claude Desktop with development build, use this configuration:
+
+```json
 {
   "mcpServers": {
     "teradata": {
@@ -71,6 +105,7 @@ If you want to quickly evaluate the tool, we recommend using Claude desktop, the
       }
     }
   }
+}
 ```
 
 ## Contributing

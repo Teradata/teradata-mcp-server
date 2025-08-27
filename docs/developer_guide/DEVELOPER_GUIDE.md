@@ -15,13 +15,18 @@ The directory structure will follow the following conventions
 - .gitignore - list of files and directories that should not be loaded into github
 - .python-version - python version
 - env - example environments file
-- custom_tools.yaml - this will enable the deployment of custom tools as defined in the yaml file.
+- profiles.yml - default profiles for development (external to package)
+- custom_objects.yml - example custom tools/prompts definitions (external to package)
+- *_objects.yml - additional custom object definitions (external to package)
 
 [logs directory](./logs/) - will contain log files, the detail of the log file will be determined in the server.py file.  Default is set to INFO.  This can be changed to DEBUG for very detailed logging.
 
 [src/teradata_mcp_server](./src/teradata_mcp_server) - this will contain all source code.
-- __init__.py - will contain server imports
-- server.py - contains the main server script and will decorate tools, prompts, and resources.
+- __init__.py - will contain server imports  
+- server.py - contains the main server script and will decorate tools, prompts, and resources
+- utils.py - utilities for configuration management and other server functions
+- config/ - packaged configuration files (default profiles.yml and other configuration defaults)
+- testing/ - testing framework and utilities
 
 
 [src/teradata_mcp_server/tools](./src/teradata_mcp_server/tools) - this will contain code to connect to the database as well as the modules.
@@ -94,7 +99,12 @@ New tool sets can be created in one of two ways:
 
 The template code should be copied and prefixes for directory name and files should be modified to align to your grouping name.  Refer to other tool sets for examples.
 
-[scripts/client_examples/](./scripts/client_examples/) - this will contain client tools for testing the server functionality
+[examples](./examples/) - contains various example configurations and client implementations.
+- Configuration_Examples/ - example profiles.yml and custom objects YAML files
+- Claude_Desktop_Config_Files/ - example Claude Desktop configuration files
+- MCP_Client_Example/ - example MCP client implementations
+- Simple_Agent/ - simple agent example
+- MCP_VoiceClient/ - voice client example
 
 [docs](./docs/) - contains package documentation.
 - CHANGE_LOG.md - maintains the change log of releases.
@@ -107,6 +117,61 @@ The template code should be copied and prefixes for directory name and files sho
 - DEVELOPER_GUIDE.md - explains structural elements of the server for developers.
 - HOW_TO_ADD_YOUR_FUNCTION.md - explains how to add tools to a module
 
+
+<br>
+
+## Configuration System
+
+The server uses a hierarchical configuration system that supports both packaged defaults and user customizations:
+
+### Configuration Hierarchy (highest to lowest priority):
+1. **CLI arguments** - Command line flags override everything
+2. **Environment variables** - Standard environment variable configuration  
+3. **Working directory configs** - External `profiles.yml` and `*_objects.yml` files
+4. **Packaged defaults** - Built-in configurations shipped with the package
+
+### Package vs Development Configuration:
+
+**PyPI Installation:**
+- Default configurations are packaged in `src/teradata_mcp_server/config/`
+- Users can create local `profiles.yml` and `*_objects.yml` files to override/extend
+- Configurations are automatically merged at runtime
+
+**Development Environment:**
+- External configuration files in repository root are used for development
+- Same merging logic applies, but external files take precedence
+
+### Configuration Files:
+
+**profiles.yml** - Defines tool/prompt/resource profiles:
+```yaml
+all:
+  tool: [".*"]
+  prompt: [".*"] 
+  resource: [".*"]
+
+dba:
+  tool: ["^dba_*", "^base_*", "^sec_*"]
+  prompt: ["^dba_*"]
+```
+
+***_objects.yml** - Define custom tools, prompts, cubes, and glossaries:
+```yaml
+my_custom_tool:
+  type: tool
+  description: "My custom SQL tool"
+  sql: "SELECT COUNT(*) FROM my_table"
+```
+
+### For Developers:
+
+The configuration system is implemented in `src/teradata_mcp_server/utils.py` and provides simple functions:
+- `load_profiles()` - Load packaged + working directory profiles.yml
+- `get_profile_config(profile_name)` - Get specific profile configuration  
+- `load_all_objects()` - Load all packaged + working directory YAML objects
+
+**Configuration Examples:**
+See `examples/Configuration_Examples/` for complete example configurations that you can copy and customize.
 
 <br>
 
@@ -126,8 +191,14 @@ Two guides have been created to show how to add tools and prompts:
 
 The MCP inspector provides you with a convenient way to browse and test tools, resources and prompts:
 
-```
+**For development environment:**
+```bash
 uv run mcp dev ./src/teradata_mcp_server/server.py
+```
+
+**For installed package:**
+```bash
+mcp dev teradata-mcp-server
 ```
 
 ## Tools testing
@@ -140,8 +211,15 @@ See guidelines and details in [our testing guide](/tests/README.md)
 
 Run testing before PR, and copy/paste the test report status in the PR. 
 
-To run the core test, simply execute:
-`python tests/run_mcp_tests.py "uv run teradata-mcp-server"`
+**Development testing:**
+```bash
+python tests/run_mcp_tests.py "uv run teradata-mcp-server"
+```
+
+**Installed package testing:**
+```bash
+python tests/run_mcp_tests.py "teradata-mcp-server"
+```
 
 <br><br><br>
 

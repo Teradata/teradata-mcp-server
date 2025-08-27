@@ -10,76 +10,137 @@ Assumes that you have a running Teradata environment, you should have the follow
 3. user password - password for the corresponding user name
 4. database - On Teradata systems this is typically the same as you user name
 
-## Step 0 - Installing environment
-- Refer to the [git](https://git-scm.com/) website for download and installation instructions, git will be used to pull code from the github repository.
-- Refer to the [Installing uv](https://docs.astral.sh/uv/getting-started/installation/#standalone-installer) guide to assist with installing uv, uv is used to manage packages that are used.
-- Refer to the [Python.org](https://www.python.org/downloads/) for downloading and installing python 3.11 or greater.
+## Installation Methods
 
-## Step 1 - Download the Software
-Clone the mcp-server repository with: 
+### Method 1: PyPI Installation (Recommended)
 
-On Windows
+The easiest way to get started is to install from PyPI:
+
+**Step 0 - Prerequisites**
+- Python 3.11 or greater ([Python.org](https://www.python.org/downloads/))
+
+**Step 1 - Install the package**
+```bash
+pip install teradata-mcp-server
 ```
+
+**Step 2 - Run the server**
+```bash
+# Set your database connection
+export DATABASE_URI="teradata://username:password@host:1025/database"
+
+# Run with all tools available
+teradata-mcp-server --profile all
+```
+
+That's it! The server is now running with all default configurations included. Jump to [Step 3 - Choose Your Transport](#step-3---choose-your-transport) to configure how clients connect to your server.
+
+### Method 2: Build from Source (Development)
+
+For development, customization, or to access the latest features:
+
+**Step 0 - Installing development environment**
+- [Git](https://git-scm.com/) for cloning the repository
+- [uv package manager](https://docs.astral.sh/uv/getting-started/installation/#standalone-installer) for dependency management
+- Python 3.11 or greater ([Python.org](https://www.python.org/downloads/))
+
+**Step 1 - Download the Software**
+Clone the repository:
+
+```bash
 git clone https://github.com/Teradata/teradata-mcp-server.git
 cd teradata-mcp-server
 ```
 
-On Mac/Linux
-```
-git clone https://github.com/Teradata/teradata-mcp-server.git
-cd teradata-mcp-server
-```
-
-Changes are constantly happening to the server, we recommend that you come back occasionally to update the code.
-```
+To stay up to date with the latest changes:
+```bash
 cd teradata-mcp-server
 git pull origin main
 ```
 
-## Step 2 - You have a choice
-
-![Choice](media/transport.png) 
-
-Transport Modes (in order of preference)
-1. Streamable-Http (http) - this transport mode uses the http protocol for communication, this is the recomended mode to use.
-2. Standard IO (stdio) - all communications are published to standard input and output, this is suitable for a standalone server running on your laptop.
-3. Server Side Events (SSE) - this transport mode is going to be decomissioned by the mcp standard hence we do not recommend using this.
-
-
-Deployment Choice
-1. Docker Container - the container will manage the libraries and starting the service.
-2. UV - UV will manage the libraries (this approach is more suitable for development)
-3. REST - The rest approach takes the docker container and wraps it in a Restful API
-
-The recommended choice will be to deploy Streamable-http in a docker container. [Jump to next section](#step-5---using-docker) for the docker option.
-
-<br>
-
-## Step 3 - Customizing the server (optional)
+## Step 2 - Customizing the server (optional)
 
 The server supports optional modules for additional functionality:
 - **`fs`** - Teradata Enterprise Feature Store integration
 - **`evs`** - Teradata Enterprise Vector Store integration
 
-Install with uv (recommended): `uv sync --extra fs --extra evs`
-Or with pip: `pip install -e .[fs,evs]`
+### With PyPI Installation:
+```bash
+pip install teradata-mcp-server[fs,evs]
+```
 
-Refer to the [Customizing](CUSTOMIZING.md) instuctions 
+### With Source Build:
+```bash
+uv sync --extra fs --extra evs
+```
 
-<br>
+Refer to the [Customizing](CUSTOMIZING.md) instructions for more details.
+
+## Step 3 - Choose Your Transport
+
+![Choice](media/transport.png) 
+
+Transport Modes (in order of preference):
+1. **Streamable-Http (http)** - Uses HTTP protocol for communication, recommended for production use
+2. **Standard IO (stdio)** - Communications via standard input/output, suitable for standalone servers and development
+3. **Server Side Events (SSE)** - Being deprecated by the MCP standard, not recommended
+
+Deployment Options:
+1. **PyPI Package** - Simple installation and configuration (recommended for most users)
+2. **Docker Container** - Containerized deployment with managed dependencies
+3. **UV Development** - Source-based development environment  
+4. **REST** - RESTful API wrapper around the MCP server
+
+Choose your preferred deployment method below:
 
 ## Step 4 - Starting your Server
 
 You should pick one of the approaches below:
-1. [Using Docker](#step-5a---using-docker) - Recommended.
-2. [Using uv](#step-5b---uv-environment-set-up) - Good for developers
-3. [Using rest](#step-5c---run-the-mcp-server-with-rest) - Good for operationalizing 
-4. [Running as a Service](#step-5d---run-the-mcp-server-as-a-service) - Good for operationalizing 
+1. [PyPI Package with HTTP](#step-4a---pypi-package-with-http) - **Recommended for most users**
+2. [Using Docker](#step-4b---using-docker) - Good for containerized deployments
+3. [Using uv (Development)](#step-4c---uv-environment-set-up) - Good for developers
+4. [Using REST](#step-4d---run-the-mcp-server-with-rest) - Good for REST API integration
+5. [Running as a Service](#step-4e---run-the-mcp-server-as-a-service) - Good for production services
+
+### Step 4a - PyPI Package with HTTP
+
+**Prerequisites:** PyPI installation completed (Method 1 above)
+
+**Configuration:**
+```bash
+# Required: Database connection
+export DATABASE_URI="teradata://username:password@host:1025/database"
+
+# Optional: Transport configuration (defaults shown)
+export MCP_TRANSPORT=streamable-http
+export MCP_HOST=127.0.0.1
+export MCP_PORT=8001
+export MCP_PATH=/mcp/
+```
+
+**Run the server:**
+```bash
+teradata-mcp-server --profile all --mcp_transport streamable-http --mcp_host 127.0.0.1 --mcp_port 8001
+```
+
+The server will be available at `http://127.0.0.1:8001/mcp/`
+
+**With custom profiles:**
+```bash
+# Create custom profiles.yml in your working directory (optional)
+# The server will merge it with packaged defaults
+
+teradata-mcp-server --profile dba
+```
+
+You are now ready to connect your client. For details on client setup, refer to [Working with Clients](./client_guide/CLIENT_GUIDE.md)
+
+-------------------------------------------------------------------------------------- 
 
 
 --------------------------------------------------------------------------------------
 
-### Step 4a - Using Docker
+### Step 4b - Using Docker
 
 The server expects the Teradata URI string via the `DATABASE_URI` environment variable. You may:
 - update the `docker-compose.yaml` file or 
@@ -116,7 +177,7 @@ You are now ready to connect your client, For details on how to set up client to
 <br><br><br>
 
 --------------------------------------------------------------------------------------
-### Step 4b - UV Environment Set Up 
+### Step 4c - UV Environment Set Up (Development) 
 
 Make sure you have uv installed on your system, installation instructions can be found at https://github.com/astral-sh/uv .
 
@@ -206,7 +267,7 @@ export MCP_PATH=/mcp/
 You are now ready to connect your client, For details on how to set up client tools, refer to [Working with Clients](./client_guide/CLIENT_GUIDE.md)
 
 --------------------------------------------------------------------
-### Step 4c - Run the MCP server with REST
+### Step 4d - Run the MCP server with REST
 
 Alternatively, you can expose your tools, prompts and resources as REST endpoints using the `rest` profile.
 
@@ -233,7 +294,7 @@ docker compose --profile rest up
 You are now ready to connect your client, For details on how to set up client tools, refer to [Working with Clients](./client_guide/CLIENT_GUIDE.md)
 
 ---------------------------------------------------------------------
-### Step 4d - Run the MCP Server as a service
+### Step 4e - Run the MCP Server as a service
 There are two options to configure the MCP server for automatic restart:
 
 ### Using Docker
