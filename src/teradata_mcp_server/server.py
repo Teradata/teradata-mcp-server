@@ -9,9 +9,7 @@ import logging.config
 import logging.handlers
 import os
 import re
-import sys
 import signal
-import threading
 from importlib.resources import files as pkg_files
 from typing import Any
 import yaml
@@ -31,66 +29,6 @@ except ImportError:
 load_dotenv()
 
 
-class FilteredStdout:
-    """
-    A stdout wrapper that filters out teradataml Teradata Go driver stack trace fragments
-    that interfere with MCP server stdio communication.
-    """
-    def __init__(self, original_stdout):
-        self.original_stdout = original_stdout
-        self.lock = threading.Lock()
-        # Patterns that indicate error output from Go driver stack traces
-        self.remove_patterns = [
-            r' at gosqldr',
-            r'teradataml: ',
-            r'\[ERROR\|'
-        ]
-        self.compiled_patterns = [re.compile(pattern) for pattern in self.remove_patterns]
-
-    def write(self, data):
-        with self.lock:
-            # Check if this data contains problematic patterns
-            if any(pattern.search(data) for pattern in self.compiled_patterns):
-                # Log it instead of writing to stdout
-                try:
-                    logger = logging.getLogger("teradata_mcp_server")
-                    logger.debug(f"Filtered stdout: {data.strip()}")
-                except:
-                    pass  # If logging fails, just suppress the output
-                return len(data)  # Pretend we wrote it
-            else:
-                # Safe data, write normally
-                return self.original_stdout.write(data)
-
-    def flush(self):
-        return self.original_stdout.flush()
-
-    def fileno(self):
-        return self.original_stdout.fileno()
-
-    def isatty(self):
-        return self.original_stdout.isatty()
-    
-    @property
-    def buffer(self):
-        """Delegate buffer access to original stdout for MCP compatibility."""
-        return self.original_stdout.buffer
-    
-    @property
-    def encoding(self):
-        """Delegate encoding access to original stdout for MCP compatibility."""
-        return getattr(self.original_stdout, 'encoding', 'utf-8')
-    
-    @property
-    def errors(self):
-        """Delegate errors access to original stdout for MCP compatibility.""" 
-        return getattr(self.original_stdout, 'errors', 'strict')
-
-    def __getattr__(self, name):
-        return getattr(self.original_stdout, name)
-
-
-
 # Parse command line arguments - if any they will override environment variables
 parser = argparse.ArgumentParser(description="Teradata MCP Server")
 parser.add_argument('--profile', type=str, required=False, help='Profile name to load from configure_tools.yml')
@@ -108,13 +46,6 @@ for key, value in vars(args).items():
         os.environ[key.upper()] = str(value)
 
 profile_name = os.getenv("PROFILE")
-
-# Install the filtered stdout wrapper if the communication mode is stdio
-if os.getenv("MCP_TRANSPORT", "stdio").lower() == 'stdio' and not hasattr(sys.stdout, '_filtered_wrapper_installed'):
-    original_stdout = sys.stdout
-    filtered_stdout = FilteredStdout(original_stdout)
-    sys.stdout = filtered_stdout
-    sys.stdout._filtered_wrapper_installed = True
 
 # Set up logging
 class CustomJSONFormatter(logging.Formatter):
@@ -151,6 +82,11 @@ class CustomJSONFormatter(logging.Formatter):
         return json.dumps(log_entry, ensure_ascii=False)
 
 os.makedirs("logs", exist_ok=True)
+
+# Only enable console logging if the MCP transport is not stdio
+mcp_transport = os.getenv("MCP_TRANSPORT", "stdio").lower()
+enable_console_logging = mcp_transport != "stdio"
+
 log_config = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -165,12 +101,6 @@ log_config = {
         },
     },
     "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "level": os.getenv("LOGGING_LEVEL", "WARNING"),
-            "formatter": "simple",
-            "stream": "ext://sys.stdout"
-        },
         "file": {
             "class": "logging.handlers.RotatingFileHandler",
             "level": "DEBUG",
@@ -181,10 +111,7 @@ log_config = {
         },
         "queue_handler": {
             "class": "logging.handlers.QueueHandler",
-            "handlers": [
-                "console",
-                "file"
-            ],
+            "handlers": ["file"],  # Start with just file handler
             "respect_handler_level": True
         },
     },
@@ -197,9 +124,21 @@ log_config = {
     },
     "root": {
         "level": os.getenv("LOGGING_LEVEL", "WARNING"),
-        "handlers": ["console"]
+        "handlers": []  # Will be populated conditionally below
     }
 }
+
+# Add console handler only if not in stdio mode (to avoid polluting MCP communication)
+if enable_console_logging:
+    log_config["handlers"]["console"] = {
+        "class": "logging.StreamHandler",
+        "level": os.getenv("LOGGING_LEVEL", "WARNING"),
+        "formatter": "simple",
+        "stream": "ext://sys.stdout"
+    }
+    log_config["handlers"]["queue_handler"]["handlers"].append("console")
+    log_config["root"]["handlers"].append("console")
+
 logging.config.dictConfig(log_config)
 queue_handler = logging.getHandlerByName("queue_handler")
 if queue_handler is not None:
