@@ -44,31 +44,23 @@ We are providing groupings of tools and associated helpful prompts to support al
 <br>
 
 
+## Quick start with Claude Desktop (no installation)
 
-## Installation
+Claude Desktop can get and start the Teradata MCP server in the background using `uv`. No permanent installation needed.
 
-### PyPI Installation (Recommended)
-
-The easiest way to get started is to install from PyPI:
-
-```bash
-pip install teradata-mcp-server
-```
-
-### Quick start with Claude desktop
-
-Once installed, you can use the MCP server with Claude Desktop:
-
+**Pre-requisites**
 1. Get your Teradata database credentials or create a free sandbox at [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics).
-2. Install [Claude Desktop](https://claude.ai/download)
-3. Configure the claude_desktop_config.json (Settings>Developer>Edit Config) by adding the configuration below, updating the database username, password and URL:
+2. Install [Claude Desktop](https://claude.ai/download).
+3. Install [uv](https://docs.astral.sh/uv/getting-started/installation/). If you are on MacOS, Use Homebrew: `brew install uv`.
+
+Configure the claude_desktop_config.json (Settings>Developer>Edit Config) by adding the configuration below, updating the database username, password and URL:
 
 ```json
 {
   "mcpServers": {
     "teradata": {
-      "command": "teradata-mcp-server",
-      "args": ["--profile", "all"],
+      "command": "uvx",
+      "args": ["teradata-mcp-server", "--profile", "all"],
       "env": {
         "DATABASE_URI": "teradata://<USERNAME>:<PASSWORD>@<HOST_URL>:1025/<USERNAME>"
       }
@@ -77,7 +69,33 @@ Once installed, you can use the MCP server with Claude Desktop:
 }
 ```
 
-### Build from Source (Development)
+## CLI Installation
+
+We recommend `uv` or `pipx` to install teradata-mcp-server as a CLI tool on your system. 
+They provide isolated environments and ensure the `teradata-mcp-server` command is available system-wide without interfering with system Python.
+
+```bash
+uv tool install "teradata-mcp-server"
+```
+
+or with pipx
+
+```bash
+pipx install "teradata-mcp-server"
+```
+
+To install the optional Enterprise Feature Store (fs) and Enterprise Vector Store (evs) packages:
+```bash
+uv tool install "teradata-mcp-server[fs,evs]"
+```
+
+Alternatively, you may use pip in a virtual environment (Python>=3.11):
+
+```bash
+pip install teradata-mcp-server
+```
+
+## Build from Source (Development)
 
 For development or customization, you can build from source:
 

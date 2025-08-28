@@ -117,16 +117,11 @@ log_config = {
             "maxBytes": 1000000,
             "backupCount": 3
         },
-        "queue_handler": {
-            "class": "logging.handlers.QueueHandler",
-            "handlers": ["file"],  # Start with just file handler
-            "respect_handler_level": True
-        },
     },
     "loggers": {
         "teradata_mcp_server": {
             "level": "DEBUG",
-            "handlers": ["queue_handler"],
+            "handlers": ["file"],
             "propagate": False
         }
     },
@@ -144,14 +139,10 @@ if enable_console_logging:
         "formatter": "simple",
         "stream": "ext://sys.stdout"
     }
-    log_config["handlers"]["queue_handler"]["handlers"].append("console")
+    log_config["loggers"]["teradata_mcp_server"]["handlers"].append("console")
     log_config["root"]["handlers"].append("console")
 
 logging.config.dictConfig(log_config)
-queue_handler = logging.getHandlerByName("queue_handler")
-if queue_handler is not None:
-    queue_handler.listener.start()
-    atexit.register(queue_handler.listener.stop)
 logger = logging.getLogger("teradata_mcp_server")
 
 # Load tool configuration using new configuration system
