@@ -11,35 +11,35 @@ The Teradata MCP server provides sets of tools and prompts, grouped as modules f
 
 We are providing groupings of tools and associated helpful prompts to support all type of agentic applications on the data platform.
 
-![alt text](./docs/media/teradata-mcp-server.png)
+![Teradata MCP Server diagram](https://raw.githubusercontent.com/Teradata/teradata-mcp-server/main/docs/media/teradata-mcp-server.png)
 
 - **Search** tools, prompts and resources to search and manage vector stores.
-  - [RAG Tools](src/teradata_mcp_server/tools/rag/README.md) rapidly build RAG applications.
+  - [RAG Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/rag/README.md) rapidly build RAG applications.
 - **Query** tools, prompts and resources to query and navigate your Teradata platform:
-  - [Base Tools](src/teradata_mcp_server/tools/base/README.md)
+  - [Base Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/base/README.md)
 - **Table** tools, to efficiently and predictably access structured data models:
-  - [Feature Store Tools](src/teradata_mcp_server/tools/fs/README.md) to access and manage the Teradata Enterprise Feature Store.
-  - [Semantic layer definitions](docs/CUSTOMIZING.md) to easily implement domain-specific tools, prompts and resources for your own business data models. 
+  - [Feature Store Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/fs/README.md) to access and manage the Teradata Enterprise Feature Store.
+  - [Semantic layer definitions](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/CUSTOMIZING.md) to easily implement domain-specific tools, prompts and resources for your own business data models. 
 - **Data Quality** tools, prompts and resources accelerate exploratory data analysis:
-  - [Data Quality Tools](src/teradata_mcp_server/tools/qlty/README.md)
+  - [Data Quality Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/qlty/README.md)
 - **DBA** tools, prompts and resources to facilitate your platform administration tasks:
-  - [DBA Tools](src/teradata_mcp_server/tools/dba/README.md)
-  - [Security Tools](src/teradata_mcp_server/tools/sec/README.md)
+  - [DBA Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/dba/README.md)
+  - [Security Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/sec/README.md)
 
 
 ## Getting Started
 
-![Getting Started](docs/media/MCP-quickstart.png)
+![Getting Started](https://raw.githubusercontent.com/Teradata/teradata-mcp-server/main/docs/media/MCP-quickstart.png)
 
-**Step 1.** - Identify the running Teradata System, you need username, password and host details to populate "teradata://username:password@host:1025". If you do not have a Teradata system to conect to, then leverage [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics)
+**Step 1.** - Identify the running Teradata System, you need username, password and host details to populate "teradata://username:password@host:1025". If you do not have a Teradata system to connect to, then leverage [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics)
 
-**Step 2.** - To cofigure and run the MCP server, refer to the [Getting started guide](docs/GETTING_STARTED.md).
+**Step 2.** - To configure and run the MCP server, refer to the [Getting started guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/GETTING_STARTED.md).
 
-**Step 3.** - There are many client options availale, the [Client Guide](docs/client_guide/CLIENT_GUIDE.md) explains how to configure and run a sample of different clients.
+**Step 3.** - There are many client options available, the [Client Guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/client_guide/CLIENT_GUIDE.md) explains how to configure and run a sample of different clients.
 
 <br>
 
-[A Video Library](./docs/VIDEO_LIBRARY.md) has been curated to assist.
+[A Video Library](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/VIDEO_LIBRARY.md) has been curated to assist.
 
 <br>
 
@@ -109,7 +109,7 @@ For Claude Desktop with development build, use this configuration:
 ```
 
 ## Contributing
-Please refer to the [Contributing](./docs/CONTRIBUTING.md) guide and the [Developer Guide](./docs/developer_guide/DEVELOPER_GUIDE.md).
+Please refer to the [Contributing](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/CONTRIBUTING.md) guide and the [Developer Guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/developer_guide/DEVELOPER_GUIDE.md).
 
 
 ---------------------------------------------------------------------
