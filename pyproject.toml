@@ -49,7 +49,6 @@ dev = [
 
 [project.scripts]
 teradata-mcp-server = "teradata_mcp_server:main"
-teradata-test = "teradata_mcp_server.testing.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/Teradata/teradata-mcp-server"

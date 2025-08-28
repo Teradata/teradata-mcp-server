@@ -38,7 +38,6 @@ parser.add_argument('--mcp_transport', type=str, required=False, help='MCP trans
 parser.add_argument('--mcp_host', type=str, required=False, help='MCP host address')
 parser.add_argument('--mcp_port', type=int, required=False, help='MCP port number')
 parser.add_argument('--mcp_path', type=str, required=False, help='MCP path for the server')
-parser.add_argument('--test', action='store_true', help='Run in test mode for automated testing')
 
 # Extract known arguments and load them into the environment if provided
 args, unknown = parser.parse_known_args()
