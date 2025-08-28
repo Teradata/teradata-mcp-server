@@ -42,11 +42,18 @@ parser.add_argument('--test', action='store_true', help='Run in test mode for au
 
 # Extract known arguments and load them into the environment if provided
 args, unknown = parser.parse_known_args()
+
+# Step 1: Apply CLI arguments (highest priority)
 for key, value in vars(args).items():
     if value is not None:
         os.environ[key.upper()] = str(value)
 
+# Step 2: Apply profile defaults (before environment variables)
 profile_name = os.getenv("PROFILE")
+if profile_name:
+    # Import here to avoid circular imports during module loading
+    from teradata_mcp_server import utils as config_utils
+    config_utils.apply_profile_defaults_to_env(profile_name)
 
 # Set up logging
 class CustomJSONFormatter(logging.Formatter):

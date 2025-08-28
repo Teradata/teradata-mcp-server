@@ -98,3 +98,59 @@ def get_profile_config(profile_name: Optional[str] = None) -> Dict[str, Any]:
         raise ValueError(f"Profile '{profile_name}' not found. Available: {available}")
     
     return profiles[profile_name]
+
+
+def get_profile_run_config(profile_name: Optional[str] = None) -> Dict[str, Any]:
+    """Get the 'run' configuration section from a profile."""
+    if not profile_name:
+        return {}
+    
+    profiles = load_profiles()
+    if profile_name not in profiles:
+        return {}
+    
+    profile = profiles[profile_name]
+    run_config = profile.get('run', {})
+    
+    # Expand environment variables in run config values
+    expanded_config = {}
+    for key, value in run_config.items():
+        if isinstance(value, str):
+            import os
+            expanded_config[key] = os.path.expandvars(value)
+        else:
+            expanded_config[key] = value
+    
+    return expanded_config
+
+
+def apply_profile_defaults_to_env(profile_name: Optional[str] = None) -> None:
+    """Apply profile run configuration to environment variables if not already set."""
+    if not profile_name:
+        return
+    
+    profile_run_config = get_profile_run_config(profile_name)
+    if not profile_run_config:
+        return
+    
+    import os
+    
+    # Map profile run keys to environment variable names
+    key_mapping = {
+        'database_uri': 'DATABASE_URI',
+        'mcp_transport': 'MCP_TRANSPORT', 
+        'mcp_host': 'MCP_HOST',
+        'mcp_port': 'MCP_PORT',
+        'mcp_path': 'MCP_PATH',
+        'logmech': 'LOGMECH',
+    }
+    
+    for run_key, run_value in profile_run_config.items():
+        env_key = key_mapping.get(run_key, run_key.upper())
+        
+        # Only set if environment variable is not already set
+        if env_key not in os.environ:
+            os.environ[env_key] = str(run_value)
+            logger.debug(f"Applied profile default: {env_key}={run_value}")
+        else:
+            logger.debug(f"Skipped profile default {env_key} (already set to: {os.environ[env_key]})")

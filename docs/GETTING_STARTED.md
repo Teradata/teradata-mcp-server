@@ -10,32 +10,26 @@ Assumes that you have a running Teradata environment, you should have the follow
 3. user password - password for the corresponding user name
 4. database - On Teradata systems this is typically the same as you user name
 
-## Installation Methods
+## Step 1: Installing the server
+
+You have multiple deployment methods for this server.
+1. [PyPI Installation](#method-1-pypi-installation-recommended) - **Recommended for most users**
+2. [Build from Source with uv](#method-2-build-from-source-with-uv-development) - Recommended for developers.
+3. [Using Docker](#using-docker) - For containerized deployments, advanced setups and REST API implementation.
 
 ### Method 1: PyPI Installation (Recommended)
 
 The easiest way to get started is to install from PyPI:
 
-**Step 0 - Prerequisites**
+**Prerequisites**
 - Python 3.11 or greater ([Python.org](https://www.python.org/downloads/))
 
-**Step 1 - Install the package**
+**Install the package**
 ```bash
 pip install teradata-mcp-server
 ```
 
-**Step 2 - Run the server**
-```bash
-# Set your database connection
-export DATABASE_URI="teradata://username:password@host:1025/database"
-
-# Run with all tools available
-teradata-mcp-server --profile all
-```
-
-That's it! The server is now running with all default configurations included. Jump to [Step 3 - Choose Your Transport](#step-3---choose-your-transport) to configure how clients connect to your server.
-
-### Method 2: Build from Source (Development)
+### Method 2: Build from Source with uv (Development)
 
 For development, customization, or to access the latest features:
 
@@ -58,7 +52,7 @@ cd teradata-mcp-server
 git pull origin main
 ```
 
-## Step 2 - Customizing the server (optional)
+## Step 2 - Adding modules (optional)
 
 The server supports optional modules for additional functionality:
 - **`fs`** - Teradata Enterprise Feature Store integration
@@ -74,73 +68,125 @@ pip install teradata-mcp-server[fs,evs]
 uv sync --extra fs --extra evs
 ```
 
-Refer to the [Customizing](CUSTOMIZING.md) instructions for more details.
+## Step 3 - Run your server
 
-## Step 3 - Choose Your Transport
+We support three communication prototcols:
 
-![Choice](media/transport.png) 
-
-Transport Modes (in order of preference):
-1. **Streamable-Http (http)** - Uses HTTP protocol for communication, recommended for production use
-2. **Standard IO (stdio)** - Communications via standard input/output, suitable for standalone servers and development
-3. **Server Side Events (SSE)** - Being deprecated by the MCP standard, not recommended
-
-Deployment Options:
-1. **PyPI Package** - Simple installation and configuration (recommended for most users)
-2. **Docker Container** - Containerized deployment with managed dependencies
-3. **UV Development** - Source-based development environment  
-4. **REST** - RESTful API wrapper around the MCP server
-
-Choose your preferred deployment method below:
-
-## Step 4 - Starting your Server
-
-You should pick one of the approaches below:
-1. [PyPI Package with HTTP](#step-4a---pypi-package-with-http) - **Recommended for most users**
-2. [Using Docker](#step-4b---using-docker) - Good for containerized deployments
-3. [Using uv (Development)](#step-4c---uv-environment-set-up) - Good for developers
-4. [Using REST](#step-4d---run-the-mcp-server-with-rest) - Good for REST API integration
-5. [Running as a Service](#step-4e---run-the-mcp-server-as-a-service) - Good for production services
-
-### Step 4a - PyPI Package with HTTP
+1. **Streamable-http (http)** - Communicates over HTTP, recommended for most use cases.
+2. **Standard IO (stdio)** - Communications via standard input/output, suitable for servers bundled within the application and development.
+3. **Server Side Events (SSE)** - Being deprecated by the MCP standard, not maintained.
 
 **Prerequisites:** PyPI installation completed (Method 1 above)
 
 **Configuration:**
+We recommend that you store the pass the database credentials as an environment variable:
+
 ```bash
 # Required: Database connection
 export DATABASE_URI="teradata://username:password@host:1025/database"
-
-# Optional: Transport configuration (defaults shown)
-export MCP_TRANSPORT=streamable-http
-export MCP_HOST=127.0.0.1
-export MCP_PORT=8001
-export MCP_PATH=/mcp/
 ```
 
-**Run the server:**
+**Run the server over http:**
+
 ```bash
-teradata-mcp-server --profile all --mcp_transport streamable-http --mcp_host 127.0.0.1 --mcp_port 8001
+teradata-mcp-server --mcp_transport streamable-http --mcp_host 127.0.0.1 --mcp_port 8001
+```
+
+or with uv:
+
+```bash
+uv run teradata-mcp-server --mcp_transport streamable-http --mcp_host 127.0.0.1 --mcp_port 8001
 ```
 
 The server will be available at `http://127.0.0.1:8001/mcp/`
 
-**With custom profiles:**
-```bash
-# Create custom profiles.yml in your working directory (optional)
-# The server will merge it with packaged defaults
+**Run the server over stdio:**
 
-teradata-mcp-server --profile dba
+This is the default mode:
+
+```bash
+teradata-mcp-server
 ```
 
-You are now ready to connect your client. For details on client setup, refer to [Working with Clients](./client_guide/CLIENT_GUIDE.md)
+or with uv:
+
+```bash
+uv run teradata-mcp-server
+```
+
+**Available built-in profiles:**
+
+We have a set of profiles pre-defined that expose a subset of MCP tools for different use cases:
+
+- `all` - All tools and resources available (excludes test prompts)
+- `tester` - Everything available including test prompts (for development/testing)
+- `dba` - Database administration tools (dba_*, base_*, sec_* tools and dba prompts)
+- `dataScientist` - Data science focused (base, rag, fs, qlty tools plus user permissions)
+- `eda` - Exploratory Data Analysis (base tools except write operations, data quality tools)
+- `custom` - Custom tools only (cust* tools/prompts/resources plus basic database listing)
+- `sales` - Sales-specific tools, prompts, and resources
+
+```bash
+# Use a built-in profile
+teradata-mcp-server --profile dba
+
+# Use a data science profile
+teradata-mcp-server --profile dataScientist
+```
+
+**Creating custom profiles:**
+
+You can define your own profile by creating a profiles.yml in your working directory.
+
+Custom profiles can include a `run` section that provides default values for command-line arguments.
+
+```yaml
+# profiles.yml example
+analyst_dev:
+  tool: [".*"]
+  prompt: [".*"] 
+  resource: [".*"]
+  run:
+    database_uri: "teradata://dev_user:dev_password@localhost:1025/dev_db"
+    mcp_transport: "http-streamable"
+    mcp_port: 8002
+
+analyst_prod:
+  tool: [".*"]
+  prompt: [".*"] 
+  resource: [".*"]
+  run:
+    database_uri: "${PROD_DB_URI}"
+    mcp_transport: "http-streamable"
+    mcp_port: 8001
+```
+
+```bash
+teradata-mcp-server --profile analyst_dev
+```
+
+**Configuration Priority** (highest to lowest):
+1. **CLI arguments** - `--database-uri`, `--mcp-port`, etc.
+2. **Profile run section** - Values from `run:` in selected profile
+3. **Environment variables** - `DATABASE_URI`, `MCP_PORT`, etc. 
+4. **Script defaults** - Built-in default values
+
+See [Configuration Examples](../examples/Configuration_Examples/) for complete examples.
+
+**Creating custom tools, prompts and resources:**
+
+We made it very simple to add custom objects to you server, refer to the [Customizing](CUSTOMIZING.md) instructions for more details.
+
+You are now ready to connect your client. For details on client setup, refer to [Working with Clients](client_guide/CLIENT_GUIDE.md)
 
 -------------------------------------------------------------------------------------- 
 
 
 --------------------------------------------------------------------------------------
 
-### Step 4b - Using Docker
+## Using Docker
+
+You can use Docker to run the MCP server in streamable-http mode.
 
 The server expects the Teradata URI string via the `DATABASE_URI` environment variable. You may:
 - update the `docker-compose.yaml` file or 
@@ -148,9 +194,6 @@ The server expects the Teradata URI string via the `DATABASE_URI` environment va
 
 `export DATABASE_URI=teradata://username:password@host:1025/databaseschema`
 
-Run the MCP server with Streamable-Http (default)
-
-This starts only the core Teradata MCP server (with stdio or SSE communication):
 
 ```sh
 docker compose up
@@ -173,11 +216,11 @@ PROFILE=dba docker compose up
 
 The server will be available on port 8001 (or the value of the `PORT` environment variable).
 
-You are now ready to connect your client, For details on how to set up client tools, refer to [Working with Clients](./client_guide/CLIENT_GUIDE.md)
+You are now ready to connect your client. For details on how to set up client tools, refer to [Working with Clients](client_guide/CLIENT_GUIDE.md)
 <br><br><br>
 
 --------------------------------------------------------------------------------------
-### Step 4c - UV Environment Set Up (Development) 
+## Development Environment Set Up with uv
 
 Make sure you have uv installed on your system, installation instructions can be found at https://github.com/astral-sh/uv .
 
@@ -198,7 +241,7 @@ source .venv/bin/activate
 ```
 
 **Step 2** - Configure the server
-To configure the connections set the following environment variables in your shell or in a .env file in the current directory (by updating and renaming the provided [env](./env) file).
+For convenience, you can define your preferred configuration in a .env file at the project root (you can use the provided [env](../env) file and rename it).
 
 1. **DATABASE_URI**
 
@@ -264,10 +307,10 @@ export MCP_PATH=/mcp/
 
 `uv run teradata-mcp-server --profile all`
 
-You are now ready to connect your client, For details on how to set up client tools, refer to [Working with Clients](./client_guide/CLIENT_GUIDE.md)
+You are now ready to connect your client. For details on how to set up client tools, refer to [Working with Clients](client_guide/CLIENT_GUIDE.md)
 
 --------------------------------------------------------------------
-### Step 4d - Run the MCP server with REST
+## Exposing the MCP server via REST
 
 Alternatively, you can expose your tools, prompts and resources as REST endpoints using the `rest` profile.
 
@@ -291,13 +334,23 @@ export MCPO_API_KEY=top-secret
 docker compose --profile rest up
 ```
 
-You are now ready to connect your client, For details on how to set up client tools, refer to [Working with Clients](./client_guide/CLIENT_GUIDE.md)
+You are now ready to connect your client. For details on how to set up client tools, refer to [Working with Clients](client_guide/CLIENT_GUIDE.md)
 
 ---------------------------------------------------------------------
-### Step 4e - Run the MCP Server as a service
-There are two options to configure the MCP server for automatic restart:
+## Remote Production Deployment
 
-### Using Docker
+For production deployments that serve multiple clients, you have two options:
+
+1. **Docker deployment** - Containerized setup with automatic restarts (includes REST option)
+2. **System service** - Background service using either:
+   - **Direct execution** - `teradata-mcp-server` (after pip/uv install, recommended)
+   - **uv-managed execution** - `uv run teradata-mcp-server` (with dependency management)
+
+For remote access, use the `streamable-http` transport protocol which communicates over HTTP.
+
+Before you deploy, define your security strategy and review the [security patterns we provide](SECURITY.md).
+
+## Using Docker
 If the server is using docker compose and you wish to have it automatically start on system reboot, add the following entry to the docker-compose.yaml file to either or both service entries (```teradata-mcp-server:```, ```teradata-rest-server:```)
 ```sh
 services:
@@ -307,22 +360,27 @@ services:
     restart: always
 ```
 
-### Using UV in the user environment
-If the server is set up to run locally using ```uv run...```, it can be configured to run as a systemd service.
-1. Create a file in /etc/systemd/service named ```<your service name>.service```, e.g. ```teradata_mcp.service```
-2. Copy the following entries - modify for your environment:
+### System service
+Configure the MCP server to run as a systemd service for automatic startup and management.
+
+1. Create a service file in /etc/systemd/system/ named ```<your service name>.service```, e.g. ```teradata_mcp.service```
+2. Copy the following configuration - modify for your environment:
 ```sh
 [Unit]
-Description=Teradata MCP  demo service
+Description=Teradata MCP Server
 After=network.target
 StartLimitIntervalSec=0
+
 [Service]
 Type=simple
 Restart=always
 RestartSec=1
-WorkingDirectory=/home/ec2-user/teradata-mcp-server
-User=ec2-user
-ExecStart=/home/ec2-user/.local/bin/uv run /home/ec2-user/teradata-mcp-server/src/teradata_mcp_server/server.py > /dev/null
+User=your-username
+Environment=DATABASE_URI=teradata://username:password@host:1025/database
+Environment=MCP_TRANSPORT=streamable-http
+Environment=MCP_HOST=127.0.0.1
+Environment=MCP_PORT=8001
+ExecStart=/usr/local/bin/teradata-mcp-server --profile all
 
 [Install]
 WantedBy=multi-user.target
@@ -334,9 +392,7 @@ WantedBy=multi-user.target
 7. ```sudo crontab -e```
 8. ```0 * * * * /bin/systemctl restart <your service name>.service```
 
-You are now ready to connect your client, For details on how to set up client tools, refer to [Working with Clients](./client_guide/CLIENT_GUIDE.md)
-
-
+You are now ready to connect your client. For details on how to set up client tools, refer to [Working with Clients](client_guide/CLIENT_GUIDE.md)
 
 ## Testing your server
 
