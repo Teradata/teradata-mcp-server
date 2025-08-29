@@ -1,8 +1,85 @@
-
 # Development Conventions
 
 This document provides guidelines for developing new tools for the Teradata MCP server.
 <br>
+
+## Quick Setup (uv recommended)
+
+We standardize on **uv** for development: fast installs, reproducible envs, no global pollution.
+
+### 1) Install uv
+- **macOS:** `brew install uv`
+- **Windows:** `winget install astral-sh.uv`
+
+### 2) Clone and bootstrap
+```bash
+git clone https://github.com/<your-org>/teradata-mcp-server.git
+cd teradata-mcp-server
+uv python install            # ensure a compatible Python is available
+uv sync                      # create venv and install project deps
+```
+
+> Tip: add extras for full dev (feature store, EVS) if you use them:
+```bash
+uv sync --extra fs --extra evs
+```
+
+### 3) Run the server from source
+```bash
+uv run teradata-mcp-server --profile all
+```
+
+### 4) MCP Inspector (interactive testing)
+```bash
+uv run mcp dev ./src/teradata_mcp_server/server.py
+```
+
+### 5) Run tests
+
+Always run tests before submitting a PR:
+
+```bash
+# core tests
+python tests/run_mcp_tests.py "uv run teradata-mcp-server"
+```
+Most users use the MCP server with Claude, stdio, so always test Claude's behaviour with your code or build before pushing it. 
+
+Example configurations:
+```json
+"teradata_dev": {
+  "command": "uv",
+  "args": [
+    "--directory",
+    "/Users/remi.turpaud/Code/genAI/teradata-mcp-server",
+    "run",
+    "teradata-mcp-server"
+  ],
+  "env": {
+"DATABASE_URI": "teradata://user:password@system.clearscape.teradata.com:1025/user",
+"MCP_TRANSPORT": "stdio"
+  }
+}
+
+"teradata_build": {
+  "command": "/opt/homebrew/bin/uvx",
+  "args": [
+    "path_to_code/teradata-mcp-server/dist/teradata_mcp_server-0.1.3-py3-none-any.whl",
+    "python", "-m", "teradata_mcp_server",
+    "--profile", "all"
+  ],
+  "env": {
+    "DATABASE_URI": "teradata://user:password@system.clearscape.teradata.com:1025/user",
+    "MCP_TRANSPORT": "stdio"
+  }
+}
+```
+
+
+
+### 6) Troubleshooting (dev)
+- GUI apps (e.g., Claude) have a different PATH. Prefer `uv --directory … run …` or `uvx` in configs.
+- Clear caches when testing or installing fresh builds/uploads: `uv cache clean` or run with `--no-cache`.
+
 
 ## Directory Structure & File Naming
 
@@ -19,7 +96,7 @@ The directory structure will follow the following conventions
 - custom_objects.yml - example custom tools/prompts definitions (external to package)
 - *_objects.yml - additional custom object definitions (external to package)
 
-[logs directory](./logs/) - will contain log files, the detail of the log file will be determined in the server.py file.  Default is set to INFO.  This can be changed to DEBUG for very detailed logging.
+[logs directory](./logs/) – (legacy note) we do **not** write logs to the current working directory by default. For CLI runs, logs go to a per‑user location (e.g., `~/Library/Logs/TeradataMCP` on macOS). When used via stdio (e.g., Claude Desktop), file logging is disabled by default to keep stdout clean; you can override with `LOG_DIR`.
 
 [src/teradata_mcp_server](./src/teradata_mcp_server) - this will contain all source code.
 - __init__.py - will contain server imports  
@@ -200,6 +277,98 @@ uv run mcp dev ./src/teradata_mcp_server/server.py
 ```bash
 mcp dev teradata-mcp-server
 ```
+
+## Build, Test, and Publish
+
+We build with **uv**, test locally (wheel), then push to **TestPyPI** before PyPI.
+
+### Versions
+- The CLI reads its version from package metadata (`importlib.metadata`).
+- **Bump only in `pyproject.toml`** (do not hardcode in code).
+- You **cannot overwrite** an existing version on PyPI/TestPyPI — always increment.
+
+### 1) Build artifacts
+```bash
+uv build --no-cache
+# Produces dist/teradata_mcp_server-<ver>-py3-none-any.whl and .tar.gz
+```
+
+### 2) Test the wheel locally (no install)
+```bash
+# Run the installed console entry point from the wheel
+uvx ./dist/teradata_mcp_server-<ver>-py3-none-any.whl \
+    python -m teradata_mcp_server --version
+
+# Or install as a persistent tool and run
+uv tool install --reinstall ./dist/teradata_mcp_server-<ver>-py3-none-any.whl
+~/.local/bin/teradata-mcp-server --help
+```
+
+### 3) Verify metadata/README
+```bash
+twine check dist/*
+```
+
+### 4) Publish to **TestPyPI** (dress rehearsal)
+```bash
+# Upload
+python -m twine upload --repository testpypi dist/*
+
+# Try installing the just-published version with uvx
+uvx --no-cache \
+   --index-url https://test.pypi.org/simple \
+   --extra-index-url https://pypi.org/simple \
+   --index-strategy unsafe-best-match \
+   "teradata-mcp-server==<ver>" --version
+```
+Notes:
+- `--index-strategy unsafe-best-match` lets uv take our package from TestPyPI and other deps from PyPI.
+- Use `--no-cache` to avoid stale wheels.
+
+### 5) Publish to **PyPI**
+```bash
+python -m twine upload dist/*
+```
+If you see `File already exists`, bump the version in `pyproject.toml`, rebuild, and upload again.
+
+### 6) Post‑publish smoke test
+```bash
+# One‑off run
+uvx "teradata-mcp-server==<ver>" --version
+
+# Or persistent install
+uv tool install "teradata-mcp-server==<ver>"
+teradata-mcp-server --help
+```
+
+### Claude Desktop tips (stdio)
+- For **no‑install** runs, point Claude to uvx:
+```json
+{
+  "command": "/opt/homebrew/bin/uvx",
+  "args": [
+    "teradata-mcp-server==<ver>",
+    "--profile", "all"
+  ],
+  "env": { "MCP_TRANSPORT": "stdio" }
+}
+```
+- To test a **local wheel** in Claude, pass the wheel path instead of the name and run the module:
+```json
+{
+  "command": "/opt/homebrew/bin/uvx",
+  "args": [
+    "/ABS/PATH/dist/teradata_mcp_server-<ver>-py3-none-any.whl",
+    "python", "-m", "teradata_mcp_server", "--profile", "all"
+  ],
+  "env": { "MCP_TRANSPORT": "stdio" }
+}
+```
+
+### Caching & indexes
+- Refresh index data: `uvx --refresh …`
+- Bypass caches: `--no-cache`
+- Clean all caches: `uv cache clean`
 
 ## Tools testing
 
