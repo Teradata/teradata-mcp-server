@@ -20,7 +20,7 @@ from pydantic import Field
 from sqlalchemy.engine import Connection
 
 # Import utilities
-from teradata_mcp_server import utils as config
+from teradata_mcp_server import utils as config, __version__
 
 # Import the tools module with lazy loading support
 try:
@@ -32,13 +32,33 @@ load_dotenv()
 
 
 # Parse command line arguments - if any they will override environment variables
-parser = argparse.ArgumentParser(description="Teradata MCP Server")
-parser.add_argument('--profile', type=str, required=False, help='Profile name to load from configure_tools.yml')
+parser = argparse.ArgumentParser(
+    prog="teradata-mcp-server",
+    description="Teradata MCP Server",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    epilog=(
+        "Examples:\n"
+        "  teradata-mcp-server --profile all\n"
+        "  teradata-mcp-server --mcp_transport sse --mcp_host 127.0.0.1 --mcp_port 8001\n"
+        "  DATABASE_URI=teradata://user:pass@host:1025/schema teradata-mcp-server\n"
+    ),
+)
+parser.add_argument('-v', '--version', action='version', version=f'%(prog)s {__version__}')
+parser.add_argument('-p', '--profile', type=str, required=False, help='Profile name to load from configure_tools.yml')
 parser.add_argument('--database_uri', type=str, required=False, help='Database URI to connect to: teradata://username:password@host:1025/schemaname')
-parser.add_argument('--mcp_transport', type=str, required=False, help='MCP transport method to use: stdio, streamable-http, sse')
+parser.add_argument(
+    '--mcp_transport',
+    type=str,
+    choices=['stdio', 'streamable-http', 'sse'],
+    required=False,
+    help='MCP transport method to use.'
+)
 parser.add_argument('--mcp_host', type=str, required=False, help='MCP host address')
 parser.add_argument('--mcp_port', type=int, required=False, help='MCP port number')
 parser.add_argument('--mcp_path', type=str, required=False, help='MCP path for the server')
+parser.add_argument('--log-dir', type=str, required=False, help='Directory for log files (overrides LOG_DIR).')
+parser.add_argument('--no-file-logs', action='store_true', required=False, help='Disable file logging (same as NO_FILE_LOGS=1).')
+parser.add_argument('--logging-level', type=str, choices=['DEBUG','INFO','WARNING','ERROR','CRITICAL'], required=False, help='Logging level for console/file output.')
 
 # Extract known arguments and load them into the environment if provided
 args, unknown = parser.parse_known_args()
@@ -107,6 +127,9 @@ def _default_log_dir():
     return os.path.join(base, "teradata_mcp_server", "logs")
 
 LOG_DIR = os.getenv("LOG_DIR", _default_log_dir() or "")
+# Allow explicit disable via NO_FILE_LOGS
+if os.getenv('NO_FILE_LOGS', '').lower() in {'1','true','yes'}:
+    LOG_DIR = ''
 if LOG_DIR:
     try:
         os.makedirs(LOG_DIR, exist_ok=True)
