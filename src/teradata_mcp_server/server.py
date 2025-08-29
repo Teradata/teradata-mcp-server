@@ -10,6 +10,7 @@ import logging.handlers
 import os
 import re
 import signal
+import sys
 from typing import Any
 from dotenv import load_dotenv
 from mcp import types
@@ -88,11 +89,33 @@ class CustomJSONFormatter(logging.Formatter):
 
         return json.dumps(log_entry, ensure_ascii=False)
 
-os.makedirs("logs", exist_ok=True)
+#
+# --- Lean, CLI‑friendly logging setup ---
+# Default: no file writes under stdio (Claude); otherwise use a per‑user log dir.
+MCP_TRANSPORT = os.getenv("MCP_TRANSPORT", "stdio").lower()
 
-# Only enable console logging if the MCP transport is not stdio
-mcp_transport = os.getenv("MCP_TRANSPORT", "stdio").lower()
-enable_console_logging = mcp_transport != "stdio"
+def _default_log_dir():
+    if MCP_TRANSPORT == "stdio":
+        return None  # avoid file I/O under stdio
+    if sys.platform == "darwin":  # macOS
+        return os.path.join(os.path.expanduser("~/Library/Logs"), "TeradataMCP")
+    if os.name == "nt":  # Windows
+        base = os.environ.get("LOCALAPPDATA", os.path.expanduser("~\\AppData\\Local"))
+        return os.path.join(base, "TeradataMCP", "Logs")
+    # Linux/Unix
+    base = os.environ.get("XDG_STATE_HOME", os.path.expanduser("~/.local/state"))
+    return os.path.join(base, "teradata_mcp_server", "logs")
+
+LOG_DIR = os.getenv("LOG_DIR", _default_log_dir() or "")
+if LOG_DIR:
+    try:
+        os.makedirs(LOG_DIR, exist_ok=True)
+    except OSError:
+        LOG_DIR = ""  # if unwritable, disable file logging silently
+
+# Console logs only when not using stdio to keep the protocol stream clean.
+enable_console_logging = (MCP_TRANSPORT != "stdio")
+# --- End logging preamble ---
 
 log_config = {
     "version": 1,
@@ -108,19 +131,21 @@ log_config = {
         },
     },
     "handlers": {
-        "file": {
-            "class": "logging.handlers.RotatingFileHandler",
-            "level": "DEBUG",
-            "filename": os.path.join("logs", "teradata_mcp_server.jsonl"),
-            "formatter": "json",
-            "maxBytes": 1000000,
-            "backupCount": 3
-        },
+        **({
+            "file": {
+                "class": "logging.handlers.RotatingFileHandler",
+                "level": "DEBUG",
+                "filename": os.path.join(LOG_DIR, "teradata_mcp_server.jsonl"),
+                "formatter": "json",
+                "maxBytes": 1000000,
+                "backupCount": 3
+            }
+        } if LOG_DIR else {}),
     },
     "loggers": {
         "teradata_mcp_server": {
             "level": "DEBUG",
-            "handlers": ["file"],
+            "handlers": (["file"] if LOG_DIR else []),
             "propagate": False
         }
     },
@@ -138,7 +163,7 @@ if enable_console_logging:
         "formatter": "simple",
         "stream": "ext://sys.stdout"
     }
-    log_config["loggers"]["teradata_mcp_server"]["handlers"].append("console")
+    log_config["loggers"]["teradata_mcp_server"].setdefault("handlers", []).append("console")
     log_config["root"]["handlers"].append("console")
 
 logging.config.dictConfig(log_config)
