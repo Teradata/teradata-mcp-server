@@ -565,7 +565,7 @@ def generate_cube_query_tool(name, cube):
             ") AS c\n"
             f"GROUP BY {', '.join(dim_list_raw)}"
             ") AS a\n"
-            f"{'WHERE' if filter_list_raw else ''} {', '.join(filter_list_raw)};"
+            f"{'WHERE' if filter_list_raw else ''} {'AND '.join(filter_list_raw)};"
 
         )
         return sql
