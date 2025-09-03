@@ -10,3 +10,5 @@ working/
 env
 CLAUDE.md
 var/
+profiles.yml
+*_objects.yml

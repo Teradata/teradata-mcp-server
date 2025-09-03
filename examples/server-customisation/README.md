@@ -28,16 +28,20 @@ cp ../examples/Configuration_Examples/custom_objects.yml mydomain_objects.yml
 TD_USER=demo_user TD_PASSWORD=demo_password teradata-mcp-server --profile my_custom_profile
 ```
 
-Claude Desktop server configuration snippet:
+Claude Desktop server configuration snippet (overriding transport mode to stdio):
 ```json
-    "sales_ux": {
+    "my_custom_server": {
       "command": "uvx",
       "args": [
         "--directory",
         "/absolute-path-to/my-tdmcp-config/examples/server-customisation",
         "teradata-mcp-server",
-        "--profile", "sales",
-        "--database_uri", "teradata://db_user:db_password@systemname.env.clearscape.teradata.com:1025"
-      ]
+        "--profile", "my_custom_profile",
+        "--mcp_transport", "stdio"        
+      ],
+      "env": {
+        "TD_USER": "demo_user",
+        "TD_PASSWORD": "demo_password"
+      }
     } 
 ```
