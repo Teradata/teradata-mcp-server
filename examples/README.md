@@ -22,31 +22,29 @@ Key files:
 - `sales_domain_example.yml` - Complete sales domain setup
 - `dba_tools_example.yml` - Database administrator focused tools
 
-Simply copy these files to your working directory, remove the `example_` prefix, customize the content, and run the server from that directory.
+Simply copy these files to your working directory, customize the content, and run the server from that directory.
 
 ### [`app-testing-agent/`](./app-testing-agent/)
 **Testing prompts and configurations for MCP Server validation**
 
-Contains specialized prompts and configurations designed to test the functionality of the MCP server. Useful for:
+Contains specialized prompts and configurations designed build agents that can test the functionality of the MCP server. Useful for:
 - Validating server setup and configuration
 - Testing custom tools and prompts
 - Quality assurance workflows
 
-Run with: `teradata-mcp-server --profile tester`
+Run the server with: `teradata-mcp-server --profile tester`
 
 ## Client Applications
 
 ### [`app-voice-agent/`](./app-voice-agent/)
 **Voice assistant using Amazon Nova Sonic with Teradata integration**
 
-A sophisticated voice-enabled assistant that provides:
-- Real-time bidirectional audio communication via AWS Bedrock
-- Multi-language support with automatic voice selection
-- Profile-based configuration system
-- Integration with Teradata MCP server tools
-- Barge-in capability and console-based interface
+A simple voice-enabled assistant that provides:
+- Real-time bidirectional audio communication to Nova Sonic models on AWS Bedrock
+- Profile-based configuration system, including language and voice options
+- Access to Teradata via the MCP server tools and prompts
 
-Perfect for hands-free database interaction and voice-driven analytics.
+Useful for rapid prototyping of voice assistants leveraging your lakehouse data and compute minimal effort.
 
 ### [`app-adk-agent/`](./app-adk-agent/)
 **Web-based agent using Google ADK framework**
@@ -57,7 +55,7 @@ A web interface agent built with Google's ADK framework featuring:
 - Support for multiple LLM providers (AWS, Google, Azure, Ollama)
 - Full access to MCP tools and resources
 
-Ideal for interactive web-based database exploration and analysis.
+Use for rapid prototyping of interactive web-based data agents.
 
 ### [`app-bedrock-client/`](./app-bedrock-client/)
 **Command-line agent using MCP client framework**
@@ -68,7 +66,7 @@ A simple command-line interface that provides:
 - AWS Bedrock integration
 - Streamlined setup for quick interactions
 
-Great for developers who prefer command-line interfaces and scripting.
+Simple example to get started.
 
 ## Client Configuration
 
@@ -82,13 +80,4 @@ Contains configuration files and setup instructions for integrating the Teradata
 ### [`server-api-spec/`](./server-api-spec/)
 **API specification and documentation**
 
-Contains OpenAPI/Swagger specifications for the server's HTTP endpoints, useful for understanding the API structure and building custom integrations.
-
-## Getting Started
-
-1. **Start with server customization**: Check out [`server-customisation/`](./server-customisation/) to create your custom profiles and tools
-2. **Choose a client**: Pick the client application that best fits your workflow (voice, web, or command-line)
-3. **Test your setup**: Use [`app-testing-agent/`](./app-testing-agent/) to validate your configuration
-4. **Integrate**: Use the API specs in [`server-api-spec/`](./server-api-spec/) for custom integrations
-
-Each example directory contains its own detailed README with specific setup instructions and usage examples.
+Contains OpenAPI/Swagger specifications for the server's HTTP endpoints.

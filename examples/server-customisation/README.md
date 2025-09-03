@@ -2,6 +2,8 @@
 
 This directory contains example configuration files for the Teradata MCP Server.
 
+See the [customization guide](docs/CUSTOMIZING.md) for more details about the server customization approach and options.
+
 ## Files
 
 - `example_profiles.yml` - Example custom profiles
@@ -28,20 +30,4 @@ cp ../examples/Configuration_Examples/custom_objects.yml mydomain_objects.yml
 TD_USER=demo_user TD_PASSWORD=demo_password teradata-mcp-server --profile my_custom_profile
 ```
 
-Claude Desktop server configuration snippet (overriding transport mode to stdio):
-```json
-    "my_custom_server": {
-      "command": "uvx",
-      "args": [
-        "--directory",
-        "/absolute-path-to/my-tdmcp-config/examples/server-customisation",
-        "teradata-mcp-server",
-        "--profile", "my_custom_profile",
-        "--mcp_transport", "stdio"        
-      ],
-      "env": {
-        "TD_USER": "demo_user",
-        "TD_PASSWORD": "demo_password"
-      }
-    } 
-```
+The equivalent Claude Desktop server configuration snippet (overriding transport mode to stdio) is [available here](examples/client-claude-desktop/claude_desktop_stdio_custom_profile_config).

@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "my_custom_server": {
+      "command": "uvx",
+      "args": [
+        "--directory",
+        "/absolute-path-to/my-tdmcp-config/examples/server-customisation",
+        "teradata-mcp-server",
+        "--profile", "my_custom_profile",
+        "--mcp_transport", "stdio"        
+      ],
+      "env": {
+        "TD_USER": "demo_user",
+        "TD_PASSWORD": "demo_password"
+      }
+    }
+  }
+}
