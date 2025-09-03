@@ -1,6 +1,6 @@
 {
   "test_cases": {
-    "bar_manageDsaDiskFileSystemOperations": [
+    "bar_manageDsaDiskFileSystem": [
       {
         "name": "list_disk_file_systems",
         "parameters": {

@@ -25,7 +25,7 @@ We are providing groupings of tools and associated helpful prompts to support al
 - **DBA** tools, prompts and resources to facilitate your platform administration tasks:
   - [DBA Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/dba/README.md)
   - [Security Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/sec/README.md)
-- **BAR** tools, prompts and resources for backup and recovery operations:
+- **BAR** tools, prompts and resources for backup and restore operations:
   - [BAR Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/bar/README.md) to manage DSA disk file systems and backup operations.
 
 

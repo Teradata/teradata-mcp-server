@@ -1,11 +1,6 @@
 """
-BAR (Backup and Recovery) Tools for Teradata DSA MCP Server
-Provides disk file system ma        # First, get the existing file systems
-        try:
-            existing_response = dsa_client._make_request(
-                method="GET",
-                endpoint="dsa/components/backup-applications/disk-file-system"
-            )nt operations
+BAR (Backup and Restore) Tools for Teradata DSA MCP Server
+
 """
 
 import logging
@@ -478,7 +473,7 @@ def manage_dsa_disk_file_systems(
 
 #------------------ Tool Handler for MCP ------------------#
 
-def handle_bar_manageDsaDiskFileSystemOperations(
+def handle_bar_manageDsaDiskFileSystem(
     conn: any,  # Not used for DSA operations, but required by MCP framework
     operation: str,
     file_system_path: str = None,
@@ -490,7 +485,7 @@ def handle_bar_manageDsaDiskFileSystemOperations(
     Handle DSA disk file system operations for the MCP server
     
     This tool provides unified management of DSA disk file system configurations
-    for backup and recovery operations.
+    for backup and restore operations.
     
     Args:
         conn: Database connection (not used for DSA operations)
@@ -501,7 +496,7 @@ def handle_bar_manageDsaDiskFileSystemOperations(
     Returns:
         ResponseType: formatted response with operation results + metadata
     """
-    logger.debug(f"Tool: handle_bar_manageDsaDiskFileSystemOperations: Args: operation: {operation}, file_system_path: {file_system_path}, max_files: {max_files}")
+    logger.debug(f"Tool: handle_bar_manageDsaDiskFileSystem: Args: operation: {operation}, file_system_path: {file_system_path}, max_files: {max_files}")
     
     try:
         # Run the synchronous operation
@@ -512,21 +507,21 @@ def handle_bar_manageDsaDiskFileSystemOperations(
         )
         
         metadata = {
-            "tool_name": "bar_manageDsaDiskFileSystemOperations",
+            "tool_name": "bar_manageDsaDiskFileSystem",
             "operation": operation,
             "file_system_path": file_system_path,
             "max_files": max_files,
             "success": True
         }
         
-        logger.debug(f"Tool: handle_bar_manageDsaDiskFileSystemOperations: metadata: {metadata}")
+        logger.debug(f"Tool: handle_bar_manageDsaDiskFileSystem: metadata: {metadata}")
         return create_response(result, metadata)
         
     except Exception as e:
-        logger.error(f"Error in handle_bar_manageDsaDiskFileSystemOperations: {e}")
+        logger.error(f"Error in handle_bar_manageDsaDiskFileSystem: {e}")
         error_result = f"❌ Error in DSA disk file system operation: {str(e)}"
         metadata = {
-            "tool_name": "bar_manageDsaDiskFileSystemOperations",
+            "tool_name": "bar_manageDsaDiskFileSystem",
             "operation": operation,
             "error": str(e),
             "success": False

@@ -37,10 +37,13 @@ class MCPTestRunner:
     def _find_project_root(self) -> str:
         """Find the project root directory (contains profiles.yml)."""
         current = os.path.abspath(os.getcwd())
-        while current != '/':
+        while True:
             if os.path.exists(os.path.join(current, 'profiles.yml')):
                 return current
-            current = os.path.dirname(current)
+            parent = os.path.dirname(current)
+            if parent == current:  # Reached root directory (works on both Windows and Unix)
+                break
+            current = parent
         return os.getcwd()
 
     async def load_test_cases(self):

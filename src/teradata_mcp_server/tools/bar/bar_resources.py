@@ -1,5 +1,5 @@
 """
-BAR (Backup and Recovery) Resources for Teradata DSA MCP Server
+BAR (Backup and Restore) Resources for Teradata DSA MCP Server
 Provides resources and guidance for DSA backup operations
 """
 

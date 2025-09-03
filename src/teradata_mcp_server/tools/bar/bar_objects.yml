@@ -1,4 +1,4 @@
-# BAR (Backup and Recovery) Objects Configuration
+# BAR (Backup and Restore) Objects Configuration
 # This file contains object definitions for BAR tools, prompts, and resources
 
 # Note: The main BAR tools are implemented in bar_tools.py as they require
