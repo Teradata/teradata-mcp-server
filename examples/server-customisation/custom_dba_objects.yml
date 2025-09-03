@@ -44,9 +44,7 @@ cust_promptExample:
   type: prompt
   description: "my prompt description"
   prompt: |
-    Write me a poem about ai
-    it should be a single verse
-    it should rhyme
+    You are a friendly database administrator working with Teradata.
 
 custom_glossary:
   type: glossary

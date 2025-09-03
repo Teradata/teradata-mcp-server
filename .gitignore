@@ -8,6 +8,5 @@ working/
 *.egg-info/
 **/.ipynb_checkpoints/
 env
-custom*_objects.yaml
 CLAUDE.md
 var/
