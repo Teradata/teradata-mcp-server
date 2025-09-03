@@ -1,0 +1,33 @@
+{
+  "test_cases": {
+    "bar_manageDsaDiskFileSystemOperations": [
+      {
+        "name": "list_disk_file_systems",
+        "parameters": {
+          "operation": "list"
+        },
+        "description": "List all configured disk file systems in DSA"
+      },
+      {
+        "name": "config_test_file_system",
+        "parameters": {
+          "operation": "config",
+          "file_system_path": "/test/backup/path",
+          "max_files": 100
+        },
+        "description": "Configure a test disk file system",
+        "skip_if_no_dsa": true
+      },
+      {
+        "name": "remove_test_file_system",
+        "parameters": {
+          "operation": "remove",
+          "file_system_path": "/test/backup/path"
+        },
+        "description": "Remove the test disk file system",
+        "skip_if_no_dsa": true,
+        "depends_on": "config_test_file_system"
+      }
+    ]
+  }
+}

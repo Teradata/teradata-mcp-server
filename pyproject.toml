@@ -28,6 +28,8 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "PyYAML>=6.0.0",
     "sqlalchemy>=2.0.0,<3.0.0",
+    "httpx>=0.24.0",
+    "requests>=2.25.0",
 ]
 
 [project.optional-dependencies]

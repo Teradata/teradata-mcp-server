@@ -54,3 +54,13 @@ sales:
     - sales_*
   resource:
     - sales_*
+
+bar:
+  tool:
+    - ^bar_*
+    - ^base_readQuery$
+    - ^base_databaseList$
+  prompt:
+    - ^bar_*
+  resource:
+    - ^bar_*
