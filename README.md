@@ -26,27 +26,9 @@ We are providing groupings of tools and associated helpful prompts to support al
   - [DBA Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/dba/README.md)
   - [Security Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/sec/README.md)
 
-
-## Getting Started
-
-![Getting Started](https://raw.githubusercontent.com/Teradata/teradata-mcp-server/main/docs/media/MCP-quickstart.png)
-
-**Step 1.** - Identify the running Teradata System, you need username, password and host details to populate "teradata://username:password@host:1025". If you do not have a Teradata system to connect to, then leverage [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics)
-
-**Step 2.** - To configure and run the MCP server, refer to the [Getting started guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/GETTING_STARTED.md).
-
-**Step 3.** - There are many client options available, the [Client Guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/client_guide/CLIENT_GUIDE.md) explains how to configure and run a sample of different clients.
-
-<br>
-
-[A Video Library](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/VIDEO_LIBRARY.md) has been curated to assist.
-
-<br>
-
-
 ## Quick start with Claude Desktop (no installation)
 
-Claude Desktop can get and start the Teradata MCP server in the background using `uv`. No permanent installation needed.
+You can use Claude Desktop to give the  Teradata MCP server a quick try, Claude can manage the server in the background using `uv`. No permanent installation needed.
 
 **Pre-requisites**
 1. Get your Teradata database credentials or create a free sandbox at [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics).
@@ -68,6 +50,22 @@ Configure the claude_desktop_config.json (Settings>Developer>Edit Config) by add
   }
 }
 ```
+
+## Getting Started
+
+![Getting Started](https://raw.githubusercontent.com/Teradata/teradata-mcp-server/main/docs/media/MCP-quickstart.png)
+
+**Step 1.** - Identify the running Teradata System, you need username, password and host details. If you do not have a Teradata system to connect to, then leverage [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics)
+
+**Step 2.** - To configure and run the MCP server, refer to the [Getting started guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/GETTING_STARTED.md).
+
+**Step 3.** - There are many client options available, the [Client Guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/client_guide/CLIENT_GUIDE.md) explains how to configure and run a sample of different clients.
+
+<br>
+
+Check out our libraries of [curated examples](https://github.com/Teradata/teradata-mcp-server/blob/main/examples/) or [video guides](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/VIDEO_LIBRARY.md).
+
+<br>
 
 ## CLI Installation
 
