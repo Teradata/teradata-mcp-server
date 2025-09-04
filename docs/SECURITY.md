@@ -4,16 +4,13 @@ All database tool calls are traced using [Teradata DBQL](https://docs.teradata.c
 
 We enable several mechanisms to manage database access (and RBAC policies):
 - Service Account (recommended for general use): The MCP server uses a [Permanent proxy user](https://docs.teradata.com/r/Enterprise_IntelliFlex_VMware/SQL-Data-Control-Language/Statement-Syntax/GRANT-CONNECT-THROUGH/CONNECT-THROUGH-Usage-Notes/GRANT-CONNECT-THROUGH-Trusted-Sessions-and-User-Types/Permanent-Proxy-Users) to assume the privileges of the client user using their own database user. Requires user identification.
-- Application user (best for application-specific deployments): a single database user is dedicated to the MCP Server instance.
-- End user direct authentication: The end user passes their database credentials (e.g., JWT) via the client.
+- Application user (best for application-specific deployments): a single database user is dedicated to the MCP Server instance. :warning: If no authentication is enabled, any user reaching the server inherits application user privileges.
 
 We enable several mechanisms to authenticate to the server:
 - No authentication (AUTH_MODE=none)
-- Basic authentication (AUTH_MODE=basic)
-- OAuth 2.1
-  - JWT without verification (AUTH_MODE=oauth_no_verify)
-  - JWT with IDP verification (AUTH_MODE=oauth_verify)
-  - Full OAuth with introspection (AUTH_MODE=oauth_full)
+- Basic (AUTH_MODE=basic): accepts either `Authorization: Basic base64(user:secret)` **or** `Authorization: Bearer <jwt>`; the server validates either a password-based DB login (LDAP/KRB5) or a JWT DB login (LOGMECH=JWT) and then proxies as the validated user.
+- OAuth (verify) (AUTH_MODE=oauth): verifies an OIDC JWT via JWKS (offline) and proxies as the mapped user.
+- OAuth (introspect) (AUTH_MODE=oauth_introspect): verifies JWT via JWKS **and** calls the IdP's token introspection endpoint to ensure the token is active before proxying.
 
 ## Tracing Tool Calls
 
@@ -25,19 +22,21 @@ Example of output in `dbc.qrylog.QueryBand`:
 
 The following parameters are included in the query band for each tool call:
 
-| Key         | Description                                                           | Source                                                                                      |
-|-------------|-----------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
-| APPLICATION | Name of the calling application (e.g., `teradata-mcp-server`)         | FastMCP server name (`mcp.name`)                                                            |
-| PROFILE     | Profile or role associated with the server instance (if available)   | Selected profile for the server process                                                     |
-| PROCESS_ID  | Identifier for the process making the request                         | Hostname + process ID                                                                       |
-| TOOL_NAME   | Name of the tool or API endpoint invoked                              | Current tool name                                                                           |
-| REQUEST_ID  | Unique identifier for the request                                     | FastMCP request context ID (or UUID fallback)                                              |
-| SESSION_ID  | FastMCP session ID (or request_id fallback)                          | FastMCP session ID (or request_id fallback)                                                |
-| TENANT      | Tenant or customer identifier (if applicable)                         | Header (`x-td-tenant` / `x-tenant`)                                                        |
-| CLIENT_IP   | IP address of the client making the request                           | Header (`x-forwarded-for`), if provided                                                    |
-| USER_AGENT  | User agent string from the client                                     | Header (`user-agent`)                                                                       |
-| AUTH_SCHEME | Authentication scheme used (e.g., `Bearer`, `Basic`)                  | Header (`authorization` scheme)                                                            |
-| AUTH_HASH   | Hashed value representing the authentication credential or token      | SHA-256 hash of the authorization token                                                    |
+| Key         | Description                                                                                     | Source                                                                                      |
+|-------------|-------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+| APPLICATION | Name of the calling application (e.g., `teradata-mcp-server`)                                   | FastMCP server name (`mcp.name`)                                                            |
+| PROFILE     | Profile or role associated with the server instance (if available)                             | Selected profile for the server process                                                     |
+| PROCESS_ID  | Identifier for the process making the request                                                 | Hostname + process ID                                                                       |
+| TOOL_NAME   | Name of the tool or API endpoint invoked                                                      | Current tool name                                                                           |
+| REQUEST_ID  | Unique identifier for the request                                                             | FastMCP request context ID (or UUID fallback)                                              |
+| SESSION_ID  | FastMCP session ID (or request_id fallback)                                                  | FastMCP session ID (or request_id fallback)                                                |
+| TENANT      | Tenant or customer identifier (if applicable)                                                 | Header (`x-td-tenant` / `x-tenant`)                                                        |
+| CLIENT_IP   | IP address of the client making the request                                                   | Header (`x-forwarded-for`), if provided                                                    |
+| USER_AGENT  | User agent string from the client                                                             | Header (`user-agent`)                                                                       |
+| AUTH_SCHEME | Authentication scheme used (e.g., `Basic`, `Bearer` in AUTH_MODE=basic; `Bearer` in AUTH_MODE=oauth and AUTH_MODE=oauth_introspect). | Header (`authorization` scheme)                                                            |
+| AUTH_HASH   | Hashed value representing the authentication credential or token                              | SHA-256 hash of the authorization token                                                    |
+
+Admins may optionally enable an additional QueryBand key such as `AUTH_VALIDATION=verify|introspect` to differentiate between OAuth verification and introspection modes in DBQL.
 
 Usage example:
 
@@ -88,28 +87,15 @@ GRANT CONNECT THROUGH mcp_svc
   --, PERMANENT alice   WITHOUT ROLE --Additional users here
 ```
 
+This server **always** executes via the service account (proxy user). End-user credentials or tokens are only used to authenticate the caller; queries are executed via the service account with `PROXYUSER=<user>` in the **transaction** query band.
+
+:warning: **DEV ONLY** — The `X-Assume-User` header is honored **only** when `AUTH_MODE=none`. In all other modes, identity comes from Basic/Bearer/OAuth and must be validated.
+
 Now you can use this proxy user as the MCP Server database connection, e.g.:
 
 ```sh
 export DATABASE_URI="teradata://mcp_svc:mcp_svc@yourteradatasystem.teradata.com:1025"
 uv run teradata-mcp-server --mcp_transport streamable-http --mcp_port 8001
-```
-
-:warning: **FOR DEMO PURPOSES** this needs to be integrated with an authentication mechanism to identify the end user and determine the associated database user!  
-In your client, indicate the end user name to assume in the HTTP header, using the `X-Assume-User` key.
-
-For example, with Clause Desktop `claude_desktop_config.json`, to assume the `demo_user` user:
-
-```json
-{
-  "mcpServers": {
-   "teradata_mcp_remote": {
-      "command": "npx",
-      "args": ["mcp-remote", "http://localhost:8001/mcp/", "--header", "X-Assume-User: ${DB_USER}"],
-      "env": { "DB_USER": "demo_user" }
-    }
-  }
-}
 ```
 
 ### Application User
@@ -120,7 +106,7 @@ This is the default mode for the MCP server: the server instantiates a connectio
 - Consider co-locating the server deployment with the application (as well as stdio-based communication)  
 - If exposed over a network interface (e.g., streamable HTTP, SSE), implement sufficient network filtering and overlaying authentication mechanisms.
 
-:warning: If no other authentication or database security mechanism is implemented, any user accessing the MCP Server instance may have access.
+:warning: If no authentication is enabled, any user accessing the MCP Server instance may have access with the privileges of the application user.
 
 Example: server execution co-located  with Claude Desktop and communication over stdio (defined in `claude_desktop_config.json`)
 
@@ -150,38 +136,98 @@ export DATABASE_URI="teradata://mcp_applicationuser:mcp_applicationuser_password
 uv run teradata-mcp-server --mcp_transport streamable-http --mcp_port 8001
 ```
 
+## Authentication
 
-### End User Direct Authentication
+Overview of Authentication Patterns
 
-:warning: **NOT IMPLEMENTED**
+:warning: **NOT IMPLEMENTED** 
 
-In this case the end-user passes their database credentials via a bearer or JWT token to the MCP Server during a streamable HTTP session.
-The credentials are passed via the HTTP headers, and this prompts the MCP server to create (and close) a new connection for every request with the provided user credentials.
+We support multiple authentication mechanisms, ranging from simple static credentials to full OAuth2 flows.
+The following patterns are available, and selectable via an AUTH_MODE server setting.
 
-Example: using Claude Desktop with [mcp-remote](https://www.npmjs.com/package/mcp-remote) to authenticate using a Bearer token:
+ - No Authentication (AUTH_MODE=none): No credentials required – open access.
+ - Basic Authentication (AUTH_MODE=basic): Uses HTTP Basic Auth with a username and password or Bearer token. The server validates the credentials from the database at the session initiation.
+ - OAuth (verify) (AUTH_MODE=oauth): Uses Bearer token with OIDC JWT verification via JWKS and user mapping.
+ - OAuth (introspect) (AUTH_MODE=oauth_introspect): Uses Bearer token with OIDC JWT verification via JWKS, plus token introspection call to IdP to confirm token active status.
 
-Add the server configuration in `claude_desktop_config.json`:
+Basic authentication provides a simple way to manage server and data access with minimal setup, leveraging your existing database authentication mechanisms. This can include classic password-based logins as well as OAuth-based JWT database authentication, even though the MCP server itself does not directly interact with the OAuth flow (the client and database perform that validation).
+
+Oauth modes enable you to integrate the MCP server directly with your enterprise SSO/OAuth2 systems  actively verify user access rights. 
+For example, if using Keycloak or another OpenID Connect provider, a user could obtain an access token (via login outside the MCP server) and present it to the MCP server; the server will check the token’s signature and metadata. 
+
+### Basic mode details
+
+In `AUTH_MODE=basic`, the server accepts either `Basic` or `Bearer` headers.
+
+- If `Basic`, it decodes `user:secret`. By default, it attempts password-based validation (LDAP/KRB5). If configured to use JWT-in-password, it performs a Teradata JWT DB login using `secret` as the JWT.
+- If `Bearer`, it treats the token as a JWT for Teradata JWT DB validation.
+- On successful validation, the server sets `PROXYUSER=<principal>` and executes via the service account.
+
+Claude Desktop example for Basic user:pass:
 
 ```json
 {
   "mcpServers": {
-   "teradata_mcp_remote": {
+    "teradata_basic": {
       "command": "npx",
-      "args": ["mcp-remote", "http://localhost:8001/mcp/", "--header", "Authorization: Bearer ${AUTH_TOKEN}"],
-      "env": { "AUTH_TOKEN": "thisismytoken" }
+      "args": ["mcp-remote", "http://localhost:8001/mcp/", "--header", "Authorization: Basic ${BASIC_AUTH}"],
+      "env": { "BASIC_AUTH": "dXNlcjpwYXNzd29yZA==" }
     }
   }
 }
 ```
 
-## Authentication
+Claude Desktop example for Basic with JWT in password (or Bearer):
 
-:warning: **NOT IMPLEMENTED** 
+```json
+{
+  "mcpServers": {
+    "teradata_jwt": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://localhost:8001/mcp/", "--header", "Authorization: Bearer ${JWT_TOKEN}"],
+      "env": { "JWT_TOKEN": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
+    }
+  }
+}
+```
 
-  - JWT without verification (AUTH_MODE=oauth_no_verify) [this should be the same as "End User Direct Authentication" above]
-  - JWT with IDP verification (AUTH_MODE=oauth_verify)
-  - Full OAuth with introspection (AUTH_MODE=oauth_full)
-  
+### OAuth mode details
+
+`AUTH_MODE=oauth` expects `Authorization: Bearer <JWT>` from a trusted IdP (e.g., Keycloak), verifies via JWKS (`iss`, `aud`, `exp`, `nbf`), maps a claim to the Teradata username, then proxies with `PROXYUSER`.
+
+Example environment variables:
+
+```sh
+export OIDC_ISS="https://keycloak.example.com/auth/realms/myrealm"
+export OIDC_AUD="my-client-id"
+export OIDC_JWKS_URL="https://keycloak.example.com/auth/realms/myrealm/protocol/openid-connect/certs"
+export USERMAP_STRATEGY="claim:preferred_username"
+```
+
+### OAuth introspection mode details
+
+When `AUTH_MODE=oauth_introspect`, the server first performs JWKS verification (fast, cryptographic), then performs an HTTP POST to the IdP's **token introspection** endpoint to confirm `active=true`.
+
+Pros and cons of the two OAuth modes:
+
+- **Verify mode** (`oauth`): Low-latency and resilient to IdP outages since verification is done offline using JWKS. Suitable for most scenarios with JWT access tokens.
+- **Introspection mode** (`oauth_introspect`): Adds immediate token revocation support and opaque token compatibility by querying the IdP's introspection endpoint, but introduces additional latency and dependency on IdP availability.
+
+Configuration variables required for introspection mode:
+
+```sh
+export OIDC_INTROSPECT_URL="https://keycloak.example.com/realms/corp/protocol/openid-connect/token/introspect"
+export OIDC_CLIENT_ID="teradata-mcp"
+export OIDC_CLIENT_SECRET="<secret>"
+# Optional timeouts
+export OIDC_INTROSPECT_TIMEOUT_MS=2000
+```
+
+Notes:
+
+- If tokens are opaque (non-JWT), JWKS verification is skipped and introspection is relied upon exclusively.
+- It is recommended to use short access-token TTLs (5–10 min) even when using introspection to limit exposure.
+
 ## Reporting a Vulnerability
 
 The teradata-mcp-server community takes security seriously.
@@ -189,3 +235,7 @@ The teradata-mcp-server community takes security seriously.
 We appreciate your efforts to responsibly disclose your findings and will make every effort to acknowledge your contribution.
 
 To report a security issue, please use the GitHub Security Advisory ["Report a Vulnerability"](https://github.com/Teradata/teradata-mcp-server/security/advisories)
+
+## Deployment hardening
+
+Place the MCP server behind NGINX for TLS termination and rate limiting; the app listens on an internal HTTP port only.
