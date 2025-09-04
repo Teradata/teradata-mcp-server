@@ -1,56 +1,39 @@
 # BAR (Backup and Restore) Tools
 
-## DSA (Data Stream Architecture) Design
+## AI Agent Integration with DSA Architecture
 
 ```mermaid
-flowchart TB
-    %% AI Agent Layer (Top)
-    subgraph AI_Layer ["🤖 AI Agent Layer"]
-        direction LR
-        User[👤 User Input] --> LLM[🤖 AI Agent/LLM] --> Output[📄 Output]
-    end
+flowchart TD
+    %% AI Agent Layer
+    User[👤 User] --> LLM[🤖 AI Agent] --> Output[📄 Output]
     
-    %% Integration Layer
-    subgraph Integration_Layer ["🔌 Integration Layer"]
-        direction LR
-        MCP[🔌 MCP Server<br/>BAR Tools] --> API[🌐 DSA REST API]
-    end
+    %% MCP Integration
+    LLM --> MCP[🔌 MCP Server]
+    MCP --> API[🌐 DSA API]
+    API --> DSC[🎛️ DSC]
     
-    %% Infrastructure Layer
-    subgraph DSA_Infrastructure ["🏢 DSA Infrastructure"]
-        direction LR
-        DSC[🎛️ DSC] -.-> DSMain[📊 DSMain]
-        DSC -.-> BarNC[📦 BarNC]
-        DB[(🗄️ Teradata<br/>Database)] <-->|read/write| DSMain
-        DSMain <-->|data stream| BarNC
-    end
+    %% DSA Infrastructure
+    DSC --> DSMain[📊 DSMain]
+    DSC --> BarNC[📦 BarNC]
     
-    %% Storage Layer
-    subgraph Storage_Solutions ["💾 Storage Solutions"]
-        direction LR
-        Storage{Backup Storage} --> Disk[📁 Disk]
-        Storage --> S3[☁️ S3]
-        Storage --> Azure[🔷 Azure]
-        Storage --> GCS[🌐 GCS]
-        Storage --> NetBackup[🔒 NetBackup]
-        Storage --> Spectrum[🎯 Spectrum]
-    end
+    %% Data Flow
+    DB[(🗄️ Database)] <--> DSMain
+    DSMain <--> BarNC
+    BarNC --> Storage{💾 Storage}
     
-    %% Vertical Flow Between Layers
-    LLM -.-> MCP
-    API --> DSC
-    BarNC <-->|Backup: write<br/>Restore: read| Storage
+    %% Storage Options
+    Storage --> Disk[📁 Disk]
+    Storage --> Cloud[☁️ Cloud]
+    Storage --> Enterprise[🔒 Enterprise]
     
     %% Styling
-    classDef userStyle fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    classDef integrationStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    classDef infraStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    classDef storageStyle fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef primary fill:#e3f2fd,stroke:#1976d2
+    classDef secondary fill:#f3e5f5,stroke:#7b1fa2
+    classDef storage fill:#e8f5e8,stroke:#388e3c
     
-    class User,LLM,Output userStyle
-    class MCP,API integrationStyle
-    class DSC,DSMain,BarNC,DB infraStyle
-    class Storage,Disk,S3,Azure,GCS,NetBackup,Spectrum storageStyle
+    class User,LLM,Output primary
+    class MCP,API,DSC secondary
+    class DSMain,BarNC,DB,Storage,Disk,Cloud,Enterprise storage
 ```
 
 ## Prerequisites
@@ -166,3 +149,7 @@ Tool for managing backup and restore job lifecycle.
 #### bar_manageSaveSets 🚧
 **Status**: Planned
 Tool for managing backup files/objects (save sets) created by backup operations.
+
+---
+
+[← Return to Main README](../../../../README.md)
