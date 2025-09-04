@@ -146,7 +146,11 @@ queue_handler = logging.getHandlerByName("queue_handler")
 if queue_handler is not None:
     queue_handler.listener.start()
     atexit.register(queue_handler.listener.stop)
+
 logger = logging.getLogger("teradata_mcp_server")
+
+# Cache: session_id -> { 'principal': str, 'auth_hash': str|None }
+_session_auth_cache: dict[str, dict] = {}
 
 # Load tool configuration from packaged profiles.yml (works in wheel/sdist installs)
 with open('profiles.yml', encoding='utf-8') as file:
@@ -211,6 +215,9 @@ class RequestContextMiddleware(Middleware):
         # Normalize to lowercase keys for consistency
         headers = {str(k).lower(): v for k, v in dict(raw_headers).items()}
 
+        # Determine auth mode
+        auth_mode = os.getenv("AUTH_MODE", "none").lower()
+
         # Client-provided identifiers (kept separate from FastMCP session)
         correlation_id = headers.get("x-correlation-id") or headers.get("correlation-id")
         client_session_id = headers.get("x-session-id")
@@ -253,16 +260,48 @@ class RequestContextMiddleware(Middleware):
             mcp_session = None
         session_id = mcp_session or request_id
 
-        # Extract X-Assume-User header (case-insensitive, normalized)
+        # Extract X-Assume-User header (dev-only; honored only in AUTH_MODE=none)
         assume_user = None
-        assume_user_value = headers.get("x-assume-user")
-        if assume_user_value is not None:
-            # Validate with regex
-            if re.match(r"^[A-Za-z0-9_]{1,30}$", assume_user_value):
-                assume_user = assume_user_value
+        if auth_mode == "none":
+            assume_user_value = headers.get("x-assume-user")
+            if assume_user_value is not None:
+                if re.match(r"^[A-Za-z0-9_]{1,30}$", assume_user_value):
+                    assume_user = assume_user_value
+                else:
+                    logger.warning("Invalid X-Assume-User header value; ignoring")
+
+        # AUTH_MODE=basic: validate once per session; accept Basic or Bearer
+        if auth_mode == "basic":
+            # Reuse cached identity if header hash matches (or if we previously validated within this session)
+            cached = _session_auth_cache.get(session_id)
+            if cached and (auth_token_sha256 == cached.get("auth_hash") or auth_hdr is None):
+                assume_user = cached.get("principal")
+                logger.debug(f"Using cached principal for session {session_id}: {assume_user}")
             else:
-                logger.warning("Invalid X-Assume-User header value; ignoring")
-                assume_user = None
+                # Require Authorization header
+                if not auth_hdr:
+                    logger.warning("AUTH_MODE=basic but Authorization header is missing")
+                    raise PermissionError("Authentication required")
+                scheme = (auth_scheme or "").lower()
+                if scheme not in ("basic", "bearer"):
+                    logger.warning(f"AUTH_MODE=basic but unsupported auth scheme: {auth_scheme}")
+                    raise PermissionError("Unsupported auth scheme for basic mode")
+                # Delegate validation to TDConn helper (validates password or JWT depending on scheme/value)
+                try:
+                    global _tdconn
+                    # Expected to return a database username (str) on success, or None on failure
+                    validated_user = _tdconn.validate_auth_header(auth_hdr)
+                except Exception as e:
+                    logger.error(f"Validation error in TDConn.validate_auth_header: {e}")
+                    validated_user = None
+                if not validated_user:
+                    raise PermissionError("Invalid credentials")
+                assume_user = validated_user
+                # Cache for this session (tie to token hash when present)
+                _session_auth_cache[session_id] = {
+                    "principal": validated_user,
+                    "auth_hash": auth_token_sha256,
+                }
 
         rc = RequestContext(
             headers=headers,
@@ -276,6 +315,7 @@ class RequestContextMiddleware(Middleware):
             client_session_id=client_session_id,
             correlation_id=correlation_id,
             assume_user=assume_user,
+            user_id=assume_user,
         )
 
         if context.fastmcp_context:
@@ -1025,6 +1065,10 @@ async def shutdown(sig=None):
         os._exit(1)  # Use immediate process termination instead of sys.exit
 
     _tdconn.close()
+    try:
+        _session_auth_cache.clear()
+    except Exception:
+        pass
     shutdown_in_progress = True
     if sig:
         logger.info(f"Received exit signal {sig.name}")
