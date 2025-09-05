@@ -26,10 +26,14 @@ dataScientist:
   tool:
     - ^base_*
     - ^rag_*
-    - ^fs_*
-    - ^qlty_*
-    - ^sec_userDbPermissions
-    - ^dba_userSqlList
+    - ^sql_*
+    # - ^fs_*
+    # - ^qlty_*
+    # - ^sec_userDbPermissions
+    # - ^dba_userSqlList
+  prompt:
+    - ^rag_*
+    - ^sql_*
 
 eda:
   tool:

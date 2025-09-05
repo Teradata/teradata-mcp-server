@@ -1,0 +1,5 @@
+sql_optimizationGuidelines:
+    type: prompt
+    description: "Guidelines for proposed SQL Optimizations"
+    prompt: |
+        
