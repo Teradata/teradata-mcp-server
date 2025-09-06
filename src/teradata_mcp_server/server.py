@@ -556,12 +556,12 @@ def generate_cube_query_tool(name, cube):
                 raise ValueError(f"Measure '{measure}' not found in cube '{name}'.")
             expr = mdef["expression"]
             mes_lines.append(f"{expr} AS {measure}")
-        met_block = ",\n  ".join(mes_lines)
+        meas_list = ",\n  ".join(mes_lines)
         sql = (
             f"SELECT {'TOP ' + str(top) if top else ''} * from\n"
             "(SELECT\n"
-            f"  {dim_list},\n"
-            f"  {met_block}\n"
+            f"  {dim_list}{',\n  ' if dim_list.strip() else ''}"
+            f"  {meas_list}\n"
             "FROM (\n"
             f"{cube['sql'].strip()}\n"
             f"{'WHERE '+dim_filters if dim_filters else ''}"
@@ -601,18 +601,18 @@ def make_custom_cube_tool(name, cube):
     {cube.get('description', '')}
 
     Expected inputs:
-        * dimensions (str): Comma-separated dimension names to group by. Allowed values for dimensions:
+        * dimensions (str): Comma-separated dimension names to group by. Allowed values for dimensions\n:
 {chr(10).join(dim_lines)}
 
         * measures (str): Comma-separated measure names to aggregate. Allowed values for measures:
 {chr(10).join(measure_lines)}
 
         * dim_filters (str): Filter expression to apply to dimensions. Valid dimension names are: [{', '.join(cube.get('dimensions', {}).keys())}], use valid SQL expressions, for example:
-{(chr(10)+'AND ').join([f"{d} = 'value'" for d in cube.get('dimensions', {}).keys()])}
+\"{' AND '.join([f"{d} {e}" for d, e in zip(list(cube.get('dimensions', {}))[:2], ["= 'value'", "in ('X', 'Y', 'Z')"])])}\"
         * meas_filters (str): Filter expression to apply to computed measures. Valid measure names are: [{', '.join(cube.get('measures', {}).keys())}], use valid SQL expressions, for example:
-{(chr(10)+'AND ').join([f"{m} > 1000" for m in list(cube.get('measures', {}).keys())])}
+\"{' AND '.join([f"{m} {e}" for m, e in zip(list(cube.get('measures', {}))[:2], ["> 1000", "= 100"])])}\"
         * order_by (str): Order expression on any selected dimensions and measures. Use SQL syntax, for example:
-{(chr(10)+', ').join([f"{d} ASC" for d in cube.get('dimensions', {}).keys()])}
+\"{' , '.join([f"{d} {e}" for d, e in zip(list(cube.get('dimensions', {}))[:2], [" ASC", " DESC"])])}\"
         top (int): Limit the number of rows returned, use a positive integer.
 
     Returns:
