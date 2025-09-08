@@ -149,8 +149,9 @@ if queue_handler is not None:
 
 logger = logging.getLogger("teradata_mcp_server")
 
-# Cache: session_id -> { 'principal': str, 'auth_hash': str|None }
-_session_auth_cache: dict[str, dict] = {}
+# Secure authentication cache with TTL and thread safety
+from teradata_mcp_server.tools.auth_cache import SecureAuthCache
+_session_auth_cache = SecureAuthCache(ttl_seconds=int(os.getenv("AUTH_CACHE_TTL", "300")))
 
 # Load tool configuration from packaged profiles.yml (works in wheel/sdist installs)
 with open('profiles.yml', encoding='utf-8') as file:
@@ -210,10 +211,14 @@ class RequestContextMiddleware(Middleware):
     """
     async def on_request(self, context: MiddlewareContext, call_next):
         # Works for any MCP *request* (tool call, list, get, read)
-        raw_headers = get_http_headers() or {}
-        logger.debug(f"Parsing HTTP headers: {dict(raw_headers).keys()}")
-        # Normalize to lowercase keys for consistency
-        headers = {str(k).lower(): v for k, v in dict(raw_headers).items()}
+        try:
+            raw_headers = get_http_headers() or {}
+            logger.debug(f"Parsing HTTP headers: {dict(raw_headers).keys()}")
+            # Normalize to lowercase keys for consistency
+            headers = {str(k).lower(): v for k, v in dict(raw_headers).items()}
+        except Exception as e:
+            logger.debug(f"Error parsing headers: {e}")
+            headers = {}
 
         # Determine auth mode
         auth_mode = os.getenv("AUTH_MODE", "none").lower()
@@ -246,7 +251,8 @@ class RequestContextMiddleware(Middleware):
                 request_id = context.fastmcp_context.request_id
             else:
                 request_id = uuid4().hex
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Error getting request_id from context: {e}")
             request_id = uuid4().hex
 
         # Prefer FastMCP-managed session ID; fall back to request_id if unavailable
@@ -256,70 +262,131 @@ class RequestContextMiddleware(Middleware):
                 # session_id may be a property or a method depending on FastMCP version
                 sid_attr = getattr(context.fastmcp_context, "session_id", None)
                 mcp_session = sid_attr() if callable(sid_attr) else sid_attr
-        except Exception:
+                logger.debug(f"FastMCP context session_id: {mcp_session}, context id: {id(context.fastmcp_context)}")
+        except Exception as e:
+            logger.debug(f"Error getting session_id from context: {e}")
             mcp_session = None
         session_id = mcp_session or request_id
+        
+        logger.debug(f"Session isolation check - request_id: {request_id}, session_id: {session_id}, context: {id(context)}")
 
         # Extract X-Assume-User header (dev-only; honored only in AUTH_MODE=none)
         assume_user = None
         if auth_mode == "none":
+            # In none mode, completely ignore Authorization headers and only process X-Assume-User
             assume_user_value = headers.get("x-assume-user")
             if assume_user_value is not None:
                 if re.match(r"^[A-Za-z0-9_]{1,30}$", assume_user_value):
                     assume_user = assume_user_value
+                    logger.debug(f"AUTH_MODE=none: Using X-Assume-User: {assume_user}")
                 else:
                     logger.warning("Invalid X-Assume-User header value; ignoring")
+            # In AUTH_MODE=none, ignore any Authorization headers completely
+            if auth_hdr:
+                logger.debug("AUTH_MODE=none: Ignoring Authorization header")
 
         # AUTH_MODE=basic: validate once per session; accept Basic or Bearer
-        if auth_mode == "basic":
-            # Reuse cached identity if header hash matches (or if we previously validated within this session)
-            cached = _session_auth_cache.get(session_id)
-            if cached and (auth_token_sha256 == cached.get("auth_hash") or auth_hdr is None):
-                assume_user = cached.get("principal")
-                logger.debug(f"Using cached principal for session {session_id}: {assume_user}")
+        elif auth_mode == "basic":
+            global _tdconn
+            
+            # Require Authorization header - no auth without credentials
+            if not auth_hdr:
+                logger.warning("AUTH_MODE=basic but Authorization header is missing")
+                raise PermissionError("Authentication required")
+            
+            # Check for cached authentication (requires matching auth hash)
+            if auth_token_sha256:
+                cached_principal = _session_auth_cache.get(session_id, auth_token_sha256)
+                if cached_principal:
+                    assume_user = cached_principal
+                    logger.debug(f"Using cached principal for session {session_id}: {assume_user}")
+                else:
+                    # Validate credentials and cache result
+                    scheme = (auth_scheme or "").lower()
+                    if scheme not in ("basic", "bearer"):
+                        logger.warning(f"AUTH_MODE=basic but unsupported auth scheme: {auth_scheme}")
+                        raise PermissionError("Unsupported auth scheme for basic mode")
+                    
+                    # Delegate validation to TDConn helper
+                    try:
+                        validated_user = _tdconn.validate_auth_header(auth_hdr)
+                    except Exception as e:
+                        # Import validation exceptions for specific handling
+                        from teradata_mcp_server.tools.auth_validation import (
+                            RateLimitExceededError, InvalidUsernameError, InvalidTokenFormatError
+                        )
+                        
+                        if isinstance(e, RateLimitExceededError):
+                            logger.warning(f"Rate limit exceeded for auth attempt: {e}")
+                            raise PermissionError("Too many authentication attempts. Please try again later.")
+                        elif isinstance(e, (InvalidUsernameError, InvalidTokenFormatError)):
+                            logger.warning(f"Invalid auth format: {e}")
+                            raise PermissionError("Invalid authentication format")
+                        else:
+                            logger.error(f"Validation error in TDConn.validate_auth_header: {e}")
+                            validated_user = None
+                    
+                    if not validated_user:
+                        raise PermissionError("Invalid credentials")
+                    
+                    assume_user = validated_user
+                    # Cache the validated session
+                    _session_auth_cache.set(session_id, validated_user, auth_token_sha256)
             else:
-                # Require Authorization header
-                if not auth_hdr:
-                    logger.warning("AUTH_MODE=basic but Authorization header is missing")
-                    raise PermissionError("Authentication required")
+                # No token hash available - validate every time (shouldn't happen normally)
+                logger.warning("AUTH_MODE=basic with missing token hash - validating without cache")
                 scheme = (auth_scheme or "").lower()
                 if scheme not in ("basic", "bearer"):
                     logger.warning(f"AUTH_MODE=basic but unsupported auth scheme: {auth_scheme}")
                     raise PermissionError("Unsupported auth scheme for basic mode")
-                # Delegate validation to TDConn helper (validates password or JWT depending on scheme/value)
+                
                 try:
-                    global _tdconn
-                    # Expected to return a database username (str) on success, or None on failure
                     validated_user = _tdconn.validate_auth_header(auth_hdr)
                 except Exception as e:
-                    logger.error(f"Validation error in TDConn.validate_auth_header: {e}")
-                    validated_user = None
+                    # Import validation exceptions for specific handling
+                    from teradata_mcp_server.tools.auth_validation import (
+                        RateLimitExceededError, InvalidUsernameError, InvalidTokenFormatError
+                    )
+                    
+                    if isinstance(e, RateLimitExceededError):
+                        logger.warning(f"Rate limit exceeded for auth attempt: {e}")
+                        raise PermissionError("Too many authentication attempts. Please try again later.")
+                    elif isinstance(e, (InvalidUsernameError, InvalidTokenFormatError)):
+                        logger.warning(f"Invalid auth format: {e}")
+                        raise PermissionError("Invalid authentication format")
+                    else:
+                        logger.error(f"Validation error in TDConn.validate_auth_header: {e}")
+                        validated_user = None
+                
                 if not validated_user:
                     raise PermissionError("Invalid credentials")
+                
                 assume_user = validated_user
-                # Cache for this session (tie to token hash when present)
-                _session_auth_cache[session_id] = {
-                    "principal": validated_user,
-                    "auth_hash": auth_token_sha256,
-                }
 
-        rc = RequestContext(
-            headers=headers,
-            request_id=request_id,
-            session_id=session_id,
-            forwarded_for=forwarded_for,
-            user_agent=user_agent,
-            tenant=tenant,
-            auth_scheme=auth_scheme,
-            auth_token_sha256=auth_token_sha256,
-            client_session_id=client_session_id,
-            correlation_id=correlation_id,
-            assume_user=assume_user,
-            user_id=assume_user,
-        )
+        try:
+            rc = RequestContext(
+                headers=headers,
+                request_id=request_id,
+                session_id=session_id,
+                forwarded_for=forwarded_for,
+                user_agent=user_agent,
+                tenant=tenant,
+                auth_scheme=auth_scheme,
+                auth_token_sha256=auth_token_sha256,
+                client_session_id=client_session_id,
+                correlation_id=correlation_id,
+                assume_user=assume_user,
+                user_id=assume_user,
+            )
 
-        if context.fastmcp_context:
-            context.fastmcp_context.set_state("request_context", rc)
+            if context.fastmcp_context:
+                context.fastmcp_context.set_state("request_context", rc)
+            else:
+                logger.warning("No FastMCP context available - RequestContext not stored")
+            
+        except Exception as e:
+            logger.debug(f"Error creating RequestContext: {e}")
+            
         return await call_next(context)
 
 # ------------------ MCP Server Start ------------------#
@@ -509,14 +576,12 @@ def execute_db_tool(tool, *args, **kwargs):
             with _tdconn.engine.connect() as conn:
                 request_context = None
                 if enable_session_tracing:
-                    # RequestContext originates from RequestContextMiddleware and includes request_id/session_id, etc.
-                    # Retrieve request context from FastMCP Context state (populated by RequestContextMiddleware)
-                    try:
-                        fctx = get_context()
-                        if fctx is not None:
-                            request_context = fctx.get_state("request_context")
-                    except Exception:
-                        request_context = None
+                    ctx = get_context()
+                    request_context = ctx.get_state("request_context") if ctx else None
+                    if request_context:
+                        logger.debug(f"Tool {tool_name}: Retrieved RequestContext for session {request_context.session_id}, assume_user={request_context.assume_user}")
+                    else:
+                        logger.debug(f"Tool {tool_name}: No RequestContext available")
                     queryband = _build_queryband_with_context(tool_name=tool_name, request_context=request_context)
                     try:
                         conn.execute(text(f"SET QUERY_BAND = '{queryband}' FOR TRANSACTION"))
@@ -532,14 +597,12 @@ def execute_db_tool(tool, *args, **kwargs):
             try:
                 request_context = None
                 if enable_session_tracing:
-                    # RequestContext originates from RequestContextMiddleware and includes request_id/session_id, etc.
-                    # Retrieve request context from FastMCP Context state (populated by RequestContextMiddleware)
-                    try:
-                        fctx = get_context()
-                        if fctx is not None:
-                            request_context = fctx.get_state("request_context")
-                    except Exception:
-                        request_context = None
+                    ctx = get_context()
+                    request_context = ctx.get_state("request_context") if ctx else None
+                    if request_context:
+                        logger.debug(f"Tool {tool_name}: Retrieved RequestContext for session {request_context.session_id}, assume_user={request_context.assume_user}")
+                    else:
+                        logger.debug(f"Tool {tool_name}: No RequestContext available")
                     queryband = _build_queryband_with_context(tool_name=tool_name, request_context=request_context)
                     try:
                         cursor = raw.cursor()
@@ -1067,6 +1130,14 @@ async def shutdown(sig=None):
     _tdconn.close()
     try:
         _session_auth_cache.clear()
+    except Exception:
+        pass
+    
+    # Clear session request contexts
+    try:
+        global _session_request_contexts, _session_contexts_lock
+        with _session_contexts_lock:
+            _session_request_contexts.clear()
     except Exception:
         pass
     shutdown_in_progress = True

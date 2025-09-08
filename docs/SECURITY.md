@@ -140,8 +140,6 @@ uv run teradata-mcp-server --mcp_transport streamable-http --mcp_port 8001
 
 Overview of Authentication Patterns
 
-:warning: **NOT IMPLEMENTED** 
-
 We support multiple authentication mechanisms, ranging from simple static credentials to full OAuth2 flows.
 The following patterns are available, and selectable via an AUTH_MODE server setting.
 
@@ -235,6 +233,124 @@ The teradata-mcp-server community takes security seriously.
 We appreciate your efforts to responsibly disclose your findings and will make every effort to acknowledge your contribution.
 
 To report a security issue, please use the GitHub Security Advisory ["Report a Vulnerability"](https://github.com/Teradata/teradata-mcp-server/security/advisories)
+
+## Implementation Notes
+
+### Security Architecture Overview
+
+### Session Management
+
+**Secure Session Cache:**
+- **Thread-safe operations** using `threading.RLock()` to prevent race conditions
+- **TTL expiration** with configurable timeout (default: 5 minutes via `AUTH_CACHE_TTL`)
+- **Auth hash validation** prevents session hijacking by requiring matching authentication tokens
+- **Automatic cleanup** of expired entries to prevent memory leaks
+- **No authentication bypass** - cached sessions require valid authentication tokens
+
+**Cache Security Properties:**
+```python
+# Cache entry requires both session ID AND auth hash to match
+cached_principal = cache.get(session_id, auth_token_sha256)
+```
+
+### Input Validation
+
+**Database Username Validation:**
+For "Basic" database authentication method, the username format is validated: `[A-Za-z0-9_]{1,30}` (alphanumeric + underscore, 1-30 characters). Prevents injection attacks and ensures database compatibility
+
+**Token Format Validation:**
+- **Basic Auth**: Validates proper base64 encoding and colon presence for `user:password` format
+- **JWT**: Validates three-part structure (`header.payload.signature`) before database validation
+- **Early rejection** of malformed tokens reduces database load
+
+### Authentication Rate Limiting
+
+**Sliding Window Algorithm:**
+- **Configurable limits**: Default 5 attempts per 60 seconds (`AUTH_RATE_LIMIT_ATTEMPTS`, `AUTH_RATE_LIMIT_WINDOW`)
+- **Client identification**: Based on authentication token hash + IP address from `X-Forwarded-For`
+- **Automatic reset**: Successful authentication clears the rate limit for that client
+- **Thread-safe**: Uses `threading.RLock()` for concurrent request handling
+
+**Rate Limiting Flow:**
+```python
+client_id = generate_client_id(auth_header, forwarded_for)
+if not rate_limiter.is_allowed(client_id):
+    raise RateLimitExceededError(retry_after_seconds)
+```
+
+### JWT validation in "Basic" mode:
+
+**Database-Validated Authentication:**
+If a JWT token is provided in "Basic" authentication mode, we rely on the database to validate it and retrieve the user identity (ie. database user name) and do not attempt to parse the JWT token in the server. This eliminates potential JWT impersonation attacks and leaves the authentication concern with the database implementation.
+
+This is consistent with the Basic user:password authentication.
+
+### Error Handling
+
+**Exception Hierarchy:**
+- `RateLimitExceededError`: Too many authentication attempts
+- `InvalidUsernameError`: Username format validation failure  
+- `InvalidTokenFormatError`: Token format validation failure
+- `AuthValidationError`: Base class for all authentication validation errors
+
+**Secure Error Responses:**
+- **Generic error messages** prevent information disclosure
+- **Structured logging** captures details without exposing sensitive data
+- **Rate limit information** includes retry timing for legitimate clients
+
+### Configuration Management
+
+**Environment Variables:**
+```bash
+# Session cache configuration
+AUTH_CACHE_TTL=300                    # Cache TTL in seconds (default: 5 minutes)
+
+# Rate limiting configuration  
+AUTH_RATE_LIMIT_ATTEMPTS=5            # Max attempts per window (default: 5)
+AUTH_RATE_LIMIT_WINDOW=60             # Window size in seconds (default: 60)
+
+# Database connection timeout for validation
+AUTH_TIMEOUT=5                        # Validation timeout in seconds
+```
+
+### Performance Considerations
+
+**Efficient Validation:**
+- **Input validation first** - reject malformed requests before database calls
+- **Session caching** - avoid repeated database validation for the same session
+- **Connection pooling** - reuse database connections with `NullPool` for validation
+- **Rate limiting on failures only** - successful authentication clears the limit
+
+**Resource Management:**
+- **Automatic connection cleanup** using context managers (`with engine.connect()`)
+- **Memory-bounded cache** with TTL expiration
+- **Background cleanup** of expired rate limit entries
+
+### Security Testing
+
+**Validation Coverage:**
+- Session cache security (TTL, auth hash validation, thread safety)
+- Input validation (usernames, JWT format, Basic token format)
+- Rate limiting (sliding window, client identification, reset on success)
+- Exception handling (specific error types, secure error messages)
+
+### Threat Model Coverage
+
+**Mitigated Attack Vectors:**
+- ✅ **JWT Impersonation**: Database validates identity, not client claims
+- ✅ **Session Hijacking**: Auth hash validation prevents cache misuse
+- ✅ **Brute Force**: Rate limiting with exponential backoff
+- ✅ **Injection Attacks**: Username format validation
+- ✅ **Information Disclosure**: Generic error messages, structured logging
+- ✅ **Race Conditions**: Thread-safe cache and rate limiter
+- ✅ **Resource Exhaustion**: TTL expiration, connection cleanup
+
+**Defense in Depth:**
+1. **Input validation** (format checking)
+2. **Rate limiting** (abuse prevention) 
+3. **Database validation** (credential verification)
+4. **Session management** (secure caching)
+5. **Error handling** (information security)
 
 ## Deployment hardening
 

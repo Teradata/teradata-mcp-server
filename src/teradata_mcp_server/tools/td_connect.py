@@ -11,8 +11,14 @@ from sqlalchemy.pool import QueuePool, NullPool
 from .utils import (
     parse_auth_header,
     parse_basic_credentials,
-    extract_unverified_jwt_claims,
-    map_principal_from_claims,
+)
+from .auth_validation import (
+    AuthValidator,
+    RateLimiter,
+    rate_limited_auth,
+    InvalidUsernameError,
+    InvalidTokenFormatError,
+    RateLimitExceededError,
 )
 
 load_dotenv()
@@ -32,6 +38,11 @@ class TDConn:
     #     It will read the connection URL from the environment variable DATABASE_URI
     #     It will parse the connection URL and create a SQLAlchemy engine connected to the database
     def __init__(self, connection_url: str | None = None):
+        # Initialize rate limiter for auth attempts
+        self._rate_limiter = RateLimiter(
+            max_attempts=int(os.getenv("AUTH_RATE_LIMIT_ATTEMPTS", "5")),
+            window_seconds=int(os.getenv("AUTH_RATE_LIMIT_WINDOW", "60"))
+        )
         if connection_url is None and os.getenv("DATABASE_URI") is None:
             logger.warning("DATABASE_URI is not specified, database connection will not be established.")
             self.engine = None
@@ -96,64 +107,89 @@ class TDConn:
             The returned principal is the Basic username.
           - If scheme == Bearer: treat value as a JWT and validate using
             LOGMECH=JWT with LOGDATA=token=<jwt>. The returned principal is
-            inferred from JWT claims (db_user → preferred_username → sub).
+            the authenticated database user from the connection.
+        
+        Raises:
+          - RateLimitExceededError: If too many auth attempts from this client
+          - InvalidUsernameError: If username format is invalid  
+          - InvalidTokenFormatError: If token format is invalid
         """
+        # Apply rate limiting
+        from .auth_validation import generate_client_id
+        client_id = generate_client_id(auth_header)
+        if not self._rate_limiter.is_allowed(client_id):
+            raise RateLimitExceededError(self._rate_limiter.window_seconds)
+        
         scheme, value = parse_auth_header(auth_header)
         if not scheme or not value:
             return None
 
         if scheme == "basic":
+            # Validate Basic token format first
+            if not AuthValidator.validate_basic_token(value):
+                raise InvalidTokenFormatError("Invalid Basic authentication token format")
+                
             user, secret = parse_basic_credentials(value)
             if not user or not secret:
                 return None
-            ok = self._quick_password_validation(user, secret, self._default_basic_logmech)
-            return user if ok else None
+                
+            # Validate username format
+            if not AuthValidator.validate_username(user):
+                raise InvalidUsernameError(f"Invalid username format: {user}")
+            
+            result = self._validate_basic_credentials(user, secret, self._default_basic_logmech)
+            if result:
+                # Clear rate limit on successful authentication
+                self._rate_limiter.clear_client(client_id)
+            return result
 
         if scheme == "bearer":
             token = value
             if not token:
                 return None
-            ok = self._quick_jwt_validation(token)
-            if not ok:
-                return None
-            claims = extract_unverified_jwt_claims(token)
-            principal = map_principal_from_claims(
-                claims,
-                strategy=os.getenv("USERMAP_STRATEGY", "claim:preferred_username"),
-                fallback=None,
-            )
-            return principal
+                
+            # Validate JWT format first
+            if not AuthValidator.validate_jwt_format(token):
+                raise InvalidTokenFormatError("Invalid JWT token format")
+            
+            result = self._validate_jwt_token(token)
+            if result:
+                # Clear rate limit on successful authentication  
+                self._rate_limiter.clear_client(client_id)
+            return result
 
         # Unsupported scheme
         return None
 
-    # ----------------- quick validation against TD ---------------------
-    def _quick_password_validation(self, user: str, secret: str, logmech: str) -> bool:
-        """Attempt a short-lived Teradata connection with user/password.
-        Uses the same host/port/db as the service account, but swaps creds and LOGMECH.
-        Returns True on success, False otherwise.
+    # ----------------- credential validation against TD ---------------------
+    def _validate_basic_credentials(self, user: str, secret: str, logmech: str) -> Optional[str]:
+        """Validate user/password credentials against Teradata database.
+        Uses the same host/port as the service account, but connects to the user's default database.
+        Returns the validated username on success, None otherwise.
         """
         try:
+            # For basic credential validation, just validate the credentials without specifying a database
+            # Let Teradata use the user's default database
             sqlalchemy_url = (
-                f"teradatasql://{user}:{secret}@{self._base_host}:{self._base_port}/{self._base_db}?LOGMECH={logmech}"
+                f"teradatasql://{user}:{secret}@{self._base_host}:{self._base_port}?LOGMECH={logmech}"
             )
             engine = create_engine(
                 sqlalchemy_url,
                 poolclass=NullPool,
-                connect_args={"QUERY_TIMEOUT": 5},
+                # Note: QUERY_TIMEOUT is not supported in connect_args for teradatasql driver
             )
             with engine.connect() as conn:
                 conn.exec_driver_sql("SELECT 1")
             engine.dispose()
-            return True
+            return user  # Return the validated username
         except Exception as e:
-            logger.debug(f"Password validation failed for user '{user}' with LOGMECH={logmech}: {e}")
-            return False
+            logger.debug(f"Basic credential validation failed for user '{user}' with LOGMECH={logmech}: {e}")
+            return None
 
-    def _quick_jwt_validation(self, jwt_token: str) -> bool:
-        """Attempt a short-lived Teradata connection using LOGMECH=JWT.
-        Passes the token via LOGDATA=token=<jwt>.
-        Returns True on success, False otherwise.
+    def _validate_jwt_token(self, jwt_token: str) -> Optional[str]:
+        """Validate JWT token against Teradata database and return authenticated username.
+        Uses LOGMECH=JWT with the token passed via LOGDATA.
+        Returns the database username of the authenticated user, None on failure.
         """
         try:
             # No username needed for JWT LOGMECH
@@ -163,12 +199,14 @@ class TDConn:
             engine = create_engine(
                 sqlalchemy_url,
                 poolclass=NullPool,
-                connect_args={"QUERY_TIMEOUT": 5},
+                # Note: QUERY_TIMEOUT is not supported in connect_args for teradatasql driver
             )
             with engine.connect() as conn:
-                conn.exec_driver_sql("SELECT 1")
+                # Get the authenticated database username
+                result = conn.exec_driver_sql("SELECT USER")
+                username = result.fetchone()[0]
             engine.dispose()
-            return True
+            return username
         except Exception as e:
-            logger.debug(f"JWT validation failed via LOGMECH=JWT: {e}")
-            return False
+            logger.debug(f"JWT token validation failed via LOGMECH=JWT: {e}")
+            return None
