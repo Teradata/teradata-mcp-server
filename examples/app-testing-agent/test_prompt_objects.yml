@@ -1,0 +1,307 @@
+
+test_baseTools:
+  type: prompt
+  description: "Test all base tools in the Teradata MCP server."
+  prompt: |
+   You are a Tester who is an expert in testing the functionality of tools in the base module. You will test all tools in the module.
+   ## your role will work through the phases
+   Perform the phases in order, and do not skip any phase.
+   
+   ## Phase 0 - Get a list of databases
+   - Get a list of databases from the user. Use the base_databaseList tool to get the list. The tool should return a list of databases in the Teradata system, if no data is returned then fail this test.
+   ## Phase 1 - Get the list of tables in each database
+   - For the DBC database, get the list of tables. Use the base_tableList tool to get the list. The tool should return a list of tables in the DBC database, if no data is returned then fail this test.
+   ## Phase 2 - Create a test table in your default database
+   - what is your default database?
+   - Create a customer table in your default database called test_customer, use the following code: 
+    CREATE TABLE test_customer (Cust_id INTEGER, Customer_Name VARCHAR(50), Email VARCHAR(100), Phone VARCHAR(20),Registration_Date DATE); 
+ 
+   - Add rows to the test_customer table using the following SQL:
+    INSERT INTO test_customer VALUES (1, 'John Smith', 'john.smith@email.com', '555-0101', DATE '2024-01-15');
+    INSERT INTO test_customer VALUES (2, 'Jane Doe', 'jane.doe@email.com', '555-0102', DATE '2024-02-20');
+    INSERT INTO test_customer VALUES (3, 'Bob Johnson', 'bob.johnson@email.com', '555-0103', DATE '2024-03-10');
+    INSERT INTO test_customer VALUES (4, 'Alice Brown', 'alice.brown@email.com', '555-0104', DATE '2024-04-05');
+    INSERT INTO test_customer VALUES (5, 'Charlie Wilson', 'charlie.wilson@email.com', '555-0105', DATE '2024-05-12');
+    INSERT INTO test_customer VALUES (6, 'Diana Davis', 'diana.davis@email.com', '555-0106', DATE '2024-06-18');
+    INSERT INTO test_customer VALUES (7, 'Edward Miller', 'edward.miller@email.com', '555-0107', DATE '2024-07-22');
+    INSERT INTO test_customer VALUES (8, 'Fiona Garcia', 'fiona.garcia@email.com', '555-0108', DATE '2024-08-03');
+    INSERT INTO test_customer VALUES (9, 'George Lee', 'george.lee@email.555-0109', DATE '2024-08-15');
+    INSERT INTO test_customer VALUES (10, 'Helen Taylor', 'helen.taylor@email.com', '555-0110', DATE '2024-08-25');
+   ## Phase 3 - Test the query tool
+   - test the query tool by running a query on the test_customer table. Use the base_readQuery tool to run the query. The query should return the 10 rows you added in the previous phase, if no data is returned then fail this test.
+   - test the query tool by running a query on the test_customer table with a filter. Use the base_readQuery tool to run the query. The query should return only the rows that match the filter, if no data is returned then fail this test. (example of a filter is Cust_id > 5)
+   ## Phase 4 - Test the table DDL tool
+   - Get the DDL of the test_customer table. Use the base_tableDDL tool to get the DDL. The tool should return the DDL of the test_customer table, if no data is returned then fail this test.
+   ## Phase 5 - Test the column description tool
+   - Get the column description of the test_customer table. Use the base_columnDescription tool to get the columns description. The tool should return the column description of the test_customer table, if no data is returned then fail this test.
+   ## Phase 6 - Test the table preview tool
+   - Get the preview of the test_customer table. Use the base_tablePreview tool to get the preview. The tool should return the first 5 rows of the test_customer table and the column information, if no data is returned then fail this test.
+   ## Phase 7 - Test the table affinity tool
+   - Get the table affinity of the test_customer table. Use the base_tableAffinity tool to get the affinity. The tool should return the table affinity of the test_customer table, if no data is returned then fail this test.
+   ## Phase 8 - Test the table usage tool
+
+test_dbaTools:
+  type: prompt
+  description: "Test all the DBA MCP tools. (prompt_type: reporting)"
+  prompt: |
+    You are a Tester who is an expert in testing the functionality of tools in the dba module. You will test all tools in the module.
+    ## your role will work through the phases
+    Perform the phases in order, and do not skip any phase.
+    
+    ## Phase 0 - set up test environment 
+    - what is your default database?
+    - Create a customer table in your default database called test_customer, use the following code CREATE TABLE test_customer (Cust_id INTEGER, Customer_Name VARCHAR(50), Email VARCHAR(100), Phone VARCHAR(20),Registration_Date DATE); A test_customer table should be created.
+    - Add 10 rows to the test_customer table. use the following script:`
+      INSERT INTO test_customer VALUES (1, 'John Smith', 'john.smith@email.com', '555-0101', DATE '2024-01-15');
+      INSERT INTO test_customer VALUES (2, 'Jane Doe', 'jane.doe@email.com', '555-0102', DATE '2024-02-20');
+      INSERT INTO test_customer VALUES (3, 'Bob Johnson', 'bob.johnson@email.com', '555-0103', DATE '2024-03-10');
+      INSERT INTO test_customer VALUES (4, 'Alice Brown', 'alice.brown@email.com', '555-0104', DATE '2024-04-05');
+      INSERT INTO test_customer VALUES (5, 'Charlie Wilson', 'charlie.wilson@email.com', '555-0105', DATE '2024-05-12');
+      INSERT INTO test_customer VALUES (6, 'Diana Davis', 'diana.davis@email.com', '555-0106', DATE '2024-06-18');
+      INSERT INTO test_customer VALUES (7, 'Edward Miller', 'edward.miller@email.com', '555-0107', DATE '2024-07-22');
+      INSERT INTO test_customer VALUES (8, 'Fiona Garcia', 'fiona.garcia@email.com', '555-0108', DATE '2024-08-03');
+      INSERT INTO test_customer VALUES (9, 'George Lee', 'george.lee@email.com', '555-0109', DATE '2024-08-15');
+      INSERT INTO test_customer VALUES (10, 'Helen Taylor', 'helen.taylor@email.com', '555-0110', DATE '2024-08-25');`
+
+    ## Phase 1 - Get a list of all the SQL executed by a user
+    - what is your user name?
+    - test the query tool by running a query on the test_customer table. Use the base_readQuery tool to run the query. The query should return the 10 rows you added in the previous phase, if no data is returned then fail this test.
+    - test the query tool by running a query on the test_customer table with a filter. Use the base_readQuery tool to run the query. The query should return only the rows that match the filter, if no data is returned then fail this test. (example of a filter is Cust_id > 5)
+    - Get a list of all the SQL executed by your user name (e.g. demo_user) in the last 7 days using the dba_userSqlList tool. A list of all SQL statements should be returned, if no data is returned then fail this test
+    
+    ## Phase 2 - Get a list of all the SQL executed against a table
+    - Get a list of all the SQL executed against a table (e.g. test_customer) in the last 7 days using the dba_tableSqlList tool. A list of all SQL statements should be returned, if no data is returned then fail this test
+
+    ## Phase 3 - get a list of the current perm table space for a tables
+    - Get the current perm table space for a test_customer table using the dba_tableSpace tool. The current perm table space should be returned, if no data is returned then fail this test.
+
+    ## Phase 4 - get a list of the current perm database space for a database
+    - Get the current perm database space for your default database (e.g. demo_user) using the dba_databaseSpace tool. The current perm database space should be returned, if no data is returned then fail this test.
+
+    ## Phase 5 - get a list of the current database version
+    - Get the current database version using the dba_databaseVersion tool. The current database version should be returned, if no data is returned then fail this test. 
+
+    ## Phase 6 - get a list of the system usage summary metrics
+    - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket using the dba_resusageSummary tool. The system usage summary metrics should be returned, if no data is returned then fail this test  
+
+    ## Phase 7 - get a list of the system usage for a user
+    - Get the system usage for your user name (e.g. demo_user) using the dba_resusageSummary tool. The system resusage for the user (e.g. demo_user) should be returned, if no data is returned then fail this test.
+
+    ## Phase 8 - get a list of the system flow control metrics
+    - Get the Teradata system flow control metrics by day and hour using the dba_flowControl tool. The system flow control metrics should be returned, if no data is returned then fail this test.
+
+    ## Phase 9 - get a list of the user feature usage metrics
+    - Get the user feature usage metrics using the dba_featureUsage tool. The user feature usage metrics should be returned, if no data is returned then fail this test.
+
+    ## Phase 10 - get a list of the user delay metrics
+    - Get the Teradata user delay metrics using the dba_userDelay tool. The user delay metrics should be returned, if no data is returned then fail this test.
+
+    ## Phase 11 - get a list of the table usage impact by a user
+    - Get the usage of a table test_customer by your user name (e.g. demo_user) using the dba_tableUsageImpact tool. The usage of the table by the user should be returned, if no data is returned then fail this test.
+
+    ## Phase 12 - get a list of the session information for a user
+    - Get the session information for your user name (e.g. demo_user) using the dba_sessionInfo tool. The session information for the user should be returned, if no data is returned then fail this test.
+
+    ## Phase 13 - Clean up
+    - Drop the test_customer table. Use the base_readQuery tool to drop the table. The tool should return a success message.
+    ## Communication guidelines:
+          - Be concise but informative in your explanations
+          - Clearly indicate which phase the process is currently in
+          - summarize the success or any failure of the phase before moving to the next phase
+    ## Final output guidelines:
+          - return in markdown results for all phases as a table including the phase number, description, success or failure status, and a description of the outcome.
+          - if a tool does not return any results, then fail that test and indicate it in the outcome.
+    ## Example output:
+
+          | Phase | Description | Status | Outcome |
+          |-------|-------------|--------|---------|
+          | 1     | Get a list of all the SQL executed against a table (e.g. test_customer) in the last 7 days | Successful |  |
+          | 2     | Get the current perm table space for a test_customer table | Successful |  |
+          | 3     | Get the current perm database space for a database (e.g. demo_user) | Successful |  |
+          | 4     | Get the current database version | Successful |  |
+          | 5     | Get the Teradata system usage summary metrics | Successful |  |
+          | 6     | Get the system usage for a user (e.g. demo_user) | Successful |  |
+          | 7     | Get the Teradata system flow control metrics | Successful |  |
+          | 8     | Get the user feature usage metrics | Successful |  |
+          | 9     | Get the Teradata user delay metrics | Successful |  |
+          | 10    | Get the usage of a table (e.g. test_customer) by a user (e.g. demo_user) | Successful |  |
+          | 11    | Get the session information for a user (e.g. demo_user) | Successful |  |
+          | 12    | Drop the test_customer table | Successful |  |
+
+test_qltyTools:
+  type: prompt
+  description: "Test all the qlty MCP tools. (prompt_type: reporting)"
+  prompt: |
+    You are a Tester who is an expert in testing the functionality of tools in the qlty module. You will test all tools in the module.
+    ## your role will work through the phases
+    Perform the phases in order, and do not skip any phase.
+    
+    ## Phase 0 - set up test environment
+    - what is your default database?
+    - Create a customer table in your default database called test_customer, use the following code CREATE TABLE test_customer (Cust_id INTEGER, Customer_Name VARCHAR(50), Email VARCHAR(100), Phone VARCHAR(20),Registration_Date DATE); A test_customer table should be created.
+    - Add 10 rows to the test_customer table. use the following script:`
+      INSERT INTO test_customer VALUES (1, 'John Smith', 'john.smith@email.com', '555-0101', DATE '2024-01-15');
+      INSERT INTO test_customer VALUES (2, 'Jane Doe', 'jane.doe@email.com', '555-0102', DATE '2024-02-20');
+      INSERT INTO test_customer VALUES (3, 'Bob Johnson', 'bob.johnson@email.com', , DATE '2024-03-10');
+      INSERT INTO test_customer VALUES (4, 'Alice Brown', 'alice.brown@email.com', '555-0104', DATE '2024-04-05');
+      INSERT INTO test_customer VALUES (5, 'Charlie Wilson', 'charlie.wilson@email.com', '555-0105', DATE '2024-05-12');
+      INSERT INTO test_customer VALUES (6, 'Diana Davis', 'diana.davis@email.com', '555-0106', DATE '2024-06-18');
+      INSERT INTO test_customer VALUES (7, 'Edward Miller', 'edward.miller@email.com', '555-0107', DATE '2024-07-22');
+      INSERT INTO test_customer VALUES (8, 'Fiona Garcia', 'fiona.garcia@email.com', '555-0108', DATE '2024-08-03');
+      INSERT INTO test_customer VALUES (9, 'George Lee', 'george.lee@email.com', '555-0109', DATE '2024-08-15');
+      INSERT INTO test_customer VALUES (-10, 'Helen Taylor', 'helen.taylor@email.com', '555-0110', DATE '2024-08-25');`
+
+    ## Phase 1 - test the missing values tool
+    - Use the qlty_missingValues tool to check for missing values in the test_customer table.
+    - The tool should return a list of column names with missing values, if no data is returned then fail this test.
+
+    ## Phase 2 - test the negative values tool
+    - Use the qlty_negativeValues tool to check for negative values in the test_customer table.
+    - The tool should return a list of column names with negative values, if no data is returned then fail this test.
+
+    ## Phase 3 - test the distinct categories tool
+    - Use the qlty_distinctCategories tool to get distinct categories in the customer_name column of the test_customer table.
+    - The tool should return a list of distinct categories, if no data is returned then fail this test.
+
+    ## Phase 4 - test the standard deviation tool
+    - Use the qlty_standardDeviation tool to get the mean and standard deviation for the customer_id column in the test_customer table.
+    - The tool should return the mean and standard deviation, if no data is returned then fail this test.
+
+    ## Phase 5 - test the column summary tool
+    - Use the qlty_columnSummary tool to get the column summary statistics for the test_customer table.
+    - The tool should return the summary statistics for each column in the table, if no data is returned then fail this test. 
+
+    ## Phase 6 - test the univariate statistics tool
+    - Use the qlty_univariateStatistics tool to get the univariate statistics for the test_customer table.
+    - The tool should return the univariate statistics for each column in the table, if no data is returned then fail this test.
+
+    ## Phase 7 - test the rows with missing values tool
+    - Use the qlty_rowsWithMissingValues tool to get rows with missing values in the test_customer table.
+    - The tool should return the rows that have missing values in any column, if no data is returned then fail this test.
+
+    ## Phase 8 - Clean up
+    - Drop the test_customer table. Use the base_readQuery tool to drop the table. The tool should return a success message.
+
+    ## Communication guidelines:
+          - Be concise but informative in your explanations
+          - Clearly indicate which phase the process is currently in
+          - summarize the success or any failure of the phase before moving to the next phase
+    ## Final output guidelines:
+          - return in markdown results for all phases as a table including the phase number, description, success or failure status, and a description of the outcome.
+          - if a tool does not return any results, then fail that test and indicate it in the outcome.
+    ## Example output:
+          - | Phase | Description | Status | Outcome |
+          - |-------|-------------|--------|---------|
+          - | 0     | Set up test environment | Success | Test environment set up successfully |
+          - | 1     | Test missing values tool | Success | Missing values tool returned expected results |
+          - | 2     | Test negative values tool | Success | Negative values tool returned expected results |
+          - | 3     | Test distinct categories tool | Success | Distinct categories tool returned expected results |
+          - | 4     | Test standard deviation tool | Success | Standard deviation tool returned expected results |
+          - | 5     | Test column summary tool | Success | Column summary tool returned expected results |
+          - | 6     | Test univariate statistics tool | Success | Univariate statistics tool returned expected results |
+          - | 7     | Test rows with missing values tool | Success | Rows with missing values tool returned expected results |
+          - | 8     | Clean up test environment | Success | Test environment cleaned up successfully |
+
+test_ragTools:
+    type: prompt
+    description: "Test all the rag MCP tools. (prompt_type: reporting)"
+    prompt: |
+        You are a Tester who is an expert in testing the functionality of tools in the rag module. You will test all tools in the module.
+        ## your role will work through the phases
+        Perform the phases in order, and do not skip any phase.
+        
+        ## Phase 0 - set up test environment
+
+
+        ## Communication guidelines:
+            - Be concise but informative in your explanations
+            - Clearly indicate which phase the process is currently in
+            - summarize the success or any failure of the phase before moving to the next phase
+        ## Final output guidelines:
+            - return in markdown results for all phases as a table including the phase number, description, success or failure status, and a description of the outcome.
+            - if a tool does not return any results, then fail that test and indicate it in the outcome.
+        ## Example output:
+            - | Phase | Description | Status | Outcome |
+            - |-------|-------------|--------|---------|
+            - | 0     | Set up test environment | Success | Test environment set up successfully |
+
+test_secTools:
+  type: prompt
+  description: "Test all the sec MCP tools. (prompt_type: reporting)"
+  prompt: |
+    You are a Tester who is an expert in testing the functionality of tools in the sec module. You will test all tools in the module.
+    ## your role will work through the phases
+    Perform the phases in order, and do not skip any phase.
+
+    ## Phase 1 - test the user database permissions tool
+    - Use the sec_userDbPermissions tool to get the database permissions for your user name(e.g. demo_user).
+    - The tool should return a list of database permissions assigned to the user, if no data is returned then fail this test.
+
+    ## Phase 2 - test the role permissions tool
+    - Use the sec_rolePermissions tool to get the role permissions for your user name (e.g. demo_user).
+    - The tool should return a list of role permissions assigned to the user, if no data is returned then fail this test.
+
+    ## Phase 3 - test the user roles tool
+    - Use the sec_userRoles tool to get the roles assigned to your user name (e.g. demo_user).
+    - The tool should return a list of roles assigned to the user, if no data is returned then fail this test.
+
+
+    ## Communication guidelines:
+          - Be concise but informative in your explanations
+          - Clearly indicate which phase the process is currently in
+          - summarize the success or any failure of the phase before moving to the next phase
+    ## Final output guidelines:
+          - return in markdown results for all phases as a table including the phase number, description, success or failure status, and a description of the outcome.
+          - if a tool does not return any results, then fail that test and indicate it in the outcome.
+    ## Example output:
+          - | Phase | Description | Status | Outcome |
+          - |-------|-------------|--------|---------|
+          - | 0     | Set up test environment | Success | Test environment set up successfully |
+          - | 1     | Test user database permissions tool | Success | User database permissions tool returned expected results |
+          - | 2     | Test role permissions tool | Success | Role permissions tool returned expected results |
+          - | 3     | Test user roles tool | Success | User roles tool returned expected results |
+          - | 4     | Clean up test environment | Success | Test environment cleaned up successfully |
+
+test_fsTools:
+    type: prompt
+    description: "Test all the fs MCP tools. (prompt_type: reporting)"
+    prompt: |
+        You are a Tester who is an expert in testing the functionality of tools in the fs module. You will test all tools in the module.
+        ## your role will work through the phases
+        Perform the phases in order, and do not skip any phase.
+        
+        ## Phase 0 - set up test environment
+
+
+        ## Communication guidelines:
+            - Be concise but informative in your explanations
+            - Clearly indicate which phase the process is currently in
+            - summarize the success or any failure of the phase before moving to the next phase
+        ## Final output guidelines:
+            - return in markdown results for all phases as a table including the phase number, description, success or failure status, and a description of the outcome.
+            - if a tool does not return any results, then fail that test and indicate it in the outcome.
+        ## Example output:
+          - | Phase | Description | Status | Outcome |
+          - |-------|-------------|--------|---------|
+          - | 0     | Set up test environment | Success | Test environment set up successfully |
+
+test_evsTools:
+  type: prompt
+  description: "Test all the evs MCP tools. (prompt_type: reporting)"
+  prompt: |
+    You are a Tester who is an expert in testing the functionality of tools in the evs module. You will test all tools in the module.
+    ## your role will work through the phases
+    Perform the phases in order, and do not skip any phase.
+    
+    ## Phase 0 - set up test environment
+
+    ## Communication guidelines:
+          - Be concise but informative in your explanations
+          - Clearly indicate which phase the process is currently in
+          - summarize the success or any failure of the phase before moving to the next phase
+    ## Final output guidelines:
+          - return in markdown results for all phases
+          - Example:
+          ***Phase 0:*** list databases:  Successful
+          ***Phase 1:*** list tables in DBC database:  Successful
+          ***Phase 2:*** Create test_customer table:  Failed          

@@ -1,0 +1,80 @@
+# Example custom profiles configuration
+# Copy this file to your working directory as "profiles.yml" to customize
+
+# Override or extend the packaged default profiles
+custom:
+  tool:
+    - cust*
+    - base_databaseList
+    - base_tableList    
+  prompt:
+    - cust*
+  resource:
+    - cust*
+  run:
+    database_uri: "teradata://${TD_USER}:${TD_PASSWORD}@demo-mcp-vikzqtnd0db0nglk.env.clearscape.teradata.com:1025"
+    mcp_transport: "streamable-http"
+    mcp_port: 8001
+
+# Example: Finance team profile with run configuration
+finance:
+  tool:
+    - base_.*        # Basic database tools
+    - finance_.*     # Finance-specific tools
+    - qlty_.*        # Data quality tools
+  prompt:
+    - finance_.*     # Finance prompts
+  resource:
+    - finance_.*     # Finance resources
+  run:
+    database_uri: "teradata://finance_user:${FINANCE_DB_PASSWORD}@prod-env.teradata.com:1025/finance_db"
+    mcp_transport: "sse"
+    mcp_host: "0.0.0.0"
+    mcp_port: 8002
+
+# Example: Development profile with full run configuration
+dev:
+  tool:
+    - .*             # All tools available in development
+  prompt:
+    - .*             # All prompts available
+  resource:
+    - .*             # All resources available
+  run:
+    database_uri: "teradata://dev_user:dev_password@localhost:1025/dev_db"
+    mcp_transport: "stdio"
+
+# Example: Production profile with security restrictions
+production:
+  tool:
+    - base_.*        # Only base tools
+    - ^(?!.*test).*  # Exclude test tools
+  prompt:
+    - ^(?!.*debug).*  # Exclude debug prompts
+  resource:
+    - .*
+  run:
+    database_uri: "${PROD_DATABASE_URI}"  # Must be set in environment
+    mcp_transport: "sse"
+    mcp_host: "127.0.0.1"
+    mcp_port: 8001
+
+# Example: Restricted read-only query profile
+read_only:
+  tool:
+    - base_databaseList
+    - base_tableList
+    - base_tablePreview
+    - base_readQuery
+  prompt:
+    - read_only_.*
+  resource:
+    - .*
+
+sales:
+  tool:
+    - sales_*    
+  prompt:
+    - sales_*
+  resource:
+    - sales_*    

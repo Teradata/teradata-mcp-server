@@ -1,7 +1,7 @@
 
 # Customizing the Teradata MCP Server: Semantic Layers
 
-The Teradata MCP server enables rapid creation of domain-focused semantic layers by allowing you to declaratively define custom tools, prompts, cubes, and glossary terms. This approach empowers admins and data teams to tailor the MCP experience to specific business domains—without writing Python code or modifying the server itself.
+The Teradata MCP server enables rapid creation of domain-focused semantic layers by allowing you to declaratively define custom tools, prompts, cubes, and glossary terms. Whether you've installed from PyPI (`pip install teradata-mcp-server`) or built from source, you can customize the server by placing YAML files in your current working directory. This approach empowers admins and data teams to tailor the MCP experience to specific business domains—without writing Python code or modifying the server itself.
 
 ## Key principles
 
@@ -62,10 +62,17 @@ glossary:
      - buyer
 ```
 
-Profiles are specified in the `profiles.yml` file at the project root. Each profile defines which tools, prompts, and resources are enabled for a given context (e.g., user group, domain, or use case). Profiles use regular expression patterns to match tool, prompt, and resource names, allowing flexible grouping and reuse. 
+## Configuration Files and Loading
 
-For example, the following `profiles.yml` enables different sets of tools for two contexts (sales and dba):
+The server uses a hierarchical configuration system that loads configurations from multiple sources:
 
+### Profiles Configuration
+
+**Default profiles** are packaged with the server installation. You can override or extend these by creating a `profiles.yml` file in your **current working directory** (where you run the server from).
+
+Each profile defines which tools, prompts, and resources are enabled for a given context (e.g., user group, domain, or use case). Profiles use regular expression patterns to match tool, prompt, and resource names, allowing flexible grouping and reuse.
+
+**Example `profiles.yml` in your working directory:**
 ```yaml
 sales:
   tool:
@@ -83,16 +90,34 @@ dba:
     - dba_.*
 ```
 
+**Configuration loading priority:**
+1. **Packaged defaults** - Built-in profiles shipped with the package
+2. **Working directory** - Your local `profiles.yml` (overrides packaged profiles)
+
+### Running with Profiles
+
 You can run the MCP server with the `--profile` command-line argument or the `PROFILE` environment variable to select a profile at startup. If the profile is unspecified or set to `all`, all tools, resources, and prompts are loaded by default.
 
-For example, to run the server with the pre-defined dba profile:
+**Examples:**
+```bash
+# PyPI installation
+teradata-mcp-server --profile dba
 
-`teradata-mcp-server --profile dba`
+# Development build  
+uv run teradata-mcp-server --profile sales
+```
 
 ## Custom Objects Implementation Details
 
-### File Naming and Loading
-All customizations must be defined in files named `*_objects.yml` (e.g., `sales_objects.yml`, `finance_objects.yml`).
+### Custom Objects Loading
+
+The server loads custom objects (tools, cubes, prompts, glossaries) from multiple sources:
+
+**Configuration loading priority:**
+1. **Packaged defaults** - Built-in objects from `src/tools/*/*.yml` (shipped with package)
+2. **Working directory** - Any `*.yml` files in your current working directory (overrides packaged objects)
+
+**File naming:** Custom object files should be named `*.yml` (e.g., `sales_objects.yml`, `finance_objects.yml`, `my_custom_tools.yml`). The `profiles.yml` file is handled separately.
 
 ### Supported Object Types and Attribute Rules
 Each entry in the YAML file is keyed by its name and must specify a `type`. Supported types and their required/optional attributes:
@@ -132,18 +157,55 @@ Each entry in the YAML file is keyed by its name and must specify a `type`. Supp
 
 ### Dynamic Registration and Glossary Enrichment
 - All objects are registered dynamically at server startup—no code changes required.
-- You can add, update, or remove tools, cubes, prompts, or glossary terms by editing the YAML file and restarting the server.
+- You can add, update, or remove tools, cubes, prompts, or glossary terms by creating/editing YAML files in your **current working directory** and restarting the server.
+- Working directory files override packaged defaults, so you can customize existing objects or add new ones.
 - The server will register each tool, prompt, and cube using the dictionary key as its name.
-- Glossary terms are automatically enriched with references from cubes.
+- Glossary terms are automatically enriched with references from cubes and tools.
+
+### Quick Start for Customization
+
+1. **Install from PyPI:** `pip install teradata-mcp-server`
+2. **Create working directory:** `mkdir my-teradata-config && cd my-teradata-config`
+3. **Create custom objects:** Add your `*.yml` files (e.g., `my_tools.yml`)
+4. **Optionally customize profiles:** Create `profiles.yml` to override default profiles
+5. **Run server:** `teradata-mcp-server --profile my_profile`
+
+The server will automatically load packaged defaults plus your custom configurations.
 
 
 ## Best Practices
 
-- Use separate YAML files for each domain for modularity and maintainability.
-- Use clear, descriptive names for each tool, cube, and prompt.
-- Document each parameter, dimension, and measure with a description.
-- Keep glossary terms up to date, remember that measures and dimensions will automatically be reflected.
+- **Organize by domain:** Use separate YAML files for each business domain (e.g., `sales_tools.yml`, `finance_metrics.yml`)
+- **Use descriptive names:** Clear, descriptive names for each tool, cube, and prompt help users understand their purpose  
+- **Document everything:** Add descriptions to all parameters, dimensions, and measures
+- **Working directory approach:** Create a dedicated directory for your custom configurations to keep them organized
+- **Version control:** Keep your custom YAML files in version control for change tracking
+- **Test profiles:** Create profiles that match your user groups' needs and permissions
 
-## Example
+## Examples
 
-See the provided [`custom_objects.yml`](../custom_objects.yml) (or your domain-specific YAML file) for a complete example.
+### Working Directory Structure
+```
+my-teradata-config/
+├── profiles.yml           # Custom profiles (optional)
+├── sales_objects.yml      # Sales domain tools and cubes
+├── finance_metrics.yml    # Finance domain objects
+└── hr_tools.yml          # HR domain tools
+```
+
+### Complete Example
+See the provided [`custom_objects.yml`](../custom_objects.yml) in the repository for a complete working example.
+
+### Running with Custom Configuration
+```bash
+# Navigate to your config directory
+cd my-teradata-config
+
+# Run server with custom objects and profiles
+teradata-mcp-server --profile sales
+
+# Server automatically loads:
+# 1. Packaged defaults (from installation)
+# 2. Your custom YAML files (from current directory)
+# 3. Your custom profiles.yml (if present)
+```

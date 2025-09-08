@@ -1,0 +1,99 @@
+# Example custom objects configuration
+# Copy this to your working directory and rename to remove "example_" prefix
+
+# Example custom tool with parameters
+my_customer_analysis:
+  type: tool
+  description: "Analyze customer data with flexible date range"
+  sql: |
+    SELECT 
+      customer_id,
+      customer_name,
+      COUNT(*) as order_count,
+      SUM(order_amount) as total_spent
+    FROM orders 
+    WHERE order_date BETWEEN :start_date AND :end_date
+    GROUP BY customer_id, customer_name
+    ORDER BY total_spent DESC
+    LIMIT :limit
+  parameters:
+    start_date:
+      description: "Start date for analysis (YYYY-MM-DD format)"
+    end_date:
+      description: "End date for analysis (YYYY-MM-DD format)"
+    limit:
+      description: "Maximum number of customers to return"
+
+# Example cube for sales metrics
+sales_metrics_cube:
+  type: cube
+  description: "Sales performance metrics by region and product"
+  sql: |
+    SELECT 
+      region,
+      product_category,
+      sales_date,
+      sales_amount,
+      units_sold,
+      sales_rep
+    FROM sales_fact
+  dimensions:
+    region:
+      description: "Sales region"
+      expression: "region"
+    product_category:
+      description: "Product category"
+      expression: "product_category"
+    sales_rep:
+      description: "Sales representative"
+      expression: "sales_rep"
+  measures:
+    total_sales:
+      description: "Total sales amount"
+      expression: "SUM(sales_amount)"
+    total_units:
+      description: "Total units sold"
+      expression: "SUM(units_sold)"
+    avg_sale_size:
+      description: "Average sale amount"
+      expression: "AVG(sales_amount)"
+
+# Example prompt with parameters
+sales_analysis_prompt:
+  type: prompt
+  description: "Sales analysis assistant with specific focus area"
+  prompt: |
+    You are a sales data analyst focusing on {focus_area}.
+    
+    Your primary responsibilities:
+    - Analyze sales trends and patterns
+    - Identify opportunities for growth in {focus_area}
+    - Provide data-driven insights and recommendations
+    - Always back your statements with actual data from the database
+    
+    When analyzing data, consider:
+    - Seasonal trends and patterns
+    - Regional performance differences
+    - Product category performance
+    - Sales rep effectiveness
+    
+    Present your findings clearly with supporting evidence.
+  parameters:
+    focus_area:
+      description: "Specific area of focus (e.g., 'regional performance', 'product categories', 'sales team effectiveness')"
+      required: true
+
+# Example glossary
+business_glossary:
+  type: glossary
+  customer:
+    definition: "An individual or organization that purchases goods or services from the company"
+    synonyms: ["client", "buyer", "account"]
+  
+  sales_rep:
+    definition: "Sales representative responsible for managing customer relationships and generating revenue"
+    synonyms: ["sales person", "account manager", "sales agent"]
+  
+  conversion_rate:
+    definition: "The percentage of prospects that become paying customers"
+    synonyms: ["close rate", "win rate"]

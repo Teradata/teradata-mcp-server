@@ -26,31 +26,17 @@ dataScientist:
   tool:
     - ^base_*
     - ^rag_*
+    - ^sql_*
     - ^fs_*
     - ^qlty_*
     - ^sec_userDbPermissions
     - ^dba_userSqlList
+  prompt:
+    - ^rag_*
+    - ^sql_*
 
 eda:
   tool:
     - "base_(?!(writeQuery|dynamicQuery)$).*"
     - qlty_.*
     - sec_userDbPermissions
-
-custom:
-  tool:
-    - cust*
-    - base_databaseList
-    - base_tableList    
-  prompt:
-    - cust*
-  resource:
-    - cust*
-
-sales:
-  tool:
-    - sales_*    
-  prompt:
-    - sales_*
-  resource:
-    - sales_*

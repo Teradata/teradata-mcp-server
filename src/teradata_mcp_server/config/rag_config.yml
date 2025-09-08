@@ -1,7 +1,7 @@
 # RAG Configuration File
 
 # RAG Version Selection
-version: 'byom'  # Options: 'byom' (ONNXEmbeddings) or 'ivsm' (IVSM functions)
+version: 'ivsm'  # Options: 'byom' (ONNXEmbeddings) or 'ivsm' (IVSM functions)
 
 # Database Configuration
 databases:
@@ -13,7 +13,7 @@ databases:
 tables:
   query_table: "user_query"
   query_embedding_store: "user_query_embeddings"
-  vector_table: "pdf_embeddings_store"
+  vector_table: "icici_fr_embeddings_store"
   model_table: "embeddings_models"
   tokenizer_table: "embeddings_tokenizers"
 
@@ -24,7 +24,7 @@ model:
 # RAG Retrieval Configuration
 retrieval:
   default_k: 10  # Default number of chunks to retrieve
-  max_k: 50      # Maximum allowed chunks (safety limit)
+  max_k: 50      # Maximum allowed chunks
 
 # Vector Store Schema Configuration
 vector_store_schema:
@@ -37,7 +37,8 @@ vector_store_schema:
   # Only list fields that actually exist in your vector store table
   metadata_fields_in_vector_store:
     - "chunk_num"
-    - "page_num"
+    # - "page_num"
+    - "section_title"
     - "doc_name"
     # Add any other metadata columns from your vector store table here
     # Examples: "page_num", "chapter", "chunk_token_length", "author", etc.

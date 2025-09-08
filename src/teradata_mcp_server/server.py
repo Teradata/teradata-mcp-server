@@ -9,19 +9,20 @@ import logging.config
 import logging.handlers
 import os
 import re
-import sys
 import signal
 from uuid import uuid4
 import hashlib
 from importlib.resources import files as pkg_files
 from typing import Any
-import yaml
 from dotenv import load_dotenv
 from mcp import types
 from fastmcp import FastMCP
 from fastmcp.prompts.prompt import TextContent, Message
 from pydantic import Field
 from sqlalchemy.engine import Connection
+
+# Import utilities
+from teradata_mcp_server import utils as config, __version__
 
 from fastmcp.server.middleware import Middleware, MiddlewareContext
 
@@ -36,24 +37,49 @@ load_dotenv()
 
 
 # Parse command line arguments - if any they will override environment variables
-parser = argparse.ArgumentParser(description="Teradata MCP Server")
-parser.add_argument('--profile', type=str, required=False, help='Profile name to load from configure_tools.yml')
+parser = argparse.ArgumentParser(
+    prog="teradata-mcp-server",
+    description="Teradata MCP Server",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    epilog=(
+        "Examples:\n"
+        "  teradata-mcp-server --profile all\n"
+        "  teradata-mcp-server --mcp_transport sse --mcp_host 127.0.0.1 --mcp_port 8001\n"
+        "  DATABASE_URI=teradata://user:pass@host:1025/schema teradata-mcp-server\n"
+    ),
+)
+parser.add_argument('-v', '--version', action='version', version=f'%(prog)s {__version__}')
+parser.add_argument('-p', '--profile', type=str, required=False, help='Profile name to load from configure_tools.yml')
 parser.add_argument('--database_uri', type=str, required=False, help='Database URI to connect to: teradata://username:password@host:1025/schemaname')
-parser.add_argument('--mcp_transport', type=str, required=False, help='MCP transport method to use: stdio, streamable-http, sse')
+parser.add_argument(
+    '--mcp_transport',
+    type=str,
+    choices=['stdio', 'streamable-http', 'sse'],
+    required=False,
+    help='MCP transport method to use.'
+)
 parser.add_argument('--mcp_host', type=str, required=False, help='MCP host address')
 parser.add_argument('--mcp_port', type=int, required=False, help='MCP port number')
 parser.add_argument('--mcp_path', type=str, required=False, help='MCP path for the server')
-parser.add_argument('--test', action='store_true', help='Run in test mode for automated testing')
+parser.add_argument('--log-dir', type=str, required=False, help='Directory for log files (overrides LOG_DIR).')
+parser.add_argument('--no-file-logs', action='store_true', required=False, help='Disable file logging (same as NO_FILE_LOGS=1).')
+parser.add_argument('--logging-level', type=str, choices=['DEBUG','INFO','WARNING','ERROR','CRITICAL'], required=False, help='Logging level for console/file output.')
 
 # Extract known arguments and load them into the environment if provided
 args, unknown = parser.parse_known_args()
+
+# Step 1: Apply CLI arguments (highest priority)
 for key, value in vars(args).items():
     if value is not None:
         os.environ[key.upper()] = str(value)
 
+# Step 2: Apply profile defaults (before environment variables)
 
 profile_name = os.getenv("PROFILE")
-# Unique identifier for this server instance (no randomness)
+if profile_name:
+    # Import here to avoid circular imports during module loading
+    from teradata_mcp_server import utils as config_utils
+    config_utils.apply_profile_defaults_to_env(profile_name)# Unique identifier for this server instance (no randomness)
 PROCESS_ID = f"{os.uname().nodename}:{os.getpid()}"
 
 
@@ -91,7 +117,37 @@ class CustomJSONFormatter(logging.Formatter):
 
         return json.dumps(log_entry, ensure_ascii=False)
 
-os.makedirs("logs", exist_ok=True)
+#
+# --- Lean, CLI‑friendly logging setup ---
+# Default: no file writes under stdio (Claude); otherwise use a per‑user log dir.
+MCP_TRANSPORT = os.getenv("MCP_TRANSPORT", "stdio").lower()
+
+def _default_log_dir():
+    if MCP_TRANSPORT == "stdio":
+        return None  # avoid file I/O under stdio
+    if sys.platform == "darwin":  # macOS
+        return os.path.join(os.path.expanduser("~/Library/Logs"), "TeradataMCP")
+    if os.name == "nt":  # Windows
+        base = os.environ.get("LOCALAPPDATA", os.path.expanduser("~\\AppData\\Local"))
+        return os.path.join(base, "TeradataMCP", "Logs")
+    # Linux/Unix
+    base = os.environ.get("XDG_STATE_HOME", os.path.expanduser("~/.local/state"))
+    return os.path.join(base, "teradata_mcp_server", "logs")
+
+LOG_DIR = os.getenv("LOG_DIR", _default_log_dir() or "")
+# Allow explicit disable via NO_FILE_LOGS
+if os.getenv('NO_FILE_LOGS', '').lower() in {'1','true','yes'}:
+    LOG_DIR = ''
+if LOG_DIR:
+    try:
+        os.makedirs(LOG_DIR, exist_ok=True)
+    except OSError:
+        LOG_DIR = ""  # if unwritable, disable file logging silently
+
+# Console logs only when not using stdio to keep the protocol stream clean.
+enable_console_logging = (MCP_TRANSPORT != "stdio")
+# --- End logging preamble ---
+
 log_config = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -106,41 +162,41 @@ log_config = {
         },
     },
     "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "level": os.getenv("LOGGING_LEVEL", "WARNING"),
-            "formatter": "simple",
-            "stream": "ext://sys.stdout"
-        },
-        "file": {
-            "class": "logging.handlers.RotatingFileHandler",
-            "level": "DEBUG",
-            "filename": os.path.join("logs", "teradata_mcp_server.jsonl"),
-            "formatter": "json",
-            "maxBytes": 1000000,
-            "backupCount": 3
-        },
-        "queue_handler": {
-            "class": "logging.handlers.QueueHandler",
-            "handlers": [
-                "console",
-                "file"
-            ],
-            "respect_handler_level": True
-        },
+        **({
+            "file": {
+                "class": "logging.handlers.RotatingFileHandler",
+                "level": "DEBUG",
+                "filename": os.path.join(LOG_DIR, "teradata_mcp_server.jsonl"),
+                "formatter": "json",
+                "maxBytes": 1000000,
+                "backupCount": 3
+            }
+        } if LOG_DIR else {}),
     },
     "loggers": {
         "teradata_mcp_server": {
             "level": "DEBUG",
-            "handlers": ["queue_handler"],
+            "handlers": (["file"] if LOG_DIR else []),
             "propagate": False
         }
     },
     "root": {
         "level": os.getenv("LOGGING_LEVEL", "WARNING"),
-        "handlers": ["console"]
+        "handlers": []  # Will be populated conditionally below
     }
 }
+
+# Add console handler only if not in stdio mode (to avoid polluting MCP communication)
+if enable_console_logging:
+    log_config["handlers"]["console"] = {
+        "class": "logging.StreamHandler",
+        "level": os.getenv("LOGGING_LEVEL", "WARNING"),
+        "formatter": "simple",
+        "stream": "ext://sys.stdout"
+    }
+    log_config["loggers"]["teradata_mcp_server"].setdefault("handlers", []).append("console")
+    log_config["root"]["handlers"].append("console")
+
 logging.config.dictConfig(log_config)
 queue_handler = logging.getHandlerByName("queue_handler")
 if queue_handler is not None:
@@ -153,26 +209,18 @@ logger = logging.getLogger("teradata_mcp_server")
 from teradata_mcp_server.tools.auth_cache import SecureAuthCache
 _session_auth_cache = SecureAuthCache(ttl_seconds=int(os.getenv("AUTH_CACHE_TTL", "300")))
 
-# Load tool configuration from packaged profiles.yml (works in wheel/sdist installs)
-with open('profiles.yml', encoding='utf-8') as file:
-    all_profiles = yaml.safe_load(file)
-
-if not profile_name:
-    logger.info("No profile specified, load all tools, prompts and resources.")
-    config = {'tool': ['.*'], 'prompt': ['.*'], 'resource': ['.*']}
-elif profile_name not in all_profiles:
-    raise ValueError(f"Profile '{profile_name}' not found in profiles.yml. Available: {list(all_profiles.keys())}.")
-else:
-    config = all_profiles.get(profile_name)
+# Load tool configuration using new configuration system
+# This supports both packaged defaults and working directory overrides
+profile_config = config.get_profile_config(profile_name)
 
 logger.info("Starting Teradata MCP server", extra={"server_config": {"profile": profile_name}, "startup_time": "2025-08-09"})
 
 # Check if the EFS or EVS tools are enabled in the profiles
-_enableEFS = True if any(re.match(pattern, 'fs_*') for pattern in config.get('tool', [])) else False
-_enableEVS = True if any(re.match(pattern, 'evs_*') for pattern in config.get('tool', [])) else False
+_enableEFS = True if any(re.match(pattern, 'fs_*') for pattern in profile_config.get('tool', [])) else False
+_enableEVS = True if any(re.match(pattern, 'evs_*') for pattern in profile_config.get('tool', [])) else False
 
 # Load the tool modules
-module_loader = td.initialize_module_loader(config)    
+module_loader = td.initialize_module_loader(profile_config)
 
 # ------------------ Request Context ------------------#
 from dataclasses import dataclass
@@ -373,7 +421,6 @@ _tdconn = td.TDConn()
 
 if _enableEFS:
     try:
-        # Suppress stdout/stderr from teradataml imports and initialization
         import teradataml as tdml  # import of the teradataml package
         fs_config = td.FeatureStoreConfig()
         try:
@@ -507,24 +554,12 @@ def execute_db_tool(tool, *args, **kwargs):
         if _enableEFS:
             try:
                 global fs_config
-                # Suppress stdout/stderr from FeatureStoreConfig and teradataml during reconnection
-                from io import StringIO
-                from contextlib import redirect_stdout, redirect_stderr
-                stdout_buffer = StringIO()
-                stderr_buffer = StringIO()
-                with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
-                    fs_config = td.FeatureStoreConfig()
-                    import teradataml as tdml  # import of the teradataml package
-                    try:
-                        tdml.create_context(tdsqlengine=_tdconn.engine)
-                    except Exception as e:
-                        logger.warning(f"Error creating teradataml context: {e}")
-
-                # Log any captured output at debug level
-                if stdout_buffer.getvalue():
-                    logger.debug(f"teradataml reconnection stdout: {stdout_buffer.getvalue()}")
-                if stderr_buffer.getvalue():
-                    logger.debug(f"teradataml reconnection stderr: {stderr_buffer.getvalue()}")
+                fs_config = td.FeatureStoreConfig()
+                import teradataml as tdml  # import of the teradataml package
+                try:
+                    tdml.create_context(tdsqlengine=_tdconn.engine)
+                except Exception as e:
+                    logger.warning(f"Error creating teradataml context: {e}")
 
             except (AttributeError, ImportError, ModuleNotFoundError) as e:
                 logger.warning(f"Feature Store module not available during reconnection: {e}")
@@ -654,9 +689,9 @@ def make_tool_wrapper(func):
     return wrapper
 
 #------------------ Register objects defined as code under ./src/teradata_mcp_server/tools/  ------------------#
-def register_td_tools(config, module_loader, mcp):
+def register_td_tools(profile_config, module_loader, mcp):
     """Register code-defined tools from loaded modules."""
-    patterns = config.get('tool', [])
+    patterns = profile_config.get('tool', [])
 
     if not module_loader:
         logger.warning("No module loader available, skipping code-defined tool registration")
@@ -677,47 +712,14 @@ def register_td_tools(config, module_loader, mcp):
         logger.info(f"Created tool: {tool_name}")
 
 
-register_td_tools(config, module_loader, mcp)
-                
+register_td_tools(profile_config, module_loader, mcp)
+
 #------------------ Register tools, resources and prompts declared in .yml files ------------------#
 
-custom_object_files = [file for file in os.listdir() if file.endswith("_objects.yml")]
-
-# Include .yml files only from modules required by the current profile
-if module_loader and profile_name:
-    # Use profile-aware loading only when a specific profile is selected
-    profile_yml_files = module_loader.get_required_yaml_paths()
-    custom_object_files.extend(profile_yml_files)  # may be filesystem paths; handled below
-    logger.info(f"Loading YAML files for profile '{profile_name}': {len(profile_yml_files)} files")
-else:
-    # Fallback: include all .yml files using importlib.resources to work from wheels
-    tool_yml_resources = []
-    tools_pkg_root = pkg_files("teradata_mcp_server").joinpath("tools")
-    if tools_pkg_root.is_dir():
-        for subpkg in tools_pkg_root.iterdir():
-            if subpkg.is_dir():
-                for entry in subpkg.iterdir():
-                    if entry.is_file() and entry.name.endswith('.yml'):
-                        tool_yml_resources.append(entry)
-    custom_object_files.extend(tool_yml_resources)
-    logger.info(f"Loading all YAML files (no specific profile): {len(tool_yml_resources)} files")
-
-custom_objects = {}
+# Load all objects using new configuration system
+# This merges packaged objects with working directory overrides
+custom_objects = config.load_all_objects()
 custom_glossary = {}
-
-for file in custom_object_files:
-    try:
-        if hasattr(file, "read_text"):
-            # importlib.resources Traversable
-            text = file.read_text(encoding='utf-8')
-        else:
-            with open(file, encoding='utf-8', errors='replace') as f:
-                text = f.read()
-        loaded = yaml.safe_load(text)
-        if loaded:
-            custom_objects.update(loaded)
-    except Exception as e:
-        logger.error(f"Failed to load YAML from {file}: {e}")
 
 
 def make_custom_prompt(prompt_name: str, prompt: str, desc: str, parameters: dict | None = None):
@@ -838,21 +840,23 @@ def generate_cube_query_tool(name, cube):
     :param cube: The cube definition
     :return: A SQL query string generator function taking dimensions and measures as comma-separated strings.
     """
-    def _cube_query_tool(dimensions: str, measures: str, filters: str) -> str:
+    def _cube_query_tool(dimensions: str, measures: str, dim_filters: str, meas_filters: str, order_by: str, top: int) -> str:
         """
         Generate a SQL query string for the cube using the specified dimensions and measures.
 
         Args:
             dimensions (str): Comma-separated dimension names (keys in cube['dimensions']).
             measures (str): Comma-separated measure names (keys in cube['measures']).
-            filters (str): Comma-separated filter expressions (on either dimensions or measures).
+            dim_filters (str): Filter SQL expressions on dimensions.
+            meas_filters (str): Filter SQL expressions on computed measures.
+            order_by (str): Order SQL expressions on selected dimensions and measures.
+            top (int): Filters the top N results.
 
         Returns:
             str: The generated SQL query.
         """
         dim_list_raw = [d.strip() for d in dimensions.split(",") if d.strip()]
         mes_list_raw = [m.strip() for m in measures.split(",") if m.strip()]
-        filter_list_raw = [f.strip() for f in filters.split(",") if f.strip()]
         # Get dimension expressions from dictionary
         dim_list = ",\n  ".join([
             cube["dimensions"][d]["expression"] if d in cube["dimensions"] else d
@@ -867,30 +871,35 @@ def generate_cube_query_tool(name, cube):
             mes_lines.append(f"{expr} AS {measure}")
         met_block = ",\n  ".join(mes_lines)
         sql = (
-            "SELECT * from\n"
+            f"SELECT {'TOP ' + str(top) if top else ''} * from\n"
             "(SELECT\n"
             f"  {dim_list},\n"
             f"  {met_block}\n"
             "FROM (\n"
             f"{cube['sql'].strip()}\n"
+            f"{'WHERE '+dim_filters if dim_filters else ''}"
             ") AS c\n"
             f"GROUP BY {', '.join(dim_list_raw)}"
             ") AS a\n"
-            f"{'WHERE' if filter_list_raw else ''} {', '.join(filter_list_raw)};"
-
+            f"{'WHERE '+meas_filters if meas_filters else ''}"
+            f"{'ORDER BY '+order_by if order_by else ''}"
+            ";"            
         )
         return sql
     return _cube_query_tool
 
 def make_custom_cube_tool(name, cube):
-    async def _dynamic_tool(dimensions, measures, filters=""):
+    async def _dynamic_tool(dimensions, measures, dim_filters="", meas_filters="", order_by="", top=None):
         # Accept dimensions and measures as comma-separated strings, parse to lists
         return execute_db_tool(
             td.util_base_dynamicQuery,
             sql_generator=generate_cube_query_tool(name, cube),
             dimensions=dimensions,
             measures=measures,
-            filters=filters
+            dim_filters=dim_filters,
+            meas_filters=meas_filters,
+            order_by=order_by,
+            top=top
         )
     _dynamic_tool.__name__ = 'get_cube_' + name
     # Build allowed values and definitions for dimensions and measures
@@ -911,9 +920,13 @@ def make_custom_cube_tool(name, cube):
         measures (str): Comma-separated measure names to aggregate. Allowed values:
 {chr(10).join(measure_lines)}
 
-        filters (str): Comma-separated filter expressions to apply to either dimensions or measures selected. The dimension or measure used must be in the dimension list to group by or measure list, use valid SQL expressions, for example:
-{chr(10).join([f"{d} = 'value'" for d in cube.get('dimensions', {}).keys()])}
-{chr(10).join([f"{m} > 1000" for m in list(cube.get('measures', {}).keys())])}
+        dim_filters (str): Filter expression to apply to dimensions. The dimension used must be in the dimension list, use valid SQL expressions, for example:
+{(chr(10)+'AND ').join([f"{d} = 'value'" for d in cube.get('dimensions', {}).keys()])}
+        meas_filters (str): Filter expression to apply to computed measures. The measure used must be in the measure list, use valid SQL expressions, for example:
+{(chr(10)+'AND ').join([f"{m} > 1000" for m in list(cube.get('measures', {}).keys())])}
+        order_by (str): Order expression on any selected dimensions and measures. Use SQL syntax, for example:
+{(chr(10)+', ').join([f"{d} ASC" for d in cube.get('dimensions', {}).keys()])}
+        top (int): Limit the number of rows returned, use a positive integer.
 
     Returns:
         Query result as a formatted response.
@@ -924,19 +937,19 @@ def make_custom_cube_tool(name, cube):
 custom_terms: list[str] = []
 for name, obj in custom_objects.items():
     obj_type = obj.get("type")
-    if obj_type == "tool" and any(re.match(pattern, name) for pattern in config.get('tool',[])):
+    if obj_type == "tool" and any(re.match(pattern, name) for pattern in profile_config.get('tool',[])):
         fn = make_custom_query_tool(name, obj)
         globals()[name] = fn
         logger.info(f"Created tool: {name}")
-    elif obj_type == "prompt"  and any(re.match(pattern, name) for pattern in config.get('prompt',[])):
+    elif obj_type == "prompt"  and any(re.match(pattern, name) for pattern in profile_config.get('prompt',[])):
         fn = make_custom_prompt(name, obj["prompt"], obj.get("description", ""), obj.get("parameters", {}))
         globals()[name] = fn
         logger.info(f"Created prompt: {name}")
-    elif obj_type == "cube"  and any(re.match(pattern, name) for pattern in config.get('tool',[])):
+    elif obj_type == "cube"  and any(re.match(pattern, name) for pattern in profile_config.get('tool',[])):
         fn = make_custom_cube_tool(name, obj)
         globals()[name] = fn
         logger.info(f"Created cube: {name}")
-    elif obj_type == "glossary"  and any(re.match(pattern, name) for pattern in config.get('resource',[])):
+    elif obj_type == "glossary"  and any(re.match(pattern, name) for pattern in profile_config.get('resource',[])):
         # Remove the 'type' key to get just the terms
         custom_glossary = {k: v for k, v in obj.items() if k != "type"}
         logger.info(f"Added custom glossary entries for: {name}.")
@@ -945,7 +958,7 @@ for name, obj in custom_objects.items():
 
     # Look for additional terms to add to the custom glossary (currently only measures and dimensions in cubes)
     for section in ("measures", "dimensions"):
-        if section in obj and  any(re.match(pattern, name) for pattern in config.get('tool',[])):
+        if section in obj and  any(re.match(pattern, name) for pattern in profile_config.get('tool',[])):
             custom_terms.extend((term, details, name) for term, details in obj[section].items())
 
 # Enrich glossary with terms from tools and cubes

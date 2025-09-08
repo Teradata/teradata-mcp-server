@@ -146,107 +146,9 @@ dba_systemSpace:
     ,SpaceAllocated_GB- SpaceUsed_GB AS FreeSpace_GB
     FROM DBC.DiskSpace;
 
-
-dba_currentUserActivity:
-  type: tool
-  description: "Get the current user activity and system impact."
-  sql: |
-    sel UserName, count(distinct SessionNo) number_of_sessions, sum(AMPCPUSec) AMPCPUSec, sum(AMPIO) AMPIO, sum(ReqSpool) ReqSpool
-    from (SELECT * FROM TABLE (MonitorSession(-1,'*',0)) AS dt) a
-    group by 1;
-
-test_dbaTools:
-  type: prompt
-  description: "Test all the DBA MCP tools."
-  prompt: |
-    You are a Tester who is an expert in testing the functionality of tools in the dba module. You will test all tools in the module.
-    ## your role will work through the phases
-    Perform the phases in order, and do not skip any phase.
-    
-    ## Phase 0 - set up test environment 
-    - what is your default database?
-    - Create a customer table in your default database called test_customer, use the following code CREATE TABLE test_customer (Cust_id INTEGER, Customer_Name VARCHAR(50), Email VARCHAR(100), Phone VARCHAR(20),Registration_Date DATE); A test_customer table should be created.
-    - Add 10 rows to the test_customer table. use the following script:`
-      INSERT INTO test_customer VALUES (1, 'John Smith', 'john.smith@email.com', '555-0101', DATE '2024-01-15');
-      INSERT INTO test_customer VALUES (2, 'Jane Doe', 'jane.doe@email.com', '555-0102', DATE '2024-02-20');
-      INSERT INTO test_customer VALUES (3, 'Bob Johnson', 'bob.johnson@email.com', '555-0103', DATE '2024-03-10');
-      INSERT INTO test_customer VALUES (4, 'Alice Brown', 'alice.brown@email.com', '555-0104', DATE '2024-04-05');
-      INSERT INTO test_customer VALUES (5, 'Charlie Wilson', 'charlie.wilson@email.com', '555-0105', DATE '2024-05-12');
-      INSERT INTO test_customer VALUES (6, 'Diana Davis', 'diana.davis@email.com', '555-0106', DATE '2024-06-18');
-      INSERT INTO test_customer VALUES (7, 'Edward Miller', 'edward.miller@email.com', '555-0107', DATE '2024-07-22');
-      INSERT INTO test_customer VALUES (8, 'Fiona Garcia', 'fiona.garcia@email.com', '555-0108', DATE '2024-08-03');
-      INSERT INTO test_customer VALUES (9, 'George Lee', 'george.lee@email.com', '555-0109', DATE '2024-08-15');
-      INSERT INTO test_customer VALUES (10, 'Helen Taylor', 'helen.taylor@email.com', '555-0110', DATE '2024-08-25');`
-
-    ## Phase 1 - Get a list of all the SQL executed by a user
-    - what is your user name?
-    - test the query tool by running a query on the test_customer table. Use the base_readQuery tool to run the query. The query should return the 10 rows you added in the previous phase, if no data is returned then fail this test.
-    - test the query tool by running a query on the test_customer table with a filter. Use the base_readQuery tool to run the query. The query should return only the rows that match the filter, if no data is returned then fail this test. (example of a filter is Cust_id > 5)
-    - Get a list of all the SQL executed by your user name (e.g. demo_user) in the last 7 days using the dba_userSqlList tool. A list of all SQL statements should be returned, if no data is returned then fail this test
-    
-    ## Phase 2 - Get a list of all the SQL executed against a table
-    - Get a list of all the SQL executed against a table (e.g. test_customer) in the last 7 days using the dba_tableSqlList tool. A list of all SQL statements should be returned, if no data is returned then fail this test
-
-    ## Phase 3 - get a list of the current perm table space for a tables
-    - Get the current perm table space for a test_customer table using the dba_tableSpace tool. The current perm table space should be returned, if no data is returned then fail this test.
-
-    ## Phase 4 - get a list of the current perm database space for a database
-    - Get the current perm database space for your default database (e.g. demo_user) using the dba_databaseSpace tool. The current perm database space should be returned, if no data is returned then fail this test.
-
-    ## Phase 5 - get a list of the current database version
-    - Get the current database version using the dba_databaseVersion tool. The current database version should be returned, if no data is returned then fail this test. 
-
-    ## Phase 6 - get a list of the system usage summary metrics
-    - Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket using the dba_resusageSummary tool. The system usage summary metrics should be returned, if no data is returned then fail this test  
-
-    ## Phase 7 - get a list of the system usage for a user
-    - Get the system usage for your user name (e.g. demo_user) using the dba_resusageSummary tool. The system resusage for the user (e.g. demo_user) should be returned, if no data is returned then fail this test.
-
-    ## Phase 8 - get a list of the system flow control metrics
-    - Get the Teradata system flow control metrics by day and hour using the dba_flowControl tool. The system flow control metrics should be returned, if no data is returned then fail this test.
-
-    ## Phase 9 - get a list of the user feature usage metrics
-    - Get the user feature usage metrics using the dba_featureUsage tool. The user feature usage metrics should be returned, if no data is returned then fail this test.
-
-    ## Phase 10 - get a list of the user delay metrics
-    - Get the Teradata user delay metrics using the dba_userDelay tool. The user delay metrics should be returned, if no data is returned then fail this test.
-
-    ## Phase 11 - get a list of the table usage impact by a user
-    - Get the usage of a table test_customer by your user name (e.g. demo_user) using the dba_tableUsageImpact tool. The usage of the table by the user should be returned, if no data is returned then fail this test.
-
-    ## Phase 12 - get a list of the session information for a user
-    - Get the session information for your user name (e.g. demo_user) using the dba_sessionInfo tool. The session information for the user should be returned, if no data is returned then fail this test.
-
-    ## Phase 13 - Clean up
-    - Drop the test_customer table. Use the base_readQuery tool to drop the table. The tool should return a success message.
-    ## Communication guidelines:
-          - Be concise but informative in your explanations
-          - Clearly indicate which phase the process is currently in
-          - summarize the success or any failure of the phase before moving to the next phase
-    ## Final output guidelines:
-          - return in markdown results for all phases as a table including the phase number, description, success or failure status, and a description of the outcome.
-          - if a tool does not return any results, then fail that test and indicate it in the outcome.
-    ## Example output:
-
-          | Phase | Description | Status | Outcome |
-          |-------|-------------|--------|---------|
-          | 1     | Get a list of all the SQL executed against a table (e.g. test_customer) in the last 7 days | Successful |  |
-          | 2     | Get the current perm table space for a test_customer table | Successful |  |
-          | 3     | Get the current perm database space for a database (e.g. demo_user) | Successful |  |
-          | 4     | Get the current database version | Successful |  |
-          | 5     | Get the Teradata system usage summary metrics | Successful |  |
-          | 6     | Get the system usage for a user (e.g. demo_user) | Successful |  |
-          | 7     | Get the Teradata system flow control metrics | Successful |  |
-          | 8     | Get the user feature usage metrics | Successful |  |
-          | 9     | Get the Teradata user delay metrics | Successful |  |
-          | 10    | Get the usage of a table (e.g. test_customer) by a user (e.g. demo_user) | Successful |  |
-          | 11    | Get the session information for a user (e.g. demo_user) | Successful |  |
-          | 12    | Drop the test_customer table | Successful |  |
-
-
 dba_tableArchive:
   type: prompt
-  description: "The following prompt is used to guide the Teradata DBA in finding opportunities for archiving data."
+  description: "The following prompt is used to guide the Teradata DBA in finding opportunities for archiving data. (prompt_type: reporting)"
   prompt: |
     You are a Teradata DBA who is an expert in finding opportunities for archiving data.
 
@@ -278,7 +180,7 @@ dba_tableArchive:
 
 dba_databaseLineage :
   type: prompt
-  description: "You are a Teradata DBA who is an expert in finding the lineage of tables in a database."
+  description: "You are a Teradata DBA who is an expert in finding the lineage of tables in a database. (prompt_type: context)"
   prompt: |
     You are a Teradata DBA who is an expert in finding the lineage of tables in a database.
 
@@ -324,7 +226,7 @@ dba_databaseLineage :
 
 dba_tableDropImpact:
   type: prompt
-  description: "You are a Teradata DBA who is an expert in finding the impact of dropping a table."
+  description: "You are a Teradata DBA who is an expert in finding the impact of dropping a table. (prompt_type: reporting)"
   prompt: |
 
     You will be assessing the {table_name} table in {database_name} database and all the SQL that has executed against it.
@@ -386,7 +288,7 @@ dba_tableDropImpact:
 
 dba_databaseHealthAssessment :
   type: prompt
-  description: "You are a Teradata DBA who is an expert in assessing the health of a database."
+  description: "You are a Teradata DBA who is an expert in assessing the health of a database. (prompt_type: reporting)"
   prompt: |
     Generate a comprehensive Teradata system health dashboard for the last 30 days, structured as an executive summary followed by detailed technical analysis. Create a visual dashboard using tables, charts, and color-coded indicators to highlight critical metrics and resource constraints. 
 
@@ -420,7 +322,7 @@ dba_databaseHealthAssessment :
 
 dba_userActivityAnalysis:
   type: prompt
-  description: "Analyze Teradata user activity patterns for the past 7 days"
+  description: "Analyze Teradata user activity patterns for the past 7 days (prompt_type: reporting)"
   prompt: |
     Analyze Teradata user activity patterns for the past 7 days, focusing on resource consumption and query behavior. Create a comprehensive analysis dashboard for DBA review with detailed breakdowns of user behavior and system impact.
 
@@ -449,7 +351,7 @@ dba_userActivityAnalysis:
 
 dba_systemVoice:
   type: prompt
-  description: "A friendly Teradata system voice that provides health and resource usage information."
+  description: "Analyze Teradata user activity patterns for the past 7 days (prompt_type: reporting)"
   prompt: | 
     You impersonate the Teradata system, when asked questions about "your" health, resource usage, users, flow control, etc... use the appropriate Teradata tools to get relevant system information.
     Unless pecified, consider that the user is asking about today's metrics.
