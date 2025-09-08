@@ -6,7 +6,7 @@ import inspect
 import json
 import logging
 import logging.config
-import logging.handlers
+import sys
 import os
 import re
 import signal
@@ -259,6 +259,25 @@ class RequestContextMiddleware(Middleware):
     """
     async def on_request(self, context: MiddlewareContext, call_next):
         # Works for any MCP *request* (tool call, list, get, read)
+
+        # Most of the context update is for http, simply create/get session and request id in stdio
+        if MCP_TRANSPORT=='stdio':
+            try:
+                rc = RequestContext(
+                    request_id=uuid4().hex,
+                    session_id=getattr(context.fastmcp_context, "session_id", None) if context.fastmcp_context else uuid4().hex
+                )
+
+                if context.fastmcp_context:
+                    context.fastmcp_context.set_state("request_context", rc)
+                else:
+                    logger.warning("No FastMCP context available - RequestContext not stored")
+                
+            except Exception as e:
+                logger.debug(f"Error creating RequestContext: {e}")
+                
+            return await call_next(context)
+
         try:
             raw_headers = get_http_headers() or {}
             logger.debug(f"Parsing HTTP headers: {dict(raw_headers).keys()}")
@@ -304,9 +323,7 @@ class RequestContextMiddleware(Middleware):
         try:
             mcp_session = None
             if context.fastmcp_context:
-                # session_id may be a property or a method depending on FastMCP version
-                sid_attr = getattr(context.fastmcp_context, "session_id", None)
-                mcp_session = sid_attr() if callable(sid_attr) else sid_attr
+                mcp_session = getattr(context.fastmcp_context, "session_id", None)
                 logger.debug(f"FastMCP context session_id: {mcp_session}, context id: {id(context.fastmcp_context)}")
         except Exception as e:
             logger.debug(f"Error getting session_id from context: {e}")
