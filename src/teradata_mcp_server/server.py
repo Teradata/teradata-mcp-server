@@ -240,10 +240,7 @@ class RequestContextMiddleware(Middleware):
             parts = auth_hdr.split(" ", 1)
             auth_scheme = parts[0]
             token = parts[1] if len(parts) > 1 else ""
-            try:
-                auth_token_sha256 = hashlib.sha256(token.encode("utf-8")).hexdigest()
-            except Exception:
-                auth_token_sha256 = None
+            auth_token_sha256 = hashlib.sha256(token.encode("utf-8")).hexdigest()
 
         # Determine request_id strictly from FastMCP context (or generate uuid)
         try:
@@ -278,7 +275,7 @@ class RequestContextMiddleware(Middleware):
             if assume_user_value is not None:
                 if re.match(r"^[A-Za-z0-9_]{1,30}$", assume_user_value):
                     assume_user = assume_user_value
-                    logger.debug(f"AUTH_MODE=none: Using X-Assume-User: {assume_user}")
+                    logger.info(f"AUTH_MODE=none: Using X-Assume-User: {assume_user}")
                 else:
                     logger.warning("Invalid X-Assume-User header value; ignoring")
             # In AUTH_MODE=none, ignore any Authorization headers completely
@@ -290,56 +287,23 @@ class RequestContextMiddleware(Middleware):
             global _tdconn
             
             # Require Authorization header - no auth without credentials
-            if not auth_hdr:
+            if not auth_hdr or not auth_token_sha256:
                 logger.warning("AUTH_MODE=basic but Authorization header is missing")
                 raise PermissionError("Authentication required")
             
             # Check for cached authentication (requires matching auth hash)
-            if auth_token_sha256:
-                cached_principal = _session_auth_cache.get(session_id, auth_token_sha256)
-                if cached_principal:
-                    assume_user = cached_principal
-                    logger.debug(f"Using cached principal for session {session_id}: {assume_user}")
-                else:
-                    # Validate credentials and cache result
-                    scheme = (auth_scheme or "").lower()
-                    if scheme not in ("basic", "bearer"):
-                        logger.warning(f"AUTH_MODE=basic but unsupported auth scheme: {auth_scheme}")
-                        raise PermissionError("Unsupported auth scheme for basic mode")
-                    
-                    # Delegate validation to TDConn helper
-                    try:
-                        validated_user = _tdconn.validate_auth_header(auth_hdr)
-                    except Exception as e:
-                        # Import validation exceptions for specific handling
-                        from teradata_mcp_server.tools.auth_validation import (
-                            RateLimitExceededError, InvalidUsernameError, InvalidTokenFormatError
-                        )
-                        
-                        if isinstance(e, RateLimitExceededError):
-                            logger.warning(f"Rate limit exceeded for auth attempt: {e}")
-                            raise PermissionError("Too many authentication attempts. Please try again later.")
-                        elif isinstance(e, (InvalidUsernameError, InvalidTokenFormatError)):
-                            logger.warning(f"Invalid auth format: {e}")
-                            raise PermissionError("Invalid authentication format")
-                        else:
-                            logger.error(f"Validation error in TDConn.validate_auth_header: {e}")
-                            validated_user = None
-                    
-                    if not validated_user:
-                        raise PermissionError("Invalid credentials")
-                    
-                    assume_user = validated_user
-                    # Cache the validated session
-                    _session_auth_cache.set(session_id, validated_user, auth_token_sha256)
+            cached_principal = _session_auth_cache.get(session_id, auth_token_sha256)
+            if cached_principal:
+                assume_user = cached_principal
+                logger.debug(f"Using cached principal for session {session_id}: {assume_user}")
             else:
-                # No token hash available - validate every time (shouldn't happen normally)
-                logger.warning("AUTH_MODE=basic with missing token hash - validating without cache")
+                # Validate credentials and cache result
                 scheme = (auth_scheme or "").lower()
                 if scheme not in ("basic", "bearer"):
                     logger.warning(f"AUTH_MODE=basic but unsupported auth scheme: {auth_scheme}")
                     raise PermissionError("Unsupported auth scheme for basic mode")
                 
+                # Delegate validation to TDConn helper
                 try:
                     validated_user = _tdconn.validate_auth_header(auth_hdr)
                 except Exception as e:
@@ -362,7 +326,10 @@ class RequestContextMiddleware(Middleware):
                     raise PermissionError("Invalid credentials")
                 
                 assume_user = validated_user
+                logger.info(f"AUTH_MODE=basic: Validated identity of user {assume_user} from database.")
 
+                # Cache the validated session
+                _session_auth_cache.set(session_id, validated_user, auth_token_sha256)
         try:
             rc = RequestContext(
                 headers=headers,
@@ -584,7 +551,7 @@ def execute_db_tool(tool, *args, **kwargs):
                         logger.debug(f"Tool {tool_name}: No RequestContext available")
                     queryband = _build_queryband_with_context(tool_name=tool_name, request_context=request_context)
                     try:
-                        conn.execute(text(f"SET QUERY_BAND = '{queryband}' FOR TRANSACTION"))
+                        conn.execute(text(f"SET QUERY_BAND = '{queryband}' FOR SESSION"))
                         logger.debug(f"QueryBand set: {queryband}")
                         logger.debug(f"Tool request context: {request_context}")
                     except Exception as qb_error:
@@ -1093,19 +1060,20 @@ async def main():
     global enable_session_tracing
     
     if mcp_transport == "sse":
-        mcp.settings.host = os.getenv("MCP_HOST", "localhost")
-        mcp.settings.port = int(os.getenv("MCP_PORT"))
-        logger.info(f"Starting MCP server on {mcp.settings.host}:{mcp.settings.port}")
-        await mcp.run_sse_async()
+        host = os.getenv("MCP_HOST", "localhost")
+        port = int(os.getenv("MCP_PORT", "8001"))
+        path = os.getenv("MCP_PATH", "/sse")
+        logger.info(f"Starting MCP server on {host}:{port} with path {path}")
+        await mcp.run_sse_async(host=host, port=port, path=path)
     elif mcp_transport == "streamable-http":
         # Enable session tracing for HTTP transport
         
-        mcp.settings.host = os.getenv("MCP_HOST", "localhost")
-        mcp.settings.port = int(os.getenv("MCP_PORT"))
-        mcp.settings.streamable_http_path = os.getenv("MCP_PATH", "/mcp/")
-        logger.info(f"Starting MCP server on {mcp.settings.host}:{mcp.settings.port} with path {mcp.settings.streamable_http_path}")
+        host = os.getenv("MCP_HOST", "localhost")
+        port = int(os.getenv("MCP_PORT", "8001"))
+        path = os.getenv("MCP_PATH", "/mcp/")
+        logger.info(f"Starting MCP server on {host}:{port} with path {path}")
         logger.info("Session tracing enabled for streamable-http transport")
-        await mcp.run_streamable_http_async()
+        await mcp.run_http_async(transport="streamable-http", host=host, port=port, path=path)
     else:
         # stdio transport - no session tracing
         logger.info("Starting MCP server on stdin/stdout")
