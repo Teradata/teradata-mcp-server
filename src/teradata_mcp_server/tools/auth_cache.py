@@ -58,6 +58,7 @@ class SecureAuthCache:
                 expires_at=current_time + self._ttl,
                 created_at=current_time
             )
+            
     
     def invalidate(self, session_id: str):
         """Remove cached entry for session."""
