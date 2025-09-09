@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import os
 import signal
 from dotenv import load_dotenv
+
+from teradata_mcp_server.config import Settings, settings_from_env
+from teradata_mcp_server.app import create_mcp_app
+from teradata_mcp_server import __version__
 
 from teradata_mcp_server.config import Settings, settings_from_env
 from teradata_mcp_server.app import create_mcp_app
@@ -46,16 +52,28 @@ async def main():
     load_dotenv()
     settings = parse_args_to_settings()
     mcp, logger = create_mcp_app(settings)
+    load_dotenv()
+    settings = parse_args_to_settings()
+    mcp, logger = create_mcp_app(settings)
 
+    # Graceful shutdown
     # Graceful shutdown
     try:
         loop = asyncio.get_running_loop()
         for s in (signal.SIGTERM, signal.SIGINT):
+        for s in (signal.SIGTERM, signal.SIGINT):
             logger.info(f"Registering signal handler for {s.name}")
+            loop.add_signal_handler(s, lambda s=s: os._exit(0))
             loop.add_signal_handler(s, lambda s=s: os._exit(0))
     except NotImplementedError:
         logger.warning("Signal handling not supported on this platform")
+        logger.warning("Signal handling not supported on this platform")
 
+    # Run transport
+    if settings.mcp_transport == 'sse':
+        await mcp.run_sse_async(host=settings.mcp_host, port=settings.mcp_port, path=settings.mcp_path)
+    elif settings.mcp_transport == 'streamable-http':
+        await mcp.run_http_async(transport='streamable-http', host=settings.mcp_host, port=settings.mcp_port, path=settings.mcp_path)
     # Run transport
     if settings.mcp_transport == 'sse':
         await mcp.run_sse_async(host=settings.mcp_host, port=settings.mcp_port, path=settings.mcp_path)
@@ -66,4 +84,7 @@ async def main():
 
 
 if __name__ == '__main__':
+
+if __name__ == '__main__':
     asyncio.run(main())
+
