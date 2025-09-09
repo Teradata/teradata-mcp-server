@@ -51,13 +51,13 @@ Configure the claude_desktop_config.json (Settings>Developer>Edit Config) by add
 }
 ```
 
-## Getting Started
+## Setting up your environment
 
 ![Getting Started](https://raw.githubusercontent.com/Teradata/teradata-mcp-server/main/docs/media/MCP-quickstart.png)
 
 **Step 1.** - Identify the running Teradata System, you need username, password and host details. If you do not have a Teradata system to connect to, then leverage [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics)
 
-**Step 2.** - To configure and run the MCP server, refer to the [Getting started guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/GETTING_STARTED.md).
+**Step 2.** - To install, configure and run the MCP server, refer to the [Getting started guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/GETTING_STARTED.md), or see below for a quick [CLI installation](#CLI-Installation). You can easily [customize the server with your own tools, prompts and resources](docs/CUSTOMIZING.md).
 
 **Step 3.** - There are many client options available, the [Client Guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/client_guide/CLIENT_GUIDE.md) explains how to configure and run a sample of different clients.
 
@@ -92,6 +92,13 @@ Alternatively, you may use pip in a virtual environment (Python>=3.11):
 ```bash
 pip install teradata-mcp-server
 ```
+
+For usage:
+
+```bash
+teradata-mcp-server --help
+```
+
 
 ## Build from Source (Development)
 

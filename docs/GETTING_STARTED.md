@@ -1,6 +1,6 @@
 # MCP Server - Getting Started
 
-![Getting Started](media/MCP-quickstart.png)
+![](media/client-server-platform.png)
 
 This document will cover the process and options for getting the teradata-mcp-server up and running
 
@@ -13,23 +13,48 @@ Assumes that you have a running Teradata environment, you should have the follow
 ## Step 1: Installing the server
 
 You have multiple deployment methods for this server.
-1. [PyPI Installation](#method-1-pypi-installation-recommended) - **Recommended for most users**
-2. [Build from Source with uv](#method-2-build-from-source-with-uv-development) - Recommended for developers.
-3. [Using Docker](#using-docker) - For containerized deployments, advanced setups and REST API implementation.
+1. [Install as a tool with uv (preferred)](#method-1-install-as-a-tool-with-uv-preferred) – fast, isolated, and does not pollute system Python.
+2. [PyPI with pip in a virtualenv](#method-2-pypi-installation-with-pip) – classic Python install.
+3. [Build from Source with uv](#method-3-build-from-source-with-uv-development) – for development.
+4. [Using Docker](#using-docker) – for containerized deployments and REST API.
 
-### Method 1: PyPI Installation (Recommended)
+### Method 1: Install as a tool with uv (preferred)
 
-The easiest way to get started is to install from PyPI:
+Why uv? It installs CLI tools into isolated environments, is very fast, and avoids polluting your global Python/site‑packages.
 
-**Prerequisites**
-- Python 3.11 or greater ([Python.org](https://www.python.org/downloads/))
+Prerequisite: install uv (macOS: `brew install uv`, Windows: `winget install astral-sh.uv`).
 
-**Install the package**
+Install the CLI tool from PyPI:
 ```bash
+uv tool install "teradata-mcp-server"
+```
+
+Optional extras (Enterprise Feature Store, Enterprise Vector Store):
+```bash
+uv tool install "teradata-mcp-server[fs,evs]"
+```
+
+Upgrade later:
+```bash
+uv tool upgrade teradata-mcp-server
+```
+
+### Method 2: PyPI installation with pip
+
+Recommended inside a virtual environment (venv):
+```bash
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\\Scripts\\activate
+pip install --upgrade pip
 pip install teradata-mcp-server
 ```
 
-### Method 2: Build from Source with uv (Development)
+Install with extras:
+```bash
+pip install "teradata-mcp-server[fs,evs]"
+```
+
+### Method 3: Build from Source with uv (Development)
 
 For development, customization, or to access the latest features:
 
@@ -57,11 +82,6 @@ git pull origin main
 The server supports optional modules for additional functionality:
 - **`fs`** - Teradata Enterprise Feature Store integration
 - **`evs`** - Teradata Enterprise Vector Store integration
-
-### With PyPI Installation:
-```bash
-pip install teradata-mcp-server[fs,evs]
-```
 
 ### With Source Build:
 ```bash
@@ -171,7 +191,7 @@ teradata-mcp-server --profile analyst_dev
 3. **Environment variables** - `DATABASE_URI`, `MCP_PORT`, etc. 
 4. **Script defaults** - Built-in default values
 
-See [Configuration Examples](../examples/Configuration_Examples/) for complete examples.
+See [Configuration Examples](../examples/server-customization/) for complete examples.
 
 **Creating custom tools, prompts and resources:**
 

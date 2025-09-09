@@ -257,8 +257,7 @@
         "name": "check_negative_values",
         "parameters": {
           "database_name": "DBC",
-          "table_name": "Tables",
-          "column_name": "TableId"
+          "table_name": "Tables"
         }
       }
     ],

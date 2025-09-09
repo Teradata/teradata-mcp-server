@@ -90,7 +90,7 @@ def handle_dba_userSqlList(conn: TeradataConnection, user_name: str, no_days: in
 
 #------------------ Tool  ------------------#
 # Get table space tool
-def handle_dba_tableSpace(conn: TeradataConnection, database_name: str | None, table_name: str | None, *args, **kwargs):
+def handle_dba_tableSpace(conn: TeradataConnection, database_name: str | None = None, table_name: str | None = None, *args, **kwargs):
     """
     Get table space used for a table if table name is provided or get table space for all tables in a database if a database name is provided."
 
@@ -104,14 +104,14 @@ def handle_dba_tableSpace(conn: TeradataConnection, database_name: str | None, t
     logger.debug(f"Tool: handle_dba_tableSpace: Args: database_name: {database_name}, table_name: {table_name}")
 
     with conn.cursor() as cur:
-        if (database_name == "") and (table_name == ""):
+        if not database_name and not table_name:
             logger.debug("No database or table name provided, returning all tables and space information.")
             rows = cur.execute("""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm
             ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
             FROM DBC.AllSpaceV
             GROUP BY DatabaseName, TableName
             ORDER BY CurrentPerm1 desc;""")
-        elif (database_name == ""):
+        elif not database_name:
             logger.debug(f"No database name provided, returning all space information for table: {table_name}.")
             rows = cur.execute(f"""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm
             ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
@@ -119,7 +119,7 @@ def handle_dba_tableSpace(conn: TeradataConnection, database_name: str | None, t
             WHERE TableName = '{table_name}'
             GROUP BY DatabaseName, TableName
             ORDER BY CurrentPerm1 desc;""")
-        elif (table_name == ""):
+        elif not table_name:
             logger.debug(f"No table name provided, returning all tables and space information for database: {database_name}.")
             rows = cur.execute(f"""SELECT TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm
             ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
