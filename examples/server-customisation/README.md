@@ -30,4 +30,4 @@ cp ../examples/Configuration_Examples/custom_objects.yml mydomain_objects.yml
 TD_USER=demo_user TD_PASSWORD=demo_password teradata-mcp-server --profile my_custom_profile
 ```
 
-The equivalent Claude Desktop server configuration snippet (overriding transport mode to stdio) is [available here](examples/client-claude-desktop/claude_desktop_stdio_custom_profile_config).
+The equivalent Claude Desktop server configuration snippet (overriding transport mode to stdio) is [available here](../client-claude-desktop/claude_desktop_stdio_custom_profile_config).

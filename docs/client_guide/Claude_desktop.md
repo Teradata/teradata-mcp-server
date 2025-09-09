@@ -18,7 +18,7 @@ Based on the transport mode of your server (Streamable-http, Stdio or SSE) you w
 
 If you have a Teradata MCP Server instance running and available via http (1), you can connect to it using the [mcp-remote npx package](https://www.npmjs.com/package/mcp-remote) (2).
 
-Example can be found in [claude_desktop_http_config](../../examples/Claude_Desktop_Config_Files/claude_desktop_http_config)
+Example can be found in [claude_desktop_http_config](../../examples/client-claude-desktop/claude_desktop_http_config)
 
 Note: The Claude Desktop example assumes a server running locally on port 8001 - modify as needed.
 
@@ -31,7 +31,7 @@ Note (2): You need Node installed on your system. Use [HomeBrew](https://formula
 
 The simplest option is to start the mcp server with Claude and enable communication over stdio
 
-Example can be found in [claude_desktop_stdio_config](../../examples/Claude_Desktop_Config_Files/claude_desktop_stdio_config)
+Example can be found in [claude_desktop_stdio_config](../../examples/client-claude-desktop/claude_desktop_stdio_config)
 
 Note: you will need to modify the directory path in the args for your system, this needs to be a complete path.  You may also need to have a complete path to uv in the command as well.
 
@@ -44,6 +44,6 @@ Note: The PROFILE variable is optional, you can change its value to instantiate 
 
 Warning: We are not actively maintaining and testing the SSE functionality.
 
-Example can be found in [claude_desktop_SSE_config](../../examples/Claude_Desktop_Config_Files/claude_desktop_SSE_config)
+Example can be found in [claude_desktop_SSE_config](../../examples/client-claude-desktop/claude_desktop_SSE_config)
 
 Note: you may need to modify the host in the args.

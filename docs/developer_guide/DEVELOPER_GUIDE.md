@@ -102,7 +102,7 @@ The directory structure will follow the following conventions
 - `server.py`: slim entrypoint. Parses CLI/env into `Settings`, builds the app via `create_mcp_app`, and runs the selected transport.
 - `app.py`: application factory. Sets up logging, middleware, adapters, loads tools/prompts/resources from code and YAML, and returns a configured `FastMCP` app.
 - `config.py`: `Settings` dataclass and `settings_from_env()` for centralized configuration (single source of truth; precedence is CLI > env > defaults).
-- `core/logging.py`: structured logging setup and JSON formatter.
+- `utils.py` (logging): structured logging setup (stdio‑safe) and JSON formatter.
 - `middleware.py`: shared `RequestContextMiddleware` that extracts per-request context; has a stdio fast-path (no headers/auth) and a full HTTP/SSE path that can enforce auth and cache.
 - MCP adapter (inlined in `app.py`): internal `execute_db_tool` (DB connection injection, QueryBand, error handling) and `make_tool_wrapper` (auto MCP wrapper for `handle_*` functions).
 - `tools/utils/queryband.py`: pure helpers to build Teradata QueryBand strings from request context (protocol-agnostic).
@@ -279,10 +279,10 @@ This section explains how the pieces fit together at runtime.
 - Runs the chosen transport: `stdio`, `streamable-http`, or `sse`.
 
 2) App factory (`app.py`)
-- Sets up logging (`core/logging.py`).
+- Sets up logging via `utils.setup_logging()` (skips console logs on stdio transport).
 - Creates `FastMCP` instance.
 - Initializes Teradata connections (SQLAlchemy engine), optional teradataml context and feature store config.
-- Adds `RequestContextMiddleware` from `mcp/middleware.py` with:
+- Adds `RequestContextMiddleware` from `middleware.py` with:
   - stdio fast‑path (no headers/auth)
   - HTTP/SSE path that extracts headers, auth (if configured), client/session IDs, etc.
 - Loads code‑defined tools via module loader and registers functions named `handle_*` that match `profiles.yml` patterns:
@@ -290,6 +290,39 @@ This section explains how the pieces fit together at runtime.
   - The wrapper delegates execution to `execute_db_tool` which:
     - Injects a DB connection (SQLAlchemy `Connection` preferred)
     - Sets QueryBand based on request context (`tools/utils/queryband.py`)
+
+## Project Layout
+
+A quick view of the important files and directories. Paths are relative to the repo root.
+
+```
+teradata-mcp-server/
+├─ profiles.yml                     # Dev overrides for profiles (optional, not packaged)
+├─ *_objects.yml                    # Dev/custom YAML objects (optional)
+├─ logs/                            # Runtime logs (disabled on stdio by default)
+└─ src/teradata_mcp_server/
+   ├─ __init__.py                   # Package metadata + CLI entry main()
+   ├─ __main__.py                   # Allows `python -m teradata_mcp_server`
+   ├─ server.py                     # Slim entrypoint; parses CLI/env and runs app
+   ├─ app.py                        # App factory: logging, middleware, tools, YAML, EVS/EFS wiring
+   ├─ utils.py                      # Logging setup, response formatting, config loaders
+   ├─ middleware.py                 # Shared RequestContextMiddleware (stdio fast‑path + HTTP/SSE)
+   ├─ config/                       # Packaged default profiles.yml
+   │  └─ profiles.yml
+   └─ tools/
+      ├─ __init__.py               # Lazy module loader + explicit exports (e.g., TDConn)
+      ├─ module_loader.py          # Profiles → load only needed tool modules (+ YAMLs)
+      ├─ td_connect.py             # SQLAlchemy connection + auth validation helpers
+      ├─ utils/
+      │  ├─ __init__.py            # JSON helpers, auth header parsing, exports queryband
++     │  └─ queryband.py           # Build Teradata QueryBand from request context
+      ├─ base/ ...                 # Tool groups (base, dba, sec, qlty, rag, fs, evs, ...)
+      └─ fs/evs/...                # Optional extras; imported only if profile enables them
+```
+
+Notes:
+- EFS (fs) and EVS (evs) modules are optional. They are loaded only if your profile enables tools with prefixes `fs_*` or `evs_*`. Missing dependencies result in a warning; the rest of the server continues to operate.
+- Logging writes to a per‑user file location by default for HTTP/SSE transports; console logging is disabled for stdio to avoid polluting MCP protocol streams. Override with `LOG_DIR` or `NO_FILE_LOGS=1`.
     - Handles errors and response formatting
     - Reconnects when needed
 - Loads YAML-defined tools, prompts, and resources and registers them.
