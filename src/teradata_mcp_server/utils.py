@@ -1,17 +1,155 @@
 """Utilities for Teradata MCP Server.
 
-Configuration loading utilities:
-1. Packaged profiles.yml + working directory profiles.yml (working dir wins)
-2. All src/tools/*/*.yml + working directory *.yml (working dir wins)
+- Logging setup (structured JSON + console)
+- Configuration loading utilities:
+  1. Packaged profiles.yml + working directory profiles.yml (working dir wins)
+  2. All src/tools/*/*.yml + working directory *.yml (working dir wins)
 """
 
+import sys
+import json
 import logging
+import logging.config
+import logging.handlers
+import os
 from pathlib import Path
 from typing import Dict, Any, Optional
 from importlib.resources import files as pkg_files
 import yaml
 
 logger = logging.getLogger("teradata_mcp_server")
+
+
+# -------------------- Logging -------------------- #
+class CustomJSONFormatter(logging.Formatter):
+    """Custom JSON formatter that can handle extra dicts in log records."""
+
+    def format(self, record):
+        log_entry = {
+            "timestamp": self.formatTime(record, self.datefmt),
+            "name": record.name,
+            "level": record.levelname,
+            "module": record.module,
+            "line": record.lineno,
+            "message": record.getMessage(),
+        }
+        reserved = {
+            'name','msg','args','levelname','levelno','pathname','filename','module','lineno',
+            'funcName','created','msecs','relativeCreated','thread','threadName','processName',
+            'process','exc_info','exc_text','stack_info','getMessage','message'
+        }
+        for k, v in record.__dict__.items():
+            if k not in reserved:
+                if isinstance(v, dict):
+                    log_entry.update(v)
+                else:
+                    log_entry[k] = v
+        return json.dumps(log_entry, ensure_ascii=False)
+
+
+def _default_log_dir(transport: str) -> Optional[str]:
+    """Choose a default per-user log directory when not using stdio.
+    Returns None for stdio to avoid writing logs when stdout is the protocol stream.
+    """
+    if (transport or "stdio").lower() == "stdio":
+        return None
+    if os.name == "nt":  # Windows
+        base = os.environ.get("LOCALAPPDATA", os.path.expanduser("~\\AppData\\Local"))
+        return os.path.join(base, "TeradataMCP", "Logs")
+    if sys.platform == "darwin":  # macOS
+        return os.path.join(os.path.expanduser("~/Library/Logs"), "TeradataMCP")
+    # Linux/Unix
+    base = os.environ.get("XDG_STATE_HOME", os.path.expanduser("~/.local/state"))
+    return os.path.join(base, "teradata_mcp_server", "logs")
+
+
+def setup_logging(level: str = "WARNING", transport: str = "stdio") -> logging.Logger:
+    """Configure structured logging.
+    - Skips console handler for stdio transport to avoid polluting MCP stdout
+    - Picks a sane per-user file log directory when not stdio (override with LOG_DIR)
+    - Disable file logging via NO_FILE_LOGS=1
+    """
+    # Determine handlers to enable
+    enable_console = (transport or "stdio").lower() != "stdio"
+
+    # Compute log dir
+    log_dir = os.getenv("LOG_DIR")
+    if not log_dir:
+        log_dir = _default_log_dir(transport) or ""
+    if os.getenv("NO_FILE_LOGS", "").lower() in {"1", "true", "yes"}:
+        log_dir = ""
+    if log_dir:
+        try:
+            os.makedirs(log_dir, exist_ok=True)
+        except OSError:
+            log_dir = ""  # fall back to no file logging if unwritable
+
+    # Build logging config dynamically
+    handlers: dict[str, Any] = {}
+    if enable_console:
+        handlers["console"] = {
+            "class": "logging.StreamHandler",
+            "level": level,
+            "formatter": "simple",
+            "stream": "ext://sys.stdout",
+        }
+    if log_dir:
+        handlers["file"] = {
+            "class": "logging.handlers.RotatingFileHandler",
+            "level": "DEBUG",
+            "filename": os.path.join(log_dir, "teradata_mcp_server.jsonl"),
+            "formatter": "json",
+            "maxBytes": 1_000_000,
+            "backupCount": 3,
+        }
+
+    logger_handlers = list(handlers.keys())
+    root_handlers = [h for h in handlers.keys() if h == "console"]  # only console for root
+
+    log_config = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "simple": {
+                "format": "[%(levelname)s|%(module)s|L%(lineno)d] %(asctime)s: %(message)s",
+                "datefmt": "%Y-%m-%dT%H:%M:%S%z",
+            },
+            "json": {"()": CustomJSONFormatter, "datefmt": "%Y-%m-%dT%H:%M:%S%z"},
+        },
+        "handlers": handlers,
+        "loggers": {
+            "teradata_mcp_server": {
+                "level": "DEBUG",
+                "handlers": logger_handlers,
+                "propagate": False,
+            }
+        },
+        "root": {"level": level, "handlers": root_handlers},
+    }
+
+    logging.config.dictConfig(log_config)
+    return logging.getLogger("teradata_mcp_server")
+
+
+# -------------------- Response formatting -------------------- #
+def format_text_response(text: Any):
+    """Format a return value into FastMCP content list.
+    Strings are pretty-printed if JSON; other values are stringified.
+    """
+    import json
+    from mcp import types
+
+    if isinstance(text, str):
+        try:
+            parsed = json.loads(text)
+            return [types.TextContent(type="text", text=json.dumps(parsed, indent=2, ensure_ascii=False))]
+        except json.JSONDecodeError:
+            return [types.TextContent(type="text", text=str(text))]
+    return [types.TextContent(type="text", text=str(text))]
+
+
+def format_error_response(error: str):
+    return format_text_response(f"Error: {error}")
 
 
 def load_profiles(working_dir: Optional[Path] = None) -> Dict[str, Any]:

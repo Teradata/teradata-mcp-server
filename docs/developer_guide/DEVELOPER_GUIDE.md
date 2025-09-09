@@ -98,12 +98,16 @@ The directory structure will follow the following conventions
 
 [logs directory](./logs/) – (legacy note) we do **not** write logs to the current working directory by default. For CLI runs, logs go to a per‑user location (e.g., `~/Library/Logs/TeradataMCP` on macOS). When used via stdio (e.g., Claude Desktop), file logging is disabled by default to keep stdout clean; you can override with `LOG_DIR`.
 
-[src/teradata_mcp_server](./src/teradata_mcp_server) - this will contain all source code.
-- __init__.py - will contain server imports  
-- server.py - contains the main server script and will decorate tools, prompts, and resources
-- utils.py - utilities for configuration management and other server functions
-- config/ - packaged configuration files (default profiles.yml and other configuration defaults)
-- testing/ - testing framework and utilities
+[src/teradata_mcp_server](./src/teradata_mcp_server) - main server source code:
+- `server.py`: slim entrypoint. Parses CLI/env into `Settings`, builds the app via `create_mcp_app`, and runs the selected transport.
+- `app.py`: application factory. Sets up logging, middleware, adapters, loads tools/prompts/resources from code and YAML, and returns a configured `FastMCP` app.
+- `config.py`: `Settings` dataclass and `settings_from_env()` for centralized configuration (single source of truth; precedence is CLI > env > defaults).
+- `core/logging.py`: structured logging setup and JSON formatter.
+- `middleware.py`: shared `RequestContextMiddleware` that extracts per-request context; has a stdio fast-path (no headers/auth) and a full HTTP/SSE path that can enforce auth and cache.
+- MCP adapter (inlined in `app.py`): internal `execute_db_tool` (DB connection injection, QueryBand, error handling) and `make_tool_wrapper` (auto MCP wrapper for `handle_*` functions).
+- `tools/utils/queryband.py`: pure helpers to build Teradata QueryBand strings from request context (protocol-agnostic).
+- `utils.py`: configuration helpers for profiles and YAML object loading.
+- `testing/`: testing framework and utilities.
 
 
 [src/teradata_mcp_server/tools](./src/teradata_mcp_server/tools) - this will contain code to connect to the database as well as the modules.
@@ -164,7 +168,7 @@ New tool sets can be created in one of two ways:
 - rename the the yaml file to the name of your tool set, ensuring that it ends in _tools.yaml
 - ensure that the tool names correspond to the tool naming convention
 
-2. New tool libraries - this approach requires changes to the server code, as defined below.
+2. New tool libraries - this approach does not require changing server wiring. Create a new module under `tools/<group>/` and implement functions beginning with `handle_...`. The app factory automatically discovers and registers them when enabled in `profiles.yml`.
 - grouping name should start with up to 4 characters that describes the module function
 - Template code can be found in:
 [src/teradata_mcp_server/tools/tmpl](./src/teradata_mcp_server/tools/tmpl) - this will contain template tool set:
@@ -242,10 +246,11 @@ my_custom_tool:
 
 ### For Developers:
 
-The configuration system is implemented in `src/teradata_mcp_server/utils.py` and provides simple functions:
+The configuration system is implemented in `src/teradata_mcp_server/utils.py` and the runtime settings in `src/teradata_mcp_server/config.py`. Key functions:
 - `load_profiles()` - Load packaged + working directory profiles.yml
 - `get_profile_config(profile_name)` - Get specific profile configuration  
 - `load_all_objects()` - Load all packaged + working directory YAML objects
+And at runtime, `Settings` is passed into `create_mcp_app(settings)`.
 
 **Configuration Examples:**
 See `examples/Configuration_Examples/` for complete example configurations that you can copy and customize.
@@ -263,6 +268,42 @@ Two guides have been created to show how to add tools and prompts:
 - [Guidelines on how to specify prompts](./PROMPT_DEFINITION_GUIDELINES.md)
 
 <br>
+
+## Architecture Overview (for developers)
+
+This section explains how the pieces fit together at runtime.
+
+1) Entry point (`server.py`)
+- Parses CLI args, merges with env using `Settings`.
+- Calls `create_mcp_app(settings)`.
+- Runs the chosen transport: `stdio`, `streamable-http`, or `sse`.
+
+2) App factory (`app.py`)
+- Sets up logging (`core/logging.py`).
+- Creates `FastMCP` instance.
+- Initializes Teradata connections (SQLAlchemy engine), optional teradataml context and feature store config.
+- Adds `RequestContextMiddleware` from `mcp/middleware.py` with:
+  - stdio fast‑path (no headers/auth)
+  - HTTP/SSE path that extracts headers, auth (if configured), client/session IDs, etc.
+- Loads code‑defined tools via module loader and registers functions named `handle_*` that match `profiles.yml` patterns:
+  - Wraps handlers with an internal `make_tool_wrapper` so MCP sees a clean signature.
+  - The wrapper delegates execution to `execute_db_tool` which:
+    - Injects a DB connection (SQLAlchemy `Connection` preferred)
+    - Sets QueryBand based on request context (`tools/utils/queryband.py`)
+    - Handles errors and response formatting
+    - Reconnects when needed
+- Loads YAML-defined tools, prompts, and resources and registers them.
+
+3) Tools modules (`tools/*`)
+- Contain Teradata-specific implementation.
+- Handlers are plain Python (`handle_*`) and remain protocol‑agnostic; they receive a `Connection` and normal arguments.
+- Docstrings are used as tool descriptions.
+
+4) Configuration and Objects
+- `profiles.yml` drives which tools/prompts/resources are enabled (by regex pattern) at startup.
+- `*_objects.yml` define declarative tools, prompts, cubes, and glossaries.
+
+This split keeps MCP concerns (transport, context, auth, formatting) in the server layer, and business/database logic in `tools`, making it easy to reuse tools with another protocol if desired.
 
 ## Interactive testing using the MCP Inspector
 
