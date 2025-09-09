@@ -14,6 +14,7 @@ import os
 class Settings:
     # General
     profile: str | None = None
+    database_uri: str | None = None
 
     # MCP transport
     mcp_transport: str = "stdio"  # stdio | streamable-http | sse
@@ -35,6 +36,7 @@ def settings_from_env() -> Settings:
     """
     return Settings(
         profile=os.getenv("PROFILE") or None,
+        database_uri=os.getenv("DATABASE_URI") or None,
         mcp_transport=os.getenv("MCP_TRANSPORT", "stdio").lower(),
         mcp_host=os.getenv("MCP_HOST", "localhost"),
         mcp_port=int(os.getenv("MCP_PORT", "8001")),

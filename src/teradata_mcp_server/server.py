@@ -23,6 +23,7 @@ def parse_args_to_settings() -> Settings:
     parser.add_argument('--mcp_host', type=str, required=False)
     parser.add_argument('--mcp_port', type=int, required=False)
     parser.add_argument('--mcp_path', type=str, required=False)
+    parser.add_argument('--database_uri', type=str, required=False, help='Override DATABASE_URI connection string')
     parser.add_argument('--auth_mode', type=str, required=False)
     parser.add_argument('--auth_cache_ttl', type=int, required=False)
     args, _ = parser.parse_known_args()
@@ -30,6 +31,7 @@ def parse_args_to_settings() -> Settings:
     env = settings_from_env()
     return Settings(
         profile=args.profile if args.profile is not None else env.profile,
+        database_uri=args.database_uri if args.database_uri is not None else env.database_uri,
         mcp_transport=(args.mcp_transport or env.mcp_transport).lower(),
         mcp_host=args.mcp_host if args.mcp_host is not None else env.mcp_host,
         mcp_port=args.mcp_port if args.mcp_port is not None else env.mcp_port,
@@ -65,4 +67,3 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
-

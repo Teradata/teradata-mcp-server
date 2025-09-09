@@ -77,6 +77,8 @@ class TDConn:
                 )
                 self.connection_url = sqlalchemy_url
                 logger.info(f"SQLAlchemy engine created for Teradata: {self._base_host}:{self._base_port}/{self._base_db}")
+                logger.info(f"Logged in as {user} with {sqlalchemy_url}")
+
             except Exception as e:
                 logger.error(f"Error creating database engine: {e}")
                 self.engine = None
