@@ -1,6 +1,6 @@
 # MCP Server - Getting Started
 
-![Getting Started]![alt text](media/client-server-platform.png)
+![](media/client-server-platform.png)
 
 This document will cover the process and options for getting the teradata-mcp-server up and running
 
