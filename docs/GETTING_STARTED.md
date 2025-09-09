@@ -1,6 +1,6 @@
 # MCP Server - Getting Started
 
-![Getting Started](media/MCP-quickstart.png)
+![Getting Started]![alt text](media/client-server-platform.png)
 
 This document will cover the process and options for getting the teradata-mcp-server up and running
 
@@ -191,7 +191,7 @@ teradata-mcp-server --profile analyst_dev
 3. **Environment variables** - `DATABASE_URI`, `MCP_PORT`, etc. 
 4. **Script defaults** - Built-in default values
 
-See [Configuration Examples](../examples/Configuration_Examples/) for complete examples.
+See [Configuration Examples](../examples/server-customization/) for complete examples.
 
 **Creating custom tools, prompts and resources:**
 
