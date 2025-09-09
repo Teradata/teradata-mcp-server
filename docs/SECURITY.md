@@ -155,6 +155,8 @@ For example, if using Keycloak or another OpenID Connect provider, a user could 
 
 ### Basic mode details
 
+:warning: **FEATURE CURRENTLY IN BETA**
+
 In `AUTH_MODE=basic`, the server accepts either `Basic` or `Bearer` headers.
 
 - If `Basic`, it decodes `user:secret`. By default, it attempts password-based validation (LDAP/KRB5). If configured to use JWT-in-password, it performs a Teradata JWT DB login using `secret` as the JWT.
@@ -190,6 +192,8 @@ Claude Desktop example for Basic with JWT in password (or Bearer):
 ```
 
 ### OAuth mode details
+
+:warning: **NOT IMPLEMENTED**
 
 `AUTH_MODE=oauth` expects `Authorization: Bearer <JWT>` from a trusted IdP (e.g., Keycloak), verifies via JWKS (`iss`, `aud`, `exp`, `nbf`), maps a claim to the Teradata username, then proxies with `PROXYUSER`.
 
