@@ -58,9 +58,18 @@ group by 1,2 order by 3 desc
 
 ## Database Access
 
+The server connects the database with the user provided in the `database_uri` string and initiates a connection pool.
+
+You can chose to either: 
+- Request end users to authenticate using their database credentials and use their identity for database access (Service Account pattern with server authentication enabled) or 
+- Directly use the server database access without end-user authentication (Application User pattern with no authentication enabled).
+
 ### Service Account
 
-This requires you to create a proxy user for the MCP Server in advance, and associate existing database users so the MCP Server user can assume their identity.
+This method ensures each end-user accesses data using their own database credentials and permissions, preserving all existing Role-Based Access Control (RBAC) policies and row-level security rules. 
+
+This requires you to create a proxy user for the MCP Server in advance, and associate existing database users so the MCP Server user can assume their identity. 
+This needs to be associated with a user authentication mechanism (see next section) so the server validates the identity of the end user when a session begins. 
 
 Here is how you can do it:
 
@@ -87,20 +96,24 @@ GRANT CONNECT THROUGH mcp_svc
   --, PERMANENT alice   WITHOUT ROLE --Additional users here
 ```
 
-This server **always** executes via the service account (proxy user). End-user credentials or tokens are only used to authenticate the caller; queries are executed via the service account with `PROXYUSER=<user>` in the **transaction** query band.
-
-:warning: **DEV ONLY** — The `X-Assume-User` header is honored **only** when `AUTH_MODE=none`. In all other modes, identity comes from Basic/Bearer/OAuth and must be validated.
+This server **always** executes via the service account (proxy user). End-user credentials or tokens are only used to authenticate the caller; queries are executed via the service account with `PROXYUSER=<user>` in the session query band.
 
 Now you can use this proxy user as the MCP Server database connection, e.g.:
 
 ```sh
 export DATABASE_URI="teradata://mcp_svc:mcp_svc@yourteradatasystem.teradata.com:1025"
-uv run teradata-mcp-server --mcp_transport streamable-http --mcp_port 8001
+uv run teradata-mcp-server --mcp_transport streamable-http --mcp_port 8001 --auth_mode Basic
 ```
+
+**User authentication**
+
+The server will rely on the defined user authentication mechanism (see next section) to validate the user identity as the MCP session begins (or when credentials are updated) before any tool queries are issued wit the proxy user on the end-user's behalf. 
+
+:warning: **DEV ONLY** — You can also use the `X-Assume-User` header to pass the database user name to impersonate for your session. This is honored **only** when `AUTH_MODE=none` and designed for testing purposes.
 
 ### Application User
 
-This is the default mode for the MCP server: the server instantiates a connection pool to the database as specified in the DATABASE_URI string. This deployment method has the lowest database overhead and is optimal for high-throughput / low-latency applications.
+This is the default mode for the MCP server. This deployment method has the lowest database overhead and is optimal for high-throughput / low-latency applications.
 
 :white_check_mark: Ideal for application-specific instantiation with demanding SLAs.  
 - Consider co-locating the server deployment with the application (as well as stdio-based communication)  
