@@ -99,7 +99,7 @@ You should see Claude connect to your Teradata database and return results!
 - Try the test command from Step 1 first
 
 **Want more help?**
-- 📹 [Video tutorials](../VIDEO_LIBRARY.md)
+- 📹 [Video tutorials](VIDEO_LIBRARY.md)
 - 📖 [Detailed installation guide](INSTALLATION.md)
 - 🔧 [Configuration options](CONFIGURATION.md)
 

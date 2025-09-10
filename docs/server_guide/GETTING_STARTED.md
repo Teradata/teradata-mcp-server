@@ -24,7 +24,15 @@ Perfect for:
 - Development workflows in your IDE
 - Code completion with Teradata context
 
-*Both get you running in 5 minutes with minimal configuration.*
+#### **Option C: Open WebUI**  
+**→ [Quick Start (Open WebUI)](QUICK_START_OPEN_WEBUI.md)**
+
+Perfect for:
+- Self-hosted web interface users
+- Team sharing and collaboration
+- Integration with various LLM models
+
+*All options get you running in 5 minutes with minimal configuration.*
 
 ---
 
@@ -106,7 +114,7 @@ Learn about:
 
 ## 🎬 Prefer Video Learning?
 
-**→ [Video Library](../VIDEO_LIBRARY.md)**
+**→ [Video Library](VIDEO_LIBRARY.md)**
 
 Watch step-by-step tutorials for:
 - Installation and setup
@@ -140,7 +148,7 @@ Watch step-by-step tutorials for:
 
 ## 🆘 Need Help?
 
-- **🎬 Visual learner?** → [Video Library](../VIDEO_LIBRARY.md)
+- **🎬 Visual learner?** → [Video Library](VIDEO_LIBRARY.md)
 - **🤝 Want to contribute?** → [Developer Guide](../developer_guide/DEVELOPER_GUIDE.md)  
 - **💡 Found an issue?** → [Open a GitHub issue](https://github.com/Teradata/teradata-mcp-server/issues)
 

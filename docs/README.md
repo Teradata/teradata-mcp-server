@@ -6,10 +6,15 @@ This guide will help you get started, configure, and customize your Teradata MCP
 
 New to Teradata MCP Server? Choose your path:
 
-- **[Quick Start (Claude Desktop)](server_guide/QUICK_START.md)** - 5-minute setup with Claude Desktop
-- **[Quick Start (VS Code with GitHub Copilot)](server_guide/QUICK_START_HTTP.md)** - 5-minute setup for VS Code and GitHub Copilot  
-- **[Getting Started Guide](server_guide/GETTING_STARTED.md)** - Choose the right path for your needs
-- **[Video Library](VIDEO_LIBRARY.md)** - Watch step-by-step tutorials
+| **Client** | **Communication** | **Deployment** | **Guide** | **Best For** |
+|------------|------------------|----------------|-----------|--------------|
+| Claude Desktop | stdio | CLI (uv/pipx) | [5-min setup](server_guide/QUICK_START.md) | Personal AI chat, data exploration |
+| VS Code + Copilot | HTTP | CLI (uv/pipx) | [5-min setup](server_guide/QUICK_START_HTTP.md) | Development workflows, code completion |
+| Open WebUI | REST | Docker | [5-min setup](server_guide/QUICK_START_OPEN_WEBUI.md) | Self-hosted web UI, team sharing |
+
+**Other Options:**
+- **[Getting Started Guide](server_guide/GETTING_STARTED.md)** - Detailed path selection and role-based recommendations
+- **[Video Library](server_guide/VIDEO_LIBRARY.md)** - Watch step-by-step tutorials
 
 ## 📖 Documentation Sections
 
@@ -18,7 +23,8 @@ Everything you need to know about running and configuring the MCP server:
 
 - **[Getting Started](server_guide/GETTING_STARTED.md)** - Choose your path (routing guide)
 - **[Quick Start (Claude)](server_guide/QUICK_START.md)** - 5-minute Claude Desktop setup using `stdio` transport mode
-- **[Quick Start (VS Code with GitHub Copilot)](server_guide/QUICK_START_HTTP.md)** - 5-minute VS Code and GitHub Copilot setup using `streamable-http` transport mode.
+- **[Quick Start (VS Code + Copilot)](server_guide/QUICK_START_HTTP.md)** - 5-minute VS Code and GitHub Copilot setup using `streamable-http` transport mode
+- **[Quick Start (Open WebUI)](server_guide/QUICK_START_OPEN_WEBUI.md)** - 5-minute Open WebUI setup using REST interface
 - **[Installation](server_guide/INSTALLATION.md)** - Deployment methods and options
 - **[Configuration](server_guide/CONFIGURATION.md)** - Server settings and tuning
 - **[Architecture](server_guide/ARCHITECTURE.md)** - How components work together
@@ -63,6 +69,6 @@ Extend and contribute to the Teradata MCP Server:
 
 ## 🆘 Need Help?
 
-- 📹 **Visual Learner?** Check our [Video Library](VIDEO_LIBRARY.md)
+- 📹 **Visual Learner?** Check our [Video Library](server_guide/VIDEO_LIBRARY.md)
 - 🤝 **Want to contribute?** See our [Contributing Guide](developer_guide/CONTRIBUTING.md)
 - 💡 **Have Ideas or identified a bug?** Open an issue on GitHub

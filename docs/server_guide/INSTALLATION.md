@@ -1,8 +1,14 @@
-# Installation Guide
+# Installation & Deployment Guide
 
 > **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Quick Start](QUICK_START.md) | **Installation** | [Configuration](CONFIGURATION.md)
 
 > **🎯 Goal:** Choose and implement the best deployment method for your needs
+
+This guide covers everything you need to deploy the Teradata MCP Server, from local development to production environments:
+
+- **Installation Methods** - Different ways to install the server (CLI, Docker, pip, source)
+- **Production Deployment** - Remote deployment strategies for serving multiple clients
+- **Service Management** - Running as system services with automatic restart and monitoring
 
 ## 🤔 Which Installation Method?
 
@@ -118,7 +124,22 @@ docker compose up -d
 
 The server will be available on port 8001 (or the value of the `PORT` environment variable).
 
-You are now ready to connect your client. For details on how to set up client tools, refer to [Working with Clients](client_guide/CLIENT_GUIDE.md)
+### REST Interface Option
+
+For integration with any tool that supports REST APIs, you can run the server with a REST interface using the "rest" profile:
+
+```sh
+# Set your API key for authentication
+export MCPO_API_KEY=top-secret
+export DATABASE_URI="teradata://username:password@host:1025/database"
+
+# Run with REST interface
+docker compose --profile rest up
+```
+
+This exposes your Teradata tools as OpenAPI-compatible REST endpoints at http://localhost:8002. View the documentation and test endpoints at http://localhost:8002/docs.
+
+You are now ready to connect your client. For details on how to set up client tools, refer to [Working with Clients](../client_guide/CLIENT_GUIDE.md)
 
 ## 🐍 Method 3: pip + venv (Traditional)
 
@@ -243,6 +264,82 @@ which python  # Should show .venv path
 - Verify DATABASE_URI environment variable is available, or use `--database_uri` argument, and URI well formatted: `teradata://user:pass@host:1025/database` 
 - Check firewall settings (port 1025)
 
+---
+
+## 🚀 Production Deployment
+
+For production deployments that serve multiple clients, you have two main options:
+
+1. **Docker deployment** - Containerized setup with automatic restarts (includes REST option)
+2. **System service** - Background service using either:
+   - **Direct execution** - `teradata-mcp-server` (after pip/uv install, recommended)
+   - **uv-managed execution** - `uv run teradata-mcp-server` (with dependency management)
+
+For remote access, use the `streamable-http` transport protocol which communicates over HTTP.
+
+**Before you deploy**, define your security strategy and review the [security patterns we provide](SECURITY.md).
+
+### 🐳 Docker Production Setup
+
+If the server is using docker compose and you wish to have it automatically start on system reboot, add the following entry to the docker-compose.yaml file to either or both service entries (`teradata-mcp-server:`, `teradata-rest-server:`):
+
+```yaml
+services:
+  teradata-mcp-server:
+    build: .
+    image: teradata-mcp-server:latest
+    restart: always
+```
+
+### ⚙️ System Service Setup
+
+Configure the MCP server to run as a systemd service for automatic startup and management:
+
+1. **Create a service file** in `/etc/systemd/system/` named `<your service name>.service`, e.g. `teradata_mcp.service`
+
+2. **Copy the following configuration** - modify for your environment:
+```ini
+[Unit]
+Description=Teradata MCP Server
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=your-username
+Environment=DATABASE_URI=teradata://username:password@host:1025/database
+Environment=MCP_TRANSPORT=streamable-http
+Environment=MCP_HOST=127.0.0.1
+Environment=MCP_PORT=8001
+ExecStart=/usr/local/bin/teradata-mcp-server --profile all
+
+[Install]
+WantedBy=multi-user.target
+```
+
+3. **Start and enable the service**:
+```bash
+# Start the service
+sudo systemctl start <your service name>.service
+
+# Check status
+sudo systemctl status <your service name>.service
+
+# Enable start on system boot
+sudo systemctl enable <your service name>.service
+```
+
+4. **Optional: Add cron restart** for additional stability:
+```bash
+# Edit crontab
+sudo crontab -e
+
+# Add hourly restart (adjust as needed)
+0 * * * * /bin/systemctl restart <your service name>.service
+```
+
 ## ✨ What's Next?
 
 **Installation complete!** Choose your next step:
@@ -254,4 +351,4 @@ which python  # Should show .venv path
 - **🛠 Custom Tools**: [Add Business Logic](CUSTOMIZING.md)
 
 ---
-*Need help? Check our [troubleshooting guide](CONFIGURATION.md#troubleshooting) or [video tutorials](../VIDEO_LIBRARY.md).*
+*Need help? Check our [troubleshooting guide](CONFIGURATION.md#troubleshooting) or [video tutorials](VIDEO_LIBRARY.md).*
