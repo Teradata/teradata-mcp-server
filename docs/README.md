@@ -4,10 +4,10 @@ This guide will help you get started, configure, and customize your Teradata MCP
 
 ## 🚀 Quick Start
 
-New to Teradata MCP Server? Start here:
+New to Teradata MCP Server? Choose your path:
 
-- **[Getting Started Guide](server_guide/GETTING_STARTED.md)** - Installation, configuration, and first run
-- **[Client Setup](client_guide/CLIENT_GUIDE.md)** - Connect your favorite AI clients
+- **[5-Minute Quick Start](server_guide/QUICK_START.md)** - Get running immediately with Claude Desktop
+- **[Getting Started Guide](server_guide/GETTING_STARTED.md)** - Choose the right path for your needs
 - **[Video Library](VIDEO_LIBRARY.md)** - Watch step-by-step tutorials
 
 ## 📖 Documentation Sections
@@ -15,8 +15,12 @@ New to Teradata MCP Server? Start here:
 ### 🛠 Server Guide
 Everything you need to know about running and configuring the MCP server:
 
-- **[Getting Started](server_guide/GETTING_STARTED.md)** - Installation and initial setup
-- **[Customizing](server_guide/CUSTOMIZING.md)** - Add your own tools, prompts, and business logic
+- **[Getting Started](server_guide/GETTING_STARTED.md)** - Choose your path (routing guide)
+- **[5-Minute Quick Start](server_guide/QUICK_START.md)** - Fastest way to get running
+- **[Installation](server_guide/INSTALLATION.md)** - Deployment methods and options
+- **[Configuration](server_guide/CONFIGURATION.md)** - Server settings and tuning
+- **[Architecture](server_guide/ARCHITECTURE.md)** - How components work together
+- **[Customizing](server_guide/CUSTOMIZING.md)** - Add your own tools and business logic
 - **[Security](server_guide/SECURITY.md)** - Authentication and access control
 
 ### 👥 Client Guide
@@ -42,7 +46,7 @@ Extend and contribute to the Teradata MCP Server:
 ## 🎯 Common Use Cases
 
 ### For Data Engineers & Analysts
-- **Quick Setup**: [Getting Started](server_guide/GETTING_STARTED.md) → [Claude Desktop](client_guide/Claude_desktop.md)
+- **Quick Setup**: [5-Minute Quick Start](server_guide/QUICK_START.md) → [Claude Desktop](client_guide/Claude_desktop.md)
 - **Custom Business Logic**: [Customizing Guide](server_guide/CUSTOMIZING.md)
 - **Security Setup**: [Security Configuration](server_guide/SECURITY.md)
 
