@@ -1,4 +1,6 @@
-# Audit and Security
+# Security Configuration
+
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting Started](GETTING_STARTED.md) | [Customizing](CUSTOMIZING.md) | **Security**
 
 All database tool calls are traced using [Teradata DBQL](https://docs.teradata.com/r/Enterprise_IntelliFlex_VMware/Database-Administration/Tracking-Query-Behavior-with-Database-Query-Logging-Operational-DBAs), and the MCP server implements query banding by default.
 
@@ -61,8 +63,8 @@ group by 1,2 order by 3 desc
 The server connects the database with the user provided in the `database_uri` string and initiates a connection pool.
 
 You can chose to either: 
-- Request end users to authenticate using their database credentials and use their identity for database access (Service Account pattern with server authentication enabled) or 
-- Directly use the server database access without end-user authentication (Application User pattern with no authentication enabled).
+- Request end users to authenticate using their database credentials and use their identity for database access (**Service Account** pattern with server authentication enabled) or 
+- Directly use the server database access without end-user authentication (**Application User** pattern with no authentication enabled).
 
 ### Service Account
 
