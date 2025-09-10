@@ -6,9 +6,18 @@
 
 ## 🔧 Basic Configuration
 
+### Configuration Priority
+
+The MCP server uses the following configuration sources in priority order (highest to lowest):
+
+1. **Command line arguments** (e.g., `--profile dataScientist`)
+2. **Environment variables** (e.g., `export PROFILE=dataScientist`)
+3. **Configuration files** (e.g., `.env` file)
+4. **Default values**
+
 ### Environment Variables
 
-The MCP server uses environment variables for configuration:
+Configure the server using environment variables:
 
 ```bash
 # Required: Database connection
@@ -34,12 +43,12 @@ export AUTH_RATE_LIMIT_ATTEMPTS="5"
 export AUTH_RATE_LIMIT_WINDOW="60"
 ```
 
-### Configuration File (.env)
+### Configuration File (.env) - Optional
 
-Create a `.env` file for persistent configuration:
+For convenience, you can create a `.env` file for persistent configuration:
 
 ```bash
-# .env file
+# .env file (optional convenience)
 DATABASE_URI=teradata://username:password@host:1025/database
 PROFILE=dataScientist
 LOGGING_LEVEL=INFO
@@ -47,7 +56,7 @@ MCP_TRANSPORT=streamable-http
 MCP_PORT=8001
 ```
 
-The server automatically loads `.env` files from the current directory.
+The server automatically loads `.env` files from the current directory. Command line arguments will override these values.
 
 ## 🎯 Profiles
 
@@ -81,7 +90,7 @@ export PROFILE="base,qlty,custom"
 
 ### Custom Profiles
 
-Create custom profiles in `profiles.yml`:
+Create custom profiles in `profiles.yml` (must be in the current directory where the application is started):
 
 ```yaml
 # profiles.yml
@@ -212,7 +221,7 @@ environment:
 # docker-compose.yml
 services:
   teradata-mcp:
-    image: ghcr.io/teradata/teradata-mcp-server:latest
+    build: .  # Build from source (no pre-built images available)
     volumes:
       - ./custom_objects.yml:/app/custom_objects.yml
       - ./profiles.yml:/app/profiles.yml
@@ -251,33 +260,6 @@ curl http://localhost:8001/mcp/list_tools
 
 # Check server health
 curl http://localhost:8001/mcp/ping
-```
-
-## 📊 Performance Tuning
-
-### For High Load
-
-```bash
-# Increase connection pool
-export TD_POOL_SIZE="20"
-export TD_MAX_OVERFLOW="30"
-
-# Longer connection timeout  
-export TD_POOL_TIMEOUT="60"
-
-# Use HTTP transport for multiple clients
-export MCP_TRANSPORT="streamable-http"
-```
-
-### For Development
-
-```bash
-# Smaller pool for dev
-export TD_POOL_SIZE="2"
-export TD_MAX_OVERFLOW="3"
-
-# More verbose logging
-export LOGGING_LEVEL="INFO"
 ```
 
 ## 🆘 Troubleshooting

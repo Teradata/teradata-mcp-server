@@ -13,10 +13,10 @@ The Teradata MCP Server creates a bridge between AI clients and your Teradata pl
 ```
 [AI Client] ←→ [MCP Server] ←→ [Teradata Platform]
      ↓              ↓                ↓
- Claude Desktop  Tool Router    Database + Analytics
- VS Code         Security        Feature Store
- Google Gemini   Profiles        Vector Store  
- Web Clients     Custom Logic    Data Quality
+ Claude Desktop  Tool Toolkit   Analytic Engine
+ VS Code         Security          Metadata
+ Google Gemini   Profiles         Database  
+ Web Clients     Custom Logic   Vector Store
 ```
 
 ## 🔧 Core Components
@@ -57,10 +57,10 @@ sequenceDiagram
     User->>AI Client: "Show me sales data"
     AI Client->>MCP Server: MCP protocol request
     MCP Server->>Security Layer: Authenticate user
-    Security Layer->>Tool Router: Route to sales_cube tool
-    Tool Router->>Teradata DB: Execute SQL query
-    Teradata DB->>Tool Router: Return results
-    Tool Router->>MCP Server: Format response
+    Security Layer->>Tool Toolkit: Route to sales_cube tool
+    Tool Toolkit->>Teradata DB: Execute SQL query
+    Teradata DB->>Tool Toolkit: Return results
+    Tool Toolkit->>MCP Server: Format response
     MCP Server->>AI Client: MCP protocol response  
     AI Client->>User: Natural language answer
 ```
