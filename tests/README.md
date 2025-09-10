@@ -8,7 +8,7 @@ The testing framework will run teradata-mcp-server and test through stdio.
 
 ```bash
 export DATABASE_URI="teradata://user:pass@host:1025/database"
-python tests/run_mcp_tests.py "uv run teradata-mcp-server"
+uv run python tests/run_mcp_tests.py "uv run teradata-mcp-server"
 ```
 
 **No need to start the server separately!**

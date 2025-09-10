@@ -58,7 +58,8 @@ def create_mcp_app(settings: Settings):
     enableEVS = True if any(re.match(pattern, 'evs_*') for pattern in config.get('tool', [])) else False
 
     # Initialize TD connection and optional teradataml/EFS context
-    tdconn = td.TDConn()
+    # Pass settings object to TDConn instead of just connection_url
+    tdconn = td.TDConn(settings=settings)
     fs_config = None
     if enableEFS:
         # Only import FeatureStoreConfig (which depends on tdfs4ds) when EFS tools are enabled
@@ -95,7 +96,7 @@ def create_mcp_app(settings: Settings):
     def get_tdconn(recreate: bool = False):
         nonlocal tdconn, fs_config
         if recreate:
-            tdconn = td.TDConn()
+            tdconn = td.TDConn(settings=settings)
             if enableEFS:
                 try:
                     import teradataml as tdml
@@ -146,9 +147,10 @@ def create_mcp_app(settings: Settings):
             if use_sqla:
                 from sqlalchemy import text
                 with tdconn_local.engine.connect() as conn:
-                    if settings.mcp_transport == "streamable-http":
-                        ctx = get_context()
-                        request_context = ctx.get_state("request_context") if ctx else None
+                    # Always attempt to set QueryBand when a request context is present
+                    ctx = get_context()
+                    request_context = ctx.get_state("request_context") if ctx else None
+                    if request_context is not None:
                         qb = build_queryband(
                             application=mcp.name,
                             profile=profile_name,
@@ -162,13 +164,19 @@ def create_mcp_app(settings: Settings):
                             logger.debug(f"Tool request context: {request_context}")
                         except Exception as qb_error:
                             logger.debug(f"Could not set QueryBand: {qb_error}")
+                            # If in Basic auth, do not run the tool without proxying
+                            if str(getattr(request_context, "auth_scheme", "")).lower() == "basic":
+                                return format_error_response(
+                                    f"Cannot run tool '{tool_name}': failed to set QueryBand for Basic auth. Error: {qb_error}"
+                                )
                     result = tool(conn, *args, **kwargs)
             else:
                 raw = tdconn_local.engine.raw_connection()
                 try:
-                    if settings.mcp_transport == "streamable-http":
-                        ctx = get_context()
-                        request_context = ctx.get_state("request_context") if ctx else None
+                    # Always attempt to set QueryBand when a request context is present
+                    ctx = get_context()
+                    request_context = ctx.get_state("request_context") if ctx else None
+                    if request_context is not None:
                         qb = build_queryband(
                             application=mcp.name,
                             profile=profile_name,
@@ -178,12 +186,17 @@ def create_mcp_app(settings: Settings):
                         )
                         try:
                             cursor = raw.cursor()
-                            cursor.execute(f"SET QUERY_BAND = '{qb}' FOR TRANSACTION")
+                            # Apply at session scope so it persists across statements
+                            cursor.execute(f"SET QUERY_BAND = '{qb}' FOR SESSION")
                             cursor.close()
                             logger.debug(f"QueryBand set: {qb}")
                             logger.debug(f"Tool request context: {request_context}")
                         except Exception as qb_error:
                             logger.debug(f"Could not set QueryBand: {qb_error}")
+                            if str(getattr(request_context, "auth_scheme", "")).lower() == "basic":
+                                return format_error_response(
+                                    f"Cannot run tool '{tool_name}': failed to set QueryBand for Basic auth. Error: {qb_error}"
+                                )
                     result = tool(raw, *args, **kwargs)
                 finally:
                     raw.close()
