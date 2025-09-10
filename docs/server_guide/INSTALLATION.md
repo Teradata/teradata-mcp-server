@@ -8,99 +8,124 @@
 
 | Method | Best For | Pros | Cons | Setup Time |
 |--------|----------|------|------|------------|
-| **uv tool** | Development, Desktop use | Fast, isolated, easy updates | Requires uv | 2 min |
+| **CLI Install** | System-wide command | Available everywhere, isolated | Requires uv/pipx | 2 min |
 | **Docker** | Production, REST API | Containerized, scalable | Requires Docker knowledge | 5 min |  
 | **pip + venv** | Traditional Python shops | Familiar workflow | Manual env management | 3 min |
 | **Source** | Contributors, Custom builds | Latest features | Requires dev setup | 10 min |
 
-## 🚀 Method 1: uv Tool (Recommended)
+## 🚀 Method 1: CLI Installation (Recommended)
 
-**Best for:** Most users, development, desktop integration
+**Best for:** System-wide command-line tool, available from anywhere
 
-### Why uv?
-- Installs into isolated environment (no system pollution)
-- Extremely fast downloads and installs
-- Easy upgrades: `uv tool upgrade teradata-mcp-server`
+We recommend `uv` or `pipx` to install teradata-mcp-server as a CLI tool. They provide isolated environments and ensure the `teradata-mcp-server` command is available system-wide without interfering with system Python.
 
-### Install uv
+### Option A: Using uv
 ```bash
-# macOS
-brew install uv
+# Install uv first
+# macOS: brew install uv
+# Windows: winget install astral-sh.uv  
+# Linux: curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Windows  
-winget install astral-sh.uv
+# Install teradata-mcp-server
+uv tool install "teradata-mcp-server"
 
-# Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# With optional Enterprise Feature Store and Vector Store
+uv tool install "teradata-mcp-server[fs,evs]"
 ```
 
-### Install MCP Server
+### Option B: Using pipx 
 ```bash
-# Basic installation
-uv tool install teradata-mcp-server
+# Install pipx first (if not available)
+python -m pip install --user pipx
+python -m pipx ensurepath
 
-# With enterprise features (Feature Store, Vector Store)
-uv tool install "teradata-mcp-server[fs,evs]"
+# Install teradata-mcp-server
+pipx install "teradata-mcp-server"
+
+# With optional Enterprise Feature Store and Vector Store
+pipx install "teradata-mcp-server[fs,evs]"
 ```
 
 ### Usage
 ```bash
-# Run directly
+# Available system-wide
 teradata-mcp-server --help
-
-# Or via uvx (no install needed)
-uvx teradata-mcp-server --help
+teradata-mcp-server --version
 ```
 
 ### Updates
 ```bash
+# With uv
 uv tool upgrade teradata-mcp-server
+
+# With pipx  
+pipx upgrade teradata-mcp-server
 ```
 
-## 🐳 Method 2: Docker (Production)
+## 🐳 Method 2: Docker (Build from Source)
 
-**Best for:** Production deployments, REST API usage, team deployments
+**Best for:** Production deployments, scale out, IaC
 
-### Quick Start
+You can use Docker to run the MCP server in streamable-http mode.
+
+Docker requires building from the source repository since we currently don't publish pre-built images.
+
+### Prerequisites
+- Docker and Docker Compose installed
+- Git
+
+### Clone and configure
 ```bash
-docker run -d \\
-  --name teradata-mcp \\
-  -p 8001:8001 \\
-  -e DATABASE_URI="teradata://user:pass@host:1025/db" \\
-  -e MCP_TRANSPORT="streamable-http" \\
-  ghcr.io/teradata/teradata-mcp-server:latest
+# Clone the repository
+git clone https://github.com/Teradata/teradata-mcp-server.git
+cd teradata-mcp-server
 ```
 
-### With Docker Compose
-```yaml
-# docker-compose.yml
-services:
-  teradata-mcp:
-    image: ghcr.io/teradata/teradata-mcp-server:latest
-    ports:
-      - "8001:8001"
-    environment:
-      - DATABASE_URI=teradata://user:pass@host:1025/db
-      - MCP_TRANSPORT=streamable-http
-      - PROFILE=dataScientist
-    restart: unless-stopped
+**Optional configurations:**
+- Place `custom_objects.yml` in the project root to add custom tools
+- Modify `docker-compose.yml` for permanent environment changes (you can use environment variables at runtime)
+
+### Run
+The server expects at least the Teradata URI string via the `DATABASE_URI` environment variable. You may:
+- update the `docker-compose.yaml` file or 
+- setup the environment variable with your system's connection details:
+
+```sh
+export DATABASE_URI=teradata://username:password@host:1025/databaseschema
+docker compose up
 ```
 
-Run with: `docker-compose up -d`
+### Examples
 
-### Custom Configuration
 ```bash
-# Mount custom config
-docker run -d \\
-  -p 8001:8001 \\
-  -v ./custom_objects.yml:/app/custom_objects.yml \\
-  -e DATABASE_URI="teradata://user:pass@host:1025/db" \\
-  ghcr.io/teradata/teradata-mcp-server:latest
+# Set your database connection
+export DATABASE_URI="teradata://username:password@host:1025/database"
+
+# Build with optional modules (Feature Store, Vector Store)
+ENABLE_FS_MODULE=true ENABLE_EVS_MODULE=true docker compose build
+docker compose up
+
+# Run with specific profile
+PROFILE=dba docker compose up
+
+# Combine options
+ENABLE_FS_MODULE=true PROFILE=dataScientist docker compose build
+PROFILE=dataScientist docker compose up
+
+# Run in background (production)
+docker compose up -d
 ```
+
+The server will be available on port 8001 (or the value of the `PORT` environment variable).
+
+You are now ready to connect your client. For details on how to set up client tools, refer to [Working with Clients](client_guide/CLIENT_GUIDE.md)
 
 ## 🐍 Method 3: pip + venv (Traditional)
 
-**Best for:** Python developers, existing Python workflows
+**Best for:** Existing Python projects
+
+### Prerequisites
+- Python 3.12+
 
 ### Create Virtual Environment
 ```bash
@@ -134,8 +159,8 @@ teradata-mcp-server --help
 **Best for:** Contributors, custom modifications, latest features
 
 ### Prerequisites
-- Python 3.9+
-- uv (recommended) or pip
+- Python 3.12+
+- uv (recommended)
 - Git
 
 ### Clone and Install
@@ -150,18 +175,6 @@ uv run teradata-mcp-server --help
 # Or with pip
 pip install -e ".[dev]"
 teradata-mcp-server --help
-```
-
-### Development Mode
-```bash
-# Run tests
-uv run pytest
-
-# Format code
-uv run ruff format
-
-# Type checking
-uv run mypy src/
 ```
 
 ## ✅ Verify Installation
@@ -227,8 +240,7 @@ which python  # Should show .venv path
 ```
 
 **Database connection fails**
-- Verify DATABASE_URI format: `teradata://user:pass@host:1025/database`
-- Test network connectivity: `ping your-host`
+- Verify DATABASE_URI environment variable is available, or use `--database_uri` argument, and URI well formatted: `teradata://user:pass@host:1025/database` 
 - Check firewall settings (port 1025)
 
 ## ✨ What's Next?
