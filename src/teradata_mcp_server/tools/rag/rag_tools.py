@@ -70,7 +70,7 @@ RAG_CONFIG = load_rag_config()
 def build_search_query(vector_db, dst_table, chunk_embed_table, k, config):
     """Build dynamic search query based on available metadata fields in vector store"""
     # Get metadata fields from config
-    metadata_fields = config['vector_store_schema']['metadata_fields_in_vector_store']
+    metadata_fields = config['vector_store_schema']['metadata_fields_in_vector_store'] or []
     feature_columns = config['embedding']['feature_columns']
 
     # Build SELECT clause dynamically - txt is always required
