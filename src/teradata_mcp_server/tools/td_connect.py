@@ -1,9 +1,7 @@
 import logging
-import os
-from typing import Optional, Any
+from typing import Optional, TYPE_CHECKING
 from urllib.parse import urlparse, quote_plus
 
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import QueuePool, NullPool
@@ -15,13 +13,13 @@ from .utils import (
 from .auth_validation import (
     AuthValidator,
     RateLimiter,
-    rate_limited_auth,
     InvalidUsernameError,
     InvalidTokenFormatError,
     RateLimitExceededError,
 )
 
-load_dotenv()
+if TYPE_CHECKING:
+    from teradata_mcp_server.config import Settings
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -32,54 +30,76 @@ logger = logging.getLogger("teradata_mcp_server")
 #     The connection URL should be in the format: teradata://username:password@host:port/database
 class TDConn:
     engine: Engine | None = None
-    connection_url: str | None = None
 
-    # Constructor
-    #     It will read the connection URL from the environment variable DATABASE_URI
-    #     It will parse the connection URL and create a SQLAlchemy engine connected to the database
-    def __init__(self, connection_url: str | None = None):
-        # Initialize rate limiter for auth attempts
-        self._rate_limiter = RateLimiter(
-            max_attempts=int(os.getenv("AUTH_RATE_LIMIT_ATTEMPTS", "5")),
-            window_seconds=int(os.getenv("AUTH_RATE_LIMIT_WINDOW", "60"))
-        )
-        if connection_url is None and os.getenv("DATABASE_URI") is None:
-            logger.warning("DATABASE_URI is not specified, database connection will not be established.")
-            self.engine = None
-        else:
-            connection_url = connection_url or os.getenv("DATABASE_URI")
-            parsed_url = urlparse(connection_url)
-            user = parsed_url.username
-            password = parsed_url.password
-            self._base_host = parsed_url.hostname
-            self._base_port = parsed_url.port or 1025
-            self._base_db = parsed_url.path.lstrip('/')
-            self._default_basic_logmech = os.getenv("LOGMECH", "TD2")
-
-            # Pool parameters from env
-            pool_size = int(os.getenv("TD_POOL_SIZE", 5))
-            max_overflow = int(os.getenv("TD_MAX_OVERFLOW", 10))
-            pool_timeout = int(os.getenv("TD_POOL_TIMEOUT", 30))
-
-            # Build SQLAlchemy connection string for teradatasqlalchemy
-            # Format: teradatasql://user:pass@host:port/database?LOGMECH=TD2
-            sqlalchemy_url = (
-                f"teradatasql://{user}:{password}@{self._base_host}:{self._base_port}/{self._base_db}?LOGMECH={self._default_basic_logmech}"
+    def __init__(self, settings: Optional['Settings'] = None):
+        """
+        Initialize TDConn with configuration from Settings object.
+        
+        Args:
+            settings: Settings object containing database configuration
+        """
+        if settings is None:
+            # Backward compatibility: create minimal settings from environment
+            import os
+            
+            # Fallback to environment variables if no settings provided
+            self._rate_limiter = RateLimiter(
+                max_attempts=int(os.getenv("AUTH_RATE_LIMIT_ATTEMPTS", "5")),
+                window_seconds=int(os.getenv("AUTH_RATE_LIMIT_WINDOW", "60"))
             )
-
-            try:
-                self.engine = create_engine(
-                    sqlalchemy_url,
-                    poolclass=QueuePool,
-                    pool_size=pool_size,
-                    max_overflow=max_overflow,
-                    pool_timeout=pool_timeout,
-                )
-                self.connection_url = sqlalchemy_url
-                logger.info(f"SQLAlchemy engine created for Teradata: {self._base_host}:{self._base_port}/{self._base_db}")
-            except Exception as e:
-                logger.error(f"Error creating database engine: {e}")
+            connection_url = os.getenv("DATABASE_URI")
+            if connection_url is None:
+                logger.warning("No database configuration provided, database connection will not be established.")
                 self.engine = None
+                return
+            
+            logmech = os.getenv("LOGMECH", "TD2")
+            pool_size = int(os.getenv("TD_POOL_SIZE", "5"))
+            max_overflow = int(os.getenv("TD_MAX_OVERFLOW", "10"))
+            pool_timeout = int(os.getenv("TD_POOL_TIMEOUT", "30"))
+        else:
+            # Use settings object
+            self._rate_limiter = RateLimiter(
+                max_attempts=settings.auth_rate_limit_attempts,
+                window_seconds=settings.auth_rate_limit_window
+            )
+            connection_url = settings.database_uri
+            if connection_url is None:
+                logger.warning("No database URI specified in settings, database connection will not be established.")
+                self.engine = None
+                return
+            
+            logmech = settings.logmech
+            pool_size = settings.pool_size
+            max_overflow = settings.max_overflow
+            pool_timeout = settings.pool_timeout
+
+        # Parse connection URL
+        parsed_url = urlparse(connection_url)
+        user = parsed_url.username
+        password = parsed_url.password
+        self._base_host = parsed_url.hostname
+        self._base_port = parsed_url.port or 1025
+        self._base_db = parsed_url.path.lstrip('/')
+        self._default_basic_logmech = logmech
+
+        # Build SQLAlchemy connection string for teradatasqlalchemy
+        sqlalchemy_url = (
+            f"teradatasql://{user}:{password}@{self._base_host}:{self._base_port}/{self._base_db}?LOGMECH={self._default_basic_logmech}"
+        )
+
+        try:
+            self.engine = create_engine(
+                sqlalchemy_url,
+                poolclass=QueuePool,
+                pool_size=pool_size,
+                max_overflow=max_overflow,
+                pool_timeout=pool_timeout,
+            )
+            logger.info(f"SQLAlchemy engine created for Teradata: {self._base_host}:{self._base_port}/{self._base_db}")
+        except Exception as e:
+            logger.error(f"Error creating database engine: {e}")
+            self.engine = None
 
     # Destructor
     #     It will close the SQLAlchemy connection and engine

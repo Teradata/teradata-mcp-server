@@ -176,6 +176,8 @@ Claude Desktop example for Basic user:pass:
   }
 }
 ```
+The expected BASIC_AUTH token is the database user:password string encoded in Base64. 
+Eg. run `printf "demo_user:demo_password" | base64` to generate the string using your database user name and password values.
 
 Claude Desktop example for Basic with JWT in password (or Bearer):
 

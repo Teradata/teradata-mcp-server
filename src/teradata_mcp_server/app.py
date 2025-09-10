@@ -58,7 +58,8 @@ def create_mcp_app(settings: Settings):
     enableEVS = True if any(re.match(pattern, 'evs_*') for pattern in config.get('tool', [])) else False
 
     # Initialize TD connection and optional teradataml/EFS context
-    tdconn = td.TDConn()
+    # Pass settings object to TDConn instead of just connection_url
+    tdconn = td.TDConn(settings=settings)
     fs_config = None
     if enableEFS:
         # Only import FeatureStoreConfig (which depends on tdfs4ds) when EFS tools are enabled
@@ -95,7 +96,7 @@ def create_mcp_app(settings: Settings):
     def get_tdconn(recreate: bool = False):
         nonlocal tdconn, fs_config
         if recreate:
-            tdconn = td.TDConn()
+            tdconn = td.TDConn(settings=settings)
             if enableEFS:
                 try:
                     import teradataml as tdml
@@ -146,9 +147,10 @@ def create_mcp_app(settings: Settings):
             if use_sqla:
                 from sqlalchemy import text
                 with tdconn_local.engine.connect() as conn:
-                    if settings.mcp_transport == "streamable-http":
-                        ctx = get_context()
-                        request_context = ctx.get_state("request_context") if ctx else None
+                    # Always attempt to set QueryBand when a request context is present
+                    ctx = get_context()
+                    request_context = ctx.get_state("request_context") if ctx else None
+                    if request_context is not None:
                         qb = build_queryband(
                             application=mcp.name,
                             profile=profile_name,
@@ -162,13 +164,19 @@ def create_mcp_app(settings: Settings):
                             logger.debug(f"Tool request context: {request_context}")
                         except Exception as qb_error:
                             logger.debug(f"Could not set QueryBand: {qb_error}")
+                            # If in Basic auth, do not run the tool without proxying
+                            if str(getattr(request_context, "auth_scheme", "")).lower() == "basic":
+                                return format_error_response(
+                                    f"Cannot run tool '{tool_name}': failed to set QueryBand for Basic auth. Error: {qb_error}"
+                                )
                     result = tool(conn, *args, **kwargs)
             else:
                 raw = tdconn_local.engine.raw_connection()
                 try:
-                    if settings.mcp_transport == "streamable-http":
-                        ctx = get_context()
-                        request_context = ctx.get_state("request_context") if ctx else None
+                    # Always attempt to set QueryBand when a request context is present
+                    ctx = get_context()
+                    request_context = ctx.get_state("request_context") if ctx else None
+                    if request_context is not None:
                         qb = build_queryband(
                             application=mcp.name,
                             profile=profile_name,
@@ -178,12 +186,17 @@ def create_mcp_app(settings: Settings):
                         )
                         try:
                             cursor = raw.cursor()
-                            cursor.execute(f"SET QUERY_BAND = '{qb}' FOR TRANSACTION")
+                            # Apply at session scope so it persists across statements
+                            cursor.execute(f"SET QUERY_BAND = '{qb}' FOR SESSION")
                             cursor.close()
                             logger.debug(f"QueryBand set: {qb}")
                             logger.debug(f"Tool request context: {request_context}")
                         except Exception as qb_error:
                             logger.debug(f"Could not set QueryBand: {qb_error}")
+                            if str(getattr(request_context, "auth_scheme", "")).lower() == "basic":
+                                return format_error_response(
+                                    f"Cannot run tool '{tool_name}': failed to set QueryBand for Basic auth. Error: {qb_error}"
+                                )
                     result = tool(raw, *args, **kwargs)
                 finally:
                     raw.close()
@@ -351,12 +364,33 @@ def create_mcp_app(settings: Settings):
         return mcp.tool(name=name, description=tool.get("description", ""))(_dynamic_tool)
 
     def generate_cube_query_tool(name, cube):
-        def _cube_query_tool(dimensions: str, measures: str, filters: str) -> str:
+        """
+        Generate a function to create aggregation SQL from a cube definition.
+
+        :param cube: The cube definition
+        :return: A SQL query string generator function taking dimensions and measures as comma-separated strings.
+        """
+        def _cube_query_tool(dimensions: str, measures: str, dim_filters: str, meas_filters: str, order_by: str, top: int) -> str:
+            """
+            Generate a SQL query string for the cube using the specified dimensions and measures.
+
+            Args:
+                dimensions (str): Comma-separated dimension names (keys in cube['dimensions']).
+                measures (str): Comma-separated measure names (keys in cube['measures']).
+                dim_filters (str): Filter SQL expressions on dimensions.
+                meas_filters (str): Filter SQL expressions on computed measures.
+                order_by (str): Order SQL expressions on selected dimensions and measures.
+                top (int): Filters the top N results.
+
+            Returns:
+                str: The generated SQL query.
+            """
             dim_list_raw = [d.strip() for d in dimensions.split(",") if d.strip()]
             mes_list_raw = [m.strip() for m in measures.split(",") if m.strip()]
-            filter_list_raw = [f.strip() for f in filters.split(",") if f.strip()]
+            # Get dimension expressions from dictionary
             dim_list = ",\n  ".join([
-                cube["dimensions"][d]["expression"] if d in cube["dimensions"] else d for d in dim_list_raw
+                cube["dimensions"][d]["expression"] if d in cube["dimensions"] else d
+                for d in dim_list_raw
             ])
             mes_lines = []
             for measure in mes_list_raw:
@@ -365,50 +399,69 @@ def create_mcp_app(settings: Settings):
                     raise ValueError(f"Measure '{measure}' not found in cube '{name}'.")
                 expr = mdef["expression"]
                 mes_lines.append(f"{expr} AS {measure}")
-            met_block = ",\n  ".join(mes_lines)
+            meas_list = ",\n  ".join(mes_lines)
             sql = (
-                "SELECT * from\n"
+                f"SELECT {'TOP ' + str(top) if top else ''} * from\n"
                 "(SELECT\n"
-                f"  {dim_list},\n"
-                f"  {met_block}\n"
+                f"  {dim_list}{',\n  ' if dim_list.strip() else ''}"
+                f"  {meas_list}\n"
                 "FROM (\n"
                 f"{cube['sql'].strip()}\n"
+                f"{'WHERE '+dim_filters if dim_filters else ''}"
                 ") AS c\n"
                 f"GROUP BY {', '.join(dim_list_raw)}"
                 ") AS a\n"
-                f"{'WHERE' if filter_list_raw else ''} {', '.join(filter_list_raw)};"
+                f"{'WHERE '+meas_filters if meas_filters else ''}"
+                f"{'ORDER BY '+order_by if order_by else ''}"
+                ";"            
             )
             return sql
         return _cube_query_tool
 
     def make_custom_cube_tool(name, cube):
-        async def _dynamic_tool(dimensions: str, measures: str, filters: str = ""):
-            sql_generator = generate_cube_query_tool(name, cube)
-            sql = sql_generator(dimensions=dimensions, measures=measures, filters=filters)
-            return execute_db_tool(td.handle_base_readQuery, sql, tool_name=name)
-
-        # Build docstring from cube schema
-        dim_lines = [f"    - {n}: {d.get('description', '')}" for n, d in cube.get('dimensions', {}).items()]
-        measure_lines = [f"    - {n}: {m.get('description', '')}" for n, m in cube.get('measures', {}).items()]
+        async def _dynamic_tool(dimensions, measures, dim_filters="", meas_filters="", order_by="", top=None):
+            # Accept dimensions and measures as comma-separated strings, parse to lists
+            return execute_db_tool(
+                td.util_base_dynamicQuery,
+                sql_generator=generate_cube_query_tool(name, cube),
+                dimensions=dimensions,
+                measures=measures,
+                dim_filters=dim_filters,
+                meas_filters=meas_filters,
+                order_by=order_by,
+                top=top
+            )
+        _dynamic_tool.__name__ = 'get_cube_' + name
+        # Build allowed values and definitions for dimensions and measures
+        dim_lines = []
+        for n, d in cube.get('dimensions', {}).items():
+            dim_lines.append(f"    - {n}: {d.get('description', '')}")
+        measure_lines = []
+        for n, m in cube.get('measures', {}).items():
+            measure_lines.append(f"    - {n}: {m.get('description', '')}")
         _dynamic_tool.__doc__ = f"""
-    Tool to query the cube '{name}'.
-    {cube.get('description', '')}
+        Tool to query the cube '{name}'.
+        {cube.get('description', '')}
 
-    Expected inputs:
-        dimensions (str): Comma-separated dimension names to group by. Allowed values:
-{chr(10).join(dim_lines)}
+        Expected inputs:
+            * dimensions (str): Comma-separated dimension names to group by. Allowed values for dimensions\n:
+    {chr(10).join(dim_lines)}
 
-        measures (str): Comma-separated measure names to aggregate. Allowed values:
-{chr(10).join(measure_lines)}
+            * measures (str): Comma-separated measure names to aggregate. Allowed values for measures:
+    {chr(10).join(measure_lines)}
 
-        filters (str): Comma-separated filter expressions to apply to either dimensions or measures selected. The dimension or measure used must be in the dimension list to group by or measure list, use valid SQL expressions, for example:
-{chr(10).join([f"{d} = 'value'" for d in cube.get('dimensions', {}).keys()])}
-{chr(10).join([f"{m} > 1000" for m in list(cube.get('measures', {}).keys())])}
+            * dim_filters (str): Filter expression to apply to dimensions. Valid dimension names are: [{', '.join(cube.get('dimensions', {}).keys())}], use valid SQL expressions, for example:
+    \"{' AND '.join([f"{d} {e}" for d, e in zip(list(cube.get('dimensions', {}))[:2], ["= 'value'", "in ('X', 'Y', 'Z')"])])}\"
+            * meas_filters (str): Filter expression to apply to computed measures. Valid measure names are: [{', '.join(cube.get('measures', {}).keys())}], use valid SQL expressions, for example:
+    \"{' AND '.join([f"{m} {e}" for m, e in zip(list(cube.get('measures', {}))[:2], ["> 1000", "= 100"])])}\"
+            * order_by (str): Order expression on any selected dimensions and measures. Use SQL syntax, for example:
+    \"{' , '.join([f"{d} {e}" for d, e in zip(list(cube.get('dimensions', {}))[:2], [" ASC", " DESC"])])}\"
+            top (int): Limit the number of rows returned, use a positive integer.
 
-    Returns:
-        Query result as a formatted response.
-    """
-        return mcp.tool(name=name, description=_dynamic_tool.__doc__)(_dynamic_tool)
+        Returns:
+            Query result as a formatted response.
+        """
+        return mcp.tool(description=_dynamic_tool.__doc__)(_dynamic_tool)
 
     # Register custom objects
     custom_terms: list[tuple[str, Any, str]] = []
