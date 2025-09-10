@@ -13,7 +13,7 @@ The Teradata MCP Server creates a bridge between AI clients and your Teradata pl
 ```
 [AI Client] ←→ [MCP Server] ←→ [Teradata Platform]
      ↓              ↓                ↓
- Claude Desktop  Tool Toolkit   Analytic Engine
+ Claude Desktop  Toolkit        Analytic Engine
  VS Code         Security          Metadata
  Google Gemini   Profiles         Database  
  Web Clients     Custom Logic   Vector Store
@@ -57,10 +57,10 @@ sequenceDiagram
     User->>AI Client: "Show me sales data"
     AI Client->>MCP Server: MCP protocol request
     MCP Server->>Security Layer: Authenticate user
-    Security Layer->>Tool Toolkit: Route to sales_cube tool
-    Tool Toolkit->>Teradata DB: Execute SQL query
-    Teradata DB->>Tool Toolkit: Return results
-    Tool Toolkit->>MCP Server: Format response
+    Security Layer->>Toolkit: Route to sales_cube tool
+    Toolkit->>Teradata DB: Execute SQL query
+    Teradata DB->>Toolkit: Return results
+    Toolkit->>MCP Server: Format response
     MCP Server->>AI Client: MCP protocol response  
     AI Client->>User: Natural language answer
 ```
@@ -77,81 +77,47 @@ sequenceDiagram
 
 ## 🎭 Deployment Patterns
 
-### Pattern 1: Desktop Development
-```
-[Claude Desktop] ←stdio→ [MCP Server Process] ←→ [Teradata Dev DB]
-```
-- **Use case**: Individual data analysis, development
-- **Transport**: stdio (most efficient)
-- **Security**: Server credentials
-- **Scaling**: Single user
+### Pattern 1: Bundled with application
 
-### Pattern 2: Team HTTP Service  
+Eg. 
+
 ```
-[Multiple Clients] ←HTTP→ [MCP Server Container] ←→ [Teradata Prod DB]
+[Claude Desktop] ←stdio|http→ [MCP Server Process] ←→ [Teradata]
 ```
-- **Use case**: Team collaboration, web applications
+- **Use case**: Individual data analysis, application with dedicated MCP server instance.
+- **Transport**: stdio if server co-located with application or http
+- **Security**: One database user for the application, configured at the server level.
+- **Scaling**: Single server process, configurable database connection pool
+
+### Pattern 2: Shared Server
+```
+[Multiple Clients] ←http→ [MCP Server] ←→ [Teradata]
+```
+- **Use case**: Shared MCP server for multiple applications
 - **Transport**: streamable-http
-- **Security**: Basic auth with user credentials  
-- **Scaling**: Multiple concurrent users
+- **Security**: One database user per application, configured at the application level, database service account for the MCP server. User identity validated by MCP server using database authentication method, RBAC policies applied to application database user.
+- **Scaling**: Single server process, configurable database connection pool
 
 ### Pattern 3: Enterprise Integration
 ```
-[Enterprise Apps] ←REST API→ [Load Balancer] ←→ [MCP Server Cluster] ←→ [Teradata Enterprise]
+[Enterprise Apps] ←http→ [Load Balancer] ←→ [MCP Server Contianers] ←→ [Teradata ]
 ```
-- **Use case**: Production applications, high availability
-- **Transport**: streamable-http with orchestration
-- **Security**: Full authentication + RBAC
-- **Scaling**: Horizontal with load balancing
-
-## 🔌 Integration Points
-
-### With Teradata Platform
-
-- **Core Database**: SQL operations, stored procedures
-- **Feature Store**: ML feature management and serving
-- **Vector Store**: Semantic search and similarity
-- **Query Grid**: Distributed query processing
-- **DBQL**: Query logging and performance monitoring
-
-### With AI Clients
-
-- **Protocol**: MCP (Model Context Protocol) standard
-- **Transport**: stdio, HTTP, Server-Sent Events
-- **Format**: JSON-RPC with typed schemas
-- **Discovery**: Dynamic tool and resource discovery
-
-### With External Systems
-
-- **Authentication**: LDAP, Active Directory, OAuth
-- **Monitoring**: Prometheus metrics, custom logging
-- **Configuration**: Environment variables, YAML files
-- **Storage**: Custom object definitions, profiles
+- **Use case**: Large end-user base, high variety of applications
+- **Transport**: streamable-http 
+- **Security**: One database user per end-user, configured at the end-user level, database service account for the MCP server. User identity validated by MCP server using IDP, RBAC policies applied to application database user.
+- **Scaling**: Horizontal with container orchestration and load balancing
 
 ## 🛡 Security Architecture
 
-### Authentication Flow
+### Request Flow
 ```
-User Request → Rate Limiting → Token Validation → Database Auth → Tool Execution
+User Request → Rate Limiting → [Database Auth] → Tool Execution -> Database RBAC
 ```
 
-### Authorization Layers
-1. **MCP Level**: Which tools user can access
+### Security Layers
+1. **MCP Level**: Control tool availability, user authentication using database
 2. **Database Level**: Teradata RBAC and row-level security  
 3. **Tool Level**: Parameter validation and sanitization
-4. **Query Level**: Query banding and resource limits
-
-## 🚀 Scalability Considerations
-
-### Vertical Scaling
-- **Connection Pooling**: Reuse database connections efficiently
-- **Caching**: Cache schema information and frequent queries
-- **Resource Limits**: Control memory and CPU usage per request
-
-### Horizontal Scaling  
-- **Stateless Design**: Each server instance is independent
-- **Load Balancing**: Distribute requests across instances
-- **Database Scaling**: Leverage Teradata's distributed architecture
 
 ## 🎯 Customization Architecture
 
@@ -160,11 +126,6 @@ User Request → Rate Limiting → Token Validation → Database Auth → Tool E
 2. **YAML Objects**: Declarative tools, prompts, and cubes
 3. **Profiles**: Control tool availability per environment
 4. **Middleware**: Request/response transformation
-
-### Development Workflow
-```
-Write Code/YAML → Test Locally → Deploy Configuration → Monitor Usage
-```
 
 ## ✨ Getting Started Paths
 
