@@ -50,7 +50,7 @@ The Teradata MCP Server creates a bridge between AI clients and your Teradata pl
 
 ## 🚦 Request Flow
 
-### Typical User Interaction
+### User Interaction
 
 ```mermaid
 sequenceDiagram
@@ -58,66 +58,174 @@ sequenceDiagram
     AI Client->>MCP Server: MCP protocol request
     MCP Server->>Security Layer: Authenticate user
     Security Layer->>Toolkit: Route to sales_cube tool
-    Toolkit->>Teradata DB: Execute SQL query
-    Teradata DB->>Toolkit: Return results
+    Toolkit->>Teradata: Execute SQL query
+    Teradata->>Toolkit: Return results
     Toolkit->>MCP Server: Format response
     MCP Server->>AI Client: MCP protocol response  
     AI Client->>User: Natural language answer
 ```
 
-### What Happens Behind the Scenes
+### Request Processing Flow
 
-1. **Request Reception**: MCP Server receives structured request
-2. **Authentication**: Validates user credentials (if enabled)
-3. **Tool Selection**: Routes to appropriate tool based on request
-4. **Query Construction**: Builds optimized SQL from parameters
-5. **Database Execution**: Executes on Teradata with query banding
-6. **Response Formatting**: Structures results for AI consumption
-7. **Security Logging**: Records operation for audit
+1. **AI Client**: Sends MCP protocol request with user intent
+2. **MCP Server**: Receives and parses structured JSON-RPC request
+3. **Security Layer**: Enforces authentication and validates user identity
+4. **Toolkit**: Routes to appropriate tool and builds SQL query
+5. **Teradata**: Executes query with query banding and RBAC enforcement
+6. **Toolkit**: Formats database results for LLM consumption
+7. **MCP Server**: Returns structured MCP protocol response
+8. **AI Client**: Presents natural language answer to user
 
 ## 🎭 Deployment Patterns
 
-### Pattern 1: Bundled with application
+### Pattern 1: Bundled with Application
 
-Eg. 
+```mermaid
+flowchart LR
+    A[Claude Desktop] -->|stdio| B[MCP Server Process]
+    B -->|Database Connection Pool| E[(Teradata Database)]
+    
+    subgraph "Application Runtime"
+        B
+        F[Application Logic]
+    end
+    
+    subgraph "Security Context"
+        G[Single DB User]
+        H[Server Credentials]
+    end
+    
+    G -.->|Database Auth| E
+    H -.-> B
+```
 
-```
-[Claude Desktop] ←stdio|http→ [MCP Server Process] ←→ [Teradata]
-```
-- **Use case**: Individual data analysis, application with dedicated MCP server instance.
-- **Transport**: stdio if server co-located with application or http
-- **Security**: One database user for the application, configured at the server level.
+- **Use case**: Individual data analysis, application with dedicated MCP server instance
+- **Transport**: stdio if server co-located with application or HTTP for remote access
+- **Security**: One database user for the application, configured at the server level
 - **Scaling**: Single server process, configurable database connection pool
 
 ### Pattern 2: Shared Server
+
+```mermaid
+flowchart LR
+    A[Claude Desktop] -->|HTTP| D[MCP Server]
+    B[VS Code] -->|HTTP| D
+    E[Custom App 1] -->|HTTP| D
+    F[Custom App 2] -->|HTTP| D
+    D -->|Connection Pool| G[(Teradata Database)]
+    
+    subgraph "Authentication & RBAC"
+        H[App User 1]
+        I[App User 2]
+        J[App User 3]
+    end
+    
+    H -.->|Database Auth| G
+    I -.->|Database Auth| G
+    J -.->|Database Auth| G
 ```
-[Multiple Clients] ←http→ [MCP Server] ←→ [Teradata]
-```
+
 - **Use case**: Shared MCP server for multiple applications
 - **Transport**: streamable-http
 - **Security**: One database user per application, configured at the application level, database service account for the MCP server. User identity validated by MCP server using database authentication method, RBAC policies applied to application database user.
 - **Scaling**: Single server process, configurable database connection pool
 
 ### Pattern 3: Enterprise Integration
+
+```mermaid
+flowchart TB
+    A[Enterprise Web Apps] -->|HTTPS| B[Reverse Proxy]
+    C[Developers IDEs] -->|HTTPS| B
+    E[End-user desktop tools] -->|HTTPS| B
+    
+    B -->|TLS Termination| F[Load Balancer]
+    
+    subgraph "Container Orchestration Platform"
+        F -->|HTTP| G[MCP Server Instance 1]
+        F -->|HTTP| H[MCP Server Instance 2]
+        F -->|HTTP| I[MCP Server Instance N]
+    end
+    
+    subgraph "Data Tier"
+        G -->|Connection Pool| J[(Teradata Database)]
+        H -->|Connection Pool| J
+        I -->|Connection Pool| J
+    end
+    
+    subgraph "Security & Identity"
+        K[Identity Provider]
+        L[Certificate Authority]
+        M[User Directory]
+    end
+    
+    subgraph "Monitoring & Observability"
+        N[Metrics Collection]
+        O[Centralized Logging]
+        P[Health Monitoring]
+    end
+    
+    K -.->|Authentication| B
+    L -.->|TLS Certificates| B
+    M -.->|User Lookup| G
+    M -.->|User Lookup| H
+    M -.->|User Lookup| I
+    
+    G -.-> N
+    H -.-> N
+    I -.-> N
+    G -.-> O
+    H -.-> O
+    I -.-> O
+    
+    style B fill:#e1f5fe
+    style F fill:#f3e5f5
+    style J fill:#e8f5e8
 ```
-[Enterprise Apps] ←http→ [Load Balancer] ←→ [MCP Server Contianers] ←→ [Teradata ]
-```
-- **Use case**: Large end-user base, high variety of applications
-- **Transport**: streamable-http 
-- **Security**: One database user per end-user, configured at the end-user level, database service account for the MCP server. User identity validated by MCP server using IDP, RBAC policies applied to application database user.
-- **Scaling**: Horizontal with container orchestration and load balancing
+
+- **Use case**: Large end-user base, high variety of applications, production workloads
+- **Transport**: HTTPS with TLS termination at reverse proxy, HTTP internally
+- **Security**: 
+  - TLS encryption for external communication
+  - Identity provider integration for authentication
+  - Per-user database credentials with RBAC enforcement
+  - Certificate management and rotation
+- **Scaling**: Horizontal scaling with container orchestration, load balancing, and connection pooling
 
 ## 🛡 Security Architecture
 
-### Request Flow
-```
-User Request → Rate Limiting → [Database Auth] → Tool Execution -> Database RBAC
+### Security Request Flow
+
+```mermaid
+flowchart TD
+    A[User Request] --> B[RequestContext Middleware]
+    B --> C{Transport Mode?}
+    C -->|stdio| D[Generate Request ID]
+    C -->|HTTP/SSE| E[Extract Headers]
+    E --> F{Auth Mode?}
+    F -->|none| G[Optional X-Assume-User]
+    F -->|basic| H[Validate Authorization Header]
+    H --> I[Check Auth Cache]
+    I -->|Cache Hit| J[Use Cached Principal]
+    I -->|Cache Miss| K[Database Authentication]
+    K -->|Success| L[Cache Principal]
+    K -->|Failure| M[Authentication Error]
+    D --> N[Set RequestContext]
+    G --> N
+    J --> N
+    L --> N
+    N --> O[Tool Execution]
+    O --> P[Query Band Generation]
+    P --> Q[Database RBAC Enforcement]
+    Q --> R[Return Results]
+    M --> S[Permission Denied]
 ```
 
 ### Security Layers
-1. **MCP Level**: Control tool availability, user authentication using database
-2. **Database Level**: Teradata RBAC and row-level security  
-3. **Tool Level**: Parameter validation and sanitization
+1. **Transport Level**: stdio (trusted) vs HTTP (authenticated)
+2. **Authentication Level**: Database credential validation and caching
+3. **Authorization Level**: Teradata RBAC and row-level security  
+4. **Tool Level**: Parameter validation and SQL injection prevention
+5. **Audit Level**: Query banding for request traceability
 
 ## 🎯 Customization Architecture
 
