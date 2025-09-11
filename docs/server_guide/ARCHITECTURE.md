@@ -88,11 +88,10 @@ flowchart LR
     subgraph "Application Runtime"
         B
         F[Application Logic]
-    end
-    
-    subgraph "Security Context"
-        G[Single DB User]
-        H[Server Credentials]
+        subgraph "Security Context"
+            G[Single DB User]
+            H[Server Credentials]
+        end
     end
     
     G -.->|Database Auth| E
@@ -108,21 +107,31 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    A[Claude Desktop] -->|HTTP| D[MCP Server]
-    B[VS Code] -->|HTTP| D
-    E[Custom App 1] -->|HTTP| D
-    F[Custom App 2] -->|HTTP| D
-    D -->|Connection Pool| G[(Teradata Database)]
-    
-    subgraph "Authentication & RBAC"
-        H[App User 1]
-        I[App User 2]
-        J[App User 3]
+    subgraph "Client Context 1"
+        A[Claude Desktop]
+        A1[Database User 1]
     end
     
-    H -.->|Database Auth| G
-    I -.->|Database Auth| G
-    J -.->|Database Auth| G
+    subgraph "Client Context 2"
+        B[VS Code]
+        B1[Database User 2]
+    end
+    
+    subgraph "Client Context 3"
+        E[Custom App]
+        E1[Database User 3]
+    end
+    
+    A -->|HTTP| D[MCP Server]
+    B -->|HTTP| D
+    E -->|HTTP| D
+    
+    D -->|Database Auth| G[(Teradata Database)]
+    D -->|User Queries<br/>(Connection Pool with proxy user)| G
+    
+    A1 -.->|Credentials| D
+    B1 -.->|Credentials| D
+    E1 -.->|Credentials| D
 ```
 
 - **Use case**: Shared MCP server for multiple applications
@@ -150,18 +159,6 @@ flowchart TB
         G -->|Connection Pool| J[(Teradata Database)]
         H -->|Connection Pool| J
         I -->|Connection Pool| J
-    end
-    
-    subgraph "Security & Identity"
-        K[Identity Provider]
-        L[Certificate Authority]
-        M[User Directory]
-    end
-    
-    subgraph "Monitoring & Observability"
-        N[Metrics Collection]
-        O[Centralized Logging]
-        P[Health Monitoring]
     end
     
     K -.->|Authentication| B
