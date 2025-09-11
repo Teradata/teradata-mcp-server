@@ -8,35 +8,20 @@ Welcome to the Teradata MCP Server! This guide helps you choose the right starti
 
 ### 🚀 **Just Want to Try It? (5 minutes)**
 
-#### **Option A: Claude Desktop**
-**→ [Quick Start (Claude Desktop)](QUICK_START.md)**
+New to Teradata MCP Server? Choose your 5-minute quickstart to rapidly evaluate the server with your favorite tool:
 
-Perfect for:
-- First-time users and evaluation
-- AI chat and data exploration
-- Desktop-based data analysis
-
-#### **Option B: VS Code & GitHub Copilot**  
-**→ [Quick Start (VS Code)](QUICK_START_VSCODE.md)**
-
-Perfect for:
-- VS Code and GitHub Copilot users
-- Development workflows in your IDE
-- Code completion with Teradata context
-
-#### **Option C: Open WebUI**  
-**→ [Quick Start (Open WebUI)](QUICK_START_OPEN_WEBUI.md)**
-
-Perfect for:
-- Self-hosted web interface users
-- Team sharing and collaboration
-- Integration with various LLM models
+| **Client** | **Deployment** | **Communication** | **Best For** |
+|------------|----------------|------------------|--------------|
+| [Claude Desktop](server_guide/QUICK_START.md) | CLI (uv/pipx) | stdio | Exploratory Data Analytics, Platform Administration, general evaluation |
+| [VS Code + Copilot](server_guide/QUICK_START_VSCODE.md) | CLI (uv/pipx) | HTTP | Data Engineering, Agentic app development |
+| [Open WebUI](server_guide/QUICK_START_OPEN_WEBUI.md) | Docker | REST | Local AI, evaluate new LLMs |
+| [Code examples](../examples/README.md) | Python | HTTP | Build your own client. Example library using ADK, Bedrock, Langchain... |
 
 *All options get you running in 5 minutes with minimal configuration.*
 
 ---
 
-### 🏗 **Setting Up for Production? (15 minutes)**  
+### 🏗 **Setting Up your environment? (15 minutes)**  
 **→ [Installation Guide](INSTALLATION.md)**
 
 Choose your deployment method:
@@ -45,50 +30,43 @@ Choose your deployment method:
 - **pip + venv** - Traditional Python virtual environments
 - **Source build** - Development and contributions
 
-*Compare options and get detailed setup instructions.*
-
 ---
 
 ### ⚙️ **Need to Configure the Server?**
 **→ [Configuration Guide](CONFIGURATION.md)**
 
-Essential for:
+Reference for:
 - Environment variables and profiles
 - Database connection tuning
 - Transport modes (stdio vs HTTP)
 - Production optimization
 
-*Master all server configuration options.*
-
 ---
 
-### 🔒 **Enterprise Security Setup?**
+### 🔒 **Security Setup?**
 **→ [Security Guide](SECURITY.md)**
 
-Required for:
-- Team deployments
-- User authentication
-- Audit compliance
-- Production security
-
-*Implement authentication and access control.*
+Reference guide for:
+- Securing a remote server deployment
+- Implementing user authentication
+- Implementing data security
+- Understanding Audit mechanisms
 
 ---
 
-### 🛠 **Want Custom Business Tools?**
+### 🛠 **Want to Customize Tools, Prompts and Resources for your Business context?**
 **→ [Customization Guide](CUSTOMIZING.md)**
 
+We make it very quick and easy to create your own:
 Create:
 - Domain-specific tools and prompts
 - Business semantic layers
 - Custom cubes and glossaries
-- YAML-based configurations
-
-*Add your business logic without coding.*
+- All in YAML-based configurations
 
 ---
 
-### 👥 **Ready to Connect AI Clients?**
+### 👥 **Connect AI Clients?**
 **→ [Client Guide](../client_guide/CLIENT_GUIDE.md)**
 
 Supports:
@@ -96,21 +74,15 @@ Supports:
 - Web applications and REST APIs
 - Custom MCP client integrations
 
-*Connect your favorite AI tools.*
-
 ## 🏗 Understanding the Architecture
-
-**New to MCP or want to understand how it all works?**
 
 **→ [Architecture Overview](ARCHITECTURE.md)**
 
-Learn about:
+This guide gives you an overview of:
 - Component relationships
 - Request flow and security
 - Deployment patterns
 - Integration points
-
-*Understand the big picture before diving in.*
 
 ## 🎬 Prefer Video Learning?
 
@@ -140,9 +112,9 @@ Watch step-by-step tutorials for:
 
 ### By Use Case:
 
-**Personal AI Chat:** [Quick Start (Claude)](QUICK_START.md)  
+**Chat with your data:** [Quick Start (Claude)](QUICK_START.md)  
 **Development/Coding:** [Quick Start (VS Code)](QUICK_START_VSCODE.md)  
-**Team Setup:** [Installation](INSTALLATION.md) + [Security](SECURITY.md)  
+**Organization Setup:** [Installation](INSTALLATION.md) + [Security](SECURITY.md)  
 **Application Integration:** [Installation](INSTALLATION.md) + [Client Guide](../client_guide/CLIENT_GUIDE.md)  
 **Business Customization:** [Quick Start (Claude)](QUICK_START.md) + [Customization](CUSTOMIZING.md)
 
