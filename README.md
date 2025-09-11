@@ -3,7 +3,7 @@
 ## Overview
 The Teradata MCP server provides sets of tools and prompts, grouped as modules for interacting with Teradata databases. Enabling AI agents and users to query, analyze, and manage their data efficiently. 
 
-
+![Getting Started](https://raw.githubusercontent.com/Teradata/teradata-mcp-server/main/docs/media/client-server-platform.png)
 
 ## Key features
 
@@ -27,7 +27,7 @@ We are providing groupings of tools and associated helpful prompts to support al
   - [Security Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/sec/README.md)
 
 ## Quick start with Claude Desktop (no installation)
-
+> Prefer to use other tools? Check out our Quick Starts for [VS Code/Copilot](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/server_guide/QUICK_START_VSCODE.md), [Open WebUI](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/server_guide/QUICK_START_OPEN_WEBUI.md), or dive into [simple code examples](https://github.com/Teradata/teradata-mcp-server/blob/main/examples/README.md#client-applications)!
 You can use Claude Desktop to give the  Teradata MCP server a quick try, Claude can manage the server in the background using `uv`. No permanent installation needed.
 
 **Pre-requisites**
@@ -52,8 +52,6 @@ Configure the claude_desktop_config.json (Settings>Developer>Edit Config) by add
 ```
 
 ## Setting up your environment
-
-![Getting Started](https://raw.githubusercontent.com/Teradata/teradata-mcp-server/main/docs/media/MCP-quickstart.png)
 
 **Step 1.** - Identify the running Teradata System, you need username, password and host details. If you do not have a Teradata system to connect to, then leverage [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics)
 
