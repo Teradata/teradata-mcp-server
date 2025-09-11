@@ -17,7 +17,7 @@ Perfect for:
 - Desktop-based data analysis
 
 #### **Option B: VS Code & GitHub Copilot**  
-**→ [Quick Start (VS Code)](QUICK_START_HTTP.md)**
+**→ [Quick Start (VS Code)](QUICK_START_VSCODE.md)**
 
 Perfect for:
 - VS Code and GitHub Copilot users
@@ -130,7 +130,7 @@ Watch step-by-step tutorials for:
 1. [Quick Start (Claude)](QUICK_START.md) → [Client Guide](../client_guide/CLIENT_GUIDE.md)
 
 **Software Developer:**
-1. [Quick Start (VS Code)](QUICK_START_HTTP.md) → [VS Code Guide](../client_guide/Visual_Studio_Code.md)
+1. [Quick Start (VS Code)](QUICK_START_VSCODE.md) → [VS Code Guide](../client_guide/Visual_Studio_Code.md)
 
 **Data Engineer/Admin:**  
 1. [Architecture](ARCHITECTURE.md) → [Installation](INSTALLATION.md) → [Security](SECURITY.md)
@@ -141,7 +141,7 @@ Watch step-by-step tutorials for:
 ### By Use Case:
 
 **Personal AI Chat:** [Quick Start (Claude)](QUICK_START.md)  
-**Development/Coding:** [Quick Start (VS Code)](QUICK_START_HTTP.md)  
+**Development/Coding:** [Quick Start (VS Code)](QUICK_START_VSCODE.md)  
 **Team Setup:** [Installation](INSTALLATION.md) + [Security](SECURITY.md)  
 **Application Integration:** [Installation](INSTALLATION.md) + [Client Guide](../client_guide/CLIENT_GUIDE.md)  
 **Business Customization:** [Quick Start (Claude)](QUICK_START.md) + [Customization](CUSTOMIZING.md)

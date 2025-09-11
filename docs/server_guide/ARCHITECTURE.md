@@ -109,17 +109,17 @@ flowchart LR
 flowchart LR
     subgraph "Client Context 1"
         A[Claude Desktop]
-        A1[User 1<br/>DB Credentials]
+        A1[DB Credentials<br/>User 1]
     end
     
     subgraph "Client Context 2"
         B[VS Code]
-        B1[User 2<br/>DB Credentials]
+        B1[DB Credentials<br/>User 2]
     end
     
     subgraph "Client Context 3"
         E[Custom App]
-        E1[User 3<br/>DB Credentials]
+        E1[DB Credentials<br/>User 3]
     end
     
     A -->|HTTP Request Body| D[MCP Server]

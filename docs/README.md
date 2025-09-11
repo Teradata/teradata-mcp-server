@@ -9,7 +9,7 @@ New to Teradata MCP Server? Choose your 5-minute quickstart to rapidly evaluate 
 | **Client** | **Communication** | **Deployment** | **Best For** |
 |------------|------------------|----------------|--------------|
 | [Claude Desktop](server_guide/QUICK_START.md) | stdio | CLI (uv/pipx) | Exploratory Data Analytics, Platform Administration, general evaluation |
-| [VS Code + Copilot](server_guide/QUICK_START_HTTP.md) | HTTP | CLI (uv/pipx) | Data Engineering, Agentic app development |
+| [VS Code + Copilot](server_guide/QUICK_START_VSCODE.md) | HTTP | CLI (uv/pipx) | Data Engineering, Agentic app development |
 | [Open WebUI](server_guide/QUICK_START_OPEN_WEBUI.md) | REST | Docker | Local AI, evaluate new LLMs |
 
 **Other Options:**
@@ -23,7 +23,7 @@ Everything you need to know about running and configuring the MCP server:
 
 - **[Getting Started](server_guide/GETTING_STARTED.md)** - Choose your path (routing guide)
 - **[Quick Start (Claude)](server_guide/QUICK_START.md)** - 5-minute Claude Desktop setup using `stdio` transport mode
-- **[Quick Start (VS Code + Copilot)](server_guide/QUICK_START_HTTP.md)** - 5-minute VS Code and GitHub Copilot setup using `streamable-http` transport mode
+- **[Quick Start (VS Code + Copilot)](server_guide/QUICK_START_VSCODE.md)** - 5-minute VS Code and GitHub Copilot setup using `streamable-http` transport mode
 - **[Quick Start (Open WebUI)](server_guide/QUICK_START_OPEN_WEBUI.md)** - 5-minute Open WebUI setup using REST interface
 - **[Installation](server_guide/INSTALLATION.md)** - Deployment methods and options
 - **[Configuration](server_guide/CONFIGURATION.md)** - Server settings and tuning

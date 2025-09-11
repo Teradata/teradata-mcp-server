@@ -1,6 +1,6 @@
 # 5-Minute Quick Start (Open WebUI)
 
-> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | **Quick Start Open WebUI** | [Quick Start Claude](QUICK_START.md) | [Quick Start VS Code](QUICK_START_HTTP.md)
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | **Quick Start Open WebUI** | [Quick Start Claude](QUICK_START.md) | [Quick Start VS Code](QUICK_START_VSCODE.md)
 
 > **🎯 Goal:** Get a working MCP server connected to Open WebUI in 5 minutes
 
@@ -17,7 +17,7 @@ Before starting, ensure you have:
 2. **Required Software**
    - [Docker and Docker Compose](https://docs.docker.com/get-docker/) installed
    - [Git](https://git-scm.com/downloads) for cloning the repository
-   - [Python 3.8+](https://www.python.org/downloads/) for Open WebUI
+   - [Python 3.11+](https://www.python.org/downloads/)
 
 ## 🚀 Step 1: Get the Server (1 minute)
 
@@ -27,10 +27,6 @@ Clone and prepare the MCP server:
 # Clone the repository
 git clone https://github.com/Teradata/teradata-mcp-server.git
 cd teradata-mcp-server
-
-# Set your database connection
-export DATABASE_URI="teradata://username:password@host:1025/database"
-export MCPO_API_KEY=top-secret
 ```
 
 ## 🔧 Step 2: Start REST Server (1 minute)
@@ -38,6 +34,10 @@ export MCPO_API_KEY=top-secret
 Start the server in REST mode for Open WebUI:
 
 ```bash
+# Set your database connection
+export DATABASE_URI="teradata://username:password@host:1025/database"
+export MCPO_API_KEY=top-secret
+
 # Start the REST interface
 docker compose --profile rest up
 ```
@@ -46,7 +46,7 @@ You should see:
 ```
 INFO: Started server process
 Server running at http://localhost:8002
-OpenAPI docs available at http://localhost:8002/docs
+OpenAPI docs available at http://localhost:8002/docs#
 ```
 
 **Keep this terminal open** - the server is now running!
@@ -94,19 +94,12 @@ Test your Teradata MCP connection in Open WebUI:
 What tables are available in my database?
 ```
 
-Or:
-```
-Show me the first 5 rows from any table in my database
-```
-
-You should see Open WebUI use your Teradata MCP server tools to execute the queries and return results!
-
 ## 🎉 Success! What's Next?
 
 **You now have Teradata MCP Server connected to Open WebUI!**
 
 ### For Quick Exploration
-- **Try different models**: Open WebUI supports various LLM runners like Ollama
+- **Try different models**: Open WebUI supports various LLM runners so you can integrate your local model deployments or use cloud-based services.
 - **Explore tools**: Check the Chat Control Valves to see all available Teradata tools
 - **Custom queries**: Ask complex questions about your data schema and content
 
@@ -120,6 +113,9 @@ You should see Open WebUI use your Teradata MCP server tools to execute the quer
 - **Custom Integration**: [REST API guide](../client_guide/Rest_API.md) for building custom applications
 
 ## 🆘 Troubleshooting
+
+**Cannot use the MCP tools**
+Not all models work well with MCP tools and resources, start with state-of-the art models such as OpenAI's or Anthropic's to validate that your setup is working and explore different models.
 
 **REST server not starting?**
 - Check your `DATABASE_URI` format: `teradata://user:pass@host:1025/database`
@@ -138,7 +134,6 @@ You should see Open WebUI use your Teradata MCP server tools to execute the quer
 
 **Database connection fails?**
 - Verify `DATABASE_URI` environment variable: `echo $DATABASE_URI`
-- Test database connectivity: `ping your-host`
 - Ensure credentials are correct
 
 **Want more help?**
@@ -148,4 +143,4 @@ You should see Open WebUI use your Teradata MCP server tools to execute the quer
 - 🌐 [Open WebUI Documentation](https://docs.openwebui.com/)
 
 ---
-*This quick start gets you running with Open WebUI. For other clients, see [Claude Quick Start](QUICK_START.md) or [VS Code Quick Start](QUICK_START_HTTP.md).*
+*This quick start gets you running with Open WebUI. For other clients, see [Claude Quick Start](QUICK_START.md) or [VS Code Quick Start](QUICK_START_VSCODE.md).*
