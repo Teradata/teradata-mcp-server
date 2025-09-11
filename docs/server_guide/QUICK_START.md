@@ -1,4 +1,4 @@
-# 5-Minute Quick Start
+# 5-Minute Quick Start with Claude
 
 > **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | **Quick Start** | [Installation](INSTALLATION.md) | [Configuration](CONFIGURATION.md)
 
