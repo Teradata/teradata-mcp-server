@@ -109,29 +109,32 @@ flowchart LR
 flowchart LR
     subgraph "Client Context 1"
         A[Claude Desktop]
-        A1[Database User 1]
+        A1[DB Credentials<br/>user1/password1]
     end
     
     subgraph "Client Context 2"
         B[VS Code]
-        B1[Database User 2]
+        B1[DB Credentials<br/>user2/password2]
     end
     
     subgraph "Client Context 3"
         E[Custom App]
-        E1[Database User 3]
+        E1[DB Credentials<br/>user3/password3]
     end
     
-    A -->|HTTP| D[MCP Server]
-    B -->|HTTP| D
-    E -->|HTTP| D
+    A -->|HTTP Request Body| D[MCP Server]
+    A -.->|HTTP Auth Header| D
+    B -->|HTTP Request Body| D
+    B -.->|HTTP Auth Header| D
+    E -->|HTTP Request Body| D
+    E -.->|HTTP Auth Header| D
     
-    D -->|Database Auth| G[(Teradata Database)]
+    D -->|Database Auth| G[(Teradata)]
     D -->|User Queries - Connection Pool with proxy user| G
     
-    A1 -.->|Credentials| D
-    B1 -.->|Credentials| D
-    E1 -.->|Credentials| D
+    A1 -.->|Provides credentials for auth header| A
+    B1 -.->|Provides credentials for auth header| B
+    E1 -.->|Provides credentials for auth header| E
 ```
 
 - **Use case**: Shared MCP server for multiple applications
@@ -156,16 +159,21 @@ flowchart TB
     end
     
     subgraph "Data Tier"
-        G -->|Connection Pool| J[(Teradata Database)]
-        H -->|Connection Pool| J
-        I -->|Connection Pool| J
+        G -->|Auth Request| J[(Teradata)]
+        G -->|User Queries - Connection Pool| J
+        H -->|Auth Request| J
+        H -->|User Queries - Connection Pool| J
+        I -->|Auth Request| J
+        I -->|User Queries - Connection Pool| J
     end
     
-    K -.->|Authentication| B
-    L -.->|TLS Certificates| B
-    M -.->|User Lookup| G
-    M -.->|User Lookup| H
-    M -.->|User Lookup| I
+    K[External IDP]
+    
+    A -.->|Authentication - JWT| K
+    C -.->|Authentication - JWT| K
+    E -.->|Authentication - JWT| K
+    
+    J -.->|Token Validation| K
     
     style B fill:#e1f5fe
     style F fill:#f3e5f5
