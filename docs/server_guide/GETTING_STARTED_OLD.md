@@ -1,6 +1,8 @@
-# MCP Server - Getting Started
+# Getting Started Guide
 
-![](media/client-server-platform.png)
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | **Getting Started** | [Customizing](CUSTOMIZING.md) | [Security](SECURITY.md)
+
+![](../media/client-server-platform.png)
 
 This document will cover the process and options for getting the teradata-mcp-server up and running
 

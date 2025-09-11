@@ -19,7 +19,7 @@ We are providing groupings of tools and associated helpful prompts to support al
   - [Base Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/base/README.md)
 - **Table** tools, to efficiently and predictably access structured data models:
   - [Feature Store Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/fs/README.md) to access and manage the Teradata Enterprise Feature Store.
-  - [Semantic layer definitions](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/CUSTOMIZING.md) to easily implement domain-specific tools, prompts and resources for your own business data models. 
+  - [Semantic layer definitions](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/server_guide/CUSTOMIZING.md) to easily implement domain-specific tools, prompts and resources for your own business data models. 
 - **Data Quality** tools, prompts and resources accelerate exploratory data analysis:
   - [Data Quality Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/qlty/README.md)
 - **DBA** tools, prompts and resources to facilitate your platform administration tasks:
@@ -57,7 +57,7 @@ Configure the claude_desktop_config.json (Settings>Developer>Edit Config) by add
 
 **Step 1.** - Identify the running Teradata System, you need username, password and host details. If you do not have a Teradata system to connect to, then leverage [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics)
 
-**Step 2.** - To install, configure and run the MCP server, refer to the [Getting started guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/GETTING_STARTED.md), or see below for a quick [CLI installation](#CLI-Installation). You can easily [customize the server with your own tools, prompts and resources](docs/CUSTOMIZING.md).
+**Step 2.** - To install, configure and run the MCP server, refer to the [Getting started guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/server_guide/GETTING_STARTED.md), or see below for a quick [CLI installation](#CLI-Installation). You can easily [customize the server with your own tools, prompts and resources](docs/server_guide/CUSTOMIZING.md).
 
 **Step 3.** - There are many client options available, the [Client Guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/client_guide/CLIENT_GUIDE.md) explains how to configure and run a sample of different clients.
 
@@ -132,7 +132,7 @@ For Claude Desktop with development build, use this configuration:
 ```
 
 ## Contributing
-Please refer to the [Contributing](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/CONTRIBUTING.md) guide and the [Developer Guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/developer_guide/DEVELOPER_GUIDE.md).
+Please refer to the [Contributing](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/developer_guide/CONTRIBUTING.md) guide and the [Developer Guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/developer_guide/DEVELOPER_GUIDE.md).
 
 
 ---------------------------------------------------------------------

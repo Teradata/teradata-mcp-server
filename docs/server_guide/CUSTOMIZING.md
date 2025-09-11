@@ -1,5 +1,7 @@
 
-# Customizing the Teradata MCP Server: Semantic Layers
+# Customizing the MCP Server: Semantic Layers
+
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting Started](GETTING_STARTED.md) | **Customizing** | [Security](SECURITY.md)
 
 The Teradata MCP server enables rapid creation of domain-focused semantic layers by allowing you to declaratively define custom tools, prompts, cubes, and glossary terms. No code change needed, you can customize the server by placing YAML files in your current working directory. This approach empowers admins and data teams to tailor the MCP experience to specific business domains—without writing Python code or modifying the server itself.
 
