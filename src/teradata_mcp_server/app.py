@@ -400,19 +400,25 @@ def create_mcp_app(settings: Settings):
                 expr = mdef["expression"]
                 mes_lines.append(f"{expr} AS {measure}")
             meas_list = ",\n  ".join(mes_lines)
+            top_clause = f"TOP {top}" if top else ""
+            dim_comma = ",\n  " if dim_list.strip() else ""
+            where_dim_clause = f"WHERE {dim_filters}" if dim_filters else ""
+            where_meas_clause = f"WHERE {meas_filters}" if meas_filters else ""
+            order_clause = f"ORDER BY {order_by}" if order_by else ""
+            
             sql = (
-                f"SELECT {'TOP ' + str(top) if top else ''} * from\n"
+                f"SELECT {top_clause} * from\n"
                 "(SELECT\n"
-                f"  {dim_list}{',\n  ' if dim_list.strip() else ''}"
+                f"  {dim_list}{dim_comma}"
                 f"  {meas_list}\n"
                 "FROM (\n"
                 f"{cube['sql'].strip()}\n"
-                f"{'WHERE '+dim_filters if dim_filters else ''}"
+                f"{where_dim_clause}"
                 ") AS c\n"
                 f"GROUP BY {', '.join(dim_list_raw)}"
                 ") AS a\n"
-                f"{'WHERE '+meas_filters if meas_filters else ''}"
-                f"{'ORDER BY '+order_by if order_by else ''}"
+                f"{where_meas_clause}"
+                f"{order_clause}"
                 ";"            
             )
             return sql
@@ -439,6 +445,17 @@ def create_mcp_app(settings: Settings):
         measure_lines = []
         for n, m in cube.get('measures', {}).items():
             measure_lines.append(f"    - {n}: {m.get('description', '')}")
+        
+        # Create example strings for documentation
+        dim_examples = [f"{d} {e}" for d, e in zip(list(cube.get('dimensions', {}))[:2], ["= 'value'", "in ('X', 'Y', 'Z')"])]
+        dim_example = ' AND '.join(dim_examples)
+        
+        meas_examples = [f"{m} {e}" for m, e in zip(list(cube.get('measures', {}))[:2], ["> 1000", "= 100"])]
+        meas_example = ' AND '.join(meas_examples)
+        
+        order_examples = [f"{d} {e}" for d, e in zip(list(cube.get('dimensions', {}))[:2], [" ASC", " DESC"])]
+        order_example = ' , '.join(order_examples)
+        
         _dynamic_tool.__doc__ = f"""
         Tool to query the cube '{name}'.
         {cube.get('description', '')}
@@ -451,11 +468,11 @@ def create_mcp_app(settings: Settings):
     {chr(10).join(measure_lines)}
 
             * dim_filters (str): Filter expression to apply to dimensions. Valid dimension names are: [{', '.join(cube.get('dimensions', {}).keys())}], use valid SQL expressions, for example:
-    \"{' AND '.join([f"{d} {e}" for d, e in zip(list(cube.get('dimensions', {}))[:2], ["= 'value'", "in ('X', 'Y', 'Z')"])])}\"
+    "{dim_example}"
             * meas_filters (str): Filter expression to apply to computed measures. Valid measure names are: [{', '.join(cube.get('measures', {}).keys())}], use valid SQL expressions, for example:
-    \"{' AND '.join([f"{m} {e}" for m, e in zip(list(cube.get('measures', {}))[:2], ["> 1000", "= 100"])])}\"
+    "{meas_example}"
             * order_by (str): Order expression on any selected dimensions and measures. Use SQL syntax, for example:
-    \"{' , '.join([f"{d} {e}" for d, e in zip(list(cube.get('dimensions', {}))[:2], [" ASC", " DESC"])])}\"
+    "{order_example}"
             top (int): Limit the number of rows returned, use a positive integer.
 
         Returns:

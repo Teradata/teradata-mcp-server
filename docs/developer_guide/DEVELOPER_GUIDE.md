@@ -370,8 +370,7 @@ uv build --no-cache
 ### 2) Test the wheel locally (no install)
 ```bash
 # Run the installed console entry point from the wheel
-uvx ./dist/teradata_mcp_server-<ver>-py3-none-any.whl \
-    python -m teradata_mcp_server --version
+uvx ./dist/teradata_mcp_server-<ver>-py3-none-any.whl teradata_mcp_server --version
 
 # Or install as a persistent tool and run
 uv tool install --reinstall ./dist/teradata_mcp_server-<ver>-py3-none-any.whl
