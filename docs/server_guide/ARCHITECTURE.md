@@ -109,17 +109,17 @@ flowchart LR
 flowchart LR
     subgraph "Client Context 1"
         A[Claude Desktop]
-        A1[DB Credentials<br/>user1/password1]
+        A1[User 1<br/>DB Credentials]
     end
     
     subgraph "Client Context 2"
         B[VS Code]
-        B1[DB Credentials<br/>user2/password2]
+        B1[User 2<br/>DB Credentials]
     end
     
     subgraph "Client Context 3"
         E[Custom App]
-        E1[DB Credentials<br/>user3/password3]
+        E1[User 3<br/>DB Credentials]
     end
     
     A -->|HTTP Request Body| D[MCP Server]
@@ -139,7 +139,7 @@ flowchart LR
 
 - **Use case**: Shared MCP server for multiple applications
 - **Transport**: streamable-http
-- **Security**: One database user per application, configured at the application level, database service account for the MCP server. User identity validated by MCP server using database authentication method, RBAC policies applied to application database user.
+- **Security**: Per-user database credentials with RBAC enforcement, database service account for the MCP server. User identity validated by MCP server using database authentication method. Connects as a proxy user through the MCP service user, RBAC policies applied at application database user level.
 - **Scaling**: Single server process, configurable database connection pool
 
 ### Pattern 3: Enterprise Integration
@@ -160,18 +160,18 @@ flowchart TB
     
     subgraph "Data Tier"
         G -->|Auth Request| J[(Teradata)]
-        G -->|User Queries - Connection Pool| J
+        G -->|User Queries<br/>Connection Pool| J
         H -->|Auth Request| J
-        H -->|User Queries - Connection Pool| J
+        H -->|User Queries<br/>Connection Pool| J
         I -->|Auth Request| J
-        I -->|User Queries - Connection Pool| J
+        I -->|User Queries<br/>Connection Pool| J
     end
     
     K[External IDP]
     
-    A -.->|Authentication - JWT| K
-    C -.->|Authentication - JWT| K
-    E -.->|Authentication - JWT| K
+    A -.->|Authentication| K
+    C -.->|Authentication| K
+    E -.->|Authentication| K
     
     J -.->|Token Validation| K
     
@@ -185,8 +185,7 @@ flowchart TB
 - **Security**: 
   - TLS encryption for external communication
   - Identity provider integration for authentication
-  - Per-user database credentials with RBAC enforcement
-  - Certificate management and rotation
+  - Per-user database credentials with RBAC enforcement, database service account for the MCP server. User identity validated by MCP server using database authentication method. Connects as a proxy user through the MCP service user.
 - **Scaling**: Horizontal scaling with container orchestration, load balancing, and connection pooling
 
 ## 🛡 Security Architecture
