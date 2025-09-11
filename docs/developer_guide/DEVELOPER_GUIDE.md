@@ -355,6 +355,7 @@ mcp dev teradata-mcp-server
 ## Build, Test, and Publish
 
 We build with **uv**, test locally (wheel), then push to **TestPyPI** before PyPI.
+The examples below use the Twine utility.
 
 ### Versions
 - The CLI reads its version from package metadata (`importlib.metadata`).
@@ -379,13 +380,13 @@ uv tool install --reinstall ./dist/teradata_mcp_server-<ver>-py3-none-any.whl
 
 ### 3) Verify metadata/README
 ```bash
-twine check dist/*
+uvx twine check dist/*
 ```
 
 ### 4) Publish to **TestPyPI** (dress rehearsal)
 ```bash
 # Upload
-python -m twine upload --repository testpypi dist/*
+uvx twine upload --repository testpypi dist/*
 
 # Try installing the just-published version with uvx
 uvx --no-cache \
@@ -400,9 +401,11 @@ Notes:
 
 ### 5) Publish to **PyPI**
 ```bash
-python -m twine upload dist/*
+uvx twine upload dist/*
 ```
-If you see `File already exists`, bump the version in `pyproject.toml`, rebuild, and upload again.
+If you see `File already exists`, it is either:
+- You haven't bumped the the version in `pyproject.toml`. Do so, rebuild, and upload again.
+- You have prior builds in the ./dist directory. Remove prior or be specify the exact version (eg. `uvx twine upload dist/*1.4.0*`)
 
 ### 6) Post‑publish smoke test
 ```bash

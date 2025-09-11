@@ -42,7 +42,7 @@ Configure the claude_desktop_config.json (Settings>Developer>Edit Config) by add
   "mcpServers": {
     "teradata": {
       "command": "uvx",
-      "args": ["teradata-mcp-server", "--profile", "all"],
+      "args": ["teradata-mcp-server"],
       "env": {
         "DATABASE_URI": "teradata://<USERNAME>:<PASSWORD>@<HOST_URL>:1025/<USERNAME>"
       }
