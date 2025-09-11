@@ -53,6 +53,8 @@ Configure the claude_desktop_config.json (Settings>Developer>Edit Config) by add
 
 ## Setting up your environment
 
+Follow this process to install your server, connect it to your Teradata platform and integrated your tools.
+
 **Step 1.** - Identify the running Teradata System, you need username, password and host details. If you do not have a Teradata system to connect to, then leverage [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics)
 
 **Step 2.** - To install, configure and run the MCP server, refer to the [Getting started guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/server_guide/GETTING_STARTED.md), or see below for a quick [CLI installation](#CLI-Installation). You can easily [customize the server with your own tools, prompts and resources](docs/server_guide/CUSTOMIZING.md).
@@ -61,7 +63,7 @@ Configure the claude_desktop_config.json (Settings>Developer>Edit Config) by add
 
 <br>
 
-Check out our libraries of [curated examples](https://github.com/Teradata/teradata-mcp-server/blob/main/examples/) or [video guides](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/VIDEO_LIBRARY.md).
+Check out our libraries of [curated examples](https://github.com/Teradata/teradata-mcp-server/blob/main/examples/) or [video guides](https://github.com/Teradata/teradata-mcp-server/blob/doc-v1.4/docs/server_guide/VIDEO_LIBRARY.md).
 
 <br>
 
