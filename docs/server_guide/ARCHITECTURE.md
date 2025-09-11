@@ -127,7 +127,7 @@ flowchart LR
     E -->|HTTP| D
     
     D -->|Database Auth| G[(Teradata Database)]
-    D -->|User Queries<br/>(Connection Pool with proxy user)| G
+    D -->|User Queries - Connection Pool with proxy user| G
     
     A1 -.->|Credentials| D
     B1 -.->|Credentials| D
@@ -166,13 +166,6 @@ flowchart TB
     M -.->|User Lookup| G
     M -.->|User Lookup| H
     M -.->|User Lookup| I
-    
-    G -.-> N
-    H -.-> N
-    I -.-> N
-    G -.-> O
-    H -.-> O
-    I -.-> O
     
     style B fill:#e1f5fe
     style F fill:#f3e5f5
