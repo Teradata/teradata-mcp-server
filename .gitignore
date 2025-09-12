@@ -10,5 +10,6 @@ working/
 env
 CLAUDE.md
 var/
-profiles.yml
-*_objects.yml
+/# Only ignore root-level overrides
+/profiles.yml
+/*_objects.yml
