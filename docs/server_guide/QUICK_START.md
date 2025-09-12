@@ -22,7 +22,7 @@ Before starting, ensure you have:
 
 ## 🚀 Step 1: Test the Server (1 minute)
 
-Run this command to test your database connection:
+Run this command to validate that you have `uvx` working and can access the MCP Server package:
 
 ```bash
 uvx teradata-mcp-server --help
@@ -32,10 +32,10 @@ If that works, test with your database:
 
 ```bash
 export DATABASE_URI="teradata://username:password@host:1025/database"
-uvx teradata-mcp-server --profile all
+uvx teradata-mcp-server
 ```
 
-You should see "Created tool: [tool_name]" messages. Press `Ctrl+C` to stop.
+You should see "NFO     Starting MCP server 'teradata-mcp-server' with transport 'stdio'" messages. Press `Ctrl+C` to stop.
 
 ## 🔧 Step 2: Configure Claude Desktop (2 minutes)
 
@@ -48,7 +48,7 @@ You should see "Created tool: [tool_name]" messages. Press `Ctrl+C` to stop.
   "mcpServers": {
     "teradata": {
       "command": "uvx",
-      "args": ["teradata-mcp-server", "--profile", "all"],
+      "args": ["teradata-mcp-server"],
       "env": {
         "DATABASE_URI": "teradata://USERNAME:PASSWORD@HOST:1025/DATABASE"
       }
