@@ -1,6 +1,6 @@
 [project]
 name = "teradata-mcp-server"
-version = "0.1.5.post1"
+version = "0.1.5.post2"
 description = "Model Context Protocol (MCP) server for Teradata, Community edition"
 readme = {file = "README.md", content-type = "text/markdown"}
 license = {text = "MIT"}
