@@ -31,8 +31,7 @@ uvx teradata-mcp-server --help
 If that works, test with your database:
 
 ```bash
-export DATABASE_URI="teradata://username:password@host:1025/database"
-uvx teradata-mcp-server --profile all
+uvx teradata-mcp-server --database_uri "teradata://username:password@host:1025/database"
 ```
 
 You should see "Created tool: [tool_name]" messages. Press `Ctrl+C` to stop.
