@@ -31,8 +31,7 @@ uvx teradata-mcp-server --help
 If that works, test with your database:
 
 ```bash
-export DATABASE_URI="teradata://username:password@host:1025/database"
-uvx teradata-mcp-server
+uvx teradata-mcp-server --database_uri "teradata://username:password@host:1025/database"
 ```
 
 You should see "NFO     Starting MCP server 'teradata-mcp-server' with transport 'stdio'" messages. Press `Ctrl+C` to stop.
@@ -91,6 +90,7 @@ You should see Claude connect to your Teradata database and return results!
 **Server won't start?**
 - Check your `DATABASE_URI` format
 - Verify database connectivity: `ping your-host`
+- Rollback to a prior version changing your config file: `"args": ["teradata-mcp-server==0.1.3", "--profile", "all"],`
 - See [Installation Guide](INSTALLATION.md) for alternative methods
 
 **Claude can't see tools?**

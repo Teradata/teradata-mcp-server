@@ -161,22 +161,46 @@ def load_profiles(working_dir: Optional[Path] = None) -> Dict[str, Any]:
     
     # Load packaged profiles.yml
     try:
-        config_files = pkg_files("teradata_mcp_server.config")
-        profiles_file = config_files / "profiles.yml"
-        if profiles_file.is_file():
-            profiles.update(yaml.safe_load(profiles_file.read_text(encoding='utf-8')) or {})
+        import importlib.resources
+        try:
+            # Try the new importlib.resources API (Python 3.9+)
+            config_files = importlib.resources.files("teradata_mcp_server.config")
+            profiles_file = config_files / "profiles.yml"
+            logger.debug(f"Looking for packaged profiles at: {profiles_file}")
+            if profiles_file.is_file():
+                packaged_profiles = yaml.safe_load(profiles_file.read_text(encoding='utf-8')) or {}
+                profiles.update(packaged_profiles)
+                logger.info(f"Loaded {len(packaged_profiles)} packaged profiles: {list(packaged_profiles.keys())}")
+            else:
+                logger.warning(f"Packaged profiles.yml not found at: {profiles_file}")
+        except AttributeError:
+            # Fallback for older Python versions
+            import importlib.resources as resources
+            with resources.path("teradata_mcp_server.config", "profiles.yml") as profiles_path:
+                logger.debug(f"Looking for packaged profiles at: {profiles_path}")
+                if profiles_path.exists():
+                    packaged_profiles = yaml.safe_load(profiles_path.read_text(encoding='utf-8')) or {}
+                    profiles.update(packaged_profiles)
+                    logger.info(f"Loaded {len(packaged_profiles)} packaged profiles: {list(packaged_profiles.keys())}")
+                else:
+                    logger.warning(f"Packaged profiles.yml not found at: {profiles_path}")
     except Exception as e:
-        logger.error(f"Failed to load packaged profiles: {e}")
+        logger.error(f"Failed to load packaged profiles: {e}", exc_info=True)
     
     # Load working directory profiles.yml (overrides packaged)
     profiles_path = working_dir / "profiles.yml"
     if profiles_path.exists():
         try:
             with open(profiles_path, encoding='utf-8') as f:
-                profiles.update(yaml.safe_load(f) or {})
+                working_dir_profiles = yaml.safe_load(f) or {}
+                profiles.update(working_dir_profiles)
+                logger.info(f"Loaded {len(working_dir_profiles)} working directory profiles: {list(working_dir_profiles.keys())}")
         except Exception as e:
             logger.error(f"Failed to load external profiles: {e}")
+    else:
+        logger.debug(f"No working directory profiles.yml found at: {profiles_path}")
     
+    logger.info(f"Total profiles loaded: {list(profiles.keys())}")
     return profiles
 
 
