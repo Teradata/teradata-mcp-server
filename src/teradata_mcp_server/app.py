@@ -119,7 +119,9 @@ def create_mcp_app(settings: Settings):
     mcp.add_middleware(middleware)
 
     # Adapters (inlined for simplicity)
-    process_id = f"{os.uname().nodename}:{os.getpid()}"
+    import socket
+    hostname = socket.gethostname()
+    process_id = f"{hostname}:{os.getpid()}"
 
     def execute_db_tool(tool, *args, **kwargs):
         """Execute a handler with a DB connection and MCP concerns.
