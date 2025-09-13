@@ -26,7 +26,7 @@
  </p>
 
 <p align="center">
-  <a href="https://github.com/Teradata/teradata-mcp-server/blob/main/docs/README.md#-quick-start">✨ Quickstart with your favorite tool in <5 minute ✨</a>
+  ✨ <a href="https://github.com/Teradata/teradata-mcp-server?tab=readme-ov-file#quick-start-with-claude-desktop-no-installation">Quickstart with Claude Desktop </a> or <a href="https://github.com/Teradata/teradata-mcp-server/blob/main/docs/README.md#-quick-start"> your favorite tool</a> in <5 minute ✨
 </p>
 
 ## Overview
