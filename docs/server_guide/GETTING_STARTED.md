@@ -12,9 +12,9 @@ New to Teradata MCP Server? Choose your 5-minute quickstart to rapidly evaluate 
 
 | **Client** | **Deployment** | **Communication** | **Best For** |
 |------------|----------------|------------------|--------------|
-| [Claude Desktop](server_guide/QUICK_START.md) | CLI (uv/pipx) | stdio | Exploratory Data Analytics, Platform Administration, general evaluation |
-| [VS Code + Copilot](server_guide/QUICK_START_VSCODE.md) | CLI (uv/pipx) | HTTP | Data Engineering, Agentic app development |
-| [Open WebUI](server_guide/QUICK_START_OPEN_WEBUI.md) | Docker | REST | Local AI, evaluate new LLMs |
+| [Claude Desktop](./QUICK_START.md) | CLI (uv/pipx) | stdio | Exploratory Data Analytics, Platform Administration, general evaluation |
+| [VS Code + Copilot](./QUICK_START_VSCODE.md) | CLI (uv/pipx) | HTTP | Data Engineering, Agentic app development |
+| [Open WebUI](./QUICK_START_OPEN_WEBUI.md) | Docker | REST | Local AI, evaluate new LLMs |
 | [Code examples](../examples/README.md) | Python | HTTP | Build your own client. Example library using ADK, Bedrock, Langchain... |
 
 *All options get you running in 5 minutes with minimal configuration.*
