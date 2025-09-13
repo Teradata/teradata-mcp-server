@@ -1,4 +1,33 @@
-# Teradata MCP Server
+<p align="center">
+  <!-- Optional: replace with a logo if you have one -->
+  <!-- <img src="docs/media/logo.svg" alt="Teradata MCP Server" width="120"> -->
+  
+</p>
+
+<h1 align="center">Teradata MCP Server</h1>
+
+<p align="center">
+  <a href="https://github.com/Teradata/teradata-mcp-server/blob/main/docs/README.md">
+    <img alt="docs" src="https://img.shields.io/badge/docs-readme-555?logo=readthedocs">
+  </a>
+  <a href="https://github.com/Teradata/teradata-mcp-server/releases">
+    <img alt="release" src="https://img.shields.io/github/v/release/Teradata/teradata-mcp-server?display_name=tag&sort=semver">
+  </a>
+  <a href="https://pypi.org/project/teradata-mcp-server/">
+    <img alt="PyPI" src="https://img.shields.io/pypi/v/teradata-mcp-server">
+  </a>
+  <a href="https://pypi.org/project/teradata-mcp-server/">
+    <img alt="downloads" src="https://img.shields.io/pypi/dm/teradata-mcp-server?label=downloads&color=2ea44f">
+  </a>
+</p>
+
+<p align="center">
+  Model Context Protocol (MCP) server for Teradata
+ </p>
+
+<p align="center">
+  <a href="https://github.com/Teradata/teradata-mcp-server/blob/main/docs/README.md#-quick-start">✨ Quickstart with your favorite tool in <5 minute ✨</a>
+</p>
 
 ## Overview
 The Teradata MCP server provides sets of tools and prompts, grouped as modules for interacting with Teradata databases. Enabling AI agents and users to query, analyze, and manage their data efficiently. 
