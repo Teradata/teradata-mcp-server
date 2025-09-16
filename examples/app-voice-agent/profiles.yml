@@ -64,3 +64,9 @@ profiles:
     system_prompt: "You are a technical support specialist. Help users troubleshoot technical issues and provide step-by-step guidance."
     language: "de"
     voice_id: "lennart"
+
+  churn:
+    mcp_server_url: "http://127.0.0.1:8001/mcp"
+    mcp_prompt: churn_assistant_prompt
+    language: "en"
+    voice_id: "matthew"    

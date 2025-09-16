@@ -78,3 +78,11 @@ sales:
     - sales_*
   resource:
     - sales_*    
+
+churn:
+  tool:
+    - churn_*
+  prompt:
+    - churn_*
+  resource:
+    - churn_*    
