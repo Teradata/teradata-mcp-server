@@ -84,8 +84,8 @@ bar:
 **Status**: Developed
 Unified tool for managing DSA disk file system configurations for backup storage.
 
-#### bar_manageAwsS3 ✅
-**Status**: Developed
+#### bar_manageAwsS3 🚧 
+**Status**: Work-In-Progress
 Tool for managing AWS S3 bucket configurations for backup storage.
 
 #### bar_manageAzureBlob 🚧

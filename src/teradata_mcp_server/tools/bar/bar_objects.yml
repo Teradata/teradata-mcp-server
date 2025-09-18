@@ -10,8 +10,7 @@
 
 bar_manageAWSS3Operations:
   type: tool
-  description: |
-    Manage AWS S3 backup configuration for Teradata DSA via MCP server. Supports list, config, delete_all, and remove operations.
+  description: Manage AWS S3 backup configuration for Teradata DSA via MCP server (list, config, delete_all, remove)
   parameters:
     operation:
       type: string
@@ -27,7 +26,7 @@ bar_manageAWSS3Operations:
       required: false
     bucketsByRegion:
       type: object
-      description: Buckets by region configuration (object: dict or list)
+      description: "Buckets by region configuration (object: dict or list)"
       required: false
     bucketName:
       type: string

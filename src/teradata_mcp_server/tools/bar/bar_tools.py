@@ -743,8 +743,8 @@ def handle_bar_manageAWSS3Operations(
 ):
     logger.info("handle_bar_manageAWSS3Operations called with operation=%s, accessId=%s, acctName=%s", operation, accessId, acctName)
     """
-    Handle DSA AWS S3 backup solution configuraiton operations for the MCP server
-    
+    Handle DSA AWS S3 backup solution configuration operations for the MCP server
+
     This tool provides unified management of DSA AWS S3 backup solution configuration
     that is  required for backup and restore operations.
     

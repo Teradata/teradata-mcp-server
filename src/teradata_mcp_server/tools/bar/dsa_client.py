@@ -73,7 +73,6 @@ class DSAClient:
         if not self.base_url.endswith('/'):
             self.base_url += '/'
             
-        print(f"[DEBUG] DSAClient initialized with base_url: {self.base_url}")
         logger.info(f"Initialized DSA client for {self.base_url}")
     
     def _get_auth(self) -> Optional[tuple]:
