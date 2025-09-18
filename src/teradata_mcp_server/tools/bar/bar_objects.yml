@@ -7,3 +7,34 @@
 
 # Future BAR-related prompts and simple tools can be defined here
 # following the standard YAML object format.
+
+bar_manageAWSS3Operations:
+  type: tool
+  description: |
+    Manage AWS S3 backup configuration for Teradata DSA via MCP server. Supports list, config, delete_all, and remove operations.
+  parameters:
+    operation:
+      type: string
+      description: Operation to perform (list, config, delete_all, remove)
+      required: true
+    accessId:
+      type: string
+      description: AWS Access ID
+      required: false
+    accessKey:
+      type: string
+      description: AWS Access Key
+      required: false
+    bucketsByRegion:
+      type: object
+      description: Buckets by region configuration (object: dict or list)
+      required: false
+    bucketName:
+      type: string
+      description: AWS Bucket Name
+      required: false
+    acctName:
+      type: string
+      description: AWS Account Name
+      required: false
+  handler: handle_bar_manageAWSS3Operations
