@@ -4,7 +4,23 @@ BAR (Backup and Restore) Tools for Teradata DSA MCP Server
 """
 
 import logging
+import string
 from typing import Optional
+import os
+
+logger = logging.getLogger("teradata_mcp_server")
+
+# Setup logging to file (always add file handler)
+log_dir = os.path.join(os.path.dirname(__file__), '../../../logs')
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, 'bar_tools.log')
+file_handler = logging.FileHandler(log_file)
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s %(message)s')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+logger.setLevel(logging.DEBUG)
+logger.info('Logging initialized to %s', log_file)
+logger.info('TEST LOG ENTRY: bar_tools.py imported and logging is active.')
 
 from teradata_mcp_server.tools.utils import create_response
 from .dsa_client import dsa_client
@@ -471,6 +487,190 @@ def manage_dsa_disk_file_systems(
         return f"❌ Error during {operation}: {str(e)}"
 
 
+""" 
+#PA255044 ->  START -- AWS S3 Configuration Tool
+""" 
+#------------------ AWS S3 Backup Solution Configuration and Operations ------------------#
+
+
+def list_aws_s3_backup_configurations () -> str:
+    """List the configured AWS S3 object store systems in DSA
+    
+    Lists all configured AWS S3 storage target systems that are currently available configured for the backup operations, showing:
+    - Bucket names
+    - Prefix numbers, names and devices configured
+    - Configuration status
+    
+    Returns:
+        Formatted summary of all S3 file systems with their configurations
+    """
+    
+    try:
+        logger.info("Listing AWS S3 target systems via DSA API")
+
+        # Make request to DSA API
+        response = dsa_client._make_request(
+            method="GET",
+            endpoint="dsa/components/backup-applications/aws-s3"
+        )
+        
+        # Add debug log for full API response
+        logger.debug("[DEBUG] Full DSA API response from aws-s3 endpoint: %r", response)
+        
+        results = []
+        results.append("🗂️ DSA AWS S3 Backup Solution Systems Available")
+        results.append("=" * 50)
+        
+        if response.get('status') == 'LIST_AWS_APP_SUCCESSFUL':
+            # Extract bucketsByRegion from nested aws[0]['configAwsRest']['bucketsByRegion']
+            bucketsByRegion = []
+            aws_list = response.get('aws', [])
+            if aws_list and isinstance(aws_list, list):
+                configAwsRest = aws_list[0].get('configAwsRest', {})
+                bucketsByRegion = configAwsRest.get('bucketsByRegion', [])
+
+            # Handle if bucketsByRegion is a dict (single region) or list
+            if isinstance(bucketsByRegion, dict):
+                bucketsByRegion = [bucketsByRegion]
+
+            bucket_count = 0
+            if bucketsByRegion:
+                for i, region in enumerate(bucketsByRegion, 1):
+                    region_name = region.get('region', 'N/A')
+                    results.append(f"🗂️ Region #{i}: {region_name}")
+                    buckets = region.get('buckets', [])
+                    if isinstance(buckets, dict):
+                        buckets = [buckets]
+                    if buckets:
+                        for j, bucket in enumerate(buckets, 1):
+                            bucket_count += 1
+                            bucket_name = bucket.get('bucketName', 'N/A')
+                            results.append(f"   📁 Bucket #{j}: {bucket_name}")
+                            prefix_list = bucket.get('prefixList', [])
+                            if isinstance(prefix_list, dict):
+                                prefix_list = [prefix_list]
+                            if prefix_list:
+                                for k, prefix in enumerate(prefix_list, 1):
+                                    prefix_name = prefix.get('prefixName', 'N/A')
+                                    storage_devices = prefix.get('storageDevices', 'N/A')
+                                    results.append(f"      🔖 Prefix #{k}: {prefix_name}")
+                                    results.append(f"         Storage Devices: {storage_devices}")
+                            else:
+                                results.append(f"      🔖 No prefixes configured")
+                    else:
+                        results.append(f"   📁 No buckets configured in this region")
+                    results.append("")
+                results.insert(1, f"📊 Total Buckets Configured: {bucket_count}")
+            else:
+                results.append("📋 No AWS backup Solutions Configured")
+
+            results.append("=" * 50)
+            results.append(f"✅ Status: {response.get('status')}")
+            results.append(f"🔍 Found Component: {response.get('foundComponent', False)}")
+            results.append(f"✔️ Valid: {response.get('valid', False)}")
+            
+        else:
+            results.append(f"❌ Failed to list AWS S3 Backup Solutions Configured")
+            results.append(f"📊 Status: {response.get('status', 'Unknown')}")
+            if response.get('validationlist'):
+                validation = response['validationlist']
+                if validation.get('serverValidationList'):
+                    for error in validation['serverValidationList']:
+                        results.append(f"❌ Error: {error.get('message', 'Unknown error')}")
+        
+        return "\n".join(results)
+        
+    except Exception as e:
+        logger.error(f"Failed to list AWS S3 Backup Solutions Configured: {str(e)}")
+        return f"❌ Error listing AWS S3 Backup Solutions Configured: {str(e)}"
+
+
+def manage_AWS_S3_backup_configurations(
+    operation: str,
+    accessId: Optional[str] = None,
+    accessKey: Optional[str] = None,
+    bucketsByRegion: Optional[object] = None,
+    bucketName: Optional[str] = None,
+    acctName: Optional[str] = None
+) -> str:
+    """Unified DSA AWS S3 Backup Configuration Management Tool
+
+    This comprehensive tool handles all DSA AWS S3 backup configuration operations including
+    listing, configuring, and removing backup configurations.
+    
+    Args:
+        operation: The operation to perform
+        accessId: AWS Access ID
+        accessKey: AWS Access Key
+        bucketsByRegion: Buckets by region configuration (object: dict or list)
+        bucketName: AWS Bucket Name
+        acctName: AWS Account Name
+    
+    Available Operations:
+        - "list" - List all configured AWS S3 backup solutions
+        - "config" - Configure a new AWS S3 backup solution
+        - "delete_all" - Remove all AWS S3 backup solution configurations
+        - "remove" - Remove a specific AWS S3 backup solution configuration
+
+    Returns:
+        Result of the requested operation
+    """
+
+    logger.info(f"DSA AWS S3 Backup Solution Management - Operation: {operation}")
+    
+    try:
+        # List operation
+        if operation == "list":
+            return list_aws_s3_backup_configurations()
+        # Config operation
+        elif operation == "config":
+            if not accessId:
+                return "❌ Error: accessId is required for config operation"
+            if not accessKey:
+                return "❌ Error: accessKey is required for config operation"
+            if not bucketsByRegion:
+                return "❌ Error: bucketsByRegion is required for config operation"
+            if not acctName:
+                return "❌ Error: acctName is required for config operation"
+            if not bucketName:
+                return "❌ Error: bucketName is required for config operation"
+            # bucketsByRegion is now expected as an object (dict or list)
+            request_data = {
+                "configAwsRest": {
+                    "accessId": accessId,
+                    "accessKey": accessKey,
+                    "bucketsByRegion": bucketsByRegion,
+                    "bucketName": bucketName,
+                    "acctName": acctName,
+                    "viewpoint": True,
+                    "viewpointBucketRegion": True
+                }
+            }
+            try:
+                response = dsa_client._make_request(
+                    method="POST",
+                    endpoint="dsa/components/backup-applications/aws-s3",
+                    data=request_data
+                )
+                return f"✅ AWS backup solution configuration operation completed\nResponse: {response}"
+            except Exception as e:
+                return f"❌ Error configuring AWS backup solution: {str(e)}"
+        # Delete all operation
+        elif operation == "delete_all":
+            return "❌ Error: 'delete_all' operation is not implemented yet for AWS S3 Configuration"
+        # Remove specific operation
+        elif operation == "remove":
+            return "❌ Error: 'remove' operation is not implemented yet for AWS S3 Configuration"
+        else:
+            available_operations = [
+                "list", "config", "delete_all", "remove"
+            ]
+            return f"❌ Error: Unknown operation '{operation}'. Available operations: {', '.join(available_operations)}"
+    except Exception as e:
+        logger.error(f"DSA AWS S3 Configuration Management error - Operation: {operation}, Error: {str(e)}")
+        return f"❌ Error during {operation}: {str(e)}"
+
+
 #------------------ Tool Handler for MCP ------------------#
 
 def handle_bar_manageDsaDiskFileSystem(
@@ -527,3 +727,71 @@ def handle_bar_manageDsaDiskFileSystem(
             "success": False
         }
         return create_response(error_result, metadata)
+
+
+
+def handle_bar_manageAWSS3Operations(
+    conn: any,  # Not used for DSA operations, but required by MCP framework
+    operation: str,
+    accessId: str = None,
+    accessKey: str = None,
+    bucketsByRegion: object = None,
+    bucketName: str = None,
+    acctName: str = None,
+    *args,
+    **kwargs
+):
+    logger.info("handle_bar_manageAWSS3Operations called with operation=%s, accessId=%s, acctName=%s", operation, accessId, acctName)
+    """
+    Handle DSA AWS S3 backup solution configuration operations for the MCP server
+
+    This tool provides unified management of DSA AWS S3 backup solution configuration
+    that is  required for backup and restore operations.
+    
+    Args:
+        conn: Database connection (not used for DSA operations)
+        operation: The operation to perform (list, config). The  delete_all, remove and will be implemented later
+        accessId: AWS access ID (for config operation)
+        accessKey: AWS access key (for config operation)
+        bucketsByRegion: List of S3 buckets by region (for config operation)
+        acctName: AWS account name (for config operation)
+
+    Returns:
+        ResponseType: formatted response with operation results + metadata
+    """
+
+    logger.debug(f"Tool: handle_bar_manageAWSS3Operations: Args: operation: {operation}, accessId: {accessId}, accessKey: {accessKey}, bucketsByRegion: {bucketsByRegion}, acctName: {acctName}")
+    logger.debug(f"[DEBUG] bucketsByRegion type: {type(bucketsByRegion)} value: {bucketsByRegion}")
+    try:
+        # Run the synchronous operation
+        result = manage_AWS_S3_backup_configurations(
+            operation=operation,
+            accessId=accessId,
+            accessKey=accessKey,
+            bucketsByRegion=bucketsByRegion,
+            bucketName="tdedsabucket01",  # Hardcoded for now, will be dynamic later
+            acctName=acctName
+        )
+        metadata = {
+            "tool_name": "bar_manageAWSS3Operations",
+            "operation": operation,
+            "accessId": accessId,
+            "accessKey": accessKey,
+            "bucketsByRegion": bucketsByRegion,
+            "bucketName": bucketName,
+            "acctName": acctName,
+            "success": True
+        }
+        logger.debug(f"Tool: handle_bar_manageAWSS3Operations: metadata: {metadata}")
+        return create_response(result, metadata)
+    except Exception as e:
+        logger.error(f"Error in handle_bar_manageAWSS3Operations: {e}")
+        error_result = f"❌ Error in DSA AWS S3 operation: {str(e)}"
+        metadata = {
+            "tool_name": "bar_manageAWSS3Operations",
+            "operation": operation,
+            "error": str(e),
+            "success": False
+        }
+        return create_response(error_result, metadata)
+

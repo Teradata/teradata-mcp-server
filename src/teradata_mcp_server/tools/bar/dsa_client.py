@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from typing import Any, Dict, List, Optional
-import requests
+import requests # pyright: ignore[reportMissingModuleSource]
 from urllib.parse import urljoin
 
 logger = logging.getLogger("teradata_mcp_server")
@@ -133,27 +133,22 @@ class DSAClient:
                 verify=self.verify_ssl,
                 timeout=self.timeout
             )
-            
             logger.debug(f"Response status: {response.status_code}")
-            
             # Handle authentication errors
             if response.status_code == 401:
                 raise DSAAuthenticationError("Authentication failed - check username and password")
-            
             # Handle other client/server errors
             if response.status_code >= 400:
                 error_msg = f"DSA API error: {response.status_code} - {response.text}"
                 logger.error(error_msg)
                 raise DSAAPIError(error_msg)
-            
             # Parse JSON response
             try:
                 return response.json()
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse JSON response: {e}")
                 raise DSAAPIError(f"Invalid JSON response from DSA API: {e}")
-                
-        except requests.exceptions.ConnectError as e:
+        except requests.exceptions.ConnectionError as e:
             error_msg = f"Failed to connect to DSA server at {url}: {e}"
             logger.error(error_msg)
             raise DSAConnectionError(error_msg)
