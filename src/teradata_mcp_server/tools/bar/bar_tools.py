@@ -741,7 +741,6 @@ def handle_bar_manageAWSS3Operations(
     *args,
     **kwargs
 ):
-    logger.info("handle_bar_manageAWSS3Operations called with operation=%s, accessId=%s, acctName=%s", operation, accessId, acctName)
     """
     Handle DSA AWS S3 backup solution configuration operations for the MCP server
 
@@ -759,7 +758,7 @@ def handle_bar_manageAWSS3Operations(
     Returns:
         ResponseType: formatted response with operation results + metadata
     """
-
+    logger.info("handle_bar_manageAWSS3Operations called with operation=%s, accessId=%s, acctName=%s", operation, accessId, acctName)
     logger.debug(f"Tool: handle_bar_manageAWSS3Operations: Args: operation: {operation}, accessId: {accessId}, accessKey: {accessKey}, bucketsByRegion: {bucketsByRegion}, acctName: {acctName}")
     logger.debug(f"[DEBUG] bucketsByRegion type: {type(bucketsByRegion)} value: {bucketsByRegion}")
     try:
