@@ -31,13 +31,22 @@ cd teradata-mcp-server
 
 ## 🔧 Step 2: Start REST Server (1 minute)
 
-Start the server in REST mode for Open WebUI:
+You can use [mcpo](https://github.com/open-webui/mcpo) to expose the MCP server as a RESTful OpenAPI:
+
+Start the server and expose as OpenAPI REST server for Open WebUI:
 
 ```bash
 # Set your database connection
 export DATABASE_URI="teradata://username:password@host:1025/database"
 export MCPO_API_KEY=top-secret
 
+# Start the REST interface
+uvx mcpo --port 8002 --api-key "top-secret" -- uvx teradata-mcp-server
+```
+
+Alternatively, you can use Docker instead of uv:
+
+```bash
 # Start the REST interface
 docker compose --profile rest up
 ```
