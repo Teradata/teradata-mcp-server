@@ -3,6 +3,7 @@ import logging
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
+from pathlib import Path
 
 import yaml
 from teradatasql import TeradataConnection
@@ -13,11 +14,16 @@ logger = logging.getLogger("teradata_mcp_server")
 def load_rag_config():
     """Load RAG configuration from rag_config.yml"""
     try:
-        with open('rag_config.yml') as file:  # Simple path like server.py
-            logger.info("Loading RAG config from: rag_config.yml")
+        # Get the directory path
+        current_dir = Path(__file__).parent
+        # Go to config/
+        config_path = current_dir.parent.parent / 'config' / 'rag_config.yml'
+        
+        with open(config_path, 'r') as file:
+            logger.info(f"Loading RAG config from: {config_path}")
             return yaml.safe_load(file)
     except FileNotFoundError:
-        logger.warning("RAG config file not found: rag_config.yml, using defaults")
+        logger.warning(f"RAG config file not found: {config_path}, using defaults")
         return get_default_rag_config()
     except Exception as e:
         logger.error(f"Error loading RAG config: {e}")
@@ -26,7 +32,7 @@ def load_rag_config():
 def get_default_rag_config():
     """Default RAG configuration as fallback"""
     return {
-        'version': 'byom',
+        'version': 'ivsm',
         'databases': {
             'query_db': 'demo_db',
             'model_db': 'demo_db',
@@ -64,7 +70,7 @@ RAG_CONFIG = load_rag_config()
 def build_search_query(vector_db, dst_table, chunk_embed_table, k, config):
     """Build dynamic search query based on available metadata fields in vector store"""
     # Get metadata fields from config
-    metadata_fields = config['vector_store_schema']['metadata_fields_in_vector_store']
+    metadata_fields = config['vector_store_schema']['metadata_fields_in_vector_store'] or []
     feature_columns = config['embedding']['feature_columns']
 
     # Build SELECT clause dynamically - txt is always required
@@ -72,11 +78,10 @@ def build_search_query(vector_db, dst_table, chunk_embed_table, k, config):
 
     # Add all metadata fields from vector store
     for field in metadata_fields:
-        # Skip txt since it's already added as reference_txt
         if field != 'txt':
             select_fields.append(f"e_ref.{field} AS {field}")
 
-    # Always add similarity (calculated field)
+    # Add similarity
     select_fields.append("(1.0 - dt.distance) AS similarity")
 
     select_clause = ",\n            ".join(select_fields)
@@ -138,8 +143,7 @@ def create_response(data: Any, metadata: dict[str, Any] | None = None) -> str:
 
     return json.dumps(response, default=serialize_teradata_types)
 
-def handle_rag_executeWorkflow(
-
+def handle_rag_Execute_Workflow(
     conn: TeradataConnection,
     question: str,
     k: int | None = None,
@@ -148,39 +152,88 @@ def handle_rag_executeWorkflow(
 ):
     """
     Execute complete RAG workflow to answer user questions based on document context.
+    This tool handles the entire RAG pipeline in a single step when a user query is tagged with /rag.
 
+    WORKFLOW STEPS (executed automatically):
+    1. Configuration setup using configurable values from rag_config.yml
+    2. Store user query with '/rag ' prefix stripping  
+    3. Generate query embeddings using either BYOM (ONNXEmbeddings) or IVSM functions based on config
+    4. Perform semantic search against precomputed chunk embeddings
+    5. Return context chunks for answer generation
 
-    This function handles the entire RAG pipeline:
-    1. Configuration setup (using configurable values from rag_config.yml)
-    2. Store user query (with /rag prefix stripping)
-    3. Generate query embeddings (tokenization + embedding)
-    4. Perform semantic search against chunk embeddings
-    5. Return retrieved context chunks for answer generation
+    CONFIGURATION VALUES (from rag_config.yml):
+    - version: 'ivsm' or 'byom' to select embedding approach
+    - All database names, table names, and model settings are configurable
+    - Vector store metadata fields are dynamically detected
+    - Embedding parameters are configurable
+    - Default chunk retrieval count is configurable
+    - Default values are provided as fallback
 
-    The function uses configuration values from rag_config.yml with fallback defaults.
+    TECHNICAL DETAILS:
+    - Strips the '/rag ' prefix if present from user questions
+    - Creates query table if it does not exist (columns: id, txt, created_ts)
+    - BYOM approach: Uses mldb.ONNXEmbeddings UDF for tokenization and embedding
+    - IVSM approach: Uses ivsm.tokenizer_encode and ivsm.IVSM_score functions
+    - Both approaches store embeddings in configured output table
+    - Uses cosine similarity via TD_VECTORDISTANCE for semantic search
+    - Returns the top-k matching chunks from the configured vector store
+    - Each result includes chunk text, similarity score, and metadata fields
 
-    Arguments:
-      question - user question to process
-      k - number of top-k results to return (optional, uses config default if not provided)
+    CRITICAL ANSWERING RULES:
+    - Answer ONLY using retrieved chunks - no external knowledge, speculation, or inference
+    - Quote source content directly without paraphrasing, summarizing, or rewriting
+    - If no relevant context found: "Not enough information found in the provided context"
+    - If partial context: "The available context does not fully answer the question"
+    - Include document/page references when available (e.g., "On page 2 of 'demo_policy.pdf'...")
+    - Execute entire workflow silently without showing function calls to user - only show final answer
 
-    Returns:
-      Returns the top-k most relevant chunks with metadata for context-grounded answer generation.
+    LANGUAGE RESTRICTIONS:
+    - Do not say "According to the context" or "The context says" - just quote directly
+    - Do not say "It can be inferred that..." - no inference allowed
+    - Use exact or near-verbatim quotes only
+    - No paraphrasing, summarizing, or adding transitions between quotes
+    - Copy content precisely - no expansion or interpretation
+
+    BEHAVIORAL REQUIREMENTS:
+    - Execute all RAG workflow steps silently without showing tool calls to users
+    - Only display final answers based strictly on retrieved context chunks
+    - Do not use external knowledge or speculation - only quote retrieved content directly
+    - RAG mode only triggers with explicit /rag prefix - do not enter RAG mode implicitly
+    - Hide all tool execution steps from user
+    - Provide clean, direct response with only the answer based on retrieved chunks
+    - This is a complete end-to-end RAG workflow - no additional tools needed
+
+    EXECUTION: Run completely silently - user only sees their question and the final context-grounded answer.
     """
 
     # Use configuration from loaded config
     config = RAG_CONFIG
 
+    # Check version and delegate to appropriate implementation
+    version = config.get('version', 'ivsm').lower()
+    
+    if version == 'ivsm':
+        return _execute_rag_workflow_ivsm(conn, question, k, config, *args, **kwargs)
+    elif version == 'byom':
+        return _execute_rag_workflow_byom(conn, question, k, config, *args, **kwargs)
+    else:
+        raise ValueError(f"Unsupported RAG version: {version}. Supported versions: 'byom', 'ivsm'")
+
+
+def _execute_rag_workflow_byom(conn: TeradataConnection, question: str, k: int | None, config: dict, *args, **kwargs):
+    """Execute RAG workflow using BYOM (ONNXEmbeddings)"""
+    
     # Use config default if k not provided
     if k is None:
         k = config['retrieval']['default_k']
 
     # Optional: Enforce max limit
-    max_k = config['retrieval'].get('max_k', 100)
+    max_k = config['retrieval'].get('max_k', 50)
     if k > max_k:
         logger.warning(f"Requested k={k} exceeds max_k={max_k}, using max_k")
         k = max_k
 
-    logger.debug(f"handle_rag_executeWorkflow: question={question[:60]}..., k={k}")
+    logger.debug(f"handle_rag_executeWorkflow (BYOM): question={question[:60]}..., k={k}")
 
     # Extract config values
     database_name = config['databases']['query_db']
@@ -193,10 +246,8 @@ def handle_rag_executeWorkflow(
     vector_db = config['databases']['vector_db']
     chunk_embed_table = config['tables']['vector_table']
 
-
     with conn.cursor() as cur:
-
-        # Step 2: Store user query
+        # Store user query
         logger.debug(f"Step 2: Storing user query in {database_name}.{table_name}")
 
         # Create table if it doesn't exist
@@ -240,8 +291,7 @@ def handle_rag_executeWorkflow(
 
         logger.debug(f"Stored query with ID {new_id}: {cleaned_txt[:60]}...")
 
-
-        # Step 3: Generate query embeddings
+        # Generate query embeddings
         logger.debug(f"Step 3: Generating embeddings in {database_name}.{dst_table}")
 
         # Drop existing embeddings table
@@ -252,7 +302,7 @@ def handle_rag_executeWorkflow(
         except Exception as e:
             logger.debug(f"DROP failed or table not found: {e}")
 
-        # Create embeddings table using ONNXEmbeddings
+        # Create embeddings table
         create_sql = f"""
         CREATE TABLE {database_name}.{dst_table} AS (
             SELECT *
@@ -271,7 +321,7 @@ def handle_rag_executeWorkflow(
         cur.execute(create_sql)
         logger.debug(f"Created embeddings table {database_name}.{dst_table}")
 
-        # Step 4: Perform semantic search with dynamic query building
+        # Perform semantic search
         logger.debug(f"Step 4: Performing semantic search with k={k}")
 
         search_sql = build_search_query(vector_db, dst_table, chunk_embed_table, k, config)
@@ -281,9 +331,10 @@ def handle_rag_executeWorkflow(
 
         logger.debug(f"Retrieved {len(data)} chunks for semantic search")
 
-    # Return results with comprehensive metadata
+    # Return metadata
     metadata = {
         "tool_name": "rag_executeWorkflow",
+        "workflow_type": "BYOM",
         "workflow_steps": ["config_set", "query_stored", "embeddings_generated", "semantic_search_completed"],
         "query_id": new_id,
         "cleaned_question": cleaned_txt,
@@ -296,48 +347,21 @@ def handle_rag_executeWorkflow(
         "topk_requested": k,
         "topk_configured_default": config['retrieval']['default_k'],
         "metadata_fields": config['vector_store_schema']['metadata_fields_in_vector_store'],
-        "description": "Complete RAG workflow executed: config → store query → generate embeddings → semantic search"
+        "description": "Complete RAG workflow executed using BYOM: config - store query - generate embeddings - semantic search"
     }
-    logger.debug(f"Tool: handle_rag_executeWorkflow: metadata: {metadata}")
+    logger.debug(f"Tool: handle_rag_executeWorkflow (BYOM): metadata: {metadata}")
     return create_response(data, metadata)
 
-def handle_rag_executeWorkflow_ivsm(
-    conn: TeradataConnection,
-    question: str,
-    k: int | None = None,
-    *args,
-    **kwargs,
-):
-    """
-    Execute complete RAG workflow to answer user questions based on document context.
 
-    This function handles the entire RAG pipeline using IVSM functions:
-    1. Configuration setup (using configurable values from rag_config.yml)
-    2. Store user query (with /rag prefix stripping)
-    3. Tokenize query using ivsm.tokenizer_encode
-    4. Create embedding view using ivsm.IVSM_score
-    5. Convert embeddings to vector columns using ivsm.vector_to_columns
-    6. Perform semantic search against chunk embeddings
-
-    The function uses configuration values from rag_config.yml with fallback defaults.
-
-    Arguments:
-      question - user question to process
-      k - number of top-k results to return (optional, uses config default if not provided
-
-    Returns:
-      Returns the top-k most relevant chunks with metadata for context-grounded answer generation.
-    """
-
-    # Use configuration from loaded config
-    config = RAG_CONFIG
-
+def _execute_rag_workflow_ivsm(conn: TeradataConnection, question: str, k: int | None, config: dict, *args, **kwargs):
+    """Execute RAG workflow using IVSM functions"""
+    
     # Use config default if k not provided
     if k is None:
         k = config['retrieval']['default_k']
 
     # Optional: Enforce max limit
-    max_k = config['retrieval'].get('max_k', 100)
+    max_k = config['retrieval'].get('max_k', 50)
     if k > max_k:
         logger.warning(f"Requested k={k} exceeds max_k={max_k}, using max_k")
         k = max_k
@@ -356,8 +380,7 @@ def handle_rag_executeWorkflow_ivsm(
     chunk_embed_table = config['tables']['vector_table']
 
     with conn.cursor() as cur:
-
-        # Step 2: Store user query
+        # Store user query
         logger.debug(f"Step 2: Storing user query in {database_name}.{table_name}")
 
         # Create table if it doesn't exist
@@ -401,8 +424,7 @@ def handle_rag_executeWorkflow_ivsm(
 
         logger.debug(f"Stored query with ID {new_id}: {cleaned_txt[:60]}...")
 
-
-        # Step 3: Tokenize query
+        # Tokenize query
         logger.debug("Step 3: Tokenizing query using ivsm.tokenizer_encode")
 
         cur.execute(f"""
@@ -434,7 +456,7 @@ def handle_rag_executeWorkflow_ivsm(
 
         logger.debug("Tokenized view v_topics_tokenized created")
 
-        # Step 4: Create embedding view
+        # Create embedding view
         logger.debug("Step 4: Creating embedding view using ivsm.IVSM_score")
 
         cur.execute(f"""
@@ -460,7 +482,7 @@ def handle_rag_executeWorkflow_ivsm(
 
         logger.debug("Embedding view v_topics_embeddings created")
 
-        # Step 5: Create query embedding table
+        # Create query embedding table
         logger.debug("Step 5: Creating query embedding table using ivsm.vector_to_columns")
 
         # Drop existing embeddings table
@@ -471,7 +493,7 @@ def handle_rag_executeWorkflow_ivsm(
         except Exception as e:
             logger.debug(f"DROP failed or table not found: {e}")
 
-        # Create embeddings table using vector_to_columns
+        # Create embeddings table
         create_sql = f"""
         CREATE TABLE {database_name}.{dst_table} AS (
             SELECT *
@@ -482,7 +504,6 @@ def handle_rag_executeWorkflow_ivsm(
                     VectorDataType('FLOAT32')
                     VectorLength({config['embedding']['vector_length']})
                     OutputColumnPrefix('{config['embedding']['vector_column_prefix']}')
-
                     InputColumnName('sentence_embedding')
             ) a
         ) WITH DATA
@@ -491,8 +512,7 @@ def handle_rag_executeWorkflow_ivsm(
         cur.execute(create_sql)
         logger.debug(f"Created embeddings table {database_name}.{dst_table}")
 
-
-        # Step 6: Perform semantic search with dynamic query building
+        # Perform semantic search
         logger.debug(f"Step 6: Performing semantic search with k={k}")
 
         search_sql = build_search_query(vector_db, dst_table, chunk_embed_table, k, config)
@@ -502,9 +522,9 @@ def handle_rag_executeWorkflow_ivsm(
 
         logger.debug(f"Retrieved {len(data)} chunks for semantic search")
 
-    # Return results with comprehensive metadata
+    # Return metadata
     metadata = {
-        "tool_name": "rag_executeWorkflow_ivsm",
+        "tool_name": "rag_executeWorkflow",
         "workflow_type": "IVSM",
         "workflow_steps": ["config_set", "query_stored", "query_tokenized", "embedding_view_created", "embedding_table_created", "semantic_search_completed"],
         "query_id": new_id,
@@ -519,7 +539,7 @@ def handle_rag_executeWorkflow_ivsm(
         "topk_configured_default": config['retrieval']['default_k'],
         "views_created": ["v_topics_tokenized", "v_topics_embeddings"],
         "metadata_fields": config['vector_store_schema']['metadata_fields_in_vector_store'],
-        "description": "Complete RAG workflow executed using IVSM functions: config → store query → tokenize → create embedding view → create embedding table → semantic search"
+        "description": "Complete RAG workflow executed using IVSM functions: config - store query - tokenize - create embedding view - create embedding table - semantic search"
     }
-    logger.debug(f"Tool: handle_rag_executeWorkflow_ivsm: metadata: {metadata}")
+    logger.debug(f"Tool: handle_rag_executeWorkflow (IVSM): metadata: {metadata}")
     return create_response(data, metadata)

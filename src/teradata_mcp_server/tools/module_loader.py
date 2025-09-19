@@ -26,6 +26,7 @@ class ModuleLoader:
         'fs': 'teradata_mcp_server.tools.fs',
         'qlty': 'teradata_mcp_server.tools.qlty',
         'rag': 'teradata_mcp_server.tools.rag',
+        'sql_opt': 'teradata_mcp_server.tools.sql_opt',
         'sec': 'teradata_mcp_server.tools.sec',
         'tmpl': 'teradata_mcp_server.tools.tmpl',
     }
@@ -151,26 +152,31 @@ class ModuleLoader:
 
         return all_functions
 
-    def get_required_yaml_paths(self) -> list[str]:
+    def get_required_yaml_paths(self) -> list:
         """
         Get the paths to YAML files for only the required modules.
         
         Returns:
-            List of file paths for YAML files that should be loaded
+            List of file paths/resources for YAML files that should be loaded
         """
-        import glob
-        import os
+        from importlib.resources import files as pkg_files
 
         yaml_paths = []
-        base_path = os.path.dirname(__file__)
-
-        for module_name in self._required_modules:
-            if module_name in self.MODULE_MAP:
-                # Get YAML files for this specific module
-                module_dir = os.path.join(base_path, module_name)
-                if os.path.exists(module_dir):
-                    pattern = os.path.join(module_dir, "*.yml")
-                    yaml_paths.extend(glob.glob(pattern))
+        
+        try:
+            tools_pkg_root = pkg_files("teradata_mcp_server").joinpath("tools")
+            if tools_pkg_root.is_dir():
+                for module_name in self._required_modules:
+                    if module_name in self.MODULE_MAP:
+                        module_dir = tools_pkg_root.joinpath(module_name)
+                        if module_dir.is_dir():
+                            for entry in module_dir.iterdir():
+                                if entry.is_file() and entry.name.endswith('.yml'):
+                                    yaml_paths.append(entry)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger("teradata_mcp_server")
+            logger.error(f"Failed to load packaged YAML files: {e}")
 
         return yaml_paths
 

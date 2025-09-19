@@ -1,17 +1,13 @@
 # RAG Tools
 
-**Dependencies**
-
-Assumes Teradata >=20.XX.  
-
 **RAG** tools:
 
-- rag_executeWorkflow - executes complete RAG pipeline (config setup, query storage, embedding generation, and semantic search) in a single step
+- rag_Execute_Workflow - executes complete RAG pipeline (config setup, query storage, embedding generation, and semantic search)
 
 
 **Configuration:**
 
-The RAG system is fully configurable through `rag_config.yaml`. You can customize:
+The RAG system is fully configurable through `rag_config.yml`. You can customize:
 
 - **Database locations** (query_db, model_db, vector_db)
 - **Table names** (query_table, vector_table, model_table, etc.)
@@ -27,7 +23,7 @@ The RAG tool supports two implementations:
 - **BYOM (default)**: Uses ONNXEmbeddings for embedding generation
 - **IVSM**: Uses IVSM functions for embedding generation
 
-To switch between versions, edit `rag_config.yaml`:
+To switch between versions, edit `rag_config.yml`:
 
 ```yaml
 version: 'byom'  # Options: 'byom' or 'ivsm'
@@ -35,7 +31,7 @@ version: 'byom'  # Options: 'byom' or 'ivsm'
 
 **Vector Store Compatibility:**
 
-The system automatically adapts to your vector store schema. Configure your setup in `rag_config.yaml`:
+The system automatically adapts to your vector store schema. Configure your setup in `rag_config.yml`:
 
 ```yaml
 # Database Configuration

@@ -1,33 +1,32 @@
 # Adding New Modules
 
-Here is a clear and reusable documentation-style guide that explains how to integrate a Python function with multiple arguments into your **MPC server**, including both the `async` tool-facing function and the backend handler function.
+Here is a clear and reusable documentation-style guide that explains how to add a new tool implemented in Python to the Teradata MCP server. The design cleanly separates the MCP protocol from your Teradata‑specific logic: you implement a plain Python handler; the server auto‑registers it and wires MCP concerns (validation, context, query band, errors) for you.
 
 ---
 
-## 📚 How to Integrate a Python Function into the MPC Server
+## 📚 How to Add a New Tool
 
-This guide shows how to register a Python function named `myFunctionName`—with multiple arguments—into your MPC server using the `@mcp.tool` decorator and the `execute_db_tool` utility.
+You add a new handler function named `handle_<toolName>` inside a tools module (e.g., `src/teradata_mcp_server/tools/base/base_tools.py`). The server scans modules according to `profiles.yml`, wraps your handler with an MCP adapter, and registers it automatically.
 
 ### 🎯 Goal
 
 Function naming convention is describes [here.](DEVELOPER_GUIDE.md#toolpromptresource-naming-convention)
 
-Integrate `myFunctionName` into the fs module of the MPC toolchain with two layers:
-
-1. **Frontend wrapper** will be created by parsing the handle fuction
-2. **Backend logic handler** (actual logic): `handle_fs_myFunctionName`
+Two layers at runtime:
+1. Your backend handler: `handle_fs_myFunctionName(conn: Connection, ...)` (pure Python, protocol‑agnostic)
+2. The server’s auto‑generated MCP wrapper: exposes your handler to MCP clients (built automatically)
 
 ---
 
-### 🧩 Step 1: Define the Backend Handler
+### 🧩 Step 1: Define the Backend Handler (pure Python)
 
-This is the core function that performs the actual logic. It receives a database connection and the necessary arguments.
+This is the core function that performs the actual logic. It receives a database connection and the necessary arguments. Prefer typing the first parameter as `sqlalchemy.engine.Connection` to use the SQLAlchemy path.
 
 ```python
 # handler_function.py
 
 def handle_fs_myFunctionName(
-    conn: TeradataConnection, 
+    conn: Connection, 
     arg1: str, 
     arg2: int, 
     flag: bool = False, 
@@ -46,7 +45,7 @@ def handle_fs_myFunctionName(
       **kwargs - Named bind parameters
 
     Returns:
-      ResponseType: formatted response with query results + metadata
+      Any: result to be formatted by the server (string/JSON/rows, etc.)
     """
     logger.debug(f"Tool: handle_fs_my_function: Args: arg1={arg1}, arg2={arg2}, flag={flag}")
 
@@ -69,42 +68,40 @@ def handle_fs_myFunctionName(
 
 ---
 
-### 🖥️ Step 2: Create the Async Tool Function
+### 🖥️ Step 2: Enable the tool in a profile
 
-This is what MPC exposes and calls. It uses `@mcp.tool` to register metadata and relies on `execute_db_tool` to call the backend handler. The dynamic tool registration process in server.py will automatically decorate your tools starting with handle_ and that have been identified in the config_tools.yml profile.
-
-You will need to add your tools into the config_tools.yaml file in the appropriate profile and module, the allmodule flag turns the entire module on and off, the example below enables the module and turns off the fs_myFunctionName.
+Add your tool name to the proper profile in `profiles.yml` so the server will register it. The pattern must match the tool name (without the `handle_` prefix). Example that enables the module while disabling a single tool:
 
 ```
-fs: 
-    allmodule: True
-    tool:
-        fs_myFunctionName : False
-    prompt:
-        fs_myPromptName: True
+fs:
+  allmodule: True
+  tool:
+    fs_myFunctionName: True   # or False to hide
+  prompt:
+    fs_myPromptName: True
 ```
 
 
 ---
 
-### 🛠️ Step 3: Ensure Your Utility Function is Available
+### 🛠️ What the server does for you
 
-Your `execute_db_tool` function is already defined like this:
+You do not need to write a wrapper or call decorators. At startup, the server:
+- Loads modules per `profiles.yml`, finds functions named `handle_*`
+- Builds an MCP wrapper internally that:
+  - Injects a DB connection (`Connection`) as `conn`
+  - Optionally injects `fs_config` if your handler declares it
+  - Removes internal params (`conn`, `tool_name`, `fs_config`) from the MCP signature
+  - Calls the internal `execute_db_tool` which handles:
+    - QueryBand (using request context)
+    - Error handling + response formatting
+    - Reconnect logic if needed
 
-```python
-def execute_db_tool(tool, *args, **kwargs):
-    try:
-        return format_text_response(tool(conn, *args, **kwargs))
-    except Exception as e:
-        logger.error(f"Error sampling object: {e}")
-        return format_error_response(str(e))
-```
-
-No change is needed here.
+Therefore, handlers should be protocol‑agnostic and not import MCP.
 
 ---
 
-### ✅ Example `my_function` (for reference)
+### ✅ Example `my_function` (helper used by your handler)
 
 ```python
 def myFunction(arg1: str, arg2: int, flag: bool = False) -> str:
@@ -113,14 +110,9 @@ def myFunction(arg1: str, arg2: int, flag: bool = False) -> str:
 
 ---
 
-### 🧪 Optional: Testing via Direct Call
+### 🧪 Optional: Testing via the server
 
-```python
-# Emulate how MPC would call the tool
-async def test_tool():
-    result = await fs_myFunction(arg1="test", arg2=123, flag=True)
-    print(result)
-```
+Use MCP Inspector or your client (Claude Desktop) to call the tool once it’s enabled in the profile.
 
 ---
 
@@ -128,8 +120,8 @@ async def test_tool():
 
 | Component                   | Purpose                                                                       |
 | --------------------------- | ----------------------------------------------------------------------------- |
-| `fs_myFunction`             | Async MPC tool function. Handles inputs, metadata, and passes to the backend. |
-| `handle_fs_myFunction`      | Backend business logic handler, receives parsed arguments and DB connection.  |
-| `execute_db_tool`           | Utility wrapper for error handling and formatting.                            |
+| `handle_fs_myFunction`      | Backend business logic handler, receives `conn` and arguments.               |
+| MCP wrapper (auto)          | Auto-generated MCP wrapper around your handler (built at startup).           |
+| `execute_db_tool` (internal)  | Central adapter: sets QueryBand, handles errors/formatting, reconnects.    |
 
 Let me know if you'd like this as a template or reusable decorator for many functions. 

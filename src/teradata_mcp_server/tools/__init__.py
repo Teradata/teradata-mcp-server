@@ -1,10 +1,11 @@
-# src/teradata_aitools/__init__.py
+# src/tools/__init__.py
 """
 Tools package with lazy loading support.
 Modules are now loaded on-demand based on profile requirements.
 """
 
 from .module_loader import ModuleLoader
+from .td_connect import TDConn  # explicit export for DB connection
 
 # Create a global module loader instance
 _module_loader = None
@@ -31,6 +32,4 @@ def __getattr__(name):
             return all_functions[name]
     # If not found, raise AttributeError as usual
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
-
-
 

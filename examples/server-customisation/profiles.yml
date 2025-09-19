@@ -2,14 +2,19 @@
 # Copy this file to your working directory as "profiles.yml" to customize
 
 # Override or extend the packaged default profiles
-my_custom_profile:
+custom:
   tool:
-    - base_.*        # Include all base tools
-    - my_custom_.*   # Include your custom tools
+    - cust*
+    - base_databaseList
+    - base_tableList    
   prompt:
-    - my_custom_.*   # Include your custom prompts
+    - cust*
   resource:
-    - .*             # Include all resources
+    - cust*
+  run:
+    database_uri: "teradata://${TD_USER}:${TD_PASSWORD}@demo-mcp-vikzqtnd0db0nglk.env.clearscape.teradata.com:1025"
+    mcp_transport: "streamable-http"
+    mcp_port: 8001
 
 # Example: Finance team profile with run configuration
 finance:
@@ -22,7 +27,7 @@ finance:
   resource:
     - finance_.*     # Finance resources
   run:
-    database_uri: "teradata://finance_user:${FINANCE_DB_PASSWORD}@prod.company.com:1025/finance_db"
+    database_uri: "teradata://finance_user:${FINANCE_DB_PASSWORD}@prod-env.teradata.com:1025/finance_db"
     mcp_transport: "sse"
     mcp_host: "0.0.0.0"
     mcp_port: 8002
@@ -65,3 +70,19 @@ read_only:
     - read_only_.*
   resource:
     - .*
+
+sales:
+  tool:
+    - sales_*    
+  prompt:
+    - sales_*
+  resource:
+    - sales_*    
+
+churn:
+  tool:
+    - churn_*
+  prompt:
+    - churn_*
+  resource:
+    - churn_*    

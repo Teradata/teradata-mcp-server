@@ -1,0 +1,85 @@
+# SQL Query Clustering Optimization Configuration File
+
+# Version Selection (NOT IMPLEMENTED YET ONLY WORKS WITH IVSM)
+# version: 'ivsm'  # Options: 'byom' or 'ivsm' 
+
+# Database Configuration
+databases:
+  feature_db: "feature_ext_db"    # Database for storing clustering tables
+  model_db: "feature_ext_db"      # Database containing embedding models and tokenizers
+
+# Table Configuration
+tables:
+  # Main workflow tables
+  sql_query_log_main: "sql_query_log_main"
+  sql_log_tokenized_for_embeddings: "sql_log_tokenized_for_embeddings"
+  sql_log_embeddings: "sql_log_embeddings"
+  sql_log_embeddings_store: "sql_log_embeddings_store"
+  sql_query_clusters_temp: "sql_query_clusters_temp"
+  sql_query_clusters: "sql_query_clusters"
+  query_cluster_stats: "query_cluster_stats"
+  
+  # Model and tokenizer tables (should exist in your system)
+  embedding_models: "embedding_models"
+  embedding_tokenizers: "embedding_tokenizers"
+
+# Model Configuration
+model:
+  model_id: "bge-small-en-v1.5"  # Must match model in your embedding_models table
+
+# Clustering Configuration
+clustering:
+  optimal_k: 14              # Number of clusters (can be overridden in tool calls)
+  max_queries: 10000          # Maximum queries to process (top by CPU time)
+  seed: 10                   # Random seed for reproducible clustering
+  stop_threshold: 0.0395     # K-means convergence threshold
+  max_iterations: 100        # Maximum K-means iterations
+
+# Embedding Configuration
+embedding:
+  vector_length: 384         # Embedding vector dimension (must match model)
+  max_length: 512           # Maximum token length for SQL queries
+  pad_to_max_length: 'False' # Padding strategy for tokenization
+
+# Performance Metric Thresholds (for categorization)
+performance_thresholds:
+  cpu:
+    high: 100               # CPU seconds threshold for "high" usage
+    very_high: 1000         # CPU seconds threshold for "very high" usage
+  
+  skew:
+    moderate: 2.0           # Skew ratio threshold for "moderate" skew
+    high: 3.0               # Skew ratio threshold for "high" skew
+    severe: 5.0             # Skew ratio threshold for "severe" skew
+  
+  io:
+    high: 1000000           # Logical I/O threshold for "high" usage
+
+# Analysis Configuration
+analysis:
+  default_sort_metric: "avg_cpu"     # Default metric for sorting cluster stats
+  default_retrieval_metric: "ampcputime"  # Default metric for retrieving queries
+  default_limit_per_cluster: 250     # Default number of queries to retrieve per cluster
+  
+  # Valid metrics for analysis
+  valid_cluster_metrics:
+    - "avg_cpu"
+    - "avg_io" 
+    - "avg_cpuskw"
+    - "avg_ioskw"
+    - "avg_pji"
+    - "avg_uii"
+    - "avg_numsteps"
+    - "queries"
+    - "cluster_silhouette_score"
+  
+  valid_query_metrics:
+    - "ampcputime"
+    - "logicalio"
+    - "cpuskw"
+    - "ioskw"
+    - "pji"
+    - "uii"
+    - "numsteps"
+    - "response_secs"
+    - "delaytime"

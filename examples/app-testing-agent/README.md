@@ -14,7 +14,7 @@ export DATABASE_URI=teradata://username:password@host:1025/schemaname
 
 ```sh
 cd examples/MCP_Testing_Agent
-uv run teradata-mcp-server --profile tester --mcp_transport=streamable-http --mcp_port=8001
+teradata-mcp-server --profile tester --mcp_transport=streamable-http --mcp_port=8001
 ```
 
 Connect your agent or application, and load the prompts named `test_*`.

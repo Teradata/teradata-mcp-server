@@ -401,7 +401,8 @@ class MCPTestRunner:
             for result in self.results:
                 if result['status'] == 'FAIL':
                     print(f"  ✗ {result['tool']}:{result['test']} - FAIL")
-                    print(f"    Error: {result['error'].split('\n')[0]}")
+                    error_first_line = result['error'].split('\n')[0]
+                    print(f"    Error: {error_first_line}")
 
                     print()  # Add blank line between failures for readability
 
