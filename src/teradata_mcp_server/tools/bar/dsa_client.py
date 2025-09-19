@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from typing import Any, Dict, List, Optional
-import requests # pyright: ignore[reportMissingModuleSource]
+import requests #
 from urllib.parse import urljoin
 
 logger = logging.getLogger("teradata_mcp_server")
