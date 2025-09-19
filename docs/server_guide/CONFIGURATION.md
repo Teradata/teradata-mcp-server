@@ -125,7 +125,7 @@ teradata-mcp-server --mcp_transport stdio
 
 ### streamable-http
 
-Best for: Web applications, REST APIs, multiple clients
+Best for: Multiple clients, multiple end-users with individual database access control, centralized deployment, container deployment.
 
 ```bash
 teradata-mcp-server --mcp_transport streamable-http --mcp_port 8001
@@ -133,10 +133,9 @@ teradata-mcp-server --mcp_transport streamable-http --mcp_port 8001
 
 **Characteristics:**
 - HTTP server on specified port
-- Multiple concurrent clients
-- REST API compatible
-- Better for web integration
-- Accessible at `http://localhost:8001/mcp/`
+- Supports multiple concurrent clients with individual sessions
+- Can be combined with user authentication to enforce individual data access policies
+- Can be containerized
 
 ### Server-Sent Events (sse)
 
