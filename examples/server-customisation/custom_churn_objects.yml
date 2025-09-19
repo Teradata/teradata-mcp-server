@@ -43,6 +43,12 @@ churn_assistant_prompt:
     - Specific customer examples for credibility
     - ROI and business case for action
 
+    **Data Setup & Error Handling:**
+    If any of your tools fail due to missing tables or views (e.g., "Object does not exist" errors), immediately offer to help set up the demo environment:
+
+    "I notice the banking churn analytics environment isn't set up yet. If you are using Teradata's ClearScape Analytics Experience I can help you with that, it takes about two minutes."
+    If the user agrees, instruct them to use their favourite application to connect to this MCP server and load the 'churn_setup_instructions' prompt. This prompt will instruct the model to set up the necessary tables and views in their Teradata environment.
+
     Remember: You're speaking to executives who need to make quick, informed decisions. Be their trusted advisor who turns complex data into clear business strategy.
 
 churn_portfolio_overview:
@@ -59,9 +65,9 @@ churn_critical_segments:
 
 churn_most_urgent_case:
   type: tool
-  description: Show the most urgent customer case for immediate action
+  description: Show the most urgent customer cases for immediate action
   sql: |
-    SELECT top 5 * FROM DEMO_BankChurn.fact_urgent_cases_by_segment 
+    SELECT * FROM DEMO_BankChurn.fact_urgent_cases_by_segment 
     ORDER BY "Account Balance (EUR)" DESC 
 
 churn_action_plan:
@@ -70,3 +76,232 @@ churn_action_plan:
   sql: |
     SELECT * FROM DEMO_BankChurn.agg_critical_segments_summary 
     ORDER BY "Annual Revenue at Risk (Millions EUR)" DESC
+
+churn_setup_instructions:
+  type: prompt
+  description: Instructions for setting up the banking churn demo dataset and views
+  prompt: |
+    # Banking Churn Demo Setup Instructions
+    
+    To set up this banking churn demo, follow these steps in order:
+
+    ## Step 1: Load Base Data
+    First, load the customer churn dataset by running this procedure:
+    ```sql
+    CALL get_data('DEMO_BankChurn_local');
+    ```
+    This will populate the DEMO_BankChurn.customer_churn table with sample banking customer data.
+
+    ## Step 2: Create Enhanced Fact View
+    Create the main fact view with calculated metrics and risk scoring:
+    ```sql
+    CREATE VIEW DEMO_BankChurn.fact_customer_churn AS
+    SELECT 
+        -- Original columns
+        RowNumber, CustomerId, Surname, CreditScore, Geography, Gender, Age, Tenure, 
+        Balance, NumOfProducts, HasCrCard, IsActiveMember, EstimatedSalary, Exited,
+        
+        -- Revenue Metrics
+        ROUND(Balance * 0.06, 2) AS annual_revenue,
+        ROUND(Balance * 0.06 * 8, 2) AS lifetime_value,
+        CASE WHEN Balance > 100000 THEN 2500 WHEN Balance > 50000 THEN 1500 ELSE 800 END AS acquisition_cost,
+        
+        -- Risk Scoring
+        CASE 
+            WHEN IsActiveMember = 0 AND Tenure <= 2 AND Balance > 100000 THEN 85.0
+            WHEN IsActiveMember = 0 AND NumOfProducts = 1 AND Balance > 50000 THEN 75.0
+            WHEN Age > 50 AND IsActiveMember = 0 AND Balance > 0 THEN 60.0
+            WHEN IsActiveMember = 0 AND CreditScore < 600 THEN 70.0
+            WHEN NumOfProducts = 1 AND IsActiveMember = 1 THEN 35.0
+            WHEN IsActiveMember = 1 AND Tenure > 5 THEN 15.0
+            ELSE 25.0
+        END AS churn_probability,
+
+        -- Risk Categories
+        CASE 
+            WHEN IsActiveMember = 0 AND Tenure <= 2 AND Balance > 100000 THEN 'CRITICAL'
+            WHEN IsActiveMember = 0 AND NumOfProducts = 1 AND Balance > 50000 THEN 'HIGH'
+            WHEN Age > 50 AND IsActiveMember = 0 AND Balance > 0 THEN 'MEDIUM'
+            WHEN IsActiveMember = 0 AND CreditScore < 600 THEN 'HIGH'
+            ELSE 'LOW'
+        END AS risk_category,
+        
+        -- Engagement and Activity Metrics
+        CASE 
+            WHEN IsActiveMember = 1 AND NumOfProducts >= 2 THEN 85
+            WHEN IsActiveMember = 1 AND NumOfProducts = 1 THEN 60
+            WHEN IsActiveMember = 0 AND NumOfProducts >= 2 THEN 35
+            WHEN IsActiveMember = 0 AND NumOfProducts = 1 THEN 15
+            ELSE 25
+        END AS engagement_score,
+        
+        CASE 
+            WHEN IsActiveMember = 1 THEN 
+                CASE WHEN Age < 35 THEN 5 + (RowNumber MOD 10) WHEN Age < 50 THEN 15 + (RowNumber MOD 20) ELSE 30 + (RowNumber MOD 30) END
+            ELSE 
+                CASE WHEN Tenure <= 2 THEN 120 + (RowNumber MOD 60) ELSE 90 + (RowNumber MOD 90) END
+        END AS days_since_last_activity,
+        
+        -- Categorizations
+        CASE WHEN NumOfProducts = 1 THEN 'Single Product' WHEN NumOfProducts = 2 THEN 'Dual Product' 
+             WHEN NumOfProducts = 3 THEN 'Multi Product' ELSE 'Premium Portfolio' END AS product_category,
+        
+        CASE WHEN Balance * 0.06 > 10000 THEN 'High Value' WHEN Balance * 0.06 > 5000 THEN 'Medium Value' 
+             WHEN Balance * 0.06 > 1000 THEN 'Standard Value' ELSE 'Low Value' END AS value_segment,
+        
+        CASE Geography WHEN 'Germany' THEN 32.4 WHEN 'Spain' THEN 16.7 WHEN 'France' THEN 16.2 ELSE 20.0 END AS market_churn_rate,
+        
+        -- Recommendations
+        CASE 
+            WHEN IsActiveMember = 0 AND Tenure <= 2 AND Balance > 100000 THEN 'Immediate RM Call'
+            WHEN IsActiveMember = 0 AND NumOfProducts = 1 AND Balance > 50000 THEN 'Product Cross-sell Campaign'
+            WHEN Age > 50 AND IsActiveMember = 0 THEN 'Senior Service Outreach'
+            WHEN NumOfProducts = 1 AND IsActiveMember = 1 THEN 'Cross-sell Opportunity'
+            WHEN IsActiveMember = 1 AND Tenure > 8 THEN 'Loyalty Reward Program'
+            ELSE 'Standard Retention'
+        END AS recommended_action,
+
+        -- Critical Segment Classification
+        CASE 
+            WHEN Exited = 0 AND Balance >= 200000 AND NumOfProducts = 1 THEN 'High Value Single Product'
+            WHEN Exited = 0 AND Tenure <= 2 AND Balance >= 100000 AND 
+                 (CASE WHEN IsActiveMember = 1 THEN 
+                    CASE WHEN Age < 35 THEN 5 + (RowNumber MOD 10) WHEN Age < 50 THEN 15 + (RowNumber MOD 20) ELSE 30 + (RowNumber MOD 30) END
+                  ELSE CASE WHEN Tenure <= 2 THEN 120 + (RowNumber MOD 60) ELSE 90 + (RowNumber MOD 90) END END) > 90 
+                 THEN 'New High Value Low Engagement'
+            WHEN Exited = 0 AND Geography = 'Germany' AND 
+                 (CASE WHEN IsActiveMember = 0 AND Tenure <= 2 AND Balance > 100000 THEN 85.0
+                       WHEN IsActiveMember = 0 AND NumOfProducts = 1 AND Balance > 50000 THEN 75.0
+                       WHEN Age > 50 AND IsActiveMember = 0 AND Balance > 0 THEN 60.0
+                       WHEN IsActiveMember = 0 AND CreditScore < 600 THEN 70.0
+                       WHEN NumOfProducts = 1 AND IsActiveMember = 1 THEN 35.0
+                       WHEN IsActiveMember = 1 AND Tenure > 5 THEN 15.0 ELSE 25.0 END) >= 60 
+                 THEN 'Local Market Issues'
+            ELSE 'Standard Risk'
+        END AS critical_segment ,
+    FROM DEMO_BankChurn.customer_churn;
+
+    comment on column DEMO_BankChurn.fact_customer_churn.churn_probability as 'Churn probability Calculated using risk scoring rules';   
+    comment on column DEMO_BankChurn.fact_customer_churn.recommended_action as 'Recommendations for customer retention from based on recommendation rules for critical risk segments';
+    comment on column DEMO_BankChurn.fact_customer_churn.critical_segment as 'Customer risk segment from risk segmentation rules';
+    ```
+
+    Add comments to key columns for clarity:
+    ```sql
+    comment on column DEMO_BankChurn.fact_customer_churn.churn_probability as 'Churn probability Calculated using risk scoring rules';   
+    comment on column DEMO_BankChurn.fact_customer_churn.recommended_action as 'Recommendations for customer retention from based on recommendation rules for critical risk segments';
+    comment on column DEMO_BankChurn.fact_customer_churn.critical_segment as 'Customer risk segment from risk segmentation rules';
+    ```
+
+    ## Step 3: Create Aggregated Views
+    Create the portfolio risk summary view:
+    ```sql
+    CREATE VIEW DEMO_BankChurn.agg_portfolio_risk_summary AS
+    WITH portfolio_summary AS (
+        SELECT 
+            COUNT(*) as total_customers,
+            SUM(CASE WHEN Exited = 0 THEN 1 ELSE 0 END) as active_customers,
+            SUM(CASE WHEN Exited = 0 AND churn_probability >= 60 THEN 1 ELSE 0 END) as high_risk_customers,
+            ROUND(SUM(CASE WHEN Exited = 0 THEN Balance ELSE 0 END) / 1000000, 0) as total_aum_millions,
+            ROUND(SUM(CASE WHEN Exited = 0 AND churn_probability >= 60 THEN annual_revenue ELSE 0 END) / 1000000, 1) as revenue_at_risk_millions
+        FROM DEMO_BankChurn.fact_customer_churn
+    ),
+    top_risk_geography AS (
+        SELECT TOP 1 
+            Geography,
+            ROUND(SUM(CASE WHEN churn_probability >= 60 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as geography_risk_rate,
+            ROUND(SUM(Balance) / 1000000, 0) as geography_aum_millions
+        FROM DEMO_BankChurn.fact_customer_churn
+        WHERE Exited = 0 
+        GROUP BY Geography
+        ORDER BY SUM(CASE WHEN churn_probability >= 60 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) DESC
+    )
+    SELECT 
+        ps.active_customers AS "Active Customers",
+        ps.high_risk_customers AS "High Risk Customer Count",
+        ROUND(ps.high_risk_customers * 100.0 / ps.active_customers, 1) AS "Portfolio Risk Percentage",
+        ps.total_aum_millions AS "Total AUM (Millions EUR)",
+        ps.revenue_at_risk_millions AS "Revenue at Risk (Millions EUR)",
+        trg.Geography AS "Highest Risk Geography",
+        trg.geography_risk_rate AS "Geography Risk Rate Percentage",
+        trg.geography_aum_millions AS "Geography AUM (Millions EUR)"
+    FROM portfolio_summary ps 
+    CROSS JOIN top_risk_geography trg;
+    ```
+
+    Create the critical segments summary view:
+    ```sql
+    CREATE VIEW DEMO_BankChurn.agg_critical_segments_summary AS
+    SELECT 
+        critical_segment AS "Critical Segment Name",
+        COUNT(*) AS "Number of At-Risk Customers",
+        ROUND(SUM(Balance)/1000000, 1) AS "Total Balance at Risk (Millions EUR)",
+        ROUND(SUM(annual_revenue)/1000000, 1) AS "Annual Revenue at Risk (Millions EUR)",
+        ROUND(AVG(churn_probability), 1) AS "Average Churn Probability Percentage",
+        ROUND(SUM(Balance)/COUNT(*), 0) AS "Average Balance per Customer (EUR)"
+    FROM DEMO_BankChurn.fact_customer_churn
+    WHERE critical_segment <> 'Standard Risk'
+    GROUP BY critical_segment;
+    ```
+
+    Create the urgent cases by segment view:
+    ```sql
+    CREATE VIEW DEMO_BankChurn.fact_urgent_cases_by_segment AS
+    WITH ranked_customers AS (
+        SELECT 
+            critical_segment,
+            CustomerId,
+            Surname,
+            Geography,
+            Age,
+            Tenure,
+            ROUND(Balance, 0) as account_balance,
+            NumOfProducts,
+            days_since_last_activity,
+            CreditScore,
+            ROUND(annual_revenue, 0) as annual_revenue,
+            churn_probability,
+            recommended_action,
+            CASE 
+                WHEN CreditScore >= 700 THEN 'Excellent'
+                WHEN CreditScore >= 650 THEN 'Good'
+                WHEN CreditScore >= 600 THEN 'Fair'
+                ELSE 'Poor'
+            END as credit_rating,
+            ROW_NUMBER() OVER (PARTITION BY critical_segment ORDER BY Balance DESC) as rn
+        FROM DEMO_BankChurn.fact_customer_churn
+        WHERE critical_segment <> 'Standard Risk'
+    )
+    SELECT 
+        critical_segment AS "Critical Segment Name",
+        CustomerId AS "Customer ID",
+        Surname AS "Customer Name",
+        Geography AS "Customer Location",
+        account_balance AS "Account Balance (EUR)",
+        Age AS "Customer Age",
+        Tenure AS "Years as Customer",
+        NumOfProducts AS "Products Held",
+        days_since_last_activity AS "Days Since Last Activity",
+        CreditScore AS "Credit Score",
+        credit_rating AS "Credit Rating",
+        annual_revenue AS "Annual Revenue (EUR)",
+        churn_probability AS "Churn Risk Percentage",
+        recommended_action AS "Immediate Action Required"
+    FROM ranked_customers 
+    WHERE rn <= 3;
+    ```
+
+    ## Step 4: Verify Setup
+    Test that all views are working correctly:
+    ```sql
+    -- Test portfolio overview
+    SELECT * FROM DEMO_BankChurn.agg_portfolio_risk_summary;
+    
+    -- Test critical segments
+    SELECT * FROM DEMO_BankChurn.agg_critical_segments_summary;
+    
+    -- Test urgent cases
+    SELECT * FROM DEMO_BankChurn.fact_urgent_cases_by_segment;
+    ```
+
+    Once all views are created successfully, the banking churn demo tools will be ready for executive voice assistant interactions.
