@@ -5,7 +5,8 @@ BAR (Backup and Restore) Tools for Teradata DSA MCP Server
 
 import logging
 import string
-from typing import Optional
+import json
+from typing import Optional, List, Dict
 import os
 
 logger = logging.getLogger("teradata_mcp_server")
@@ -671,6 +672,287 @@ def manage_AWS_S3_backup_configurations(
         return f"❌ Error during {operation}: {str(e)}"
 
 
+#------------------ Media Server Operations ------------------#
+
+def manage_dsa_media_servers(
+    operation: str,
+    server_name: Optional[str] = None,
+    port: Optional[int] = None,
+    ip_addresses: Optional[str] = None,
+    pool_shared_pipes: Optional[int] = 50,
+    virtual: Optional[bool] = False
+) -> str:
+    """Unified media server management for all media server operations
+    
+    This comprehensive function handles all media server operations in the DSA system,
+    including listing, getting details, adding, deleting, and managing consumers.
+    """
+    # Validate operation
+    valid_operations = [
+        "list", "get", "add", "delete", 
+        "list_consumers", "list_consumers_by_server"
+    ]
+    
+    if operation not in valid_operations:
+        return f"❌ Invalid operation '{operation}'. Valid operations: {', '.join(valid_operations)}"
+    
+    try:
+        # Route to the appropriate operation
+        if operation == "list":
+            return _list_media_servers()
+        
+        elif operation == "get":
+            if not server_name:
+                return "❌ server_name is required for 'get' operation"
+            return _get_media_server(server_name)
+        
+        elif operation == "add":
+            if not server_name:
+                return "❌ server_name is required for 'add' operation"
+            if not port:
+                return "❌ port is required for 'add' operation"
+            if not ip_addresses:
+                return "❌ ip_addresses is required for 'add' operation"
+            
+            try:
+                import json
+                ip_list = json.loads(ip_addresses)
+                return _add_media_server(server_name, port, ip_list, pool_shared_pipes or 50)
+            except json.JSONDecodeError as e:
+                return f"❌ Invalid IP addresses format: {str(e)}\nExpected JSON format: '[{{\"ipAddress\": \"IP\", \"netmask\": \"MASK\"}}]'"
+        
+        elif operation == "delete":
+            if not server_name:
+                return "❌ server_name is required for 'delete' operation"
+            return _delete_media_server(server_name, virtual or False)
+        
+        elif operation == "list_consumers":
+            return _list_media_server_consumers()
+        
+        elif operation == "list_consumers_by_server":
+            if not server_name:
+                return "❌ server_name is required for 'list_consumers_by_server' operation"
+            return _list_media_server_consumers_by_name(server_name)
+    
+    except Exception as e:
+        logger.error(f"Failed to execute media server operation '{operation}': {str(e)}")
+        return f"❌ Error executing media server operation '{operation}': {str(e)}"
+
+
+def _list_media_servers() -> str:
+    """List all media servers from the DSA system"""
+    try:
+        # Make request to list media servers
+        response = dsa_client._make_request("GET", "dsa/components/mediaservers")
+        
+        if not response.get("valid", False):
+            error_messages = []
+            validation_list = response.get("validationlist", {})
+            if validation_list:
+                client_errors = validation_list.get("clientValidationList", [])
+                server_errors = validation_list.get("serverValidationList", [])
+                
+                for error in client_errors + server_errors:
+                    error_messages.append(f"Code {error.get('code', 'N/A')}: {error.get('message', 'Unknown error')}")
+            
+            if error_messages:
+                return f"❌ Failed to list media servers:\n" + "\n".join(error_messages)
+            else:
+                return f"❌ Failed to list media servers: {response.get('status', 'Unknown error')}"
+        
+        # Return the full response for complete transparency
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to list media servers: {str(e)}")
+        return f"❌ Error listing media servers: {str(e)}"
+
+
+def _get_media_server(server_name: str) -> str:
+    """Get details of a specific media server by name"""
+    try:
+        # Make request to get specific media server
+        endpoint = f"dsa/components/mediaservers/{server_name}"
+        response = dsa_client._make_request("GET", endpoint)
+        
+        if not response.get("valid", False):
+            error_messages = []
+            validation_list = response.get("validationlist", {})
+            if validation_list:
+                client_errors = validation_list.get("clientValidationList", [])
+                server_errors = validation_list.get("serverValidationList", [])
+                
+                for error in client_errors + server_errors:
+                    error_messages.append(f"Code {error.get('code', 'N/A')}: {error.get('message', 'Unknown error')}")
+            
+            if error_messages:
+                return f"❌ Failed to get media server '{server_name}':\n" + "\n".join(error_messages)
+            else:
+                return f"❌ Failed to get media server '{server_name}': {response.get('status', 'Unknown error')}"
+        
+        # Return the full response for complete transparency
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to get media server '{server_name}': {str(e)}")
+        return f"❌ Error getting media server '{server_name}': {str(e)}"
+
+
+def _add_media_server(
+    server_name: str,
+    port: int,
+    ip_list: List[Dict[str, str]],
+    pool_shared_pipes: int = 50
+) -> str:
+    """Add a new media server to the DSA system"""
+    try:
+        # Validate inputs
+        if not server_name or not server_name.strip():
+            return "❌ Server name is required and cannot be empty"
+        
+        if not (1 <= port <= 65535):
+            return f"❌ Port must be between 1 and 65535"
+        
+        if not ip_list or not isinstance(ip_list, list):
+            return "❌ At least one IP address is required"
+        
+        # Validate IP addresses format
+        for ip_info in ip_list:
+            if not isinstance(ip_info, dict) or 'ipAddress' not in ip_info or 'netmask' not in ip_info:
+                return "❌ Each IP address must be a dictionary with 'ipAddress' and 'netmask' keys"
+        
+        # Prepare request payload
+        payload = {
+            "serverName": server_name.strip(),
+            "port": port,
+            "ipInfo": ip_list
+        }
+        
+        # Make request to add media server
+        response = dsa_client._make_request(
+            "POST", 
+            "dsa/components/mediaservers", 
+            data=payload,
+            headers={"Content-Type": "application/json", "Accept": "*/*"}
+        )
+        
+        if not response.get("valid", False):
+            error_messages = []
+            validation_list = response.get("validationlist", {})
+            if validation_list:
+                client_errors = validation_list.get("clientValidationList", [])
+                server_errors = validation_list.get("serverValidationList", [])
+                
+                for error in client_errors + server_errors:
+                    error_messages.append(f"Code {error.get('code', 'N/A')}: {error.get('message', 'Unknown error')}")
+            
+            if error_messages:
+                return f"❌ Failed to add media server '{server_name}':\n" + "\n".join(error_messages)
+            else:
+                return f"❌ Failed to add media server '{server_name}': {response.get('status', 'Unknown error')}"
+        
+        # Return the full response for complete transparency
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to add media server '{server_name}': {str(e)}")
+        return f"❌ Error adding media server '{server_name}': {str(e)}"
+
+
+def _delete_media_server(server_name: str, virtual: bool = False) -> str:
+    """Delete a media server from the DSA system"""
+    try:
+        # Prepare request parameters
+        params = {}
+        if virtual:
+            params["virtual"] = "true"
+        
+        # Make request to delete media server
+        endpoint = f"dsa/components/mediaservers/{server_name}"
+        response = dsa_client._make_request("DELETE", endpoint, params=params)
+        
+        if not response.get("valid", False):
+            error_messages = []
+            validation_list = response.get("validationlist", {})
+            if validation_list:
+                client_errors = validation_list.get("clientValidationList", [])
+                server_errors = validation_list.get("serverValidationList", [])
+                
+                for error in client_errors + server_errors:
+                    error_messages.append(f"Code {error.get('code', 'N/A')}: {error.get('message', 'Unknown error')}")
+            
+            if error_messages:
+                return f"❌ Failed to delete media server '{server_name}':\n" + "\n".join(error_messages)
+            else:
+                return f"❌ Failed to delete media server '{server_name}': {response.get('status', 'Unknown error')}"
+        
+        # Return the full response for complete transparency
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to delete media server '{server_name}': {str(e)}")
+        return f"❌ Error deleting media server '{server_name}': {str(e)}"
+
+
+def _list_media_server_consumers() -> str:
+    """List all media server consumers from the DSA system"""
+    try:
+        # Make request to list media server consumers
+        response = dsa_client._make_request("GET", "dsa/components/mediaservers/listconsumers")
+        
+        if not response.get("valid", False):
+            error_messages = []
+            validation_list = response.get("validationlist", {})
+            if validation_list:
+                client_errors = validation_list.get("clientValidationList", [])
+                server_errors = validation_list.get("serverValidationList", [])
+                
+                for error in client_errors + server_errors:
+                    error_messages.append(f"Code {error.get('code', 'N/A')}: {error.get('message', 'Unknown error')}")
+            
+            if error_messages:
+                return f"❌ Failed to list media server consumers:\n" + "\n".join(error_messages)
+            else:
+                return f"❌ Failed to list media server consumers: {response.get('status', 'Unknown error')}"
+        
+        # Return the full response for complete transparency
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to list media server consumers: {str(e)}")
+        return f"❌ Error listing media server consumers: {str(e)}"
+
+
+def _list_media_server_consumers_by_name(server_name: str) -> str:
+    """List consumers for a specific media server by name"""
+    try:
+        # Make request to list consumers for specific media server
+        endpoint = f"dsa/components/mediaservers/listconsumers/{server_name.strip()}"
+        response = dsa_client._make_request("GET", endpoint)
+        
+        if not response.get("valid", False):
+            error_messages = []
+            validation_list = response.get("validationlist", {})
+            if validation_list:
+                client_errors = validation_list.get("clientValidationList", [])
+                server_errors = validation_list.get("serverValidationList", [])
+                
+                for error in client_errors + server_errors:
+                    error_messages.append(f"Code {error.get('code', 'N/A')}: {error.get('message', 'Unknown error')}")
+            
+            if error_messages:
+                return f"❌ Failed to list consumers for media server '{server_name}':\n" + "\n".join(error_messages)
+            else:
+                return f"❌ Failed to list consumers for media server '{server_name}': {response.get('status', 'Unknown error')}"
+        
+        # Return the full response for complete transparency
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to list consumers for media server '{server_name}': {str(e)}")
+        return f"❌ Error listing consumers for media server '{server_name}': {str(e)}"
+
+
 #------------------ Tool Handler for MCP ------------------#
 
 def handle_bar_manageDsaDiskFileSystem(
@@ -794,3 +1076,86 @@ def handle_bar_manageAWSS3Operations(
         }
         return create_response(error_result, metadata)
 
+
+def handle_bar_manageMediaServer(
+    conn: any,  # Not used for DSA operations, but required by MCP framework
+    operation: str,
+    server_name: str = None,
+    port: int = None,
+    ip_addresses: str = None,
+    pool_shared_pipes: int = 50,
+    virtual: bool = False,
+    *args,
+    **kwargs
+):
+    """
+    Unified media server management tool for all DSA media server operations.
+    
+    This comprehensive tool handles all media server operations in the DSA system,
+    including listing, getting details, adding, deleting, and managing consumers.
+    
+    Arguments:
+        operation - The operation to perform. Valid values:
+                   "list" - List all media servers
+                   "get" - Get details of a specific media server  
+                   "add" - Add a new media server
+                   "delete" - Delete a media server
+                   "list_consumers" - List all media server consumers
+                   "list_consumers_by_server" - List consumers for a specific server
+        server_name - Name of the media server (required for get, add, delete, list_consumers_by_server)
+        port - Port number for the media server (required for add operation, 1-65535)
+        ip_addresses - JSON string containing IP address configuration for add operation, e.g.:
+                      '[{"ipAddress": "192.168.1.100", "netmask": "255.255.255.0"}]'
+        pool_shared_pipes - Number of shared pipes in the pool (for add operation, 1-99, default: 50)
+        virtual - Whether to perform a virtual deletion (for delete operation, default: False)
+    
+    Returns:
+        ResponseType: formatted response with media server operation results + metadata
+    """
+    logger.debug(f"Tool: handle_bar_manageMediaServer: Args: operation: {operation}, server_name: {server_name}, port: {port}")
+    
+    try:
+        # Validate operation
+        valid_operations = [
+            "list", "get", "add", "delete", 
+            "list_consumers", "list_consumers_by_server"
+        ]
+        
+        if operation not in valid_operations:
+            error_result = f"❌ Invalid operation '{operation}'. Valid operations: {', '.join(valid_operations)}"
+            metadata = {
+                "tool_name": "bar_manageMediaServer",
+                "operation": operation,
+                "error": "Invalid operation",
+                "success": False
+            }
+            return create_response(error_result, metadata)
+        
+        # Execute the media server operation
+        result = manage_dsa_media_servers(
+            operation=operation,
+            server_name=server_name,
+            port=port,
+            ip_addresses=ip_addresses,
+            pool_shared_pipes=pool_shared_pipes,
+            virtual=virtual
+        )
+        
+        metadata = {
+            "tool_name": "bar_manageMediaServer",
+            "operation": operation,
+            "server_name": server_name,
+            "success": True
+        }
+        logger.debug(f"Tool: handle_bar_manageMediaServer: metadata: {metadata}")
+        return create_response(result, metadata)
+    except Exception as e:
+        logger.error(f"Error in handle_bar_manageMediaServer: {e}")
+        error_result = f"❌ Error in DSA media server operation: {str(e)}"
+        metadata = {
+            "tool_name": "bar_manageMediaServer",
+            "operation": operation,
+            "error": str(e),
+            "success": False
+        }
+        return create_response(error_result, metadata)
