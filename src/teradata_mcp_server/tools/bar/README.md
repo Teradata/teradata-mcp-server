@@ -76,7 +76,7 @@ bar:
 
 ## Available Tools
 
-**Total Estimated Tools: 16** (1 ✅ Developed, 15 🚧 Planned)
+**Total Estimated Tools: 16** (2 ✅ Developed, 14 🚧 Planned)
 
 ### Storage Configuration Tools
 
@@ -106,9 +106,9 @@ Tool for managing IBM Spectrum Protect configurations for backup storage.
 
 ### Infrastructure Management Tools
 
-#### bar_manageMediaServer 🚧
-**Status**: Planned
-Tool for managing BarNC configurations
+#### bar_manageMediaServer ✅
+**Status**: Implemented
+Tool for managing media server configurations including list, get, add, delete, and consumer management operations.
 
 #### bar_manageTeradataSystem 🚧
 **Status**: Planned
