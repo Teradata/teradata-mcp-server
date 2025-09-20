@@ -76,7 +76,7 @@ bar:
 
 ## Available Tools
 
-**Total Estimated Tools: 16** (2 ✅ Developed, 14 🚧 Planned)
+**Total Estimated Tools: 16** (3 ✅ Developed, 13 🚧 Planned)
 
 ### Storage Configuration Tools
 
@@ -110,9 +110,9 @@ Tool for managing IBM Spectrum Protect configurations for backup storage.
 **Status**: Implemented
 Tool for managing media server configurations including list, get, add, delete, and consumer management operations.
 
-#### bar_manageTeradataSystem 🚧
-**Status**: Planned
-Tool for managing DSMain configurations and Teradata system integration.
+#### bar_manageTeradataSystem ✅
+**Status**: Implemented
+Tool for managing Teradata system configurations and consumers in DSA. Supports listing systems, getting system details, configuring new systems, enabling/deleting systems, and managing system consumers.
 
 ### Target Group Management Tools
 

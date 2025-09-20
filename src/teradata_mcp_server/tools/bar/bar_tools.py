@@ -952,6 +952,234 @@ def _list_media_server_consumers_by_name(server_name: str) -> str:
         logger.error(f"Failed to list consumers for media server '{server_name}': {str(e)}")
         return f"❌ Error listing consumers for media server '{server_name}': {str(e)}"
 
+#------------------ Teradata System Management Operations ------------------#
+
+def manage_dsa_systems(
+    operation: str,
+    system_name: Optional[str] = None,
+    tdp_id: Optional[str] = None,
+    username: Optional[str] = None,
+    password: Optional[str] = None,
+    ir_support: Optional[bool] = True,
+    component_name: Optional[str] = None
+) -> str:
+    """Unified Teradata system management for all system operations
+    
+    This comprehensive function handles all Teradata system operations in the DSA system,
+    including listing, getting details, configuring, enabling, deleting, and managing consumers.
+    """
+    # Validate operation
+    valid_operations = [
+        "list_systems", "get_system", "config_system", 
+        "enable_system", "delete_system", "list_consumers", "get_consumer"
+    ]
+    
+    if operation not in valid_operations:
+        return f"❌ Invalid operation '{operation}'. Valid operations: {', '.join(valid_operations)}"
+    
+    try:
+        # Route to the appropriate operation
+        if operation == "list_systems":
+            return _list_teradata_systems()
+        
+        elif operation == "get_system":
+            if not system_name:
+                return "❌ system_name is required for 'get_system' operation"
+            return _get_teradata_system(system_name)
+        
+        elif operation == "config_system":
+            if not all([system_name, tdp_id, username, password]):
+                return "❌ system_name, tdp_id, username, and password are required for 'config_system' operation"
+            return _config_teradata_system(system_name, tdp_id, username, password, ir_support)
+        
+        elif operation == "enable_system":
+            if not system_name:
+                return "❌ system_name is required for 'enable_system' operation"
+            return _enable_teradata_system(system_name)
+        
+        elif operation == "delete_system":
+            if not system_name:
+                return "❌ system_name is required for 'delete_system' operation"
+            return _delete_teradata_system(system_name)
+        
+        elif operation == "list_consumers":
+            return _list_system_consumers()
+        
+        elif operation == "get_consumer":
+            if not component_name:
+                return "❌ component_name is required for 'get_consumer' operation"
+            return _get_system_consumer(component_name)
+    
+    except Exception as e:
+        logger.error(f"Failed to execute Teradata system operation '{operation}': {str(e)}")
+        return f"❌ Error executing Teradata system operation '{operation}': {str(e)}"
+
+
+def _list_teradata_systems() -> str:
+    """List all configured Teradata database systems in DSA"""
+    try:
+        # Make API call to list Teradata systems
+        response = dsa_client._make_request(
+            method='GET',
+            endpoint='dsa/components/systems/teradata'
+        )
+        
+        # Return the full response for complete transparency
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to list Teradata systems: {str(e)}")
+        return f"❌ Error listing Teradata systems: {str(e)}"
+
+
+def _get_teradata_system(system_name: str) -> str:
+    """Get detailed information about a specific Teradata database system"""
+    try:
+        if not system_name or not system_name.strip():
+            return "❌ System name is required and cannot be empty"
+        
+        system_name = system_name.strip()
+        
+        # Make API call to get specific Teradata system
+        response = dsa_client._make_request(
+            method='GET',
+            endpoint=f'dsa/components/systems/teradata/{system_name}'
+        )
+        
+        # Return the full response for complete transparency
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to get Teradata system '{system_name}': {str(e)}")
+        return f"❌ Error getting Teradata system '{system_name}': {str(e)}"
+
+
+def _config_teradata_system(
+    system_name: str,
+    tdp_id: str,
+    username: str,
+    password: str,
+    ir_support: Optional[str] = None
+) -> str:
+    """Configure a new Teradata database system in DSA"""
+    try:
+        if not all([system_name, tdp_id, username, password]):
+            return "❌ system_name, tdp_id, username, and password are required"
+        
+        # Prepare the configuration payload - matching the working model exactly
+        config_data = {
+            "systemName": system_name.strip(),
+            "tdpId": tdp_id.strip(),
+            "user": username.strip(),
+            "password": password,
+            "databaseQueryMethodType": "BASE_VIEW",
+            "skipForceFull": True,
+            "irSupport": ir_support or "true",
+            "irSupportTarget": "true",
+            "dslJsonLogging": True,
+            "ajseSupport": "true",
+            "softLimit": 10,
+            "hardLimit": 10
+        }
+        
+        # Make API call to configure Teradata system
+        response = dsa_client._make_request(
+            method='POST',
+            endpoint='dsa/components/systems/teradata',
+            data=config_data
+        )
+        
+        # Return the full response for complete transparency
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to configure Teradata system '{system_name}': {str(e)}")
+        return f"❌ Error configuring Teradata system '{system_name}': {str(e)}"
+
+
+def _enable_teradata_system(system_name: str) -> str:
+    """Enable a configured Teradata database system in DSA"""
+    try:
+        if not system_name or not system_name.strip():
+            return "❌ System name is required"
+        
+        system_name = system_name.strip()
+        
+        # Make API call to enable Teradata system
+        response = dsa_client._make_request(
+            method='PATCH',
+            endpoint=f'dsa/components/systems/enabling/{system_name}/',
+            data={"enabled": True}
+        )
+        
+        # Return the full response for complete transparency
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to enable Teradata system '{system_name}': {str(e)}")
+        return f"❌ Error enabling Teradata system '{system_name}': {str(e)}"
+
+
+def _delete_teradata_system(system_name: str) -> str:
+    """Delete a Teradata database system from DSA"""
+    try:
+        if not system_name or not system_name.strip():
+            return "❌ System name is required"
+        
+        system_name = system_name.strip()
+        
+        # Make API call to delete Teradata system
+        response = dsa_client._make_request(
+            method='DELETE',
+            endpoint=f'dsa/components/systems/teradata/{system_name}'
+        )
+        
+        # Return the full response for complete transparency
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to delete Teradata system '{system_name}': {str(e)}")
+        return f"❌ Error deleting Teradata system '{system_name}': {str(e)}"
+
+
+def _list_system_consumers() -> str:
+    """List all system consumers in DSA"""
+    try:
+        # Make API call to list system consumers
+        response = dsa_client._make_request(
+            method='GET',
+            endpoint='dsa/components/systems/listconsumers'
+        )
+        
+        # Return the full response for complete transparency
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to list system consumers: {str(e)}")
+        return f"❌ Error listing system consumers: {str(e)}"
+
+
+def _get_system_consumer(component_name: str) -> str:
+    """Get detailed information about a specific system consumer"""
+    try:
+        if not component_name or not component_name.strip():
+            return "❌ Component name is required and cannot be empty"
+        
+        component_name = component_name.strip()
+        
+        # Make API call to get specific system consumer
+        response = dsa_client._make_request(
+            method='GET',
+            endpoint=f'dsa/components/systems/listconsumers/{component_name}'
+        )
+        
+        # Return complete DSA response for transparency
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to get system consumer '{component_name}': {str(e)}")
+        return f"❌ Error getting system consumer '{component_name}': {str(e)}"
+
 
 #------------------ Tool Handler for MCP ------------------#
 
@@ -1009,8 +1237,6 @@ def handle_bar_manageDsaDiskFileSystem(
             "success": False
         }
         return create_response(error_result, metadata)
-
-
 
 def handle_bar_manageAWSS3Operations(
     conn: any,  # Not used for DSA operations, but required by MCP framework
@@ -1075,7 +1301,6 @@ def handle_bar_manageAWSS3Operations(
             "success": False
         }
         return create_response(error_result, metadata)
-
 
 def handle_bar_manageMediaServer(
     conn: any,  # Not used for DSA operations, but required by MCP framework
@@ -1154,6 +1379,96 @@ def handle_bar_manageMediaServer(
         error_result = f"❌ Error in DSA media server operation: {str(e)}"
         metadata = {
             "tool_name": "bar_manageMediaServer",
+            "operation": operation,
+            "error": str(e),
+            "success": False
+        }
+        return create_response(error_result, metadata)
+    
+def handle_bar_manageTeradataSystem(
+    conn: any,  # Not used for DSA operations, but required by MCP framework
+    operation: str,
+    system_name: Optional[str] = None,
+    tdp_id: Optional[str] = None,
+    username: Optional[str] = None,
+    password: Optional[str] = None,
+    ir_support: Optional[str] = None,
+    component_name: Optional[str] = None,
+    *args,
+    **kwargs
+):
+    """Unified DSA System Management Tool
+    
+    This comprehensive tool handles all DSA system operations including Teradata systems
+    and system consumers management in a single interface.
+    
+    Args:
+        operation: The operation to perform. Valid operations:
+                  - "list_systems" - List all configured Teradata systems
+                  - "get_system" - Get details for a specific Teradata system
+                  - "config_system" - Configure a new Teradata system
+                  - "enable_system" - Enable a Teradata system
+                  - "delete_system" - Delete a Teradata system
+                  - "list_consumers" - List all system consumers
+                  - "get_consumer" - Get details for a specific system consumer
+        system_name: Name of the Teradata system (required for system operations)
+        tdp_id: TDP ID for Teradata system (required for config operation)
+        username: Username for Teradata system (required for config operation)
+        password: Password for Teradata system (required for config operation)
+        ir_support: IR support level (for config operation) - "SOURCE", "TARGET", or "BOTH"
+        component_name: Name of the system component (required for consumer operations)
+    
+    Returns:
+        Dict containing the result and metadata
+    """
+    try:
+        logger.debug(f"Tool: handle_bar_manageTeradataSystem: Args: operation: {operation}, system_name: {system_name}")
+        
+        # Validate operation
+        valid_operations = [
+            "list_systems", "get_system", "config_system", 
+            "enable_system", "delete_system", "list_consumers", "get_consumer"
+        ]
+        
+        if operation not in valid_operations:
+            error_result = f"❌ Invalid operation '{operation}'. Valid operations: {', '.join(valid_operations)}"
+            metadata = {
+                "tool_name": "bar_manageTeradataSystem",
+                "operation": operation,
+                "error": "Invalid operation",
+                "success": False
+            }
+            return create_response(error_result, metadata)
+        
+        # Execute the Teradata system operation
+        result = manage_dsa_systems(
+            operation=operation,
+            system_name=system_name,
+            tdp_id=tdp_id,
+            username=username,
+            password=password,
+            ir_support=ir_support,
+            component_name=component_name
+        )
+        
+        metadata = {
+            "tool_name": "bar_manageTeradataSystem",
+            "operation": operation,
+            "system_name": system_name,
+            "success": True
+        }
+        
+        if component_name:
+            metadata["component_name"] = component_name
+            
+        logger.debug(f"Tool: handle_bar_manageTeradataSystem: metadata: {metadata}")
+        return create_response(result, metadata)
+        
+    except Exception as e:
+        logger.error(f"Error in handle_bar_manageTeradataSystem: {e}")
+        error_result = f"❌ Error in DSA Teradata system operation: {str(e)}"
+        metadata = {
+            "tool_name": "bar_manageTeradataSystem",
             "operation": operation,
             "error": str(e),
             "success": False
