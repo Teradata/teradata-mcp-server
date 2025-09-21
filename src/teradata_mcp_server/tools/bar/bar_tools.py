@@ -1180,6 +1180,170 @@ def _get_system_consumer(component_name: str) -> str:
         logger.error(f"Failed to get system consumer '{component_name}': {str(e)}")
         return f"❌ Error getting system consumer '{component_name}': {str(e)}"
 
+#------------------ Disk File Target Group Operations ------------------#
+
+def _list_disk_file_target_groups(replication: bool = False) -> str:
+    """List all disk file target groups"""
+    try:
+        response = dsa_client._make_request(
+            method="GET",
+            endpoint=f"dsa/components/target-groups/disk-file-system?replication={str(replication).lower()}"
+        )
+        return json.dumps(response, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to list disk file target groups: {str(e)}")
+        return f"❌ Error listing disk file target groups: {str(e)}"
+
+
+def _get_disk_file_target_group(target_group_name: str, replication: bool = False) -> str:
+    """Get details of a specific disk file target group"""
+    try:
+        response = dsa_client._make_request(
+            method="GET",
+            endpoint=f"dsa/components/target-groups/disk-file-system/{target_group_name}/?replication={str(replication).lower()}"
+        )
+        return json.dumps(response, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to get disk file target group '{target_group_name}': {str(e)}")
+        return f"❌ Error getting disk file target group '{target_group_name}': {str(e)}"
+
+
+def _create_disk_file_target_group(target_group_config: str, replication: bool = False) -> str:
+    """Create a new disk file target group using JSON configuration"""
+    try:
+        import json
+        try:
+            config_data = json.loads(target_group_config)
+            target_group_name = config_data.get('targetGroupName', 'Unknown')
+        except json.JSONDecodeError as e:
+            return f"❌ Error: Invalid JSON in target_group_config: {str(e)}"
+        
+        logger.info(f"Creating target disk file system '{target_group_name}' via DSA API")
+        
+        response = dsa_client._make_request(
+            method="POST",
+            endpoint=f"dsa/components/target-groups/disk-file-system?replication={str(replication).lower()}",
+            data=config_data
+        )
+        return json.dumps(response, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to create disk file target group: {str(e)}")
+        return f"❌ Error creating disk file target group: {str(e)}"
+
+
+def _enable_disk_file_target_group(target_group_name: str) -> str:
+    """Enable a disk file target group"""
+    try:
+        response = dsa_client._make_request(
+            method="PATCH",
+            endpoint=f"dsa/components/target-groups/disk-file-system/enabling/{target_group_name}/"
+        )
+        return json.dumps(response, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to enable disk file target group '{target_group_name}': {str(e)}")
+        return f"❌ Error enabling disk file target group '{target_group_name}': {str(e)}"
+
+
+def _disable_disk_file_target_group(target_group_name: str) -> str:
+    """Disable a disk file target group"""
+    try:
+        response = dsa_client._make_request(
+            method="PATCH",
+            endpoint=f"dsa/components/target-groups/disk-file-system/disabling/{target_group_name}/"
+        )
+        return json.dumps(response, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to disable disk file target group '{target_group_name}': {str(e)}")
+        return f"❌ Error disabling disk file target group '{target_group_name}': {str(e)}"
+
+
+def _delete_disk_file_target_group(
+    target_group_name: str,
+    replication: bool = False,
+    delete_all_data: bool = False
+) -> str:
+    """Delete a disk file target group"""
+    try:
+        response = dsa_client._make_request(
+            method="DELETE",
+            endpoint=f"dsa/components/target-groups/disk-file-system/{target_group_name}/?replication={str(replication).lower()}&deleteAllData={str(delete_all_data).lower()}"
+        )
+        return json.dumps(response, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to delete disk file target group '{target_group_name}': {str(e)}")
+        return f"❌ Error deleting disk file target group '{target_group_name}': {str(e)}"
+
+
+def manage_dsa_disk_file_target_groups(
+    operation: str,
+    target_group_name: Optional[str] = None,
+    target_group_config: Optional[str] = None,
+    replication: bool = False,
+    delete_all_data: bool = False
+) -> str:
+    """Manage DSA disk file target groups
+    
+    Provides comprehensive management of disk file target groups including:
+    - List all target groups
+    - Get specific target group details
+    - Create new target groups
+    - Enable/disable target groups
+    - Delete target groups
+    
+    Args:
+        operation: Operation to perform ('list', 'get', 'create', 'enable', 'disable', 'delete')
+        target_group_name: Name of the target group (required for get, enable, disable, delete)
+        target_group_config: JSON configuration string for create operation
+        replication: Enable replication (for delete operation)
+        delete_all_data: Whether to delete all backup data (for delete operation)
+    
+    Returns:
+        JSON string with operation results
+    """
+    try:
+        logger.info(f"Managing DSA disk file target groups - operation: {operation}")
+        
+        if operation == "list":
+            return _list_disk_file_target_groups(replication)
+            
+        elif operation == "get":
+            if not target_group_name:
+                return json.dumps({"status": "error", "data": "❌ target_group_name is required for get operation"}, indent=2)
+            return _get_disk_file_target_group(target_group_name, replication)
+            
+        elif operation == "create":
+            if not target_group_config:
+                return json.dumps({"status": "error", "data": "❌ target_group_config is required for create operation"}, indent=2)
+            return _create_disk_file_target_group(target_group_config, replication)
+            
+        elif operation == "enable":
+            if not target_group_name:
+                return json.dumps({"status": "error", "data": "❌ target_group_name is required for enable operation"}, indent=2)
+            return _enable_disk_file_target_group(target_group_name)
+            
+        elif operation == "disable":
+            if not target_group_name:
+                return json.dumps({"status": "error", "data": "❌ target_group_name is required for disable operation"}, indent=2)
+            return _disable_disk_file_target_group(target_group_name)
+            
+        elif operation == "delete":
+            if not target_group_name:
+                return json.dumps({"status": "error", "data": "❌ target_group_name is required for delete operation"}, indent=2)
+            return _delete_disk_file_target_group(target_group_name, replication, delete_all_data)
+            
+        else:
+            return json.dumps({
+                "status": "error", 
+                "data": f"❌ Unknown operation: {operation}. Supported operations: list, get, create, enable, disable, delete"
+            }, indent=2)
+            
+    except Exception as e:
+        logger.error(f"Error in manage_dsa_disk_file_target_groups: {e}")
+        return json.dumps({
+            "status": "error",
+            "data": f"❌ Error in disk file target group operation: {str(e)}"
+        }, indent=2)
+
 
 #------------------ Tool Handler for MCP ------------------#
 
@@ -1202,6 +1366,10 @@ def handle_bar_manageDsaDiskFileSystem(
         operation: The operation to perform (list, config, delete_all, remove)
         file_system_path: Path to the file system (for config and remove operations)
         max_files: Maximum number of files allowed (for config operation)
+    
+    **Note: To UPDATE an existing disk file system configuration, simply use the 'config' 
+    operation with the same file_system_path. The DSA API will automatically override the 
+    existing configuration - no need to remove and reconfigure the file system.**
     
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -1262,6 +1430,10 @@ def handle_bar_manageAWSS3Operations(
         accessKey: AWS access key (for config operation)
         bucketsByRegion: List of S3 buckets by region (for config operation)
         acctName: AWS account name (for config operation)
+
+    **Note: To UPDATE an existing AWS S3 configuration, simply use the 'config' operation 
+    with new parameters. The DSA API will automatically override the existing 
+    configuration - no need to remove and reconfigure the S3 settings.**
 
     Returns:
         ResponseType: formatted response with operation results + metadata
@@ -1333,6 +1505,10 @@ def handle_bar_manageMediaServer(
                       '[{"ipAddress": "192.168.1.100", "netmask": "255.255.255.0"}]'
         pool_shared_pipes - Number of shared pipes in the pool (for add operation, 1-99, default: 50)
         virtual - Whether to perform a virtual deletion (for delete operation, default: False)
+    
+    **Note: To UPDATE an existing media server configuration, simply use the 'add' operation 
+    with the same server_name. The DSA API will automatically override the existing 
+    configuration - no need to delete and recreate the media server.**
     
     Returns:
         ResponseType: formatted response with media server operation results + metadata
@@ -1418,6 +1594,10 @@ def handle_bar_manageTeradataSystem(
         ir_support: IR support level (for config operation) - "SOURCE", "TARGET", or "BOTH"
         component_name: Name of the system component (required for consumer operations)
     
+    **Note: To UPDATE an existing Teradata system configuration, simply use the 'config_system' 
+    operation with the same system_name. The DSA API will automatically override the existing 
+    configuration - no need to delete and recreate the system.**
+    
     Returns:
         Dict containing the result and metadata
     """
@@ -1474,3 +1654,118 @@ def handle_bar_manageTeradataSystem(
             "success": False
         }
         return create_response(error_result, metadata)
+
+def handle_bar_manageDiskFileTargetGroup(
+    conn: any,  # Not used for DSA operations, but required by MCP framework
+    operation: str,
+    target_group_name: Optional[str] = None,
+    target_group_config: Optional[str] = None,
+    replication: bool = False,
+    delete_all_data: bool = False
+):
+    """Handle DSA disk file target group management operations
+    
+    Manage disk file target groups for backup and restore operations including:
+    
+    **Available Operations:**
+    - `list`: List all disk file target groups
+    - `get`: Get detailed information about a specific target group
+    - `create`: Create a new target group with specified configuration or update existing one
+    - `enable`: Enable a target group for backup operations
+    - `disable`: Disable a target group
+    - `delete`: Delete a target group (optionally with all backup data)
+    
+    **Parameters:**
+    - operation: The operation to perform
+    - target_group_name: Name of the target group (required for get, enable, disable, delete operations)
+    - target_group_config: JSON configuration string for create operation (required for create)
+    - replication: Enable replication settings for list, get, create, and delete operations (default: False)
+    - delete_all_data: Delete all associated backup data when deleting target group (default: False)
+    
+    **Examples:**
+    ```
+    # List all target groups without replication
+    bar_manageDiskFileTargetGroup(operation="list")
+    # List all target groups with replication
+    bar_manageDiskFileTargetGroup(operation="list", replication=True)
+
+    # Get specific target group details without replication
+    bar_manageDiskFileTargetGroup(operation="get", target_group_name="my_target_group")
+    # Get specific target group details with replication
+    bar_manageDiskFileTargetGroup(operation="get", target_group_name="my_target_group", replication=True)
+    
+    # Create new target group
+    - Create basic target group:
+        config = '{"targetGroupName":"test_tg","isEnabled":true,"remoteFileSystems":[{"mediaServerName":"test-ms","fileSystems":[{"path":"/backup/test","files":100,"filesystemId":1}]}]}'
+        bar_manageDiskFileTargetGroup(operation="create", target_group_config=config)
+
+    - Create multi-server group:
+        config = '{"targetGroupName":"backup_tg","isEnabled":true,"remoteFileSystems":[{"mediaServerName":"ms1","fileSystems":[{"path":"/backup1","files":500}]},{"mediaServerName":"ms2","fileSystems":[{"path":"/backup2","files":500}]}]}'
+        bar_manageDiskFileTargetGroup(operation="create", target_group_config=config)
+
+    **Note: To UPDATE an existing target group configuration, simply use the 'create' operation 
+    with the same targetGroupName. The DSA API will automatically override the existing 
+    configuration - no need to delete and recreate the target group.**
+
+    # Enable a target group
+    bar_manageDiskFileTargetGroup(operation="enable", target_group_name="my_target_group")
+    # Disable a target group
+    bar_manageDiskFileTargetGroup(operation="disable", target_group_name="my_target_group")
+    
+    # Delete a target group and all its data with replication
+    - Delete configuration only:
+        bar_manageDiskFileTargetGroup("delete", target_group_name="test_tg")
+    - Delete with all data (PERMANENT):
+        bar_manageDiskFileTargetGroup("delete", 
+                                       target_group_name="old_tg", 
+                                       delete_all_data=True)
+    - Delete replicated group:
+        bar_manageDiskFileTargetGroup("delete", 
+                                       target_group_name="repl_tg", 
+                                       replication=True, 
+                                       delete_all_data=True)
+
+    ```
+    
+    Returns:
+        JSON string containing the operation results and status
+    """
+    try:
+        logger.info(f"BAR Disk File Target Group Management - Operation: {operation}")
+        
+        result = manage_dsa_disk_file_target_groups(
+            operation=operation,
+            target_group_name=target_group_name,
+            target_group_config=target_group_config,
+            replication=replication,
+            delete_all_data=delete_all_data
+        )
+        
+        metadata = {
+            "tool_name": "bar_manageDiskFileTargetGroup",
+            "operation": operation,
+            "target_group_name": target_group_name,
+            "success": True
+        }
+        
+        if target_group_config:
+            metadata["target_group_config"] = target_group_config
+        if replication:
+            metadata["replication"] = replication
+        if delete_all_data:
+            metadata["delete_all_data"] = delete_all_data
+            
+        logger.debug(f"Tool: handle_bar_manageDiskFileTargetGroup: metadata: {metadata}")
+        return create_response(result, metadata)
+        
+    except Exception as e:
+        logger.error(f"Error in handle_bar_manageDiskFileTargetGroup: {e}")
+        error_result = f"❌ Error in DSA disk file target group operation: {str(e)}"
+        metadata = {
+            "tool_name": "bar_manageDiskFileTargetGroup",
+            "operation": operation,
+            "error": str(e),
+            "success": False
+        }
+        return create_response(error_result, metadata)
+

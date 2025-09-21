@@ -76,7 +76,7 @@ bar:
 
 ## Available Tools
 
-**Total Estimated Tools: 16** (3 ✅ Developed, 13 🚧 Planned)
+**Total Estimated Tools: 16** (4 ✅ Developed, 12 🚧 Planned)
 
 ### Storage Configuration Tools
 
@@ -116,9 +116,9 @@ Tool for managing Teradata system configurations and consumers in DSA. Supports 
 
 ### Target Group Management Tools
 
-#### bar_manageDiskFileTargetGroup 🚧
-**Status**: Planned
-Tool for managing media server configurations with disk file storage solutions.
+#### bar_manageDiskFileTargetGroup ✅
+**Status**: Implemented
+Tool for managing disk file target group configurations with comprehensive management of backup target groups including create, list, get, enable, disable, and delete operations.
 
 #### bar_manageAwsS3TargetGroup 🚧
 **Status**: Planned
