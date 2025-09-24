@@ -1,0 +1,14 @@
+{
+  "server": {
+    "host": "localhost",
+    "port": 8001
+  },
+  "streams": [
+    {
+      "stream_id": "error_test_01",
+      "test_config": "tests/mcp_bench/configs/error_test.json",
+      "duration": 5,
+      "loop": false
+    }
+  ]
+}

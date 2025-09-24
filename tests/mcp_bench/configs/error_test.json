@@ -1,0 +1,18 @@
+{
+  "test_cases": {
+    "base_readQuery": [
+      {
+        "name": "invalid_query_test",
+        "parameters": {
+          "query": "this_is_wrong_parameter_name"
+        }
+      }
+    ],
+    "sec_rolePermissions": [
+      {
+        "name": "missing_required_param",
+        "parameters": {}
+      }
+    ]
+  }
+}

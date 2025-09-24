@@ -1,0 +1,27 @@
+{
+  "test_cases": {
+    "base_databaseList": [
+      {
+        "name": "database_list_test",
+        "parameters": {}
+      }
+    ],
+    "base_readQuery": [
+      {
+        "name": "simple_query_test",
+        "parameters": {
+          "sql": "select 1"
+        }
+      }
+    ],
+    "base_tableDDL": [
+      {
+        "name": "table_ddl_test",
+        "parameters": {
+          "database_name": "dbc",
+          "table_name": "tvm"
+        }
+      }
+    ]
+  }
+}
