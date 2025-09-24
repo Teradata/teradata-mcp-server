@@ -220,6 +220,12 @@ class MCPStreamableClient:
             }
         self.request_id += 1
 
+        # Verbose logging - show request
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(f"=== REQUEST: {test_name} ===")
+            self.logger.debug(f"Method: {data.get('method')}")
+            self.logger.debug(f"Params: {json.dumps(data.get('params', {}), indent=2)}")
+
         start_time = time.time()
         result = {
             'test_name': test_name,
@@ -227,7 +233,9 @@ class MCPStreamableClient:
             'start_time': datetime.now().isoformat(),
             'success': False,
             'response_time': 0,
-            'error': None
+            'error': None,
+            'request': data,
+            'response_data': None
         }
 
         try:
@@ -243,19 +251,60 @@ class MCPStreamableClient:
 
             if response.status_code == 200:
                 response_data = self._parse_sse_response(response.text)
+                result['response_data'] = response_data
+
                 if response_data:
                     if 'result' in response_data:
                         result['success'] = True
                         self.metrics.successful_requests += 1
                         self.metrics.request_times.append(response_time)
-                        self.logger.debug(f"Test {test_name} succeeded in {response_time:.3f}s")
+
+                        # Verbose logging - show successful response
+                        if self.logger.isEnabledFor(logging.DEBUG):
+                            self.logger.debug(f"=== RESPONSE: {test_name} ===")
+                            self.logger.debug(f"Status: SUCCESS ({response_time:.3f}s)")
+                            response_content = response_data['result']
+                            if isinstance(response_content, dict) and 'content' in response_content:
+                                content = response_content['content']
+                                if content and len(content) > 0:
+                                    first_content = content[0]
+                                    if hasattr(first_content, 'text') or (isinstance(first_content, dict) and 'text' in first_content):
+                                        text = first_content.get('text', '') if isinstance(first_content, dict) else first_content.text
+                                        preview = (text[:200] + '...') if len(text) > 200 else text
+                                        self.logger.debug(f"Content preview: {preview}")
+                                    else:
+                                        self.logger.debug(f"Content type: {type(first_content)}")
+                                else:
+                                    self.logger.debug("Empty content")
+                            else:
+                                # Show truncated result for other response types
+                                result_str = json.dumps(response_content, indent=2)
+                                preview = (result_str[:300] + '...') if len(result_str) > 300 else result_str
+                                self.logger.debug(f"Result: {preview}")
+                        else:
+                            self.logger.info(f"✓ {test_name} succeeded in {response_time:.3f}s")
+
                     elif 'error' in response_data:
                         result['error'] = response_data['error'].get('message', 'Unknown error')
                         self.metrics.failed_requests += 1
-                        self.logger.error(f"Test {test_name} failed: {result['error']}")
+
+                        # Verbose logging - show error response
+                        if self.logger.isEnabledFor(logging.DEBUG):
+                            self.logger.debug(f"=== RESPONSE: {test_name} ===")
+                            self.logger.debug(f"Status: ERROR")
+                            self.logger.debug(f"Error: {json.dumps(response_data['error'], indent=2)}")
+
+                        self.logger.error(f"✗ {test_name} failed: {result['error']}")
             else:
                 result['error'] = f"HTTP {response.status_code}"
                 self.metrics.failed_requests += 1
+
+                if self.logger.isEnabledFor(logging.DEBUG):
+                    self.logger.debug(f"=== RESPONSE: {test_name} ===")
+                    self.logger.debug(f"Status: HTTP {response.status_code}")
+                    self.logger.debug(f"Response: {response.text[:200]}...")
+
+                self.logger.error(f"✗ {test_name} HTTP {response.status_code}")
 
         except asyncio.TimeoutError:
             response_time = time.time() - start_time

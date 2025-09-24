@@ -1,27 +1,25 @@
 {
   "test_cases": {
-    "rag_Execute_Workflow": [
+    "base_databaseList": [
       {
-        "name": "rag_workflow_test",
+        "name": "database_list_test",
         "parameters": {}
       }
     ],
-    "sec_rolePermissions": [
+    "base_readQuery": [
       {
-        "name": "security_role_permissions",
-        "parameters": {}
+        "name": "simple_query_test",
+        "parameters": {
+          "query": "select 1"
+        }
       }
     ],
-    "sec_userRoles": [
+    "base_tableDDL": [
       {
-        "name": "security_user_roles",
-        "parameters": {}
-      }
-    ],
-    "qlty_columnSummary": [
-      {
-        "name": "quality_column_summary",
-        "parameters": {}
+        "name": "table_ddl_test",
+        "parameters": {
+          "table": "dbc.tvm"
+        }
       }
     ]
   }

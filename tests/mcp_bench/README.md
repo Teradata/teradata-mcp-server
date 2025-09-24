@@ -84,6 +84,11 @@ python run_perf_test.py configs/minimal_test.json
 python run_perf_test.py configs/perf_test.json
 ```
 
+### Verbose Output (see request/response details)
+```bash
+python run_perf_test.py configs/minimal_test.json --verbose
+```
+
 ### Custom Server
 ```bash
 # Edit config to point to your server:
@@ -98,6 +103,14 @@ The tool provides:
 - Per-stream metrics (requests, success rate, response time)
 - Overall performance summary
 - Throughput in requests per second
+- **Detailed JSON reports** saved to `var/mcp-bench/reports/`
+
+### Verbose Mode
+With `--verbose` flag, you'll see:
+- Each request's method and parameters
+- Response content previews
+- Success/failure status with timing
+- Detailed error messages
 
 ### Sample Output
 ```
@@ -117,6 +130,8 @@ OVERALL:
   Failed: 0
   Success Rate: 100.0%
 ============================================================
+
+📊 Detailed report saved to: var/mcp-bench/reports/perf_report_20250924_174226.json
 ```
 
 ## Architecture
