@@ -10,7 +10,7 @@
       {
         "name": "simple_query_test",
         "parameters": {
-          "query": "select 1"
+          "sql": "select 1"
         }
       }
     ],
@@ -18,7 +18,8 @@
       {
         "name": "table_ddl_test",
         "parameters": {
-          "table": "dbc.tvm"
+          "database_name": "dbc",
+          "table_name": "tvm"
         }
       }
     ]

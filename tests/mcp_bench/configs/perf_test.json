@@ -6,19 +6,19 @@
   "streams": [
     {
       "stream_id": "stream_01",
-      "test_config": "tests/mcp_bench/configs/real_tools_test.json",
+      "test_config": "tests/mcp_bench/configs/tool_tests.json",
       "duration": 30,
       "loop": true
     },
     {
       "stream_id": "stream_02",
-      "test_config": "tests/mcp_bench/configs/real_tools_test.json",
+      "test_config": "tests/mcp_bench/configs/tool_tests.json",
       "duration": 30,
       "loop": true
     },
     {
       "stream_id": "stream_03",
-      "test_config": "tests/mcp_bench/configs/real_tools_test.json",
+      "test_config": "tests/mcp_bench/configs/tool_tests.json",
       "duration": 30,
       "loop": true
     }

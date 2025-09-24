@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """
-MCP Client for Performance Testing - Direct HTTP Implementation
+MCP Client for Performance Testing - MCP SDK Implementation
 """
 
 import asyncio
 import json
 import logging
 import time
-import httpx
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from mcp.client.session import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
 
 
 @dataclass
@@ -52,7 +54,7 @@ class ClientMetrics:
 
 
 class MCPStreamableClient:
-    """Direct HTTP MCP client for performance testing."""
+    """MCP SDK client for performance testing."""
 
     def __init__(
         self,
@@ -65,47 +67,25 @@ class MCPStreamableClient:
         logger: Optional[logging.Logger] = None
     ):
         self.stream_id = stream_id
-
-        # Ensure we have the correct URL format
+        # Ensure we have the correct URL for MCP SDK
         if not server_url.endswith('/'):
             server_url += '/'
         if not server_url.endswith('mcp/'):
             server_url += 'mcp/'
-
-        self.server_url = server_url
+        self.server_url = server_url.rstrip('/')
         self.test_config_path = Path(test_config_path)
         self.duration_seconds = duration_seconds
         self.loop_tests = loop_tests
-        self.auth = auth
+        self.auth = auth or {}
         self.logger = logger or logging.getLogger(f"stream_{stream_id}")
 
         self.metrics = ClientMetrics(stream_id=stream_id)
         self.test_cases: List[Dict[str, Any]] = []
         self._stop_event = asyncio.Event()
-        self.session_id: Optional[str] = None
-        self.request_id = 1
 
-    def _get_headers(self) -> Dict[str, str]:
-        """Get headers for MCP requests."""
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json, text/event-stream"
-        }
-        if self.session_id:
-            headers["mcp-session-id"] = self.session_id
-        if self.auth:
-            headers.update(self.auth)
-        return headers
-
-    def _parse_sse_response(self, response_text: str) -> Optional[Dict]:
-        """Parse SSE response to extract JSON data."""
-        for line in response_text.split('\n'):
-            if line.startswith('data: '):
-                try:
-                    return json.loads(line[6:])
-                except json.JSONDecodeError:
-                    continue
-        return None
+    async def message_handler(self, message):
+        """Handle incoming messages from the server (optional for basic usage)."""
+        pass
 
     async def load_test_config(self):
         """Load test cases from configuration file."""
@@ -130,101 +110,28 @@ class MCPStreamableClient:
             self.logger.error(f"Failed to load test config: {e}")
             raise
 
-    async def initialize_session(self, client: httpx.AsyncClient) -> bool:
-        """Initialize MCP session."""
-        # Step 1: Send initialize request
-        data = {
-            "jsonrpc": "2.0",
-            "method": "initialize",
-            "params": {
-                "protocolVersion": "2025-06-18",
-                "capabilities": {},
-                "clientInfo": {"name": f"perf-test-{self.stream_id}", "version": "1.0.0"}
-            },
-            "id": self.request_id
-        }
-        self.request_id += 1
+    async def list_tools(self, session: ClientSession) -> List[str]:
+        """List available tools using MCP SDK."""
+        try:
+            tools_result = await session.list_tools()
+            tool_names = [tool.name for tool in tools_result.tools]
+            self.logger.info(f"Available tools ({len(tool_names)}): {tool_names[:5]}")
+            return tool_names
+        except Exception as e:
+            self.logger.error(f"Failed to list tools: {e}")
+            return []
 
-        headers = self._get_headers()
-        response = await client.post(self.server_url, headers=headers, json=data)
-
-        if response.status_code == 200:
-            self.session_id = response.headers.get('mcp-session-id')
-            result = self._parse_sse_response(response.text)
-
-            if result and 'result' in result:
-                server_info = result['result'].get('serverInfo', {})
-                self.logger.info(f"Session initialized: {self.session_id}")
-                self.logger.info(f"Server: {server_info.get('name')} v{server_info.get('version')}")
-
-                # Step 2: Send initialized notification
-                notification_data = {
-                    "jsonrpc": "2.0",
-                    "method": "notifications/initialized"
-                }
-                headers = self._get_headers()
-                notification_response = await client.post(self.server_url, headers=headers, json=notification_data)
-
-                if notification_response.status_code in [200, 202]:
-                    self.logger.info("Initialized notification sent successfully")
-                    return True
-                else:
-                    self.logger.warning(f"Initialized notification returned {notification_response.status_code}")
-                    return True  # Still continue even if notification fails
-
-        self.logger.error(f"Failed to initialize: {response.status_code}")
-        return False
-
-    async def list_tools(self, client: httpx.AsyncClient) -> List[str]:
-        """List available tools."""
-        data = {
-            "jsonrpc": "2.0",
-            "method": "tools/list",
-            "params": {},
-            "id": self.request_id
-        }
-        self.request_id += 1
-
-        response = await client.post(self.server_url, headers=self._get_headers(), json=data)
-        if response.status_code == 200:
-            result = self._parse_sse_response(response.text)
-            if result and 'result' in result:
-                return [t['name'] for t in result['result'].get('tools', [])]
-        return []
-
-    async def execute_test(self, client: httpx.AsyncClient, test_case: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute a single test case."""
+    async def execute_test(self, session: ClientSession, test_case: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a single test case using MCP SDK."""
         tool_name = test_case['tool']
         test_name = test_case.get('name', 'unnamed')
         parameters = test_case.get('parameters', {})
 
-        # Check if this is a protocol method (contains /)
-        if '/' in tool_name:
-            # Direct protocol method call
-            data = {
-                "jsonrpc": "2.0",
-                "method": tool_name,
-                "params": parameters,
-                "id": self.request_id
-            }
-        else:
-            # Tool call
-            data = {
-                "jsonrpc": "2.0",
-                "method": "tools/call",
-                "params": {
-                    "name": tool_name,
-                    "arguments": parameters
-                },
-                "id": self.request_id
-            }
-        self.request_id += 1
-
         # Verbose logging - show request
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug(f"=== REQUEST: {test_name} ===")
-            self.logger.debug(f"Method: {data.get('method')}")
-            self.logger.debug(f"Params: {json.dumps(data.get('params', {}), indent=2)}")
+            self.logger.debug(f"Tool: {tool_name}")
+            self.logger.debug(f"Arguments: {json.dumps(parameters, indent=2)}")
 
         start_time = time.time()
         result = {
@@ -234,98 +141,86 @@ class MCPStreamableClient:
             'success': False,
             'response_time': 0,
             'error': None,
-            'request': data,
             'response_data': None
         }
 
         try:
-            response = await client.post(
-                self.server_url,
-                headers=self._get_headers(),
-                json=data,
-                timeout=30.0
-            )
+            # Use MCP SDK to call the tool
+            response = await session.call_tool(tool_name, arguments=parameters)
 
             response_time = time.time() - start_time
             result['response_time'] = response_time
+            result['response_data'] = response.content
 
-            if response.status_code == 200:
-                response_data = self._parse_sse_response(response.text)
-                result['response_data'] = response_data
+            # Check if response contains an error by examining content
+            is_error = False
+            error_message = None
 
-                if response_data:
-                    if 'result' in response_data:
-                        result['success'] = True
-                        self.metrics.successful_requests += 1
-                        self.metrics.request_times.append(response_time)
+            if response.content and len(response.content) > 0:
+                first_content = response.content[0]
+                if hasattr(first_content, 'text') and first_content.text:
+                    # Check if the response text indicates an error
+                    text = first_content.text.lower()
+                    if ('error' in text and ('validation' in text or 'failed' in text or 'exception' in text)) or \
+                       'input validation error' in text or \
+                       'traceback' in text or \
+                       'failed to connect' in text:
+                        is_error = True
+                        error_message = first_content.text[:200] + '...' if len(first_content.text) > 200 else first_content.text
 
-                        # Verbose logging - show successful response
-                        if self.logger.isEnabledFor(logging.DEBUG):
-                            self.logger.debug(f"=== RESPONSE: {test_name} ===")
-                            self.logger.debug(f"Status: SUCCESS ({response_time:.3f}s)")
-                            response_content = response_data['result']
-                            if isinstance(response_content, dict) and 'content' in response_content:
-                                content = response_content['content']
-                                if content and len(content) > 0:
-                                    first_content = content[0]
-                                    if hasattr(first_content, 'text') or (isinstance(first_content, dict) and 'text' in first_content):
-                                        text = first_content.get('text', '') if isinstance(first_content, dict) else first_content.text
-                                        preview = (text[:200] + '...') if len(text) > 200 else text
-                                        self.logger.debug(f"Content preview: {preview}")
-                                    else:
-                                        self.logger.debug(f"Content type: {type(first_content)}")
-                                else:
-                                    self.logger.debug("Empty content")
-                            else:
-                                # Show truncated result for other response types
-                                result_str = json.dumps(response_content, indent=2)
-                                preview = (result_str[:300] + '...') if len(result_str) > 300 else result_str
-                                self.logger.debug(f"Result: {preview}")
-                        else:
-                            self.logger.info(f"✓ {test_name} succeeded in {response_time:.3f}s")
-
-                    elif 'error' in response_data:
-                        result['error'] = response_data['error'].get('message', 'Unknown error')
-                        self.metrics.failed_requests += 1
-
-                        # Verbose logging - show error response
-                        if self.logger.isEnabledFor(logging.DEBUG):
-                            self.logger.debug(f"=== RESPONSE: {test_name} ===")
-                            self.logger.debug(f"Status: ERROR")
-                            self.logger.debug(f"Error: {json.dumps(response_data['error'], indent=2)}")
-
-                        self.logger.error(f"✗ {test_name} failed: {result['error']}")
-            else:
-                result['error'] = f"HTTP {response.status_code}"
+            if is_error:
+                result['success'] = False
+                result['error'] = error_message
                 self.metrics.failed_requests += 1
 
+                # Verbose logging - show error response
                 if self.logger.isEnabledFor(logging.DEBUG):
                     self.logger.debug(f"=== RESPONSE: {test_name} ===")
-                    self.logger.debug(f"Status: HTTP {response.status_code}")
-                    self.logger.debug(f"Response: {response.text[:200]}...")
+                    self.logger.debug(f"Status: ERROR ({response_time:.3f}s)")
+                    self.logger.debug(f"Error content: {error_message}")
+                else:
+                    self.logger.error(f"✗ {test_name} failed: {error_message}")
+            else:
+                result['success'] = True
+                self.metrics.successful_requests += 1
+                self.metrics.request_times.append(response_time)
 
-                self.logger.error(f"✗ {test_name} HTTP {response.status_code}")
-
-        except asyncio.TimeoutError:
-            response_time = time.time() - start_time
-            result['response_time'] = response_time
-            result['error'] = "Request timeout"
-            self.metrics.failed_requests += 1
-            self.logger.error(f"Test {test_name} timed out")
+                # Verbose logging - show successful response
+                if self.logger.isEnabledFor(logging.DEBUG):
+                    self.logger.debug(f"=== RESPONSE: {test_name} ===")
+                    self.logger.debug(f"Status: SUCCESS ({response_time:.3f}s)")
+                    if response.content and len(response.content) > 0:
+                        first_content = response.content[0]
+                        if hasattr(first_content, 'text'):
+                            preview = (first_content.text[:200] + '...') if len(first_content.text) > 200 else first_content.text
+                            self.logger.debug(f"Content preview: {preview}")
+                        else:
+                            self.logger.debug(f"Content type: {type(first_content)}")
+                    else:
+                        self.logger.debug("Empty content")
+                else:
+                    self.logger.info(f"✓ {test_name} succeeded in {response_time:.3f}s")
 
         except Exception as e:
             response_time = time.time() - start_time
             result['response_time'] = response_time
             result['error'] = str(e)
             self.metrics.failed_requests += 1
-            self.logger.error(f"Test {test_name} failed: {e}")
+
+            # Verbose logging - show error response
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(f"=== RESPONSE: {test_name} ===")
+                self.logger.debug(f"Status: ERROR ({response_time:.3f}s)")
+                self.logger.debug(f"Error: {e}")
+            else:
+                self.logger.error(f"✗ {test_name} failed: {e}")
 
         finally:
             self.metrics.total_requests += 1
 
         return result
 
-    async def run_test_loop(self, client: httpx.AsyncClient):
+    async def run_test_loop(self, session: ClientSession):
         """Run test cases in a loop until duration expires."""
         self.metrics.start_time = time.time()
         end_time = self.metrics.start_time + self.duration_seconds
@@ -343,7 +238,7 @@ class MCPStreamableClient:
                     break
 
             test_case = self.test_cases[test_index]
-            result = await self.execute_test(client, test_case)
+            result = await self.execute_test(session, test_case)
             test_results.append(result)
 
             test_index += 1
@@ -360,27 +255,34 @@ class MCPStreamableClient:
         return test_results
 
     async def run(self):
-        """Main run method for the client stream."""
+        """Main run method using MCP SDK."""
         try:
             # Load test configuration
             await self.load_test_config()
 
             self.logger.info(f"Connecting to {self.server_url}")
 
-            async with httpx.AsyncClient() as client:
-                # Initialize session
-                if not await self.initialize_session(client):
-                    raise RuntimeError("Failed to initialize MCP session")
+            # Use MCP SDK streamablehttp_client - much simpler!
+            async with streamablehttp_client(self.server_url, headers=self.auth) as streams:
+                read_stream, write_stream, get_session_id_callback = streams
 
-                # List available tools
-                tools = await self.list_tools(client)
-                self.logger.info(f"Available tools ({len(tools)}): {tools[:5]}")
+                async with ClientSession(
+                    read_stream,
+                    write_stream,
+                    message_handler=self.message_handler
+                ) as session:
+                    # Initialize session - SDK handles all the protocol details
+                    await session.initialize()
+                    self.logger.info(f"Session initialized successfully")
 
-                # Run test loop
-                test_results = await self.run_test_loop(client)
+                    # List available tools
+                    tools = await self.list_tools(session)
 
-                self.logger.info(f"Stream {self.stream_id} completed successfully")
-                return test_results
+                    # Run test loop
+                    test_results = await self.run_test_loop(session)
+
+                    self.logger.info(f"Stream {self.stream_id} completed successfully")
+                    return test_results
 
         except Exception as e:
             self.logger.error(f"Stream {self.stream_id} failed: {e}")
