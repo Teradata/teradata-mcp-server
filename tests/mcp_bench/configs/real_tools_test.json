@@ -1,0 +1,28 @@
+{
+  "test_cases": {
+    "rag_Execute_Workflow": [
+      {
+        "name": "rag_workflow_test",
+        "parameters": {}
+      }
+    ],
+    "sec_rolePermissions": [
+      {
+        "name": "security_role_permissions",
+        "parameters": {}
+      }
+    ],
+    "sec_userRoles": [
+      {
+        "name": "security_user_roles",
+        "parameters": {}
+      }
+    ],
+    "qlty_columnSummary": [
+      {
+        "name": "quality_column_summary",
+        "parameters": {}
+      }
+    ]
+  }
+}
