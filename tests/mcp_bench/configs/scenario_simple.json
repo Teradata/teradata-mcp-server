@@ -5,8 +5,8 @@
   },
   "streams": [
     {
-      "stream_id": "error_test_01",
-      "test_config": "tests/mcp_bench/configs/error_test.json",
+      "stream_id": "test_01",
+      "test_config": "tests/mcp_bench/configs/cases_mixed.json",
       "duration": 5,
       "loop": false
     }

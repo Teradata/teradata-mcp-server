@@ -1,6 +1,6 @@
 # MCP Performance Benchmark Tool
 
-A performance testing tool for MCP (Model Context Protocol) servers.
+A performance testing tool for MCP (Model Context Protocol) servers supporting multiple concurrent streams of test cases with authentication support and detailed performance reporting.
 
 ## Quick Start
 
@@ -12,23 +12,85 @@ pip install -r requirements.txt
 
 ### 2. Start Your MCP Server
 
-Ensure your MCP server is running. For example:
+Ensure your MCP server is running in streamable http and accessible. For example:
 ```bash
+uv run python -m teradata_mcp_server.server --mcp_transport streamable-http --mcp_port 8001 --auth_mode none
 # Your server should be running at http://localhost:8001/mcp/
+```
+
+For authenticated testing:
+```bash
+uv run python -m teradata_mcp_server.server --mcp_transport streamable-http --mcp_port 8001 --auth_mode Basic
 ```
 
 ### 3. Run Performance Test
 
+**Simple Test (no auth):**
 ```bash
-python run_perf_test.py configs/perf_test.json
+python run_perf_test.py configs/scenario_simple.json
+```
+
+**Authenticated Test:**
+```bash
+export AUTH_TOKEN="ZGVtb191c2VyOmRlbW9fdXNlcg=="
+python run_perf_test.py configs/scenario_simple_auth.json
 ```
 
 ## Configuration
 
+We separately define configuration files for *test cases* and *scenarios*. 
+
+Test cases files define the list of MCP tool calls that will be issued, and scenarios the streams that will execute the cases.
+A single case file may contain multiple tool calls, they will be executed sequentially in the order they are defined.
+A scenario file may contain multiple stream definitions, they will be executed concurrently. Streams may be configured to loop over the test cases definitions and end after a specific duration.
+
 ### Basic Configuration
 
-Create a JSON configuration file with server details and test streams:
+We provide multiple case and scenario files:
+- `cases_mixed.json` A small sample of mixed "base" tool calls.
+- `cases_tactical.json` A series of tactical queries using the `base_readQuery` tool.
+- `cases_error.json` Erroneous tool calls (using wrong/missing parameters or tool names).
+- `scenario_simple`: Single stream quick test (5 seconds, no loop).
+- `scenario_concurrence`: Three concurrent streams running the three test cases files above in loop for 30 seconds.
+- `scenario_load`: 50 concurrent streams running the cases above in loop for 5 minutes.
+- `scenario_simple_auth`: Basic authentication testing with a single stream.
+- `scenario_env_example`: Example configuration showing environment variable usage.
 
+### Creating your own scenarios
+
+You may create new cases and scenario JSON files to configure your own test scenarios:
+
+**Cases Example**
+
+```json
+{
+  "test_cases": {
+    "base_databaseList": [
+      {
+        "name": "database_list_test",
+        "parameters": {}
+      }
+    ],
+    "base_readQuery": [
+      {
+        "name": "simple_query_test",
+        "parameters": {
+          "sql": "select top 10 * from dbc.tablesv"
+        }
+      },
+      {
+        "name": "tactical_query_test",
+        "parameters": {
+          "sql": "sel * from dbc.dbcinfo where infokey='VERSION'"
+        }
+      }
+
+    ]
+  }
+}
+```
+
+**Scenario Example (no authentication)**
 ```json
 {
   "server": {
@@ -38,7 +100,13 @@ Create a JSON configuration file with server details and test streams:
   "streams": [
     {
       "stream_id": "stream_01",
-      "test_config": "configs/real_tools_test.json",
+      "test_config": "tests/mcp_bench/configs/cases_mixed.json",
+      "duration": 30,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_02",
+      "test_config": "tests/mcp_bench/configs/cases_error.json",
       "duration": 30,
       "loop": true
     }
@@ -46,55 +114,124 @@ Create a JSON configuration file with server details and test streams:
 }
 ```
 
-### Test Cases Configuration
-
-Define which tools/methods to test in a separate JSON file:
-
+**Scenario Example (with stream-level authentication)**
 ```json
 {
-  "test_cases": {
-    "tool_name": [
-      {
-        "name": "test_name",
-        "parameters": {
-          "param1": "value1"
-        }
+  "server": {
+    "host": "localhost",
+    "port": 8001
+  },
+  "streams": [
+    {
+      "stream_id": "stream_01",
+      "test_config": "tests/mcp_bench/configs/cases_mixed.json",
+      "duration": 30,
+      "loop": true,
+      "auth": {
+        "Authorization": "Basic $AUTH_TOKEN"
       }
-    ]
-  }
+    },
+    {
+      "stream_id": "stream_02",
+      "test_config": "tests/mcp_bench/configs/cases_error.json",
+      "duration": 30,
+      "loop": true,
+      "auth": {
+        "Authorization": "Basic $AUTH_TOKEN_USER2"
+      }
+    }
+  ]
 }
 ```
 
-## Available Test Configurations
+## Authentication Support
 
-- `configs/perf_test.json` - 3 concurrent streams, 30 seconds each
-- `configs/minimal_test.json` - Single stream, 5 seconds (quick test)
-- `configs/load_test.json` - Heavy load test with multiple streams
-- `configs/real_tools_test.json` - Tests with actual MCP tools
+The MCP benchmark client supports Basic Authentication for testing servers that require authentication.
+
+### Environment Variables
+
+The configuration system supports environment variable expansion for secure token management:
+
+```bash
+export AUTH_TOKEN="ZGVtb191c2VyOmRlbW9fdXNlcg=="
+```
+
+Configuration files can reference environment variables using:
+- `$VARIABLE_NAME` syntax
+- `${VARIABLE_NAME}` syntax
+
+### Authentication Configuration
+
+Authentication is configured at the **stream level** (recommended for testing different users):
+
+```json
+{
+  "server": {
+    "host": "localhost",
+    "port": 8001
+  },
+  "streams": [
+    {
+      "stream_id": "test_01",
+      "test_config": "tests/mcp_bench/configs/cases_mixed.json",
+      "duration": 5,
+      "loop": false,
+      "auth": {
+        "Authorization": "Basic $AUTH_TOKEN"
+      }
+    }
+  ]
+}
+```
+
+### Generating Auth Tokens
+
+Use the included auth helper utility to generate Basic Auth tokens:
+
+```bash
+# Generate a token
+python tests/mcp_bench/auth_helper.py encode demo_user demo_user
+
+# Output:
+# Basic Auth Token: ZGVtb191c2VyOmRlbW9fdXNlcg==
+# Authorization Header: Authorization: Basic ZGVtb191c2VyOmRlbW9fdXNlcg==
+
+# Decode a token (for verification)
+python tests/mcp_bench/auth_helper.py decode ZGVtb191c2VyOmRlbW9fdXNlcg==
+
+# Output:
+# Username: demo_user
+# Password: demo_user
+```
+
 
 ## Example Commands
 
-### Quick Test (5 seconds)
+### Quick Test (5 seconds, no auth)
 ```bash
-python run_perf_test.py configs/minimal_test.json
+python tests/mcp_bench/run_perf_test.py tests/mcp_bench/configs/scenario_simple.json
 ```
 
-### Standard Performance Test (30 seconds)
+### Authenticated Test
 ```bash
-python run_perf_test.py configs/perf_test.json
+export AUTH_TOKEN="ZGVtb191c2VyOmRlbW9fdXNlcg=="
+python tests/mcp_bench/run_perf_test.py tests/mcp_bench/configs/scenario_simple_auth.json
 ```
 
-### Verbose Output (see request/response details)
+### Load Test with Authentication (50 streams, 5 minutes)
 ```bash
-python run_perf_test.py configs/minimal_test.json --verbose
+export AUTH_TOKEN="ZGVtb191c2VyOmRlbW9fdXNlcg=="
+python tests/mcp_bench/run_perf_test.py tests/mcp_bench/configs/scenario_load.json
 ```
 
-### Custom Server
+### Verbose Output
+
+This enables you to see the request/response details:
+
 ```bash
-# Edit config to point to your server:
-# "host": "your-server.com", "port": 8080
-python run_perf_test.py your_config.json
+python tests/mcp_bench/run_perf_test.py tests/mcp_bench/configs/scenario_simple.json --verbose
 ```
+
 
 ## Output
 
@@ -134,55 +271,71 @@ OVERALL:
 📊 Detailed report saved to: var/mcp-bench/reports/perf_report_20250924_174226.json
 ```
 
-## Architecture
+### Multi-User Testing
 
-- `run_perf_test.py` - Main test runner
-- `mcp_streamable_client.py` - MCP client implementation
-- `configs/` - Test configuration files
+You can test concurrent streams with different users by setting multiple environment variables:
 
-## Creating Custom Tests
-
-1. Create a test cases file with your tools:
-```json
-{
-  "test_cases": {
-    "your_tool": [
-      {
-        "name": "your_test",
-        "parameters": {}
-      }
-    ]
-  }
-}
+```bash
+export AUTH_TOKEN="ZGVtb191c2VyOmRlbW9fdXNlcg=="          # demo_user:demo_user
+export AUTH_TOKEN_USER2="YWRtaW46YWRtaW4="                # admin:admin
+export AUTH_TOKEN_USER3="Z3Vlc3Q6Z3Vlc3Q="                # guest:guest
 ```
 
-2. Create a main config pointing to your test:
+Then configure different streams to use different tokens:
+
 ```json
 {
-  "server": {
-    "host": "localhost",
-    "port": 8001
-  },
   "streams": [
     {
-      "stream_id": "test",
-      "test_config": "path/to/your/test.json",
-      "duration": 10,
-      "loop": true
+      "stream_id": "user1_stream",
+      "auth": { "Authorization": "Basic $AUTH_TOKEN" }
+    },
+    {
+      "stream_id": "user2_stream",
+      "auth": { "Authorization": "Basic $AUTH_TOKEN_USER2" }
+    },
+    {
+      "stream_id": "user3_stream",
+      "auth": { "Authorization": "Basic $AUTH_TOKEN_USER3" }
     }
   ]
 }
 ```
 
-3. Run the test:
-```bash
-python run_perf_test.py your_config.json
+## Claude Desktop Integration
+
+This authentication format matches Claude Desktop MCP configurations:
+
+```json
+{
+  "mcpServers": {
+    "teradata-mcp-server": {
+      "command": "mcp-remote",
+      "args": [
+        "http://localhost:8001/mcp/",
+        "--header",
+        "Authorization: Basic ${AUTH_TOKEN}"
+      ],
+      "env": {
+        "AUTH_TOKEN": "ZGVtb191c2VyOmRlbW9fdXNlcg=="
+      }
+    }
+  }
+}
 ```
 
-## Notes
+## Security Notes
 
-- The tool properly handles MCP session initialization
-- Supports concurrent test streams
-- Automatically discovers available tools on the server
-- Measures response time and throughput
-- Provides 100% success rate tracking
+- Basic Auth tokens are Base64 encoded, not encrypted - use HTTPS in production
+- Store auth tokens securely and avoid committing them to version control
+- Use environment variables for sensitive authentication data
+- The demo token `ZGVtb191c2VyOmRlbW9fdXNlcg==` encodes `demo_user:demo_user`
+
+## Architecture
+
+- `run_perf_test.py` - Main test runner with environment variable expansion
+- `mcp_streamable_client.py` - MCP client implementation with auth support
+- `auth_helper.py` - Authentication token encoding/decoding utility
+- `configs/` - Test configuration files
+  - `scenario_*.json` - Stream configurations
+  - `cases_*.json` - Test case definitions

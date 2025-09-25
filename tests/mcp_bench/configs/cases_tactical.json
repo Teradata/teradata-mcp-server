@@ -1,0 +1,66 @@
+{
+  "test_cases": {
+    "base_readQuery": [
+      {
+        "name": "tactical_query_test_01",
+        "parameters": {
+          "sql": "sel day_of_week from Sys_Calendar.Calendar where calendar_date=current_date+random(-1000,1000);"
+        }
+      },
+      {
+        "name": "tactical_query_test_02",
+        "parameters": {
+          "sql": "sel day_of_week from Sys_Calendar.Calendar where calendar_date=current_date+random(-1000,1000);"
+        }
+      },
+      {
+        "name": "tactical_query_test_03",
+        "parameters": {
+          "sql": "sel day_of_week from Sys_Calendar.Calendar where calendar_date=current_date+random(-1000,1000);"
+        }
+      },
+      {
+        "name": "tactical_query_test_04",
+        "parameters": {
+          "sql": "sel day_of_week from Sys_Calendar.Calendar where calendar_date=current_date+random(-1000,1000);"
+        }
+      },
+      {
+        "name": "tactical_query_test_05",
+        "parameters": {
+          "sql": "sel day_of_week from Sys_Calendar.Calendar where calendar_date=current_date+random(-1000,1000);"
+        }
+      },
+      {
+        "name": "tactical_query_test_06",
+        "parameters": {
+          "sql": "sel day_of_week from Sys_Calendar.Calendar where calendar_date=current_date+random(-1000,1000);"
+        }
+      },
+      {
+        "name": "tactical_query_test_07",
+        "parameters": {
+          "sql": "sel day_of_week from Sys_Calendar.Calendar where calendar_date=current_date+random(-1000,1000);"
+        }
+      },
+      {
+        "name": "tactical_query_test_08",
+        "parameters": {
+          "sql": "sel day_of_week from Sys_Calendar.Calendar where calendar_date=current_date+random(-1000,1000);"
+        }
+      },
+      {
+        "name": "tactical_query_test_09",
+        "parameters": {
+          "sql": "sel day_of_week from Sys_Calendar.Calendar where calendar_date=current_date+random(-1000,1000);"
+        }
+      },
+      {
+        "name": "tactical_query_test_10",
+        "parameters": {
+          "sql": "sel day_of_week from Sys_Calendar.Calendar where calendar_date=current_date+random(-1000,1000);"
+        }
+      }      
+    ]
+  }
+}

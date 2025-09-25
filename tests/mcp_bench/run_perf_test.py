@@ -4,6 +4,8 @@
 import asyncio
 import json
 import logging
+import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -12,9 +14,31 @@ from typing import Dict, List
 from mcp_streamable_client import MCPStreamableClient
 
 
+def expand_env_vars(obj):
+    """Recursively expand environment variables in strings within a data structure."""
+    if isinstance(obj, str):
+        # Support both $VAR and ${VAR} syntax
+        def replace_env_var(match):
+            var_name = match.group(1) or match.group(2)
+            return os.environ.get(var_name, match.group(0))  # Return original if not found
+
+        # Pattern matches $VAR or ${VAR}
+        pattern = r'\$\{([^}]+)\}|\$([A-Za-z_][A-Za-z0-9_]*)'
+        return re.sub(pattern, replace_env_var, obj)
+    elif isinstance(obj, dict):
+        return {key: expand_env_vars(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [expand_env_vars(item) for item in obj]
+    else:
+        return obj
+
+
 def load_config(config_file: str) -> Dict:
     with open(config_file, 'r') as f:
-        return json.load(f)
+        config = json.load(f)
+
+    # Expand environment variables in the configuration
+    return expand_env_vars(config)
 
 
 async def run_test(config_file: str, verbose: bool = False):
@@ -30,6 +54,9 @@ async def run_test(config_file: str, verbose: bool = False):
     server = config['server']
     server_url = f"http://{server['host']}:{server['port']}"
 
+    # Get server-level auth configuration
+    server_auth = server.get('auth')
+
     print(f"\n{'='*60}")
     print(f"MCP PERFORMANCE TEST")
     print(f"Server: {server_url}")
@@ -41,13 +68,16 @@ async def run_test(config_file: str, verbose: bool = False):
     # Create and run clients
     clients = []
     for stream_config in config['streams']:
+        # Use stream-level auth if available, otherwise use server-level auth
+        auth_config = stream_config.get('auth', server_auth)
+
         client = MCPStreamableClient(
             stream_id=stream_config.get('stream_id', 'test'),
             server_url=server_url,
             test_config_path=stream_config['test_config'],
             duration_seconds=stream_config.get('duration', 10),
             loop_tests=stream_config.get('loop', False),
-            auth=stream_config.get('auth')
+            auth=auth_config
         )
         clients.append(client)
 

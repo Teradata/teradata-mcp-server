@@ -4,6 +4,7 @@ MCP Client for Performance Testing - MCP SDK Implementation
 """
 
 import asyncio
+import base64
 import json
 import logging
 import time
@@ -14,6 +15,7 @@ from pathlib import Path
 
 from mcp.client.session import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
+
 
 
 @dataclass
@@ -67,12 +69,12 @@ class MCPStreamableClient:
         logger: Optional[logging.Logger] = None
     ):
         self.stream_id = stream_id
-        # Ensure we have the correct URL for MCP SDK
+        # Ensure we have the correct URL for MCP SDK with trailing slash
         if not server_url.endswith('/'):
             server_url += '/'
         if not server_url.endswith('mcp/'):
             server_url += 'mcp/'
-        self.server_url = server_url.rstrip('/')
+        self.server_url = server_url
         self.test_config_path = Path(test_config_path)
         self.duration_seconds = duration_seconds
         self.loop_tests = loop_tests
@@ -262,6 +264,11 @@ class MCPStreamableClient:
 
             self.logger.info(f"Connecting to {self.server_url}")
 
+            # Add small random delay to avoid race conditions with multiple clients
+            import random
+            delay = random.uniform(0, 0.5)
+            await asyncio.sleep(delay)
+
             # Use MCP SDK streamablehttp_client - much simpler!
             async with streamablehttp_client(self.server_url, headers=self.auth) as streams:
                 read_stream, write_stream, get_session_id_callback = streams
@@ -271,9 +278,19 @@ class MCPStreamableClient:
                     write_stream,
                     message_handler=self.message_handler
                 ) as session:
-                    # Initialize session - SDK handles all the protocol details
-                    await session.initialize()
-                    self.logger.info(f"Session initialized successfully")
+                    # Initialize session with retry logic
+                    max_retries = 3
+                    for attempt in range(max_retries):
+                        try:
+                            await session.initialize()
+                            self.logger.info(f"Session initialized successfully")
+                            break
+                        except Exception as e:
+                            if attempt < max_retries - 1:
+                                self.logger.warning(f"Initialization attempt {attempt + 1} failed: {e}, retrying...")
+                                await asyncio.sleep(1)
+                            else:
+                                raise
 
                     # List available tools
                     tools = await self.list_tools(session)
