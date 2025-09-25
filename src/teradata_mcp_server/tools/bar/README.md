@@ -76,7 +76,7 @@ bar:
 
 ## Available Tools
 
-**Total Estimated Tools: 16** (4 ✅ Developed, 12 🚧 Planned)
+**Total Estimated Tools: 16** (5 ✅ Developed, 11 🚧 Planned)
 
 ### Storage Configuration Tools
 
@@ -142,9 +142,9 @@ Tool for managing media server configurations with IBM Spectrum storage solution
 
 ### Operations Management Tools
 
-#### bar_manageJob 🚧
-**Status**: Planned
-Tool for managing backup and restore job lifecycle.
+#### bar_manageJob ✅
+**Status**: Implemented
+Comprehensive tool for managing backup and restore job lifecycle including creation, updates, retrieval, retirement, deletion, execution, and status monitoring. Supports all DSA job operations through REST API endpoints.
 
 #### bar_manageSaveSets 🚧
 **Status**: Planned

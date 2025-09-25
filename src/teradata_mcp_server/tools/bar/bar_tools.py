@@ -1344,6 +1344,214 @@ def manage_dsa_disk_file_target_groups(
             "data": f"❌ Error in disk file target group operation: {str(e)}"
         }, indent=2)
 
+#------------------ DSA Job Management Operation------------------#
+
+def _list_jobs(bucket_size: int = 100, bucket: int = 1, job_type: str = "*%", 
+               is_retired: bool = False, status: str = "*%") -> str:
+    """List all DSA jobs with filtering options"""
+    try:
+        params = {
+            'bucketSize': bucket_size,
+            'bucket': bucket,
+            'jobType': job_type,
+            'isRetired': str(is_retired).lower(),
+            'status': status
+        }
+        
+        response = dsa_client._make_request('GET', 'dsa/jobs', params=params)
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to list jobs: {str(e)}")
+        return f"❌ Error listing jobs: {str(e)}"
+
+
+def _get_job(job_name: str) -> str:
+    """Get job definition by name"""
+    try:
+        response = dsa_client._make_request(
+            method="GET",
+            endpoint=f"dsa/jobs/{job_name}"
+        )
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to get job '{job_name}': {str(e)}")
+        return f"❌ Error getting job '{job_name}': {str(e)}"
+
+
+def _create_job(job_config: dict) -> str:
+    """Create a new job"""
+    try:
+        response = dsa_client._make_request(
+            method="POST",
+            endpoint="dsa/jobs",
+            data=job_config
+        )
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to create job: {str(e)}")
+        return f"❌ Error creating job: {str(e)}"
+
+
+def _update_job(job_config: dict) -> str:
+    """Update an existing job"""
+    try:
+        response = dsa_client._make_request(
+            method="PUT",
+            endpoint="dsa/jobs",
+            data=job_config
+        )
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to update job: {str(e)}")
+        return f"❌ Error updating job: {str(e)}"
+
+
+def _run_job(job_config: dict) -> str:
+    """Run/execute a job"""
+    try:
+        response = dsa_client._make_request(
+            method="POST",
+            endpoint="dsa/jobs/running",
+            data=job_config
+        )
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to run job: {str(e)}")
+        return f"❌ Error running job: {str(e)}"
+
+
+def _get_job_status(job_name: str) -> str:
+    """Get job status"""
+    try:
+        response = dsa_client._make_request(
+            method="GET",
+            endpoint=f"dsa/jobs/{job_name}/status"
+        )
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to get job status for '{job_name}': {str(e)}")
+        return f"❌ Error getting job status for '{job_name}': {str(e)}"
+
+
+def _retire_job(job_name: str, retired: bool = True) -> str:
+    """Retire or unretire a job"""
+    try:
+        response = dsa_client._make_request(
+            method="PATCH",
+            endpoint=f"dsa/jobs/{job_name}?retired={str(retired).lower()}"
+        )
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        action = "retire" if retired else "unretire"
+        logger.error(f"Failed to {action} job '{job_name}': {str(e)}")
+        return f"❌ Error {action}ing job '{job_name}': {str(e)}"
+
+
+def _delete_job(job_name: str) -> str:
+    """Delete a job"""
+    try:
+        response = dsa_client._make_request(
+            method="DELETE",
+            endpoint=f"dsa/jobs/{job_name}"
+        )
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        logger.error(f"Failed to delete job '{job_name}': {str(e)}")
+        return f"❌ Error deleting job '{job_name}': {str(e)}"
+
+
+def manage_job_operations(operation: str, job_name: str = None, job_config: str = None) -> str:
+    """DSA Job Management Operations
+    
+    Handles all job operations including list, get, create, update, run, status, retire, unretire, delete
+    
+    Args:
+        operation: The operation to perform
+        job_name: Name of the job (required for specific operations)
+        job_config: JSON configuration for creating/updating/running jobs
+    
+    Returns:
+        Formatted result of the requested operation
+    """
+    import json
+    
+    try:
+        logger.info(f"DSA Job Operation: {operation}")
+        
+        if operation == "list":
+            # List all jobs with default parameters
+            return _list_jobs()
+            
+        elif operation == "get":
+            if not job_name:
+                return "❌ Error: job_name is required for get operation"
+            return _get_job(job_name)
+            
+        elif operation == "create":
+            if not job_config:
+                return "❌ Error: job_config is required for create operation"
+            try:
+                config_data = json.loads(job_config)
+                return _create_job(config_data)
+            except json.JSONDecodeError:
+                return "❌ Error: Invalid JSON in job_config parameter"
+            
+        elif operation == "update":
+            if not job_config:
+                return "❌ Error: job_config is required for update operation"
+            try:
+                config_data = json.loads(job_config)
+                return _update_job(config_data)
+            except json.JSONDecodeError:
+                return "❌ Error: Invalid JSON in job_config parameter"
+            
+        elif operation == "run":
+            if not job_config:
+                return "❌ Error: job_config is required for run operation"
+            try:
+                config_data = json.loads(job_config)
+                return _run_job(config_data)
+            except json.JSONDecodeError:
+                return "❌ Error: Invalid JSON in job_config parameter"
+            
+        elif operation == "status":
+            if not job_name:
+                return "❌ Error: job_name is required for status operation"
+            return _get_job_status(job_name)
+            
+        elif operation == "retire":
+            if not job_name:
+                return "❌ Error: job_name is required for retire operation"
+            return _retire_job(job_name, retired=True)
+            
+        elif operation == "unretire":
+            if not job_name:
+                return "❌ Error: job_name is required for unretire operation"
+            return _retire_job(job_name, retired=False)
+            
+        elif operation == "delete":
+            if not job_name:
+                return "❌ Error: job_name is required for delete operation"
+            return _delete_job(job_name)
+            
+        else:
+            available_operations = ["list", "get", "create", "update", "run", "status", "retire", "unretire", "delete"]
+            return f"❌ Error: Unknown operation '{operation}'. Available operations: {', '.join(available_operations)}"
+        
+    except Exception as e:
+        logger.error(f"Failed to execute job operation '{operation}': {str(e)}")
+        return f"❌ Error executing job operation '{operation}': {str(e)}"
+
+
+
 
 #------------------ Tool Handler for MCP ------------------#
 
@@ -1769,3 +1977,503 @@ def handle_bar_manageDiskFileTargetGroup(
         }
         return create_response(error_result, metadata)
 
+def handle_bar_manageJob(
+    conn: any,  # Not used for DSA operations, but required by MCP framework
+    operation: str,
+    job_name: str = None,
+    job_config: str = None
+):
+    """Comprehensive DSA Job Management Tool
+    
+    This tool manages backup and restore jobs including creation, updates,
+    retrieval, retirement, deletion, execution, and status monitoring. It provides 
+    complete CRUD operations and job execution management through the DSA REST API.
+    
+    Args:
+        operation: The operation to perform
+        job_name: Name of the job (required for specific operations)
+        job_config: JSON configuration for creating/updating/running jobs
+        retired: Whether to retire (True) or unretire (False) jobs (default: True)
+    
+    Available Operations:
+        - "list" - List all jobs (uses existing list_jobs functionality)
+        - "get" - Get complete job definition and configuration
+        - "create" - Create a new job with specified configuration
+        - "update" - Update an existing job configuration
+        - "run" - Execute/start a job (REQUIRES USER CONFIRMATION)
+        - "status" - Get detailed status of a running or completed job
+        - "retire" - Retire a job (mark as archived)
+        - "unretire" - Unretire a job (restore from archive)
+        - "delete" - Delete a job permanently from repository
+    
+    === MINIMAL JOB CONFIGURATION TEMPLATE ===
+    
+    For create/update operations, here's the minimal required configuration:
+    
+    {
+      "restJobDefinitionModel": {
+        "sourceSystem": "YOUR_SOURCE_SYSTEM_NAME",
+        "srcUserName": "TERADATA_USERNAME",
+        "srcUserPassword": "TERADATA_PASSWORD",
+        "jobType": "BACKUP",
+        "targetGroupName": "YOUR_TARGET_GROUP_NAME",
+        "jobName": "YOUR_JOB_NAME",
+        "jobDescription": "Your job description",
+        "dataDictionaryType": "DATA"
+      },
+      "restJobSettingsModel": {},
+      "restJobObjectsModels": [
+        {
+          "objectName": "YOUR_DATABASE_NAME",
+          "objectType": "DATABASE",
+          "parentName": "YOUR_DATABASE_NAME",
+          "parentType": "DATABASE"
+        }
+      ]
+    }
+    
+    === COMPREHENSIVE CREATE/UPDATE JOB CONFIGURATION ===
+    
+    For advanced create/update operations with all available options:
+    
+    {
+      "restJobDefinitionModel": {
+        "sourceSystem": "YOUR_SOURCE_SYSTEM_NAME",
+        "srcUserName": "TERADATA_USERNAME",
+        "srcUserPassword": "TERADATA_PASSWORD",
+        "jobType": "BACKUP",
+        "targetSystem": "YOUR_TARGET_SYSTEM",
+        "targetUserName": "TARGET_USERNAME",
+        "targetUserPassword": "TARGET_PASSWORD",
+        "targetGroupName": "YOUR_TARGET_GROUP_NAME",
+        "jobName": "YOUR_JOB_NAME",
+        "jobDescription": "Your comprehensive job description",
+        "targetUserAccountId": "YOUR_TARGET_ACCOUNT_ID",
+        "srcUserAccountId": "YOUR_SOURCE_ACCOUNT_ID",
+        "dataDictionaryType": "DATA",
+        "backupName": "YOUR_BACKUP_NAME",
+        "backupVersion": 0,
+        "savesetUser": "SAVESET_USERNAME",
+        "savesetPassword": "SAVESET_PASSWORD",
+        "savesetAccountId": "YOUR_SAVESET_ACCOUNT_ID",
+        "allBackupObjects": true,
+        "autoRetire": true,
+        "retireValue": 30,
+        "retireUnits": "DAYS",
+        "nextIncrementalRestore": true
+      },
+      "restJobSettingsModel": {
+        "reblock": true,
+        "trackEmptyTables": true,
+        "enableTemperatureOverride": true,
+        "singleObjectLocking": true,
+        "skipArchive": false,
+        "skipStats": false,
+        "loggingLevel": "Info",
+        "blockLevelCompression": "DEFAULT",
+        "runAsCopy": false,
+        "queryband": "ApplicationName=DSA_MCP;Version=1.0;",
+        "numberParallelBuilds": 2,
+        "online": false,
+        "nosync": false,
+        "temperatureOverride": "DEFAULT",
+        "disableFallback": false,
+        "nowait": true,
+        "configMapName": "YOUR_CONFIG_MAP",
+        "streamsSoftlimit": 100,
+        "skipJoinhashIndex": false,
+        "skipSystemJoinIndex": false,
+        "mapTo": "YOUR_MAP_TO",
+        "enableIncrementalRestore": true,
+        "enableBackupForIr": true,
+        "skipBuildSecondaryIndexes": false,
+        "wholeDbc": false,
+        "dsmainJsonLogging": true,
+        "includeDbcData": true,
+        "enableIr": true,
+        "allowWrite": false,
+        "cbbEnhancement": true,
+        "advJobProgressStats": true,
+        "restJob": "YOUR_REST_JOB",
+        "previousBackupJob": "YOUR_PREVIOUS_BACKUP_JOB"
+      },
+      "restJobObjectsModels": [
+        {
+          "objectName": "YOUR_DATABASE_NAME",
+          "objectType": "DATABASE",
+          "parentType": "DATABASE",
+          "parentName": "YOUR_DATABASE_NAME",
+          "renameTo": "YOUR_RENAME_TO",
+          "mapTo": "YOUR_MAP_TO",
+          "includeAll": true,
+          "configMapName": "YOUR_CONFIG_MAP",
+          "excludeObjects": [
+            {
+              "objectName": "TEMP_TABLE_1",
+              "objectType": "TABLE"
+            },
+            {
+              "objectName": "TEMP_TABLE_2", 
+              "objectType": "TABLE"
+            }
+          ]
+        }
+      ]
+    }
+    
+    === MINIMAL RUN JOB CONFIGURATION TEMPLATE ===
+    
+    For run operations, here's the minimal required configuration:
+    
+    {
+      "executionType": "FULL",
+      "jobName": "YOUR_JOB_NAME",
+      "jobType": "BACKUP"
+    }
+    
+    === COMPREHENSIVE RUN JOB CONFIGURATION ===
+    
+    For advanced run operations with all available options:
+    
+    {
+      "jobName": "YOUR_JOB_NAME",
+      "executionType": "FULL",
+      "backupJobPhase": "DATA",
+      "allowWrite": true,
+      "jobType": "BACKUP",
+      "isRestart": false,
+      "repositoryJobType": "BACKUP",
+      "targetName": "YOUR_TARGET_NAME",
+      "backupVersion": 0,
+      "promptResponse": true,
+      "sourceSystem": "YOUR_SOURCE_SYSTEM_NAME",
+      "srcUserName": "TERADATA_USERNAME",
+      "srcUserPassword": "TERADATA_PASSWORD",
+      "jobDescription": "Your job description",
+      "dataDictionaryType": "DATA",
+      "targetGroupName": "YOUR_TARGET_GROUP_NAME",
+      "targetSystem": "YOUR_TARGET_SYSTEM",
+      "targetUserName": "TARGET_USERNAME",
+      "targetUserPassword": "TARGET_PASSWORD",
+      "objectList": [
+        {
+          "objectName": "YOUR_DATABASE_NAME",
+          "objectType": "DATABASE",
+          "parentType": "DATABASE",
+          "parentName": "YOUR_DATABASE_NAME",
+          "includeAll": true,
+          "excludeObjects": []
+        }
+      ],
+      "jobSettings": {
+        "online": false,
+        "nowait": true,
+        "loggingLevel": "Info",
+        "blockLevelCompression": "DEFAULT",
+        "skipArchive": false,
+        "skipStats": false,
+        "runAsCopy": false,
+        "queryband": "ApplicationName=DSA_MCP;Version=1.0;"
+      }
+    }
+    
+    === ALL AVAILABLE CONFIGURATION PARAMETERS ===
+    
+    **restJobDefinitionModel** (Required for CREATE/UPDATE):
+    - sourceSystem: Source Teradata system name (REQUIRED) - e.g., "pe06-tdvm-mpp-0002-01"
+    - srcUserName: Source username - use "TERADATA_USERNAME" (REQUIRED)
+    - srcUserPassword: Source password - use "TERADATA_PASSWORD" (REQUIRED)
+    - jobType: "BACKUP", "RESTORE", "COPY" (REQUIRED)
+    - targetGroupName: Target group name (REQUIRED) - e.g., "dfs_tg"
+    - jobName: Unique job name (REQUIRED)
+    - jobDescription: Job description (REQUIRED)
+    - dataDictionaryType: "DATA" or "STRUCTURE" (REQUIRED)
+    - targetSystem: Target system name (optional)
+    - targetUserName: Target username - use "TARGET_USERNAME" (optional)
+    - targetUserPassword: Target password - use "TARGET_PASSWORD" (optional)
+    - targetUserAccountId: Target user account ID (optional)
+    - srcUserAccountId: Source user account ID (optional)
+    - backupName: Backup name (optional)
+    - backupVersion: Backup version number (optional)
+    - savesetUser: Saveset username - use "SAVESET_USERNAME" (optional)
+    - savesetPassword: Saveset password - use "SAVESET_PASSWORD" (optional)
+    - savesetAccountId: Saveset account ID (optional)
+    - allBackupObjects: Include all backup objects (true/false)
+    - autoRetire: Auto-retirement setting (true/false)
+    - retireValue: Retirement value (number)
+    - retireUnits: Retirement units - "DAYS", "WEEKS", "MONTHS", "YEARS"
+    - nextIncrementalRestore: Enable next incremental restore (true/false)
+    
+    **restJobSettingsModel** (Optional for CREATE/UPDATE):
+    - reblock: Reblock setting (true/false)
+    - trackEmptyTables: Track empty tables (true/false)
+    - enableTemperatureOverride: Enable temperature override (true/false)
+    - singleObjectLocking: Single object locking (true/false)
+    - skipArchive: Skip archive phase (true/false)
+    - skipStats: Skip statistics collection (true/false)
+    - loggingLevel: "Error", "Warning", "Info", "Debug"
+    - blockLevelCompression: "DEFAULT", "ENABLED", "DISABLED"
+    - runAsCopy: Run as copy operation (true/false)
+    - queryband: Query band settings (string)
+    - numberParallelBuilds: Number of parallel builds (number)
+    - online: Online backup mode (true/false)
+    - nosync: No sync mode (true/false)
+    - temperatureOverride: "DEFAULT", "HOT", "WARM", "COLD"
+    - disableFallback: Disable fallback (true/false)
+    - nowait: No-wait mode (true/false)
+    - configMapName: Configuration map name (string)
+    - streamsSoftlimit: Streams soft limit (number)
+    - skipJoinhashIndex: Skip join hash index (true/false)
+    - skipSystemJoinIndex: Skip system join index (true/false)
+    - mapTo: Map to setting (string)
+    - enableIncrementalRestore: Enable incremental restore (true/false)
+    - enableBackupForIr: Enable backup for incremental restore (true/false)
+    - skipBuildSecondaryIndexes: Skip build secondary indexes (true/false)
+    - wholeDbc: Backup whole DBC (true/false)
+    - dsmainJsonLogging: Enable DSMAIN JSON logging (true/false)
+    - includeDbcData: Include DBC data (true/false)
+    - enableIr: Enable incremental restore (true/false)
+    - allowWrite: Allow write operations (true/false)
+    - cbbEnhancement: CBB enhancement (true/false)
+    - advJobProgressStats: Advanced job progress statistics (true/false)
+    - restJob: REST job reference (string)
+    - previousBackupJob: Previous backup job reference (string)
+    
+    **restJobObjectsModels** (Required - Array for CREATE/UPDATE):
+    For each object to backup:
+    - objectName: Database/table name (REQUIRED) - e.g., "DBC", "YourDatabase"
+    - objectType: "DATABASE", "TABLE", "VIEW", "AGGREGATE_FUNCTION", etc. (REQUIRED)
+    - parentType: Parent object type (optional)
+    - parentName: Parent object name (optional)
+    - renameTo: Rename object to (optional)
+    - mapTo: Map object to (optional)
+    - includeAll: Include all child objects (true/false)
+    - configMapName: Configuration map name (optional)
+    - excludeObjects: Array of objects to exclude (optional)
+      Each exclude object has:
+      - objectName: Name of object to exclude
+      - objectType: Type of object to exclude
+    - objectType: "DATABASE", "TABLE", "VIEW", etc. (REQUIRED)
+    - parentName: Parent object name (optional)
+    - parentType: Parent object type (optional)
+    - includeAll: Include all child objects (true/false)
+    - excludeObjects: Array of objects to exclude (optional)
+    
+    === RUN JOB PARAMETERS ===
+    
+    **Basic Run Parameters** (Required for run operation):
+    - executionType: "FULL", "INCREMENTAL", "DIFFERENTIAL" (REQUIRED)
+    - jobName: Name of the job to run (REQUIRED)
+    - jobType: "BACKUP", "RESTORE", "COPY" (REQUIRED)
+    
+    **Advanced Run Parameters** (Optional):
+    - backupJobPhase: "DICTIONARY", "DATA", "ALL"
+    - allowWrite: Allow write operations during backup (true/false)
+    - isRestart: Whether this is a restart operation (true/false)
+    - repositoryJobType: Repository job type
+    - targetName: Target system name
+    - backupVersion: Backup version number
+    - promptResponse: Auto-respond to prompts (true/false)
+    - sourceSystem: Source Teradata system name
+    - srcUserName: Source username - use "TERADATA_USERNAME"
+    - srcUserPassword: Source password - use "TERADATA_PASSWORD"
+    - jobDescription: Description for the job execution
+    - dataDictionaryType: "DATA" or "STRUCTURE"
+    - targetGroupName: Target group name
+    - targetSystem: Target system name
+    - targetUserName: Target username - use "TARGET_USERNAME"
+    - targetUserPassword: Target password - use "TARGET_PASSWORD"
+    
+    **Job Settings for Run** (Optional):
+    - online: Online mode (true/false)
+    - nowait: No-wait mode (true/false)
+    - skipArchive: Skip archive phase (true/false)
+    - skipStats: Skip statistics collection (true/false)
+    - runAsCopy: Run as copy operation (true/false)
+    - loggingLevel: "Error", "Warning", "Info", "Debug"
+    - blockLevelCompression: "DEFAULT", "ENABLED", "DISABLED"
+    - queryband: Query band settings
+    - numberParallelBuilds: Number of parallel builds
+    - nosync: No sync mode (true/false)
+    - temperatureOverride: Temperature override setting
+    - disableFallback: Disable fallback (true/false)
+    - streamsSoftlimit: Streams soft limit
+    - skipJoinhashIndex: Skip join hash index (true/false)
+    - skipSystemJoinIndex: Skip system join index (true/false)
+    - enableIr: Enable incremental restore (true/false)
+    - enableIncrementalRestore: Enable incremental restore (true/false)
+    - enableBackupForIr: Enable backup for incremental restore (true/false)
+    - skipBuildSI: Skip build secondary index (true/false)
+    - includeDbcData: Include DBC data (true/false)
+    
+    === USER INTERACTION GUIDELINES ===
+    When helping users with job operations:
+    1. ALWAYS show the user the payload that will be used
+    2. ASK if they want to modify any settings before proceeding
+    3. CONFIRM the configuration with the user before executing
+    4. Offer to explain any parameters they want to customize
+    5. Do NOT show the actual password values for security
+    
+    **SPECIAL REQUIREMENTS FOR CREATE/UPDATE OPERATIONS:**
+    - ALWAYS require user confirmation before creating or updating jobs
+    - Show the complete configuration payload to the user (minimal or comprehensive)
+    - Ask if they want to add any additional settings from the comprehensive template
+    - Explain that this will create/modify job definitions in the DSA repository
+    - Wait for explicit confirmation before executing create_job or update_job
+    - Offer to show comprehensive template if user wants advanced options
+    
+    **SPECIAL REQUIREMENTS FOR RUN OPERATION:**
+    - ALWAYS require explicit user confirmation before running jobs
+    - Show the complete run configuration payload to the user
+    - Ask if they want to add any additional settings (compression, logging, etc.)
+    - Explain that running a job will start actual backup/restore operations
+    - Wait for explicit "yes" or confirmation before executing run_job
+    - Provide guidance on monitoring job progress with status operation
+    
+    Example interaction flow:
+    - Show the configuration payload (minimal or comprehensive based on user needs)
+    - Ask: "Would you like to add any additional settings from the comprehensive template?"
+    - Wait for user confirmation before executing the operation
+    - Explain available options if user wants to customize
+    
+    Returns:
+        Formatted result of the requested operation with detailed status and validation information
+        
+    Examples:
+        # List all jobs
+        - View all jobs:
+          manage_job_operations("list")
+          
+        # Get specific job definition
+        - Get job details:
+          manage_job_operations("get", job_name="dfs_bk")
+          
+        # Create new job with minimal configuration
+        - Create backup job:
+          config = '{"restJobDefinitionModel":{"sourceSystem":"YOUR_SOURCE_SYSTEM_NAME","srcUserName":"TERADATA_USERNAME","srcUserPassword":"TERADATA_PASSWORD","jobType":"BACKUP","targetGroupName":"YOUR_TARGET_GROUP_NAME","jobName":"YOUR_JOB_NAME","jobDescription":"Your job description","dataDictionaryType":"DATA"},"restJobSettingsModel":{},"restJobObjectsModels":[{"objectName":"YOUR_DATABASE_NAME","objectType":"DATABASE","parentName":"YOUR_DATABASE_NAME","parentType":"DATABASE"}]}'
+          manage_job_operations("create", job_config=config)
+          
+        # Create job with advanced settings (COMPREHENSIVE TEMPLATE)
+        - Create comprehensive backup job with all options:
+          config = '{"restJobDefinitionModel":{"sourceSystem":"YOUR_SOURCE_SYSTEM_NAME","srcUserName":"TERADATA_USERNAME","srcUserPassword":"TERADATA_PASSWORD","jobType":"BACKUP","targetSystem":"YOUR_TARGET_SYSTEM","targetUserName":"TARGET_USERNAME","targetUserPassword":"TARGET_PASSWORD","targetGroupName":"YOUR_TARGET_GROUP_NAME","jobName":"comprehensive_backup","jobDescription":"Comprehensive backup with all settings","targetUserAccountId":"YOUR_TARGET_ACCOUNT_ID","srcUserAccountId":"YOUR_SOURCE_ACCOUNT_ID","dataDictionaryType":"DATA","backupName":"YOUR_BACKUP_NAME","backupVersion":0,"savesetUser":"SAVESET_USERNAME","savesetPassword":"SAVESET_PASSWORD","savesetAccountId":"YOUR_SAVESET_ACCOUNT_ID","allBackupObjects":true,"autoRetire":true,"retireValue":30,"retireUnits":"DAYS","nextIncrementalRestore":true},"restJobSettingsModel":{"reblock":true,"trackEmptyTables":true,"enableTemperatureOverride":true,"singleObjectLocking":true,"skipArchive":false,"skipStats":false,"loggingLevel":"Info","blockLevelCompression":"DEFAULT","runAsCopy":false,"queryband":"ApplicationName=DSA_MCP;Version=1.0;","numberParallelBuilds":2,"online":false,"nosync":false,"temperatureOverride":"DEFAULT","disableFallback":false,"nowait":true,"configMapName":"YOUR_CONFIG_MAP","streamsSoftlimit":100,"skipJoinhashIndex":false,"skipSystemJoinIndex":false,"mapTo":"YOUR_MAP_TO","enableIncrementalRestore":true,"enableBackupForIr":true,"skipBuildSecondaryIndexes":false,"wholeDbc":false,"dsmainJsonLogging":true,"includeDbcData":true,"enableIr":true,"allowWrite":false,"cbbEnhancement":true,"advJobProgressStats":true,"restJob":"YOUR_REST_JOB","previousBackupJob":"YOUR_PREVIOUS_BACKUP_JOB"},"restJobObjectsModels":[{"objectName":"YOUR_DATABASE_NAME","objectType":"DATABASE","parentType":"DATABASE","parentName":"YOUR_DATABASE_NAME","renameTo":"YOUR_RENAME_TO","mapTo":"YOUR_MAP_TO","includeAll":true,"configMapName":"YOUR_CONFIG_MAP","excludeObjects":[{"objectName":"TEMP_TABLE_1","objectType":"TABLE"},{"objectName":"TEMP_TABLE_2","objectType":"TABLE"}]}]}'
+          manage_job_operations("create", job_config=config)
+          
+        # Update existing job
+        - Update job configuration:
+          config = '{"restJobDefinitionModel":{"sourceSystem":"YOUR_SOURCE_SYSTEM_NAME","srcUserName":"TERADATA_USERNAME","srcUserPassword":"TERADATA_PASSWORD","jobType":"BACKUP","targetGroupName":"YOUR_TARGET_GROUP_NAME","jobName":"test_job","jobDescription":"Updated test backup"},"restJobSettingsModel":{"online":false,"nowait":true},"restJobObjectsModels":[{"objectName":"DBC","objectType":"DATABASE"}]}'
+          manage_job_operations("update", job_config=config)
+          
+        # Run job operations (REQUIRES USER CONFIRMATION)
+        - Run job with minimal configuration:
+          config = '{"executionType":"FULL","jobName":"YOUR_JOB_NAME","jobType":"BACKUP"}'
+          manage_job_operations("run", job_config=config)
+          
+        - Run job with advanced settings:
+          config = '{"jobName":"backup_job","executionType":"FULL","backupJobPhase":"DATA","allowWrite":true,"jobType":"BACKUP","isRestart":false,"sourceSystem":"YOUR_SOURCE_SYSTEM_NAME","srcUserName":"TERADATA_USERNAME","srcUserPassword":"TERADATA_PASSWORD","targetGroupName":"YOUR_TARGET_GROUP_NAME","jobSettings":{"online":false,"nowait":true,"loggingLevel":"Info","blockLevelCompression":"DEFAULT"}}'
+          manage_job_operations("run", job_config=config)
+          
+        # Get job status
+        - Check job status:
+          manage_job_operations("status", job_name="backup_job")
+        - Monitor running job:
+          manage_job_operations("status", job_name="dfs_bk")
+          
+        # Retire/Unretire jobs
+        - Retire job:
+          manage_job_operations("retire", job_name="old_job")
+        - Unretire job:
+          manage_job_operations("unretire", job_name="old_job", retired=False)
+          
+        # Delete job
+        - Delete job permanently:
+          manage_job_operations("delete", job_name="old_job")
+    
+    Notes:
+        - Job creation/update requires comprehensive JSON configuration
+        - Two configuration templates available: minimal (basic) and comprehensive (all options)
+        - Source and target systems must be properly configured
+        - Target groups must exist before creating jobs
+        - Retirement marks jobs as archived but keeps them in repository
+        - Deletion permanently removes jobs from repository
+        - JSON configuration must include restJobDefinitionModel, restJobSettingsModel, and restJobObjectsModels
+        - Use get operation to see proper configuration format for existing jobs
+        - Always use "TERADATA_USERNAME" pattern for all credential fields
+        
+        COMPREHENSIVE TEMPLATE: Use when users need advanced features like:
+        - Auto-retirement settings, backup versioning, temperature overrides
+        - Advanced job settings, parallel builds, compression options
+        - Complex object mappings, exclusions, secondary indexes control
+        - Target system credentials, saveset configurations
+        
+        IMPORTANT: When assisting users with job creation/updates/runs:
+        1. Always show the user the exact payload that will be used (minimal or comprehensive)
+        2. Ask if they want to modify any settings or upgrade to comprehensive template
+        3. FOR CREATE/UPDATE: Require user confirmation before creating/updating jobs
+        4. FOR RUN: Require explicit user confirmation before executing (starts actual operations)
+        5. Confirm the configuration with the user before executing the operation
+        4. Offer to explain available parameters for customization
+        5. Never show actual password values - only show "TERADATA_PASSWORD"
+        6. FOR RUN OPERATIONS: Always require explicit user confirmation before execution
+        7. Explain that run operations start actual backup/restore processes
+        8. Suggest using status operation to monitor job progress after running
+    """
+    try:
+        logger.debug(f"Tool: bar_manageJob: Args: operation: {operation}, job_name: {job_name}")
+        
+        # Validate operation
+        valid_operations = [
+            "list", "get", "create", "update", "run", 
+            "status", "retire", "unretire", "delete"
+        ]
+        
+        if operation not in valid_operations:
+            error_result = f"❌ Invalid operation '{operation}'. Valid operations: {', '.join(valid_operations)}"
+            metadata = {
+                "tool_name": "bar_manageJob",
+                "operation": operation,
+                "error": "Invalid operation",
+                "success": False
+            }
+            return create_response(error_result, metadata)
+        
+        # Execute the job management operation
+        result = manage_job_operations(
+            operation=operation,
+            job_name=job_name,
+            job_config=job_config
+        )
+        
+        metadata = {
+            "tool_name": "bar_manageJob",
+            "operation": operation,
+            "job_name": job_name,
+            "success": True
+        }
+        
+        if job_config:
+            metadata["job_config"] = job_config
+            
+        logger.debug(f"Tool: bar_manageJob: metadata: {metadata}")
+        return create_response(result, metadata)
+        
+    except Exception as e:
+        logger.error(f"Error in bar_manageJob: {e}")
+        error_result = f"❌ Error in DSA job management operation: {str(e)}"
+        metadata = {
+            "tool_name": "bar_manageJob",
+            "operation": operation,
+            "error": str(e),
+            "success": False
+        }
+        return create_response(error_result, metadata)
+    
+    except Exception as e:
+        logger.error(f"Error in bar_manageJob: {e}")
+        error_result = f"❌ Error in DSA job management operation: {str(e)}"
+        metadata = {
+            "tool_name": "bar_manageJob",
+            "operation": operation,
+            "error": str(e),
+            "success": False
+        }
+        return create_response(error_result, metadata)
