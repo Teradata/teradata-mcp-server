@@ -1,0 +1,26 @@
+{
+  "server": {
+    "host": "${MCP_HOST}",
+    "port": "${MCP_PORT}",
+    "auth": {
+      "Authorization": "Basic $AUTH_TOKEN"
+    }
+  },
+  "streams": [
+    {
+      "stream_id": "test_01",
+      "test_config": "tests/mcp_bench/configs/cases_mixed.json",
+      "duration": "${TEST_DURATION}",
+      "loop": false
+    },
+    {
+      "stream_id": "test_02",
+      "test_config": "tests/mcp_bench/configs/cases_error.json",
+      "duration": "$TEST_DURATION",
+      "loop": false,
+      "auth": {
+        "Authorization": "Basic ${AUTH_TOKEN}"
+      }
+    }
+  ]
+}

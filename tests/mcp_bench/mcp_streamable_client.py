@@ -4,6 +4,7 @@ MCP Client for Performance Testing - MCP SDK Implementation
 """
 
 import asyncio
+import base64
 import json
 import logging
 import time
@@ -14,6 +15,7 @@ from pathlib import Path
 
 from mcp.client.session import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
+
 
 
 @dataclass
