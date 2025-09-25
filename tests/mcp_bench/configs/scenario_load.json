@@ -1,0 +1,153 @@
+{
+  "server": {
+    "host": "localhost",
+    "port": 8001
+  },
+  "streams": [
+    {
+      "stream_id": "stream_01",
+      "test_config": "tests/mcp_bench/configs/cases_mixed.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_02",
+      "test_config": "tests/mcp_bench/configs/cases_error.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_03",
+      "test_config": "tests/mcp_bench/configs/cases_tactical.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_04",
+      "test_config": "tests/mcp_bench/configs/cases_mixed.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_05",
+      "test_config": "tests/mcp_bench/configs/cases_error.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_06",
+      "test_config": "tests/mcp_bench/configs/cases_tactical.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_07",
+      "test_config": "tests/mcp_bench/configs/cases_mixed.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_08",
+      "test_config": "tests/mcp_bench/configs/cases_error.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_09",
+      "test_config": "tests/mcp_bench/configs/cases_tactical.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_10",
+      "test_config": "tests/mcp_bench/configs/cases_mixed.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_11",
+      "test_config": "tests/mcp_bench/configs/cases_error.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_12",
+      "test_config": "tests/mcp_bench/configs/cases_tactical.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_01",
+      "test_config": "tests/mcp_bench/configs/cases_mixed.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_02",
+      "test_config": "tests/mcp_bench/configs/cases_error.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_03",
+      "test_config": "tests/mcp_bench/configs/cases_tactical.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_04",
+      "test_config": "tests/mcp_bench/configs/cases_mixed.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_05",
+      "test_config": "tests/mcp_bench/configs/cases_error.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_06",
+      "test_config": "tests/mcp_bench/configs/cases_tactical.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_07",
+      "test_config": "tests/mcp_bench/configs/cases_mixed.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_08",
+      "test_config": "tests/mcp_bench/configs/cases_error.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_09",
+      "test_config": "tests/mcp_bench/configs/cases_tactical.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_10",
+      "test_config": "tests/mcp_bench/configs/cases_mixed.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_11",
+      "test_config": "tests/mcp_bench/configs/cases_error.json",
+      "duration": 300,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_12",
+      "test_config": "tests/mcp_bench/configs/cases_tactical.json",
+      "duration": 300,
+      "loop": true
+    },
+
+  ]
+}

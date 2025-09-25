@@ -10,9 +10,16 @@
       {
         "name": "simple_query_test",
         "parameters": {
-          "sql": "select 1"
+          "sql": "select top 10 * from dbc.tablesv"
+        }
+      },
+      {
+        "name": "tactical_query_test",
+        "parameters": {
+          "sql": "sel * from dbc.dbcinfo where infokey='VERSION'"
         }
       }
+
     ],
     "base_tableDDL": [
       {

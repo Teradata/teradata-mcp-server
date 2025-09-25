@@ -1,6 +1,6 @@
 # MCP Performance Benchmark Tool
 
-A performance testing tool for MCP (Model Context Protocol) servers.
+A performance testing tool for MCP (Model Context Protocol) servers running multiple concurrent streams of test cases and reporting the errors and performance.
 
 ## Quick Start
 
@@ -12,23 +12,70 @@ pip install -r requirements.txt
 
 ### 2. Start Your MCP Server
 
-Ensure your MCP server is running. For example:
+Ensure your MCP server is running in streamable http and accesible. For example:
 ```bash
+teradata-mcp-server --mcp_transport streamable-http --mcp_port 8001
 # Your server should be running at http://localhost:8001/mcp/
 ```
 
 ### 3. Run Performance Test
 
 ```bash
-python run_perf_test.py configs/perf_test.json
+python run_perf_test.py configs/scenario_simple.json
 ```
 
 ## Configuration
 
+We separately define configuration files for *test cases* and *scenarios*. 
+
+Test cases files define the list of MCP tool calls that will be issued, and scenarios the streams that will execute the cases.
+A single case file may contain multiple tool calls, they will be executed sequentially in the order they are defined.
+A scenario file may contain multiple stream definitions, they will be executed concurrently. Streams may be configured to loop over the test cases definitions and end after a specific duration.
+
 ### Basic Configuration
 
-Create a JSON configuration file with server details and test streams:
+We provide multiple case and scenario files:
+- `cases_mixed.json` A small sample of mixed "base" tool calls.
+- `cases_tactical.json` A series of tactical queries using the `base_readQuery` tool.
+- `cases_error.json` Erroneous tool calls (using wrong/missing parameters or tool names).
+- `scenario_simple`: Three concurrent streams running the three test cases files above in loop for 30 seconds.
+- `scenario_ load`: 50 concurrent streams running the cases above in loop for 5 minutes.
 
+### Creating your own scenarios
+
+You may create new cases and scenario JSON files to configure your own test scenarios:
+
+**Cases Example**
+
+```json
+{
+  "test_cases": {
+    "base_databaseList": [
+      {
+        "name": "database_list_test",
+        "parameters": {}
+      }
+    ],
+    "base_readQuery": [
+      {
+        "name": "simple_query_test",
+        "parameters": {
+          "sql": "select top 10 * from dbc.tablesv"
+        }
+      },
+      {
+        "name": "tactical_query_test",
+        "parameters": {
+          "sql": "sel * from dbc.dbcinfo where infokey='VERSION'"
+        }
+      }
+
+    ]
+  }
+}
+```
+
+**Cases Example**
 ```json
 {
   "server": {
@@ -38,7 +85,13 @@ Create a JSON configuration file with server details and test streams:
   "streams": [
     {
       "stream_id": "stream_01",
-      "test_config": "configs/real_tools_test.json",
+      "test_config": "tests/mcp_bench/configs/cases_mixed.json",
+      "duration": 30,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_02",
+      "test_config": "tests/mcp_bench/configs/cases_error.json",
       "duration": 30,
       "loop": true
     }
@@ -46,55 +99,26 @@ Create a JSON configuration file with server details and test streams:
 }
 ```
 
-### Test Cases Configuration
-
-Define which tools/methods to test in a separate JSON file:
-
-```json
-{
-  "test_cases": {
-    "tool_name": [
-      {
-        "name": "test_name",
-        "parameters": {
-          "param1": "value1"
-        }
-      }
-    ]
-  }
-}
-```
-
-## Available Test Configurations
-
-- `configs/perf_test.json` - 3 concurrent streams, 30 seconds each
-- `configs/minimal_test.json` - Single stream, 5 seconds (quick test)
-- `configs/load_test.json` - Heavy load test with multiple streams
-- `configs/real_tools_test.json` - Tests with actual MCP tools
-
 ## Example Commands
 
 ### Quick Test (5 seconds)
 ```bash
-python run_perf_test.py configs/minimal_test.json
+python tests/mcp_bench/run_perf_test.py tests/mcp_bench/configs/scenario_simple.json
 ```
 
 ### Standard Performance Test (30 seconds)
 ```bash
-python run_perf_test.py configs/perf_test.json
+python tests/mcp_bench/run_perf_test.py tests/mcp_bench/configs/scenario_load.json
 ```
 
-### Verbose Output (see request/response details)
+### Verbose Output
+
+This enables you to see the request/response details
+
 ```bash
-python run_perf_test.py configs/minimal_test.json --verbose
+python tests/mcp_bench/run_perf_test.py tests/mcp_bench/configs/scenario_simple.json --verbose
 ```
 
-### Custom Server
-```bash
-# Edit config to point to your server:
-# "host": "your-server.com", "port": 8080
-python run_perf_test.py your_config.json
-```
 
 ## Output
 
@@ -139,50 +163,3 @@ OVERALL:
 - `run_perf_test.py` - Main test runner
 - `mcp_streamable_client.py` - MCP client implementation
 - `configs/` - Test configuration files
-
-## Creating Custom Tests
-
-1. Create a test cases file with your tools:
-```json
-{
-  "test_cases": {
-    "your_tool": [
-      {
-        "name": "your_test",
-        "parameters": {}
-      }
-    ]
-  }
-}
-```
-
-2. Create a main config pointing to your test:
-```json
-{
-  "server": {
-    "host": "localhost",
-    "port": 8001
-  },
-  "streams": [
-    {
-      "stream_id": "test",
-      "test_config": "path/to/your/test.json",
-      "duration": 10,
-      "loop": true
-    }
-  ]
-}
-```
-
-3. Run the test:
-```bash
-python run_perf_test.py your_config.json
-```
-
-## Notes
-
-- The tool properly handles MCP session initialization
-- Supports concurrent test streams
-- Automatically discovers available tools on the server
-- Measures response time and throughput
-- Provides 100% success rate tracking
