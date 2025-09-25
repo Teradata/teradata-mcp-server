@@ -517,14 +517,7 @@ def list_aws_s3_backup_configurations () -> str:
         
         # Add debug log for full API response
         logger.debug("[DEBUG] Full DSA API response from aws-s3 endpoint: %r", response)
-        
-        # Temporary debug output to console for investigation
-        print(f"[DEBUG] AWS LIST API RESPONSE:")
-        print(f"Status: {response.get('status')}")
-        print(f"AWS list length: {len(response.get('aws', []))}")
-        print(f"Full aws list: {response.get('aws', [])}")
-        print("=" * 80)
-        
+                
         results = []
         results.append("🗂️ DSA AWS S3 Backup Solution Systems Available")
         results.append("=" * 50)
