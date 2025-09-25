@@ -518,50 +518,79 @@ def list_aws_s3_backup_configurations () -> str:
         # Add debug log for full API response
         logger.debug("[DEBUG] Full DSA API response from aws-s3 endpoint: %r", response)
         
+        # Temporary debug output to console for investigation
+        print(f"[DEBUG] AWS LIST API RESPONSE:")
+        print(f"Status: {response.get('status')}")
+        print(f"AWS list length: {len(response.get('aws', []))}")
+        print(f"Full aws list: {response.get('aws', [])}")
+        print("=" * 80)
+        
         results = []
         results.append("🗂️ DSA AWS S3 Backup Solution Systems Available")
         results.append("=" * 50)
         
         if response.get('status') == 'LIST_AWS_APP_SUCCESSFUL':
-            # Extract bucketsByRegion from nested aws[0]['configAwsRest']['bucketsByRegion']
-            bucketsByRegion = []
+            # Extract all AWS configurations from the aws list
             aws_list = response.get('aws', [])
+            
+            total_configurations = 0
+            total_buckets = 0
+            
             if aws_list and isinstance(aws_list, list):
-                configAwsRest = aws_list[0].get('configAwsRest', {})
-                bucketsByRegion = configAwsRest.get('bucketsByRegion', [])
+                total_configurations = len(aws_list)
+                results.append(f"📊 Total AWS S3 Configurations: {total_configurations}")
+                results.append("")
+                
+                # Process each AWS configuration
+                for config_idx, aws_config in enumerate(aws_list, 1):
+                    configAwsRest = aws_config.get('configAwsRest', {})
+                    account_name = configAwsRest.get('acctName', 'N/A')
+                    access_id = configAwsRest.get('accessId', 'N/A')
+                    
+                    results.append(f"🔧 AWS Configuration #{config_idx}")
+                    results.append(f"   📋 Account Name: {account_name}")
+                    results.append(f"   🔑 Access ID: {access_id}")
+                    
+                    bucketsByRegion = configAwsRest.get('bucketsByRegion', [])
+                    
+                    # Handle if bucketsByRegion is a dict (single region) or list
+                    if isinstance(bucketsByRegion, dict):
+                        bucketsByRegion = [bucketsByRegion]
 
-            # Handle if bucketsByRegion is a dict (single region) or list
-            if isinstance(bucketsByRegion, dict):
-                bucketsByRegion = [bucketsByRegion]
-
-            bucket_count = 0
-            if bucketsByRegion:
-                for i, region in enumerate(bucketsByRegion, 1):
-                    region_name = region.get('region', 'N/A')
-                    results.append(f"🗂️ Region #{i}: {region_name}")
-                    buckets = region.get('buckets', [])
-                    if isinstance(buckets, dict):
-                        buckets = [buckets]
-                    if buckets:
-                        for j, bucket in enumerate(buckets, 1):
-                            bucket_count += 1
-                            bucket_name = bucket.get('bucketName', 'N/A')
-                            results.append(f"   📁 Bucket #{j}: {bucket_name}")
-                            prefix_list = bucket.get('prefixList', [])
-                            if isinstance(prefix_list, dict):
-                                prefix_list = [prefix_list]
-                            if prefix_list:
-                                for k, prefix in enumerate(prefix_list, 1):
-                                    prefix_name = prefix.get('prefixName', 'N/A')
-                                    storage_devices = prefix.get('storageDevices', 'N/A')
-                                    results.append(f"      🔖 Prefix #{k}: {prefix_name}")
-                                    results.append(f"         Storage Devices: {storage_devices}")
+                    config_bucket_count = 0
+                    if bucketsByRegion:
+                        for i, region in enumerate(bucketsByRegion, 1):
+                            region_name = region.get('region', 'N/A')
+                            results.append(f"   🗂️ Region #{i}: {region_name}")
+                            buckets = region.get('buckets', [])
+                            if isinstance(buckets, dict):
+                                buckets = [buckets]
+                            if buckets:
+                                for j, bucket in enumerate(buckets, 1):
+                                    config_bucket_count += 1
+                                    total_buckets += 1
+                                    bucket_name = bucket.get('bucketName', 'N/A')
+                                    results.append(f"      📁 Bucket #{j}: {bucket_name}")
+                                    prefix_list = bucket.get('prefixList', [])
+                                    if isinstance(prefix_list, dict):
+                                        prefix_list = [prefix_list]
+                                    if prefix_list:
+                                        for k, prefix in enumerate(prefix_list, 1):
+                                            prefix_name = prefix.get('prefixName', 'N/A')
+                                            storage_devices = prefix.get('storageDevices', 'N/A')
+                                            results.append(f"         🔖 Prefix #{k}: {prefix_name}")
+                                            results.append(f"            Storage Devices: {storage_devices}")
+                                    else:
+                                        results.append(f"         🔖 No prefixes configured")
                             else:
-                                results.append(f"      🔖 No prefixes configured")
+                                results.append(f"      📁 No buckets configured in this region")
                     else:
-                        results.append(f"   📁 No buckets configured in this region")
+                        results.append("      📋 No regions configured for this account")
+                    
                     results.append("")
-                results.insert(1, f"📊 Total Buckets Configured: {bucket_count}")
+                
+                # Update the total bucket count
+                results[1] = f"📊 Total Buckets Configured: {total_buckets}"
             else:
                 results.append("📋 No AWS backup Solutions Configured")
 
@@ -586,12 +615,293 @@ def list_aws_s3_backup_configurations () -> str:
         return f"❌ Error listing AWS S3 Backup Solutions Configured: {str(e)}"
 
 
+def delete_aws_s3_backup_configurations() -> str:
+    """Delete all AWS S3 backup configurations from DSA
+    
+    Removes all AWS S3 backup solution configurations from DSA. This operation will fail
+    if any S3 configurations are currently in use by backup operations or target groups.
+    
+    Returns:
+        Formatted result of the deletion operation with status and any validation messages
+        
+    Warning:
+        This operation removes ALL AWS S3 backup configurations. Make sure no
+        backup operations or target groups are using these configurations.
+    """
+    try:
+        logger.info("Deleting all AWS S3 backup configurations via DSA API")
+        
+        # Make request to DSA API
+        response = dsa_client._make_request(
+            method="DELETE",
+            endpoint="dsa/components/backup-applications/aws-s3"
+        )
+        
+        logger.debug(f"DSA API response: {response}")
+        
+        results = []
+        results.append("🗂️ DSA AWS S3 Backup Configuration Deletion")
+        results.append("=" * 50)
+        
+        if response.get('status') == 'DELETE_COMPONENT_SUCCESSFUL':
+            results.append("✅ All AWS S3 backup configurations deleted successfully")
+            results.append(f"📊 Status: {response.get('status')}")
+            results.append(f"✔️ Valid: {response.get('valid', False)}")
+            
+        else:
+            results.append("❌ Failed to delete AWS S3 backup configurations")
+            results.append(f"📊 Status: {response.get('status', 'Unknown')}")
+            results.append(f"✔️ Valid: {response.get('valid', False)}")
+            
+            # Show validation errors if any
+            if response.get('validationlist'):
+                validation = response['validationlist']
+                results.append("")
+                results.append("🔍 Validation Details:")
+                
+                if validation.get('serverValidationList'):
+                    for error in validation['serverValidationList']:
+                        results.append(f"❌ Server Error: {error.get('message', 'Unknown error')}")
+                        results.append(f"   Code: {error.get('code', 'N/A')}")
+                        results.append(f"   Status: {error.get('valStatus', 'N/A')}")
+                
+                if validation.get('clientValidationList'):
+                    for error in validation['clientValidationList']:
+                        results.append(f"❌ Client Error: {error.get('message', 'Unknown error')}")
+                
+                # If deletion failed due to dependencies, provide guidance
+                if any('in use by' in error.get('message', '') for error in validation.get('serverValidationList', [])):
+                    results.append("")
+                    results.append("💡 Helpful Notes:")
+                    results.append("   • Remove all backup jobs using these AWS S3 configurations first")
+                    results.append("   • Delete any target groups that reference these S3 configurations")
+                    results.append("   • Use list_aws_s3_backup_configurations() to see current configurations")
+        
+        results.append("")
+        results.append("=" * 50)
+        results.append("✅ AWS S3 backup configuration deletion operation completed")
+        
+        return "\n".join(results)
+        
+    except Exception as e:
+        logger.error(f"Failed to delete AWS S3 backup configurations: {str(e)}")
+        return f"❌ Error deleting AWS S3 backup configurations: {str(e)}"
+
+
+
+def remove_AWS_S3_backup_configuration(aws_acct_name: str) -> str:
+    """Remove a specific AWS S3 configuration from DSA
+
+    Removes a specific AWS S3 configuration from the existing list by reconfiguring
+    the remaining S3 configurations. This operation will fail if the S3 configuration is
+    currently in use by backup operations or S3 target groups.
+    
+    Args:
+        aws_acct_name : Name of the AWS S3 account for which the configuration needs to be removed from DSA (e.g., "/var/opt/teradata/backup")
+        
+    Returns:
+        Formatted result of the removal operation with status and any validation messages
+        
+    Warning:
+        This operation will fail if the AWS S3 config is in use by any backup operations
+        or target groups. Remove those dependencies first.
+    """
+    try:
+        logger.info(f"Removing AWS S3 configuration: {aws_acct_name}")
+
+        # Prepare request data with aws_acct_name as that is the input for the 
+        request_data = aws_acct_name
+        
+        # First, get the existing S3 configurations
+        try:
+            existing_response = dsa_client._make_request(
+                method="GET",
+                endpoint="dsa/components/backup-applications/aws-s3"
+            )
+
+            existing_s3_configurations = []
+            if existing_response.get('status') == 'LIST_AWS_APP_SUCCESSFUL':
+                # Use the exact same logic as the list function
+                aws_list = existing_response.get('aws', [])
+                logger.debug(f"AWS list from API: {aws_list}")
+                logger.debug(f"AWS list type: {type(aws_list)}, length: {len(aws_list) if aws_list else 0}")
+                if aws_list and isinstance(aws_list, list):
+                    # For consistency with list function, treat each aws entry as a configuration
+                    existing_s3_configurations = aws_list
+                    logger.info(f"Successfully parsed {len(existing_s3_configurations)} S3 configurations")
+                else:
+                    logger.warning(f"No aws list found or wrong type. aws_list: {aws_list}")
+            else:
+                logger.warning("No existing S3 configurations found or unable to retrieve them")
+                logger.debug(f"API response status: {existing_response.get('status')}")
+                return f"❌ Could not retrieve existing S3 configurations to remove '{aws_acct_name}'"
+
+        except Exception as e:
+            logger.error(f"Could not retrieve existing S3 configurations: {e}")
+            return f"❌ Error retrieving existing S3 configurations: {str(e)}"
+
+        # Check if the S3 configuration to remove, actually exists or not
+        s3config_exists = False
+        s3_configurations_to_keep = []
+
+        for s3 in existing_s3_configurations:
+            # Extract account name from the nested structure
+            config_aws_rest = s3.get('configAwsRest', {})
+            current_acct_name = config_aws_rest.get('acctName', '')
+            
+            logger.debug(f"Checking S3 config - current_acct_name: '{current_acct_name}', target: '{aws_acct_name}'")
+            if current_acct_name == aws_acct_name:
+                s3config_exists = True
+                logger.info(f"Found S3 configuration to remove: {aws_acct_name}")
+            else:
+                # Keep this S3 configuration
+                s3_configurations_to_keep.append(s3)
+        
+        # If S3 config doesn't exist, return error
+        if not s3config_exists:
+            available_s3_configs = []
+            debug_info = []
+            for i, s3 in enumerate(existing_s3_configurations):
+                config_aws_rest = s3.get('configAwsRest', {})
+                acct_name = config_aws_rest.get('acctName', 'N/A')
+                
+                # Also collect bucket names as potential identifiers
+                bucket_names = []
+                buckets_by_region = config_aws_rest.get('bucketsByRegion', [])
+                if isinstance(buckets_by_region, dict):
+                    buckets_by_region = [buckets_by_region]
+                for region in buckets_by_region:
+                    buckets = region.get('buckets', [])
+                    if isinstance(buckets, dict):
+                        buckets = [buckets]
+                    for bucket in buckets:
+                        bucket_name = bucket.get('bucketName', '')
+                        if bucket_name:
+                            bucket_names.append(bucket_name)
+                
+                available_s3_configs.append(acct_name)
+                # Add debug info about the structure - show all possible account fields
+                debug_info.append(f"Config #{i+1}: Top level keys: {list(s3.keys())}")
+                debug_info.append(f"   configAwsRest keys: {list(config_aws_rest.keys())}")
+                debug_info.append(f"   Bucket names: {bucket_names}")
+                # Look for any field that might contain account info
+                for key, value in config_aws_rest.items():
+                    if 'acc' in key.lower() or 'name' in key.lower() or 'id' in key.lower():
+                        debug_info.append(f"   {key}: {value}")
+            results = []
+            results.append("🗂️ DSA S3 Configuration Removal")
+            results.append("=" * 50)
+            results.append(f"❌ S3 configuration '{aws_acct_name}' not found")
+            results.append("")
+            results.append("📋 Available S3 configurations:")
+            if available_s3_configs:
+                for path in available_s3_configs:
+                    results.append(f"   • {path}")
+            else:
+                results.append("   (No S3 configurations configured)")
+            results.append("")
+            results.append("🔍 Debug Info:")
+            for debug in debug_info:
+                results.append(f"   {debug}")
+            results.append("")
+            results.append("=" * 50)
+            return "\n".join(results)
+
+        logger.info(f"Removing '{aws_acct_name}', keeping {len(s3_configurations_to_keep)} S3 configurations")
+
+        # this code logic is not required. If the account is found, we can just delete it, do not complicate with reconfiguring the rest
+        # reconfiguring the rest is not going to work in the single call to the API
+        # Make request to DSA API to reconfigure with remaining S3 configurations
+        # If no configurations remain, we need to delete all instead of posting empty config
+        #if not s3_configurations_to_keep:
+        #    logger.info("No S3 configurations remaining, deleting all S3 configurations")
+        #    response = dsa_client._make_request(
+        #        method="DELETE",
+        #        endpoint="dsa/components/backup-applications/aws-s3"
+        #    )
+        #else:
+        #    logger.info(f"Reconfiguring with {len(s3_configurations_to_keep)} remaining S3 configurations")
+        #    response = dsa_client._make_request(
+        #       method="POST",
+        #        endpoint="dsa/components/backup-applications/aws-s3",
+        #        data=request_data
+        #    )
+
+ 
+            
+        # Build the request data and delete the specific configuration that is already found to be existing
+        # Use the correct endpoint with account name and trailing slash (matching successful Swagger call)
+        response = dsa_client._make_request(
+                method="DELETE",
+                endpoint=f"dsa/components/backup-applications/aws-s3/{aws_acct_name}/"
+        )
+
+        logger.debug(f"DSA API response: {response}")
+
+        results = []
+        results.append("🗂️ DSA S3 Configuration Removal")
+        results.append("=" * 50)
+        results.append(f"📁 Removed S3 Configuration: {aws_acct_name}")
+        results.append(f"📊 Remaining S3 Configurations: {len(s3_configurations_to_keep)}")
+        results.append("")
+
+        success_statuses = ['CONFIG_AWS_APP_SUCCESSFUL', 'LIST_AWS_APP_SUCCESSFUL', 'DELETE_COMPONENT_SUCCESSFUL']
+        if response.get('status') in success_statuses:
+            results.append("✅ AWS S3 configuration removed successfully")
+            results.append(f"📊 Status: {response.get('status')}")
+            results.append(f"✔️ Valid: {response.get('valid', False)}")
+
+            if s3_configurations_to_keep:
+                results.append("")
+                results.append("📋 Remaining S3 configurations:")
+                for s3 in s3_configurations_to_keep:
+                    config_aws_rest = s3.get('configAwsRest', {})
+                    acct_name = config_aws_rest.get('acctName', 'N/A')
+                    results.append(f"   • {acct_name}")
+            else:
+                results.append("")
+                results.append("📋 No S3 configurations remaining (all removed)")
+
+        else:
+            results.append("❌ Failed to remove AWS S3 configuration")
+            results.append(f"📊 Status: {response.get('status', 'Unknown')}")
+            results.append(f"✔️ Valid: {response.get('valid', False)}")
+
+            # Show validation errors if any
+            if response.get('validationlist'):
+                validation = response['validationlist']
+                results.append("")
+                results.append("🔍 Validation Details:")
+
+                if validation.get('serverValidationList'):
+                    for error in validation['serverValidationList']:
+                        results.append(f"❌ Server Error: {error.get('message', 'Unknown error')}")
+                        results.append(f"   Code: {error.get('code', 'N/A')}")
+                        results.append(f"   Status: {error.get('valStatus', 'N/A')}")
+
+                if validation.get('clientValidationList'):
+                    for error in validation['clientValidationList']:
+                        results.append(f"❌ Client Error: {error.get('message', 'Unknown error')}")
+
+        results.append("")
+        results.append("=" * 50)
+        results.append("✅ AWS S3 backup configuration removal operation completed")
+        
+        return "\n".join(results)
+        
+    except Exception as e:
+        logger.error(f"Failed to remove AWS S3 configuration: {str(e)}")
+        return f"❌ Error removing AWS S3 configuration '{aws_acct_name}': {str(e)}"
+    
+
 def manage_AWS_S3_backup_configurations(
     operation: str,
     accessId: Optional[str] = None,
     accessKey: Optional[str] = None,
     bucketsByRegion: Optional[object] = None,
     bucketName: Optional[str] = None,
+    prefixName: Optional[str] = "dsa-backup",
+    storageDevices: Optional[int] = 4,
     acctName: Optional[str] = None
 ) -> str:
     """Unified DSA AWS S3 Backup Configuration Management Tool
@@ -605,6 +915,8 @@ def manage_AWS_S3_backup_configurations(
         accessKey: AWS Access Key
         bucketsByRegion: Buckets by region configuration (object: dict or list)
         bucketName: AWS Bucket Name
+        prefixName: AWS S3 Prefix Name
+        storageDevices: Storage devices to use (default 4)
         acctName: AWS Account Name
     
     Available Operations:
@@ -624,6 +936,7 @@ def manage_AWS_S3_backup_configurations(
         if operation == "list":
             return list_aws_s3_backup_configurations()
         # Config operation
+       # Config operation
         elif operation == "config":
             if not accessId:
                 return "❌ Error: accessId is required for config operation"
@@ -631,37 +944,84 @@ def manage_AWS_S3_backup_configurations(
                 return "❌ Error: accessKey is required for config operation"
             if not bucketsByRegion:
                 return "❌ Error: bucketsByRegion is required for config operation"
-            if not acctName:
-                return "❌ Error: acctName is required for config operation"
             if not bucketName:
                 return "❌ Error: bucketName is required for config operation"
+            if not prefixName:
+                return "❌ Error: prefixName is required for config operation"
+            # Validate storageDevices as integer
+            if not storageDevices or not isinstance(storageDevices, int) or storageDevices <= 0:
+                return "❌ Error: storageDevices must be a positive integer for config operation"
+            if not acctName:
+                return "❌ Error: acctName is required for config operation"
+            
+            # Transform bucketsByRegion to match API expectations
+            formatted_buckets_by_region = []
+
+
+            # Debug information
+            debug_msg = f"Original bucketsByRegion: type={type(bucketsByRegion)}, value={bucketsByRegion}"
+            
+            if isinstance(bucketsByRegion, list):
+                # Handle if it's a simple list of regions like ["us-west-2"]
+                if bucketsByRegion and isinstance(bucketsByRegion[0], str):
+                    # Convert simple region string to proper structure
+                    region_name = bucketsByRegion[0]
+                    formatted_buckets_by_region = [{
+                        "region": region_name,
+                        "buckets": [{
+                            "bucketName": bucketName,
+                            "prefixList": [{
+                                "prefixName": prefixName,
+                                "storageDevices": storageDevices,
+                                "prefixId": 0
+                            }]
+                        }]
+                    }]
+                    debug_msg += f" | Converted to: {formatted_buckets_by_region}"
+                else:
+                    # Assume it's already properly formatted
+                    formatted_buckets_by_region = bucketsByRegion
+                    debug_msg += " | Used as-is (already formatted)"
+            elif isinstance(bucketsByRegion, dict):
+                # Handle if it's a single region object
+                formatted_buckets_by_region = [bucketsByRegion]
+                debug_msg += f" | Wrapped dict in list: {formatted_buckets_by_region}"
+            else:
+                return f"❌ Error: bucketsByRegion must be a list or dict, got {type(bucketsByRegion)} | {debug_msg}"
+
             # bucketsByRegion is now expected as an object (dict or list)
             request_data = {
                 "configAwsRest": {
                     "accessId": accessId,
                     "accessKey": accessKey,
-                    "bucketsByRegion": bucketsByRegion,
-                    "bucketName": bucketName,
+                    "bucketsByRegion": formatted_buckets_by_region,
                     "acctName": acctName,
                     "viewpoint": True,
                     "viewpointBucketRegion": True
                 }
             }
+
+            # Debug: return debug info for testing
+            debug_info = f"DEBUG INFO:\n{debug_msg}\nFormatted structure: {formatted_buckets_by_region}\nFull request data: {request_data}"
+
             try:
                 response = dsa_client._make_request(
                     method="POST",
                     endpoint="dsa/components/backup-applications/aws-s3",
                     data=request_data
                 )
-                return f"✅ AWS backup solution configuration operation completed\nResponse: {response}"
+                return f"✅ AWS backup solution configuration operation completed\nResponse: {response}\n\n{debug_info}"
             except Exception as e:
-                return f"❌ Error configuring AWS backup solution: {str(e)}"
+                return f"❌ Error configuring AWS backup solution: {str(e)}\n\n{debug_info}"
+
         # Delete all operation
         elif operation == "delete_all":
-            return "❌ Error: 'delete_all' operation is not implemented yet for AWS S3 Configuration"
+            return delete_aws_s3_backup_configurations()
         # Remove specific operation
         elif operation == "remove":
-            return "❌ Error: 'remove' operation is not implemented yet for AWS S3 Configuration"
+            if not acctName:
+                return "❌ Error: acctName is required for remove operation"
+            return remove_AWS_S3_backup_configuration(acctName)
         else:
             available_operations = [
                 "list", "config", "delete_all", "remove"
@@ -1413,6 +1773,8 @@ def handle_bar_manageAWSS3Operations(
     accessKey: str = None,
     bucketsByRegion: object = None,
     bucketName: str = None,
+    prefixName: str = None,
+    storageDevices: int = None,
     acctName: str = None,
     *args,
     **kwargs
@@ -1429,6 +1791,9 @@ def handle_bar_manageAWSS3Operations(
         accessId: AWS access ID (for config operation)
         accessKey: AWS access key (for config operation)
         bucketsByRegion: List of S3 buckets by region (for config operation)
+        bucketName: S3 bucket name (for config operation)
+        prefixName: S3 prefix name (for config operation)
+        storageDevices: Number of Storage devices (for config operation)
         acctName: AWS account name (for config operation)
 
     **Note: To UPDATE an existing AWS S3 configuration, simply use the 'config' operation 
@@ -1448,7 +1813,9 @@ def handle_bar_manageAWSS3Operations(
             accessId=accessId,
             accessKey=accessKey,
             bucketsByRegion=bucketsByRegion,
-            bucketName="tdedsabucket01",  # Hardcoded for now, will be dynamic later
+            bucketName=bucketName,
+            prefixName=prefixName,
+            storageDevices=storageDevices,
             acctName=acctName
         )
         metadata = {
@@ -1458,6 +1825,8 @@ def handle_bar_manageAWSS3Operations(
             "accessKey": accessKey,
             "bucketsByRegion": bucketsByRegion,
             "bucketName": bucketName,
+            "prefixName": prefixName,
+            "storageDevices": storageDevices,
             "acctName": acctName,
             "success": True
         }
