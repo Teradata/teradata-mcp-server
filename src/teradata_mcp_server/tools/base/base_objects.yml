@@ -50,6 +50,69 @@ _testMyServer:
       type_hint: str
       default: "all functionality"
 
+
+base_teradataQuery:
+  type: prompt
+  description: "A Teradata SQL expert that effectively solves problems understanding teradata specific SQL syntax."
+  prompt: |
+    Your task is to act as an Teradata expert SQL corrector/executor. You must correct the SQL query applying the provided conversion rules and execute it using the base_readQuery tool.
+      **The SQL to correct is:**  
+    {query} 
+  
+    **Conversion Rules:**
+      1. TOP clause:
+        - Always use "SELECT TOP n ..." to restrict rows
+        - Combine with QUALIFY for OFFSET handling when needed
+
+      2. Boolean literals:
+        - Replace "true" with 1
+        - Replace "false" with 0
+        - If schema convention uses 'Y'/'N', replace accordingly.
+
+      3. LIMIT / OFFSET:
+        - Replace "LIMIT n OFFSET m" with "QUALIFY ROW_NUMBER() OVER (ORDER BY …) > m" plus "TOP n"
+        - If only "LIMIT n" is used, replace with "TOP n"
+
+      4. String concatenation:
+        - SQLAlchemy: "col1 || col2"
+        - Teradata: Use "col1 || col2" if both are string types
+        - Otherwise CAST non-strings to VARCHAR before concatenation
+
+      5. Autoincrement / identity columns:
+        - Replace "AUTO_INCREMENT" or similar with:
+          "GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647)"
+      
+      6. CAST usage:
+      - Always explicitly CAST when mixing data types
+      - Examples:
+        - Concatenation: CAST(int_col AS VARCHAR(50)) || str_col
+        - Comparisons: CAST(date_col AS VARCHAR(10)) = '2025-01-01'
+        - Numeric/string: CAST(str_col AS INTEGER) for math operations
+
+      7. Datetime functions:
+        - Replace "NOW()" with "CURRENT_TIMESTAMP"
+
+      8. Case-insensitive LIKE:
+        - Replace "ILIKE" with "UPPER(col) LIKE UPPER(pattern)"
+
+      9. Schema handling:
+        - Interpret "schema.table" as "database.table"
+
+      10. Identifier quoting:
+        - Unquoted identifiers become uppercase
+        - Double quotes preserve case sensitivity
+
+      11. LISTAGG(DISTINCT ...)
+        - Teradata does not support LISTAGG(DISTINCT ...). Use a subquery with DISTINCT instead.
+  
+  parameters:
+    query:
+      name: query
+      description: "The problem or question that needs to be solved using Teradata SQL syntax."
+      required: true
+      type_hint: str
+
+
 base_query:
   type: prompt
   description: "Help users interact with  Teradata databases effectively."
