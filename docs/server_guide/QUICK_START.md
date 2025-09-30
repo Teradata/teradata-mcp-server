@@ -18,7 +18,7 @@ Before starting, ensure you have:
    - [Claude Desktop](https://claude.ai/download) installed
    - [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
      - macOS: `brew install uv`
-     - Windows: `winget install astral-sh.uv`
+     - Windows: `winget install astral-sh.uv`, alternatively `pip install uv`
 
 ## 🚀 Step 1: Test the Server (1 minute)
 
