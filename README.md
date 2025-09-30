@@ -62,7 +62,7 @@ You can use Claude Desktop to give the  Teradata MCP server a quick try, Claude 
 **Pre-requisites**
 1. Get your Teradata database credentials or create a free sandbox at [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics).
 2. Install [Claude Desktop](https://claude.ai/download).
-3. Install [uv](https://docs.astral.sh/uv/getting-started/installation/). If you are on MacOS, Use Homebrew: `brew install uv`.
+3. Install [uv](https://docs.astral.sh/uv/getting-started/installation/). If you are on MacOS, Use Homebrew: `brew install uv`, on Windows you may use `pip install uv` as an alternative to the installer.
 
 Configure the claude_desktop_config.json (Settings>Developer>Edit Config) by adding the configuration below, updating the database username, password and URL:
 
@@ -128,6 +128,8 @@ For usage:
 teradata-mcp-server --help
 ```
 
+**Troubleshooting**
+When using uv, If the tool's path isn't resolved add it to your shell using `uv tool update-shell` and restart the terminal.
 
 ## Build from Source (Development)
 

@@ -39,6 +39,8 @@ uv tool install "teradata-mcp-server"
 uv tool install "teradata-mcp-server[fs,evs]"
 ```
 
+If the tool's path isn't resolved add it to your shell using `uv tool update-shell` and restart the terminal.
+
 ### Option B: Using pipx 
 ```bash
 # Install pipx first (if not available)
