@@ -19,6 +19,7 @@ class ModuleLoader:
 
     # Map tool prefixes to their corresponding module paths
     MODULE_MAP = {
+        'bar': 'teradata_mcp_server.tools.bar',
         'base': 'teradata_mcp_server.tools.base',
         'dba': 'teradata_mcp_server.tools.dba',
         'evs': 'teradata_mcp_server.tools.evs',

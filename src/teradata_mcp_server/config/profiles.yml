@@ -40,3 +40,13 @@ eda:
     - "base_(?!(writeQuery|dynamicQuery)$).*"
     - qlty_.*
     - sec_userDbPermissions
+    
+bar:
+  tool:
+    - ^bar_*
+    - ^base_readQuery$
+    - ^base_databaseList$
+  prompt:
+    - ^bar_*
+  resource:
+    - ^bar_*
