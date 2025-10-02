@@ -243,6 +243,7 @@ def create_mcp_app(settings: Settings):
 
         _exec.__name__ = getattr(func, "__name__", "wrapped_tool")
         _exec.__signature__ = new_sig
+        _exec.__doc__ = func.__doc__
         if annotations:
             _exec.__annotations__ = annotations
         return _exec
