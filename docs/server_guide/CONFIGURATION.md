@@ -1,6 +1,6 @@
 # Server Configuration
 
-> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Quick Start](QUICK_START.md) | [Installation](INSTALLATION.md) | **Configuration**
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting started](GETTING_STARTED.md) | [Architecture](ARCHITECTURE.md) | [Installation](INSTALLATION.md) | [<u>**Configuration**</u>](CONFIGURATION.md) | [Security](SECURITY.md) | [Customization](CUSTOMIZING.md) | [Client Guide](../client_guide/CLIENT_GUIDE.md)
 
 > **🎯 Goal:** Configure your MCP server for optimal performance and security
 

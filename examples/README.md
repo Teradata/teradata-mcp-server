@@ -1,5 +1,7 @@
 # Examples
 
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-quick-start) | [Quick Start Claude](../docs/server_guide/QUICK_START.md) | [Quick Start VS Code](../docs/server_guide/QUICK_START_VSCODE.md) | [Quick Start Open WebUI](../docs/server_guide/QUICK_START_OPEN_WEBUI.md) | **Code Examples**
+
 This directory contains application examples and configurations for the Teradata MCP Server. These examples demonstrate different ways to customize, configure, and build upon the server.
 
 ## Server Customization

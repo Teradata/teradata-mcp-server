@@ -1,25 +1,9 @@
 # Getting Started with Teradata MCP Server
 
-> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | **Getting Started** | [Customizing](CUSTOMIZING.md) | [Security](SECURITY.md)
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [<u>**Getting started**</u>](GETTING_STARTED.md) | [Architecture](ARCHITECTURE.md) | [Installation](INSTALLATION.md) | [Configuration](CONFIGURATION.md) | [Security](SECURITY.md) | [Customization](CUSTOMIZING.md) | [Client Guide](../client_guide/CLIENT_GUIDE.md)
 
 Welcome to the Teradata MCP Server! This guide helps you choose the right starting point based on your needs.
 
-## 🎯 What Do You Want To Do?
-
-### 🚀 **Just Want to Try It? (5 minutes)**
-
-New to Teradata MCP Server? Choose your 5-minute quickstart to rapidly evaluate the server with your favorite tool:
-
-| **Client** | **Deployment** | **Communication** | **Best For** |
-|------------|----------------|------------------|--------------|
-| [Claude Desktop](./QUICK_START.md) | CLI (uv/pipx) | stdio | Exploratory Data Analytics, Platform Administration, general evaluation |
-| [VS Code + Copilot](./QUICK_START_VSCODE.md) | CLI (uv/pipx) | HTTP | Data Engineering, Agentic app development |
-| [Open WebUI](./QUICK_START_OPEN_WEBUI.md) | Docker | REST | Local AI, evaluate new LLMs |
-| [Code examples](../examples/README.md) | Python | HTTP | Build your own client. Example library using ADK, Bedrock, Langchain... |
-
-*All options get you running in 5 minutes with minimal configuration.*
-
----
 
 ### 🏗 **Setting Up your environment? (15 minutes)**  
 **→ [Installation Guide](INSTALLATION.md)**

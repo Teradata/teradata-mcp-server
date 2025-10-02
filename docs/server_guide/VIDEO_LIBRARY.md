@@ -1,4 +1,8 @@
+
 # Video Library
+
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md) | **Video Library** 
+
 
 The video library is a curation of videos that the community believes would be valuable for new members.
 

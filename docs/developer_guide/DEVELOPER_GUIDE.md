@@ -1,5 +1,7 @@
 # Development Conventions
 
+> **📍 Navigation:** [Documentation Home](../README.md) | **Developer Guide** 
+
 This document provides guidelines for developing new tools for the Teradata MCP server.
 <br>
 

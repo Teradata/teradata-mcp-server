@@ -1,6 +1,6 @@
 # 5-Minute Quick Start (Open WebUI)
 
-> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | **Quick Start Open WebUI** | [Quick Start Claude](QUICK_START.md) | [Quick Start VS Code](QUICK_START_VSCODE.md)
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-quick-start) | [Quick Start Claude](QUICK_START.md) | [Quick Start VS Code](QUICK_START_VSCODE.md) | <u>**Quick Start Open WebUI**</u> | [Code Examples](../../examples/README.md)
 
 > **🎯 Goal:** Get a working MCP server connected to Open WebUI in 5 minutes
 

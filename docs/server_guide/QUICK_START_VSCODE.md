@@ -1,6 +1,6 @@
 # 5-Minute Quick Start (Visual Studio Code with GitHub Copilot)
 
-> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | **Quick Start VS Code** | [Quick Start Claude](QUICK_START.md) | [Installation](INSTALLATION.md)
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-quick-start) | [Quick Start Claude](QUICK_START.md) | <u>**Quick Start VS Code**</u>  | [Quick Start Open WebUI](QUICK_START_OPEN_WEBUI.md) | [Code Examples](../../examples/README.md)
 
 > **🎯 Goal:** Get a working MCP server connected to VS Code and GitHub Copilot in 5 minutes
 
@@ -63,7 +63,7 @@ Add MCP Server via Command Palette:
 
 You should see a configuration as follows in your mcp.json file:
 
-![alt text](media/vscode-mcp-json.png)
+![alt text](../media/vscode-mcp-json.png)
 
 ## ✨ Step 4: Test It (30 seconds)
 
