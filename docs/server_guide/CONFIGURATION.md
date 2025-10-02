@@ -298,6 +298,22 @@ export LOGGING_LEVEL="DEBUG"
 # Check for connection leaks in logs
 ```
 
+**Installing behind a proxy**
+
+For UV installations
+```bash
+export INTERNAL_PROXY=
+export UV_INDEX_INTERNAL_PROXY_USERNAME=
+export UV_INDEX_INTERNAL_PROXY_PASSWORD=
+export UV_INDEX=
+```
+
+for pip installations
+```bash
+pip install <package_name> --proxy ://[user:password@]proxy.server:port
+```
+
+
 ### Testing Your Configuration
 
 ```bash
