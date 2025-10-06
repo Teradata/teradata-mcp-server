@@ -14,6 +14,7 @@ New to Teradata MCP Server? Choose your 5-minute quickstart to rapidly evaluate 
 | [VS Code + Copilot](server_guide/QUICK_START_VSCODE.md) | CLI (uv/pipx) | HTTP | Data Engineering, Agentic app development |
 | [Open WebUI](server_guide/QUICK_START_OPEN_WEBUI.md) | Docker | REST | Local AI, evaluate new LLMs |
 | [Code examples](../examples/README.md) | Python | HTTP | Build your own client. Example library using ADK, Bedrock, Langchain... |
+| [Flowise](../docs/client_guide/Flowise_with_teradata_mcp_Guide.md) | Docker | HTTP | Build AI Agents Visually |
 
 **Other Options:**
 - **[Getting Started Guide](server_guide/GETTING_STARTED.md)** - Detailed path selection and role-based recommendations
@@ -43,6 +44,7 @@ Connect different AI clients to your Teradata MCP Server:
 - **[Open WebUI](client_guide/Open_WebUI.md)** - Web-based interface
 - **[REST API](client_guide/Rest_API.md)** - HTTP/API integration
 - **[MCP Inspector](client_guide/MCP_Inspector.md)** - Debugging and testing tool
+- **[Flowise](client_guide/Flowise_with_teradata_mcp_Guide.md)** - Build AI Agents Visually
 
 ### 🔧 Developer Guide
 Extend and contribute to the Teradata MCP Server:
