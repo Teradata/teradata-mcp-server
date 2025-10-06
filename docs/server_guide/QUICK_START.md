@@ -1,6 +1,6 @@
 # 5-Minute Quick Start with Claude
 
-> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-quick-start) | <u>**Quick Start Claude**</u> | [Quick Start VS Code](QUICK_START_VSCODE.md) | [Quick Start Open WebUI](QUICK_START_OPEN_WEBUI.md) | [Code Examples](../../examples/README.md)
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting started](GETTING_STARTED.md) | [Architecture](ARCHITECTURE.md) | [Installation](INSTALLATION.md) | [Configuration](CONFIGURATION.md) | [Security](SECURITY.md) | [Customization](CUSTOMIZING.md) | [Client Guide](../client_guide/CLIENT_GUIDE.md)
 
 > **🎯 Goal:** Get a working MCP server connected to Claude Desktop in 5 minutes
 
