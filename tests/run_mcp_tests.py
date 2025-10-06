@@ -41,6 +41,7 @@ class MCPTestRunner:
             if os.path.exists(os.path.join(current, 'profiles.yml')):
                 return current
             current = os.path.dirname(current)
+
         return os.getcwd()
 
     async def load_test_cases(self):
@@ -206,7 +207,7 @@ class MCPTestRunner:
                     check=False, shell=True,
                     capture_output=True,
                     text=True,
-                    timeout=300,  # 5 minute timeout
+                    timeout=3000,  # 50 minute timeout
                     env={**os.environ}  # Pass current environment including DATABASE_URI
                 )
 

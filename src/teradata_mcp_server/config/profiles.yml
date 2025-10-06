@@ -31,6 +31,7 @@ dataScientist:
     - ^qlty_*
     - ^sec_userDbPermissions
     - ^dba_userSqlList
+    - .*plot
   prompt:
     - ^rag_*
     - ^sql_*

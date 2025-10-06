@@ -1,6 +1,6 @@
 import logging
 import json
-
+from teradata_mcp_server.tools.utils import create_response
 
 # Define the logger.
 logger = logging.getLogger("teradata_mcp_server")
@@ -63,7 +63,12 @@ def get_plot_json_data(conn, table_name, labels, columns, chart_type='line'):
                   "datasets": datasets_}
     logger.debug("Chart data: %s", json.dumps(chart_data, indent=2))
 
-    return chart_data
+    return create_response(data=chart_data, metadata={
+            "tool_description": "chart js {} plot data".format(chart_type),
+            "table_name": table_name,
+            "labels": labels,
+            "columns": columns
+        })
 
 
 def get_radar_plot_json_data(conn, table_name, labels, columns):
@@ -137,4 +142,9 @@ def get_radar_plot_json_data(conn, table_name, labels, columns):
                   "datasets": datasets_}
     logger.debug("Chart data: %s", json.dumps(chart_data, indent=2))
 
-    return chart_data
+    return create_response(data=chart_data, metadata={
+            "tool_description": "chart js radar plot data",
+            "table_name": table_name,
+            "labels": labels,
+            "columns": columns
+        })

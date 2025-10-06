@@ -1,0 +1,1095 @@
+{
+    "scripts": {
+        "pre_test": {
+            "command": "python tests/scripts/analytic_functions_setup.py --action setup",
+            "description": "Setup Analytic functions test environment"
+        },
+        "post_test": {
+            "command": "python tests/scripts/analytic_functions_setup.py --action cleanup",
+            "description": "Teardown Analytic functions test environment"
+        }
+    },
+    "test_cases": {
+        "ANOVA": [
+            {
+                "name": "anova_test_case_1",
+                "parameters": {
+                    "data": "insect_sprays",
+                    "group_columns": ["groupC", "groupD"],
+                    "alpha": 0.06
+                }
+            }
+        ],
+        "Antiselect": [
+            {
+                "name": "antiselect_test_case_1",
+                "parameters": {
+                    "data": "sales",
+                    "exclude": ["Jan", "Feb"]
+                }
+            }
+        ],
+        "Apriori": [
+            {
+                "name": "apriori_test_case_1",
+                "parameters": {
+                    "data": "trans_dense",
+                    "target_column": "item",
+                    "partition_columns": ["location"],
+                    "max_len": 2,
+                    "patterns_or_rules": "rules",
+                    "support": 0.01
+                }
+            }
+        ],
+        "BincodeFit": [
+            {
+                "name": "bincodefit_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "target_columns": "age",
+                    "nbins": 2,
+                    "label_prefix": "Age Group",
+                    "method_type": "EQUAL-WIDTH"
+                }
+            }
+        ],
+        "BincodeTransform": [
+            {
+                "name": "bincodetransform_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "object": "bin_fit_op",
+                    "accumulate": "passenger"
+                }
+            }
+        ],
+        "CFilter": [
+            {
+                "name": "cfilter_test_case_1",
+                "parameters": {
+                    "data": "grocery_transaction",
+                    "target_column": "item",
+                    "transaction_id_columns": "tranid",
+                    "max_distinct_items": 100
+                }
+            }
+        ],
+        "CategoricalSummary": [
+            {
+                "name": "categoricalsummary_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "target_columns": "sex"
+                }
+            }
+        ],
+        "ChiSq": [
+            {
+                "name": "chisq_test_case_1",
+                "parameters": {
+                    "data": "chi_sq",
+                    "alpha": 0.5
+                }
+            }
+        ],
+        "ClassificationEvaluator": [
+            {
+                "name": "classificationevaluator_test_case_1",
+                "parameters": {
+                    "data": "CVTable",
+                    "observation_column": "survived",
+                    "prediction_column": "pcol",
+                    "labels": ["0","1"]
+                }
+            }
+        ],
+        "ColumnSummary": [
+            {
+                "name": "columnsummary_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "target_columns": ["age","pClass"]
+                }
+            }
+        ],
+        "ColumnTransformer": [
+            {
+                "name": "columntransformer_test_case_1",
+                "parameters": {
+                    "fillrowid_column_name": "output_value",
+                    "input_data": "titanic",
+                    "bincode_fit_data": "bin_fit_op",
+                    "onehotencoding_fit_data": "one_hot_op"
+                }
+            }
+        ],
+        "ConvertTo": [
+            {
+                "name": "convertto_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "target_columns": ["fare"],
+                    "target_datatype": "integer",
+                    "accumulate": ["passenger", "name", "ticket"],
+                    "output_table_name": "convert_to_output_tbl"
+                }
+            }
+        ],
+        "DecisionForest": [
+            {
+                "name": "decisionforest_test_case_1",
+                "parameters": {
+                            "data": "boston",
+                            "formula": "medv ~ crim+zn+indus+chas+nox+rm+age+dis+rad+tax+ptratio+black+lstat",
+                            "max_depth": 12,
+                            "num_trees": 4,
+                            "min_node_size": 1,
+                            "mtry": 3,
+                            "mtry_seed": 1,
+                            "seed": 1,
+                            "tree_type": "REGRESSION"
+                }
+            }
+        ],
+        "FTest": [
+            {
+                "name": "ftest_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "second_sample_column": "parch",
+                    "second_sample_variance": 8,
+                    "df2": 2
+                }
+            }
+        ],
+        "FillRowId": [
+            {
+                "name": "fillrowid_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "row_id_column": "PassengerId"
+                }
+            }
+        ],
+        "Fit": [
+            {
+                "name": "fit_test_case_1",
+                "parameters": {
+                    "data": "iris_input",
+                    "object": "transformation_table"
+                }
+            }
+        ],
+        "TDGLMPredict": [
+            {
+                "name": "glmpredict_test_case_1",
+                "parameters": {
+                    "id_column": "id",
+                    "newdata": "boston_transformed_data",
+                    "object": "glm_op",
+                    "accumulate": "medv"
+                }
+            }
+        ],
+        "GetFutileColumns": [
+            {
+                "name": "getfutilecolumns_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "object": "cat_summary_op",
+                    "category_summary_column": "ColumnName",
+                    "threshold_value": 0.7
+                }
+            }
+        ],
+        "GetRowsWithMissingValues": [
+            {
+                "name": "getrowswithmissingvalues_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "target_columns": ["name", "sex", "age", "passenger"],
+                    "accumulate": ["survived","pclass"]
+                }
+            }
+        ],
+        "GetRowsWithoutMissingValues": [
+            {
+                "name": "getrowswithoutmissingvalues_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "target_columns": ["name", "sex", "age", "passenger"],
+                    "accumulate": ["survived","pclass"]
+                }
+            }
+        ],
+        "Histogram": [
+            {
+                "name": "histogram_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "target_columns": "age",
+                    "method_type": "STURGES"
+                }
+            }
+        ],
+        "KMeans": [
+            {
+                "name": "kmeans_test_case_1",
+                "parameters": {
+                    "id_column":"id",
+                    "data": "computers_train1",
+                    "target_columns": ["price", "speed"],
+                    "num_clusters": 3
+                }
+            }
+        ],
+        "KMeansPredict": [
+            {
+                "name": "kmeanspredict_test_case_1",
+                "parameters": {
+                    "data": "computers_train1",
+                    "object": "kmeans_op"
+                }
+            }
+        ],
+        "KNN": [
+            {
+                "name": "knn_test_case_1",
+                "parameters": {
+                    "train_data": "knn_OHE_op",
+                    "test_data": "computers_test1",
+                    "k": 50,
+                    "response_column": "computer_category_special",
+                    "id_column": "id",
+                    "output_prob": false,
+                    "input_columns": [
+                        "price",
+                        "speed",
+                        "hd",
+                        "ram",
+                        "screen"
+                    ],
+                    "voting_weight": 1.0,
+                    "emit_distances": false
+                }
+            }
+        ],
+        "MovingAverage": [
+            {
+                "name": "movingaverage_test_case_1",
+                "parameters": {
+                    "data": "ibm_stock",
+                    "include_first": false,
+                    "alpha": 0.1,
+                    "start_rows": 2,
+                    "window_size": 10,
+                    "mavgtype": "C"
+                }
+            }
+        ],
+        "NERExtractor": [
+            {
+                "name": "nerextractor_test_case_1",
+                "parameters": {
+                    "data": "ner_input_eng",
+                    "user_defined_data": "ner_dict",
+                    "rules_data": "ner_rule",
+                    "text_column": ["txt"],
+                    "input_language": "en",
+                    "show_context": 3,
+                    "accumulate": ["id"]
+                }
+            }
+        ],
+        "NGramSplitter": [
+            {
+                "name": "ngramsplitter_test_case_1",
+                "parameters": {
+                    "data": "paragraphs_input",
+                    "text_column": "paratext",
+                    "n_gram_column": "ngram",
+                    "num_grams_column": "n",
+                    "frequency_column": "frequency",
+                    "total_count_column": "totalcnt",
+                    "grams": "4-6",
+                    "overlapping": true,
+                    "to_lower_case": true,
+                    "delimiter": " ",
+                    "punctuation": "`~#^&*()-",
+                    "reset": ".,?!",
+                    "total_gram_count": false
+                }
+            }
+        ],
+        "NaiveBayesTextClassifierPredict": [
+            {
+                "name": "naivebayestextclassifierpredict_test_case_1",
+                "parameters": {
+                    "newdata": "complaints_tokens_test",
+                    "object": "nbt_op",
+                    "input_token_column": "token",
+                    "doc_id_columns": "doc_id",
+                    "model_type": "Bernoulli",
+                    "model_token_column": "token",
+                    "model_category_column": "category",
+                    "model_prob_column": "prob"
+                }
+            }
+        ],
+        "NaiveBayesTextClassifierTrainer": [
+            {
+                "name": "naivebayestextclassifiertrainer_test_case_1",
+                "parameters": {
+                    "data": "token_table",
+                    "token_column": "token",
+                    "doc_id_column": "doc_id",
+                    "doc_category_column": "category",
+                    "model_type": "Bernoulli"
+                }
+            }
+        ],
+        "NonLinearCombineFit": [
+            {
+                "name": "nonlinearcombinefit_test_case_1",
+                "parameters": {
+                        "data": "titanic",
+                        "target_columns": [
+                            "sibsp",
+                            "parch",
+                            "fare"
+                        ],
+                        "formula": "Y=(X0+X1+1)*X2",
+                        "result_column": "total_cost"
+                }
+            }
+        ],
+        "NonLinearCombineTransform": [
+            {
+                "name": "nonlinearcombinetransform_test_case_1",
+                "parameters": {
+                        "data": "titanic",
+                        "object": "non_linear_fit_op",
+                        "accumulate": "passenger"
+                }
+            }
+        ],
+        "NumApply": [
+            {
+                "name": "numapply_test_case_1",
+                "parameters": {
+                    "data": "numerics",
+                    "target_columns": "integer_col",
+                    "apply_method": "log",
+                    "in_place": true
+                }
+            }
+        ],
+        "OneClassSVM": [
+            {
+                "name": "oneclasssvm_test_case_1",
+                "parameters": {
+                    "data": "diabetes",
+                    "input_columns": ["age", "sex", "bmi", "map1", "tc", "ldl", "hdl", "tch", "ltg", "glu", "y"],
+                    "local_sgd_iterations": 537,
+                    "batch_size": 1,
+                    "learning_rate": "CONSTANT",
+                    "initial_eta": 0.01,
+                    "lambda1": 0.1,
+                    "alpha": 0.0,
+                    "momentum": 0.0,
+                    "iter_max": 1
+                }
+            }
+        ],
+        "OneClassSVMPredict": [
+            {
+                "name": "oneclasssvmpredict_test_case_1",
+                "parameters": {
+                    "newdata": "scale_transform_op",
+                    "object": "one_class_svm_op",
+                    "id_column": "id"
+                }
+            }
+        ],
+        "OneHotEncodingFit": [
+            {
+                "name": "onehotencodingfit_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "is_input_dense": true,
+                    "target_column": "sex",
+                    "categorical_values": ["male", "female"],
+                    "other_column": "other"
+                }
+            }
+        ],
+        "OneHotEncodingTransform": [
+            {
+                "name": "onehotencodingtransform_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "object": "one_hot_fit_op",
+                    "is_input_dense": true
+                }
+            }
+        ],
+        "OrdinalEncodingFit": [
+            {
+                "name": "ordinalencodingfit_test_case_1",
+                "parameters": {
+                    "target_column": "sex",
+                    "data": "titanic"
+                }
+            }
+        ],
+        "OrdinalEncodingTransform": [
+            {
+                "name": "ordinalencodingtransform_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "object": "ordinal_fit_op",
+                    "accumulate": "age"
+                }
+            }
+        ],
+        "OutlierFilterFit": [
+            {
+                "name": "outlierfilterfit_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "target_columns": "fare",
+                    "lower_percentile": 0.1,
+                    "upper_percentile": 0.9,
+                    "outlier_method": "PERCENTILE",
+                    "replacement_value": "MEDIAN",
+                    "percentile_method": "PERCENTILECONT"
+                }
+            }
+        ],
+        "OutlierFilterTransform": [
+            {
+                "name": "outlierfiltertransform_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "object": "outlier_fit_op"
+                }
+            }
+        ],
+        "Pack": [
+            {
+                "name": "pack_test_case_1",
+                "parameters": {
+                    "data": "ville_temperature",
+                    "input_columns": ["city", "state", "period", "temp_f"],
+                    "output_column": "packed_data",
+                    "delimiter": ",",
+                    "accumulate": "city",
+                    "include_column_name": true
+                }
+            }
+        ],
+        "PolynomialFeaturesFit": [
+            {
+                "name": "polynomialfeaturesfit_test_case_1",
+                "parameters": {
+                    "data": "numerics",
+                    "target_columns": [
+                        "integer_col",
+                        "smallint_col"
+                    ],
+                    "degree": 2
+                }
+            }
+        ],
+        "PolynomialFeaturesTransform": [
+            {
+                "name": "polynomialfeaturestransform_test_case_1",
+                "parameters": {
+                    "data": "numerics",
+                    "object": "poly_fit_op"
+                }
+            }
+        ],
+        "QQNorm": [
+            {
+                "name": "qqnorm_test_case_1",
+                "parameters": {
+                        "data": "rank_table",
+                        "target_columns": [
+                            "age",
+                            "fare"
+                        ],
+                        "rank_columns": [
+                            "rank_age",
+                            "rank_fare"
+                        ]
+                }
+            }
+        ],
+        "ROC": [
+            {
+                "name": "roc_test_case_1",
+                "parameters": {
+                        "probability_column": "probability",
+                        "observation_column": "observation",
+                        "model_id_column": "model_id",
+                        "positive_class": "1",
+                        "data": "roc_input"
+                }
+            }
+        ],
+        "RandomProjectionFit": [
+            {
+                "name": "randomprojectionfit_test_case_1",
+                "parameters": {
+                    "data": "stock_movement",
+                    "target_columns": "1:",
+                    "epsilon": 0.9,
+                    "num_components": 343
+                }
+            }
+        ],
+        "RandomProjectionMinComponents": [
+            {
+                "name": "randomprojectionmincomponents_test_case_1",
+                "parameters": {
+                    "data": "stock_movement",
+                    "target_columns": "1:"
+                }
+            }
+        ],
+        "RandomProjectionTransform": [
+            {
+                "name": "randomprojectiontransform_test_case_1",
+                "parameters": {
+                    "data": "stock_movement",
+                    "object": "random_proj_fit_op"
+                }
+            }
+        ],
+        "RegressionEvaluator": [
+            {
+                "name": "regressionevaluator_test_case_1",
+                "parameters": {
+                        "data": "titanic",
+                        "observation_column": "fare",
+                        "prediction_column": "passenger",
+                        "freedom_degrees": [
+                            1,
+                            2
+                        ],
+                        "independent_features_num": 2,
+                        "metrics": [
+                            "RMSE",
+                            "R2",
+                            "FSTAT"
+                        ]
+                }
+            }
+        ],
+        "RoundColumns": [
+            {
+                "name": "roundcolumns_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "target_columns": "fare",
+                    "precision_digit": 2,
+                    "accumulate": [
+                        "pclass",
+                        "sex"
+                    ]
+                }
+            }
+        ],
+        "RowNormalizeFit": [
+            {
+                "name": "rownormalizefit_test_case_1",
+                "parameters": {
+                    "data": "numerics",
+                    "target_columns": [
+                        "integer_col",
+                        "smallint_col"
+                    ],
+                    "approach": "INDEX",
+                    "base_column": "integer_col",
+                    "base_value": 100.0
+                }
+            }
+        ],
+        "RowNormalizeTransform": [
+            {
+                "name": "rownormalizetransform_test_case_1",
+                "parameters": {
+                    "data": "numerics",
+                    "object": "row_normalize_fit_op",
+                    "accumulate": "id_col"
+                }
+            }
+        ],
+        "SMOTE": [
+            {
+                "name": "smote_test_case_1",
+                "parameters": {
+                        "data": "iris_test",
+                        "n_neighbors": 5,
+                        "id_column": "id",
+                        "minority_class": "3",
+                        "response_column": "species",
+                        "input_columns": [
+                            "sepal_length",
+                            "sepal_width",
+                            "petal_length",
+                            "petal_width"
+                        ],
+                        "oversampling_factor": 2,
+                        "sampling_strategy": "smote",
+                        "seed": 10
+                }
+            }
+        ],
+        "SVM": [
+            {
+                "name": "svm_test_case_1",
+                "parameters": {
+                        "data": "scale_transform_op2",
+                        "formula": "MedHouseVal ~ MedInc+HouseAge+AveRooms+AveBedrms+Population+AveOccup+Latitude+Longitude",
+                        "model_type": "Regression"
+                }
+            }
+        ],
+        "SVMPredict": [
+            {
+                "name": "svmpredict_test_case_1",
+                "parameters": {
+                        "newdata": "scale_transform_op2",
+                        "object": "svm_op",
+                        "id_column": "id",
+                        "accumulate": "MedHouseVal",
+                        "model_type": "Regression"
+                }
+            }
+        ],
+        "ScaleFit": [
+            {
+                "name": "scalefit_test_case_1",
+                "parameters": {
+                        "data": "scale_housing",
+                        "target_columns": "lotsize",
+                        "scale_method": "MEAN",
+                        "miss_value": "KEEP",
+                        "global_scale": false,
+                        "multiplier": "1",
+                        "intercept": "0"
+                }
+            }
+        ],
+        "ScaleTransform": [
+            {
+                "name": "scaletransform_test_case_1",
+                "parameters": {
+                        "data": "scale_housing",
+                        "object": "scale_fit_op",
+                        "accumulate": "price"
+                }
+            }
+        ],
+        "SentimentExtractor": [
+            {
+                "name": "sentimentextractor_test_case_1",
+                "parameters": {
+                    "text_column": "review",
+                    "data": "sentiment_extract_input"
+                }
+            }
+        ],
+        "Shap": [
+            {
+                "name": "shap_test_case_1",
+                "parameters": {
+                        "data": "iris_input",
+                        "object": "xgboost_op",
+                        "id_column": "id",
+                        "training_function": "TD_XGBOOST",
+                        "model_type": "Classification",
+                        "input_columns": [
+                            "sepal_length",
+                            "sepal_width",
+                            "petal_length",
+                            "petal_width"
+                        ],
+                        "detailed": true
+                }
+            }
+        ],
+        "Silhouette": [
+            {
+                "name": "silhouette_test_case_1",
+                "parameters": {
+                        "accumulate": [
+                            "feature"
+                        ],
+                        "id_column": "row_id",
+                        "cluster_id_column": "userid",
+                        "target_columns": "\"value\"",
+                        "output_type": "SAMPLE_SCORES",
+                        "data": "mobile_data"
+                }
+            }
+        ],
+        "SimpleImputeFit": [
+            {
+                "name": "simpleimputefit_test_case_1",
+                "parameters": {
+                        "data": "titanic",
+                        "stats_columns": "age",
+                        "literals_columns": "cabin",
+                        "stats": "median",
+                        "literals": "General"
+                }
+            }
+        ],
+        "SimpleImputeTransform": [
+            {
+                "name": "simpleimputetransform_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "object": "simple_impute_fit_op"
+                }
+            }
+        ],
+        "StrApply": [
+            {
+                "name": "strapply_test_case_1",
+                "parameters": {
+                        "data": "titanic",
+                        "target_columns": "name",
+                        "string_operation": "TOUPPER",
+                        "in_place": false
+                }
+            }
+        ],
+        "StringSimilarity": [
+            {
+                "name": "stringsimilarity_test_case_1",
+                "parameters": {
+                        "data": "strsimilarity_input",
+                        "comparison_columns": [
+                            "jaro (src_text1, tar_text) AS jaro1_sim",
+                            "LD (src_text1, tar_text) AS ld1_sim",
+                            "n_gram (src_text1, tar_text, 2) AS ngram1_sim",
+                            "jaro_winkler (src_text1, tar_text, 0.1) AS jw1_sim"
+                        ],
+                        "case_sensitive": true,
+                        "accumulate": [
+                            "id",
+                            "src_text1",
+                            "tar_text"
+                        ]
+                }
+            }
+        ],
+        "TDDecisionForestPredict": [
+            {
+                "name": "tddecisionforestpredict_test_case_1",
+                "parameters": {
+                        "newdata": "boston",
+                        "object": "decision_forest_op",
+                        "id_column": "id"
+                }
+            }
+        ],
+        "TDNaiveBayesPredict": [
+            {
+                "name": "tdnaivebayespredict_test_case_1",
+                "parameters": {
+                        "data": "housing_test",
+                        "object": "naive_bayes_op",
+                        "id_column": "sn",
+                        "numeric_inputs": [
+                            "price",
+                            "lotsize",
+                            "bedrooms",
+                            "bathrms",
+                            "stories",
+                            "garagepl"
+                        ],
+                        "categorical_inputs": [
+                            "driveway",
+                            "recroom",
+                            "fullbase",
+                            "gashw",
+                            "airco",
+                            "prefarea"
+                        ],
+                        "responses": [
+                            "Classic",
+                            "Eclectic",
+                            "bungalow"
+                        ],
+                        "accumulate": "homestyle",
+                        "output_prob": true
+                }
+            }
+        ],
+        "TFIDF": [
+            {
+                "name": "tfidf_test_case_1",
+                "parameters": {
+                        "data": "token_table",
+                        "doc_id_column": "doc_id",
+                        "token_column": "token",
+                        "tf_normalization": "LOG",
+                        "idf_normalization": "SMOOTH",
+                        "regularization": "L2",
+                        "accumulate": [
+                            "category"
+                        ]
+                }
+            }
+        ],
+        "TargetEncodingFit": [
+            {
+                "name": "targetencodingfit_test_case_1",
+                "parameters": {
+                        "data": "titanic",
+                        "category_data": "category_data_op",
+                        "encoder_method": "CBM_BETA",
+                        "target_columns": [
+                            "sex",
+                            "embarked"
+                        ],
+                        "response_column": "survived",
+                        "default_values": [
+                            -1,
+                            -2
+                        ]
+                }
+            }
+        ],
+        "TargetEncodingTransform": [
+            {
+                "name": "targetencodingtransform_test_case_1",
+                "parameters": {
+                    "data":"titanic",
+                    "object": "target_encoding_fit_op",
+                    "accumulate": "passenger"
+                }
+            }
+        ],
+        "TextMorph": [
+            {
+                "name": "textmorph_test_case_1",
+                "parameters": {
+                        "data": "words_input",
+                        "word_column": "word",
+                        "pos": [
+                            "noun",
+                            "verb"
+                        ],
+                        "single_output": true,
+                        "accumulate": [
+                            "id"
+                        ]
+                }
+            }
+        ],
+        "TextParser": [
+            {
+                "name": "textparser_test_case_1",
+                "parameters": {
+                        "data": "complaints",
+                        "text_column": "text_data",
+                        "object": "stop_words",
+                        "remove_stopwords": true,
+                        "accumulate": "doc_id"
+                }
+            }
+        ],
+        "TrainTestSplit": [
+            {
+                "name": "traintestsplit_test_case_1",
+                "parameters": {
+                        "data": "titanic",
+                        "id_column": "passenger",
+                        "train_size": 0.8,
+                        "test_size": 0.2,
+                        "seed": 42
+                }
+            }
+        ],
+        "Transform": [
+            {
+                "name": "transform_test_case_1",
+                "parameters": {
+                        "data": "iris_input",
+                        "object": "fit_op",
+                        "id_columns": [
+                            "species",
+                            "id"
+                        ]
+                }
+            }
+        ],
+        "UnivariateStatistics": [
+            {
+                "name": "univariatestatistics_test_case_1",
+                "parameters": {
+                        "newdata": "titanic",
+                        "target_columns": "fare",
+                        "partition_columns": [
+                            "sex",
+                            "age"
+                        ],
+                        "stats": "ALL",
+                        "centiles": [
+                            1,
+                            5,
+                            10,
+                            25,
+                            50,
+                            75,
+                            90,
+                            95,
+                            99
+                        ],
+                        "trim_percentile": 20
+                }
+            }
+        ],
+        "Unpack": [
+            {
+                "name": "unpack_test_case_1",
+                "parameters": {
+                        "data": "ville_tempdata",
+                        "input_column": "packed_temp_data",
+                        "output_columns": [
+                            "city",
+                            "state",
+                            "temp_f"
+                        ],
+                        "output_datatypes": [
+                            "varchar",
+                            "varchar",
+                            "real"
+                        ],
+                        "delimiter": ",",
+                        "regex": "(.*)",
+                        "regex_set": 1,
+                        "exception": true
+                }
+            }
+        ],
+        "Unpivoting": [
+            {
+                "name": "unpivoting_test_case_1",
+                "parameters": {
+                        "data": "unpivot_input",
+                        "id_column": "sn",
+                        "target_columns": "city",
+                        "accumulate": "week",
+                        "include_nulls": true
+                }
+            }
+        ],
+        "VectorDistance": [
+            {
+                "name": "vectordistance_test_case_1",
+                "parameters": {
+                    "target_id_column": "userid",
+                    "target_feature_columns": [
+                        "CallDuration",
+                        "DataCounter",
+                        "SMS"
+                    ],
+                    "ref_id_column": "userid",
+                    "ref_feature_columns": [
+                        "CallDuration",
+                        "DataCounter",
+                        "SMS"
+                    ],
+                    "distance_measure": [
+                        "Cosine",
+                        "Euclidean",
+                        "Manhattan"
+                    ],
+                    "topk": 2,
+                    "target_data": "target_mobile_data_dense",
+                    "reference_data": "ref_mobile_data_dense"
+                }
+            }
+        ],
+        "WhichMax": [
+            {
+                "name": "whichmax_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "target_column": "age"
+                }
+            }
+        ],
+        "WhichMin": [
+            {
+                "name": "whichmin_test_case_1",
+                "parameters": {
+                    "data": "titanic",
+                    "target_column": "age"
+                }
+            }
+        ],
+        "WordEmbeddings": [
+            {
+                "name": "wordembeddings_test_case_1",
+                "parameters": {
+                        "data": "word_embed_input_table1",
+                        "model": "word_embed_model",
+                        "id_column": "doc_id",
+                        "model_text_column": "token",
+                        "model_vector_columns": [
+                            "v1",
+                            "v2",
+                            "v3",
+                            "v4"
+                        ],
+                        "primary_column": "doc1",
+                        "operation": "token-embedding"
+                }
+            }
+        ],
+        "XGBoost": [
+            {
+                "name": "xgboost_test_case_1",
+                "parameters": {
+                        "data": "titanic",
+                        "formula": "fare ~ age + survived + pclass",
+                        "max_depth": 3,
+                        "lambda1": 1000.0,
+                        "model_type": "Regression",
+                        "seed": -1,
+                        "shrinkage_factor": 0.1,
+                        "iter_num": 2
+                }
+            }
+        ],
+        "XGBoostPredict": [
+            {
+                "name": "xgboostpredict_test_case_1",
+                "parameters": {
+                        "newdata": "titanic",
+                        "object": "xgboost_op2",
+                        "id_column": "passenger"
+                }
+            }
+        ],
+        "ZTest": [
+            {
+                "name": "ztest_test_case_1",
+                "parameters": {
+                        "data": "titanic",
+                        "first_sample_column": "age",
+                        "first_sample_variance": 5
+                }
+            }
+        ]
+    }
+}

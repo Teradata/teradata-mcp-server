@@ -4,7 +4,7 @@ from teradata_mcp_server.tools.plot.plot_utils import (get_plot_json_data,
 from teradatasql import TeradataConnection
 
 
-def handle_generate_line_plot(conn: TeradataConnection, table_name: str, labels: str, columns: List[str]):
+def handle_generate_line_plot(conn: TeradataConnection, table_name: str, labels: str, columns: str|List[str]):
     """
     Function to generate a line plot for labels and columns.
     Columns mentioned in labels are used for x-axis and columns are used for y-axis.
@@ -96,7 +96,7 @@ def handle_generate_pie_plot(conn: TeradataConnection, table_name: str, labels: 
     return get_plot_json_data(conn, table_name, labels, column, 'pie')
 
 
-def handle_generate_radar_plot(conn: TeradataConnection, table_name: str, labels: str, columns: List[str]):
+def handle_generate_radar_plot(conn: TeradataConnection, table_name: str, labels: str, columns: str|List[str]):
     """
     Function to generate a radar plot for labels and columns.
     Columns mentioned in labels are used as labels and column is used to plot.
