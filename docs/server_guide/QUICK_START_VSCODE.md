@@ -1,6 +1,6 @@
 # 5-Minute Quick Start (Visual Studio Code with GitHub Copilot)
 
-> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-quick-start) | [Quick Start Claude](QUICK_START.md) | <u>**Quick Start VS Code**</u>  | [Quick Start Open WebUI](QUICK_START_OPEN_WEBUI.md) | [Code Examples](../../examples/README.md)
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting started](GETTING_STARTED.md) | [Architecture](ARCHITECTURE.md) | [Installation](INSTALLATION.md) | [Configuration](CONFIGURATION.md) | [Security](SECURITY.md) | [Customization](CUSTOMIZING.md) | [Client Guide](../client_guide/CLIENT_GUIDE.md)
 
 > **🎯 Goal:** Get a working MCP server connected to VS Code and GitHub Copilot in 5 minutes
 

@@ -1,5 +1,7 @@
 # MCP Workflow Prompt Guidelines
 
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting started](../server_guide/GETTING_STARTED.md) | [Architecture](../server_guide/ARCHITECTURE.md) | [Installation](../server_guide/INSTALLATION.md) | [Configuration](../server_guide/CONFIGURATION.md) | [Security](../server_guide/SECURITY.md) | [Customization](../server_guide/CUSTOMIZING.md) | [Client Guide](../client_guide/CLIENT_GUIDE.md)
+
 To ensure that LLMs and Clients can reliably parse and execute multi-step workflows in an efficient "headless" mode, all workflow prompts must adhere to the following structural and semantic guidelines.
 
 ---

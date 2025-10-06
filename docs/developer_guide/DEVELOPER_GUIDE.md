@@ -1,6 +1,6 @@
 # Development Conventions
 
-> **📍 Navigation:** [Documentation Home](../README.md) | **Developer Guide** 
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting started](../server_guide/GETTING_STARTED.md) | [Architecture](../server_guide/ARCHITECTURE.md) | [Installation](../server_guide/INSTALLATION.md) | [Configuration](../server_guide/CONFIGURATION.md) | [Security](../server_guide/SECURITY.md) | [Customization](../server_guide/CUSTOMIZING.md) | [Client Guide](../client_guide/CLIENT_GUIDE.md) 
 
 This document provides guidelines for developing new tools for the Teradata MCP server.
 <br>

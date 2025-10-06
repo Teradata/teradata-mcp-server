@@ -1,6 +1,6 @@
 # Teradata MCP Server Documentation
 
-> **📍 Navigation:** [Documentation Home](../README.md) | **Server Guide** 
+> **📍 Navigation:** [<u>**Documentation Home**</u>](README.md) | [Server Guide](#-server-guide) | [Client Guide](client_guide/CLIENT_GUIDE.md) | [Developer Guide](developer_guide/DEVELOPER_GUIDE.md) 
 
 This guide will help you get started, configure, and customize your Teradata MCP Server setup.
 

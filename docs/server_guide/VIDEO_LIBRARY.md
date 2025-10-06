@@ -1,7 +1,7 @@
 
 # Video Library
 
-> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md) | **Video Library** 
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting started](GETTING_STARTED.md) | [Architecture](ARCHITECTURE.md) | [Installation](INSTALLATION.md) | [Configuration](CONFIGURATION.md) | [Security](SECURITY.md) | [Customization](CUSTOMIZING.md) | [Client Guide](../client_guide/CLIENT_GUIDE.md) 
 
 
 The video library is a curation of videos that the community believes would be valuable for new members.

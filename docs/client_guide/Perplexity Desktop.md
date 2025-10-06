@@ -1,5 +1,7 @@
 # Using with Perplexity Desktop
 
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting started](../server_guide/GETTING_STARTED.md) | [Architecture](../server_guide/ARCHITECTURE.md) | [Installation](../server_guide/INSTALLATION.md) | [Configuration](../server_guide/CONFIGURATION.md) | [Security](../server_guide/SECURITY.md) | [Customization](../server_guide/CUSTOMIZING.md) | [Client Guide](CLIENT_GUIDE.md)
+
 Perplexity Desktop Instructions (https://www.perplexity.ai/help-center/en/articles/11502712-local-and-remote-mcps-for-perplexity)
 
 Step 1 - Open your account settings and click on Connectors
