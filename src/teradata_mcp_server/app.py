@@ -24,7 +24,7 @@ from typing import Any
 import yaml
 from fastmcp import FastMCP
 from fastmcp.prompts.prompt import TextContent, Message
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 from teradata_mcp_server.config import Settings
 from teradata_mcp_server import utils as config_utils

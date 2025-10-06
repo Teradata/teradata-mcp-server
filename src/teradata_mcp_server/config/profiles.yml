@@ -29,11 +29,13 @@ dataScientist:
     - ^sql_*
     - ^fs_*
     - ^qlty_*
+    - ^teradata_vectorstore_*
     - ^sec_userDbPermissions
     - ^dba_userSqlList
   prompt:
     - ^rag_*
     - ^sql_*
+    - ^teradata_vectorstore_*
 
 eda:
   tool:
