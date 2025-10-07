@@ -42,7 +42,7 @@ evs = [
     "teradatagenai>=20.0.0.0",
 ]
 # Teradata Vector Store functionality
-teradata_vectorstore = [
+tdvs = [
     "teradatagenai>=20.0.0.0"
 ]
 # Development dependencies 

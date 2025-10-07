@@ -56,7 +56,7 @@ def create_mcp_app(settings: Settings):
     # Feature flags from profiles
     enableEFS = True if any(re.match(pattern, 'fs_*') for pattern in config.get('tool', [])) else False
     enableEVS = True if any(re.match(pattern, 'evs_*') for pattern in config.get('tool', [])) else False
-    enableTeradataVectorStore = True if any(re.match(pattern, 'teradata_vectorstore_*') for pattern in config.get('tool', [])) else False
+    enableTDVS = True if any(re.match(pattern, 'tdvs_*') for pattern in config.get('tool', [])) else False
 
     # Initialize TD connection and optional teradataml/EFS context
     # Pass settings object to TDConn instead of just connection_url
@@ -91,15 +91,15 @@ def create_mcp_app(settings: Settings):
             enableEVS = False
             
     # TeradataVectorStore connection (optional)
-    teradata_vectorstore = None
+    tdvs = None
     if len(os.getenv("TD_BASE_URL", "").strip()) > 0:
         try:
-            from teradata_mcp_server.tools.teradata_vectorstore.teradata_vectorstore_utilies import create_teradataml_context
+            from teradata_mcp_server.tools.tdvs.tdvs_utilies import create_teradataml_context
             create_teradataml_context()
-            enableTeradataVectorStore = True
+            enableTDVS = True
         except Exception as e:
             logger.error(f"Unable to establish connection to Teradata Vector Store, disabling: {e}")
-            enableTeradataVectorStore = False
+            enableTDVS = False
 
     # Middleware (auth + request context)
     from teradata_mcp_server.tools.auth_cache import SecureAuthCache

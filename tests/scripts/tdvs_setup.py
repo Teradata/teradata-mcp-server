@@ -9,8 +9,8 @@ def main():
     parser = argparse.ArgumentParser(description="Teradata MCP Server")
     parser.add_argument('--database_uri', type=str, required=False, help='Database URI to connect to: teradata://username:password@host:1025/schemaname')
     parser.add_argument('--action', type=str, choices=['setup', 'cleanup'], required=True, help='Action to perform: setup, test or cleanup')
-    parser.add_argument('--dbc_user', type=str, required=True, help='dbc user name')
-    parser.add_argument('--dbc_password', type=str, required=True, help='dbc password')
+    parser.add_argument('--sysdba_user', type=str, required=True, help='system database administrator user name')
+    parser.add_argument('--sysdba_password', type=str, required=True, help='system database administrator password')
     # Extract known arguments and load them into the environment if provided
     args, unknown = parser.parse_known_args()
 
@@ -31,7 +31,7 @@ def main():
     if args.action=='setup':
         # Set up the analytic functions test data.
         
-        ct1 = create_context(host=host, username=args.dbc_user, password=args.dbc_password)
+        ct1 = create_context(host=host, username=args.sysdba_user, password=args.sysdba_password)
         create_user_sql = "CREATE USER test1 AS PERM = 1e9 *(HASHAMP()+1) PASSWORD = test1;"
         execute_sql(create_user_sql)
         remove_context()
@@ -52,7 +52,7 @@ def main():
         
     elif args.action in ('cleanup'):
     
-        ct1 = create_context(host=host, username=args.dbc_user, password=args.dbc_password)
+        ct1 = create_context(host=host, username=args.sysdba_user, password=args.sysdba_password)
         drop_user_sql = "drop user test1;"
         execute_sql(drop_user_sql)
         remove_context()

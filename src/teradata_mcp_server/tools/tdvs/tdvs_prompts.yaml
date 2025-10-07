@@ -2,7 +2,7 @@
 #  Copyright (C) 2025 by Teradata Corporation.                                   #
 #  All Rights Reserved.                                                          #
 #                                                                                #
-#  File: teradata_vectorstore_prompts.yml                                        #
+#  File: tdvs_prompts.yml                                        #
 #                                                                                #
 #  Description:                                                                  #
 #    YAML configuration file containing prompt templates for teradata enterprise #
@@ -10,13 +10,13 @@
 # -------------------------------------------------------------------------------#
 
 tool_descriptions:
-    teradata_vectorstore_get_health: "Use this tool to check and return the health or overall status of Teradata Vector Store."
-    teradata_vectorstore_list: "Use this tool to get the list of all vector stores with their details in Teradata Vector Store. Return the complete dataframe and do not trim any entry."
-    teradata_vectorstore_get_details: "Use this tool to get details of a specific vector store in Teradata Vector Store"
-    teradata_vectorstore_destroy: "Use this tool to destroy/delete a vector store in Teradata Vector Store."
-    teradata_vectorstore_grant_user_permission: "Use this tool to grant user permission to a vector store in Teradata Vector Store. Allowed values for permission are 'ADMIN' or 'USER'."
-    teradata_vectorstore_revoke_user_permission: "Use this tool to revoke user permission to a vector store in Teradata Vector Store. Allowed values for permission are 'ADMIN' or 'USER'."
-    teradata_vectorstore_similarity_search: |
+    tdvs_get_health: "Use this tool to check and return the health or overall status of Teradata Vector Store."
+    tdvs_list: "Use this tool to get the list of all vector stores with their details in Teradata Vector Store. Return the complete dataframe and do not trim any entry."
+    tdvs_get_details: "Use this tool to get details of a specific vector store in Teradata Vector Store"
+    tdvs_destroy: "Use this tool to destroy/delete a vector store in Teradata Vector Store."
+    tdvs_grant_user_permission: "Use this tool to grant user permission to a vector store in Teradata Vector Store. Allowed values for permission are 'ADMIN' or 'USER'."
+    tdvs_revoke_user_permission: "Use this tool to revoke user permission to a vector store in Teradata Vector Store. Allowed values for permission are 'ADMIN' or 'USER'."
+    tdvs_similarity_search: |
       Use this tool to perform similarity search and retrieve top K similar documents from a vector store in Teradata Vector Store.
       TOOL PARAMETERS:
       -----------------
@@ -26,7 +26,7 @@ tool_descriptions:
         batch_data: Optional[str] = Field(None, description="Optional Specifies the table name or teradataml DataFrame to be indexed for batch mode")
         batch_id_column: Optional[str] = Field(None, description="Optional Specifies the ID column to be indexed for batch mode")
         batch_query_column: Optional[str] = Field(None, description="Optional Specifies the query column to be indexed for batch mode.")
-    teradata_vectorstore_ask: |
+    tdvs_ask: |
       Use this tool to find contextual information related to query from specific vector store and return the final reponse. This tool must always be used to retrieve information irrespective of topic of the user_query.
       TOOL PARAMETERS:
       -----------------
@@ -37,7 +37,7 @@ tool_descriptions:
         batch_data: Optional[str] = Field(None, description="Optional Specifies the table name or teradataml DataFrame to be indexed for batch mode")
         batch_id_column: Optional[str] = Field(None, description="Optional Specifies the ID column to be indexed for batch mode")
         batch_query_column: Optional[str] = Field(None, description="Optional Specifies the query column to be indexed for batch mode.")
-    teradata_vectorstore_create: |
+    tdvs_create: |
       Use this tool to create a vector store in Teradata Vector Store.
       TOOL PARAMETERS:
       -----------------
@@ -91,7 +91,7 @@ tool_descriptions:
         ranking_url: Optional[str] = Field(None, description="Optional Specifies the URL for the service to be used for reranking.")
         ingest_host: Optional[str] = Field(None, description="Optional Specifies the http host for document parsing.")
         ingest_port: Optional[int] = Field(None, description="Optional Specifies the port for document parsing.")
-    teradata_vectorstore_update: |
+    tdvs_update: |
       Use this tool to update an existing vector store with the specified parameters in Teradata Vector Store.
       TOOL PARAMETERS:
       -----------------

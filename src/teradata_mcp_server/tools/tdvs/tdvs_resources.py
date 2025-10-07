@@ -2,7 +2,7 @@
 #  Copyright (C) 2025 by Teradata Corporation.                                    #
 #  All Rights Reserved.                                                           #
 #                                                                                 #
-#  File: teradata_vectorstore_resources.py                                                    #
+#  File: tdvs_resources.py                                                    #
 #                                                                                 #
 #  Description:                                                                   #
 #    This module defines resource templates for the Model Context Protocol (MCP)  #

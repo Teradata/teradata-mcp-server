@@ -1,12 +1,12 @@
 {
   "test_cases": {
-    "teradata_vectorstore_get_health": [
+    "tdvs_get_health": [
       {
         "name": "test_get_vs_health",
         "parameters": {}
       }
     ],
-    "teradata_vectorstore_create": [
+    "tdvs_create": [
       {
         "name": "test_vs_create",
         "parameters": {
@@ -30,7 +30,7 @@
         }
       }
     ],
-    "teradata_vectorstore_get_details": [
+    "tdvs_get_details": [
       {
         "name": "test_vs_get_details",
         "parameters": {
@@ -38,13 +38,13 @@
         }
       }
     ],
-    "teradata_vectorstore_list": [
+    "tdvs_list": [
       {
         "name": "test_vs_list",
         "parameters": {}
       }
     ],
-    "teradata_vectorstore_update": [
+    "tdvs_update": [
       {
         "name": "test_vs_update",
         "parameters": {
@@ -57,7 +57,7 @@
         }
       }
     ],
-    "teradata_vectorstore_similarity_search": [
+    "tdvs_similarity_search": [
       {
         "name": "test_vs_similarity_search",
         "parameters":{
@@ -68,7 +68,7 @@
         }
       }
     ],
-    "teradata_vectorstore_ask": [
+    "tdvs_ask": [
       {
         "name": "test_vs_ask",
         "parameters":{
@@ -80,7 +80,7 @@
       }
     ],
     
-    "teradata_vectorstore_grant_user_permission": [
+    "tdvs_grant_user_permission": [
       {
         "name": "test_vs_grant_user_permission",
         "parameters": {
@@ -90,7 +90,7 @@
         }
       }
     ],
-    "teradata_vectorstore_revoke_user_permission": [
+    "tdvs_revoke_user_permission": [
       {
         "name": "test_vs_revoke_user_permission",
         "parameters": {
@@ -100,7 +100,7 @@
         }
       }
     ],
-    "teradata_vectorstore_destroy": [
+    "tdvs_destroy": [
       {
         "name": "test_vs_destroy",
         "parameters": {
