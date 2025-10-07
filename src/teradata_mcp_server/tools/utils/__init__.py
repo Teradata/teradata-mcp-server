@@ -127,6 +127,9 @@ def execute_analytic_function(function_name: str, tables_to_df=[], **kwargs):
     # Hence remove 'headers' from print.
     func_params = {k: v for k, v in kwargs.items() if k != 'headers'}
 
+    # Analytic functions are called with 'tdml_' prefix. Remove it.
+    function_name = function_name[5:]
+
     logger = logging.getLogger("teradata_mcp_server.utils")
     logger.info("recieved kwargs: {} for the function {}".format(func_params, function_name))
 

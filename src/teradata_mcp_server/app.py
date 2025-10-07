@@ -303,6 +303,7 @@ def create_mcp_app(settings: Settings):
             func_args_str = get_anlytic_function_signature(
                 func_metadata.function_params)
 
+            func_name = "tdml_" + func_name
             func_str = get_dynamic_function_definition().format(
                 analytic_function=func_name,
                 doc_string=func_obj.__init__.__doc__,

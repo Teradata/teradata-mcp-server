@@ -10,7 +10,7 @@
         }
     },
     "test_cases": {
-        "ANOVA": [
+        "tdml_ANOVA": [
             {
                 "name": "anova_test_case_1",
                 "parameters": {
@@ -20,7 +20,7 @@
                 }
             }
         ],
-        "Antiselect": [
+        "tdml_Antiselect": [
             {
                 "name": "antiselect_test_case_1",
                 "parameters": {
@@ -29,7 +29,7 @@
                 }
             }
         ],
-        "Apriori": [
+        "tdml_Apriori": [
             {
                 "name": "apriori_test_case_1",
                 "parameters": {
@@ -42,7 +42,7 @@
                 }
             }
         ],
-        "BincodeFit": [
+        "tdml_BincodeFit": [
             {
                 "name": "bincodefit_test_case_1",
                 "parameters": {
@@ -54,7 +54,7 @@
                 }
             }
         ],
-        "BincodeTransform": [
+        "tdml_BincodeTransform": [
             {
                 "name": "bincodetransform_test_case_1",
                 "parameters": {
@@ -64,7 +64,7 @@
                 }
             }
         ],
-        "CFilter": [
+        "tdml_CFilter": [
             {
                 "name": "cfilter_test_case_1",
                 "parameters": {
@@ -75,7 +75,7 @@
                 }
             }
         ],
-        "CategoricalSummary": [
+        "tdml_CategoricalSummary": [
             {
                 "name": "categoricalsummary_test_case_1",
                 "parameters": {
@@ -84,7 +84,7 @@
                 }
             }
         ],
-        "ChiSq": [
+        "tdml_ChiSq": [
             {
                 "name": "chisq_test_case_1",
                 "parameters": {
@@ -93,7 +93,7 @@
                 }
             }
         ],
-        "ClassificationEvaluator": [
+        "tdml_ClassificationEvaluator": [
             {
                 "name": "classificationevaluator_test_case_1",
                 "parameters": {
@@ -104,7 +104,7 @@
                 }
             }
         ],
-        "ColumnSummary": [
+        "tdml_ColumnSummary": [
             {
                 "name": "columnsummary_test_case_1",
                 "parameters": {
@@ -113,7 +113,7 @@
                 }
             }
         ],
-        "ColumnTransformer": [
+        "tdml_ColumnTransformer": [
             {
                 "name": "columntransformer_test_case_1",
                 "parameters": {
@@ -124,7 +124,7 @@
                 }
             }
         ],
-        "ConvertTo": [
+        "tdml_ConvertTo": [
             {
                 "name": "convertto_test_case_1",
                 "parameters": {
@@ -136,7 +136,7 @@
                 }
             }
         ],
-        "DecisionForest": [
+        "tdml_DecisionForest": [
             {
                 "name": "decisionforest_test_case_1",
                 "parameters": {
@@ -152,7 +152,7 @@
                 }
             }
         ],
-        "FTest": [
+        "tdml_FTest": [
             {
                 "name": "ftest_test_case_1",
                 "parameters": {
@@ -163,7 +163,7 @@
                 }
             }
         ],
-        "FillRowId": [
+        "tdml_FillRowId": [
             {
                 "name": "fillrowid_test_case_1",
                 "parameters": {
@@ -172,7 +172,7 @@
                 }
             }
         ],
-        "Fit": [
+        "tdml_Fit": [
             {
                 "name": "fit_test_case_1",
                 "parameters": {
@@ -181,7 +181,7 @@
                 }
             }
         ],
-        "TDGLMPredict": [
+        "tdml_TDGLMPredict": [
             {
                 "name": "glmpredict_test_case_1",
                 "parameters": {
@@ -192,7 +192,7 @@
                 }
             }
         ],
-        "GetFutileColumns": [
+        "tdml_GetFutileColumns": [
             {
                 "name": "getfutilecolumns_test_case_1",
                 "parameters": {
@@ -203,7 +203,7 @@
                 }
             }
         ],
-        "GetRowsWithMissingValues": [
+        "tdml_GetRowsWithMissingValues": [
             {
                 "name": "getrowswithmissingvalues_test_case_1",
                 "parameters": {
@@ -213,7 +213,7 @@
                 }
             }
         ],
-        "GetRowsWithoutMissingValues": [
+        "tdml_GetRowsWithoutMissingValues": [
             {
                 "name": "getrowswithoutmissingvalues_test_case_1",
                 "parameters": {
@@ -223,7 +223,7 @@
                 }
             }
         ],
-        "Histogram": [
+        "tdml_Histogram": [
             {
                 "name": "histogram_test_case_1",
                 "parameters": {
@@ -233,7 +233,7 @@
                 }
             }
         ],
-        "KMeans": [
+        "tdml_KMeans": [
             {
                 "name": "kmeans_test_case_1",
                 "parameters": {
@@ -244,7 +244,7 @@
                 }
             }
         ],
-        "KMeansPredict": [
+        "tdml_KMeansPredict": [
             {
                 "name": "kmeanspredict_test_case_1",
                 "parameters": {
@@ -253,7 +253,7 @@
                 }
             }
         ],
-        "KNN": [
+        "tdml_KNN": [
             {
                 "name": "knn_test_case_1",
                 "parameters": {
@@ -275,7 +275,7 @@
                 }
             }
         ],
-        "MovingAverage": [
+        "tdml_MovingAverage": [
             {
                 "name": "movingaverage_test_case_1",
                 "parameters": {
@@ -288,7 +288,7 @@
                 }
             }
         ],
-        "NERExtractor": [
+        "tdml_NERExtractor": [
             {
                 "name": "nerextractor_test_case_1",
                 "parameters": {
@@ -302,7 +302,7 @@
                 }
             }
         ],
-        "NGramSplitter": [
+        "tdml_NGramSplitter": [
             {
                 "name": "ngramsplitter_test_case_1",
                 "parameters": {
@@ -322,7 +322,7 @@
                 }
             }
         ],
-        "NaiveBayesTextClassifierPredict": [
+        "tdml_NaiveBayesTextClassifierPredict": [
             {
                 "name": "naivebayestextclassifierpredict_test_case_1",
                 "parameters": {
@@ -337,7 +337,7 @@
                 }
             }
         ],
-        "NaiveBayesTextClassifierTrainer": [
+        "tdml_NaiveBayesTextClassifierTrainer": [
             {
                 "name": "naivebayestextclassifiertrainer_test_case_1",
                 "parameters": {
@@ -349,7 +349,7 @@
                 }
             }
         ],
-        "NonLinearCombineFit": [
+        "tdml_NonLinearCombineFit": [
             {
                 "name": "nonlinearcombinefit_test_case_1",
                 "parameters": {
@@ -364,7 +364,7 @@
                 }
             }
         ],
-        "NonLinearCombineTransform": [
+        "tdml_NonLinearCombineTransform": [
             {
                 "name": "nonlinearcombinetransform_test_case_1",
                 "parameters": {
@@ -374,7 +374,7 @@
                 }
             }
         ],
-        "NumApply": [
+        "tdml_NumApply": [
             {
                 "name": "numapply_test_case_1",
                 "parameters": {
@@ -385,7 +385,7 @@
                 }
             }
         ],
-        "OneClassSVM": [
+        "tdml_OneClassSVM": [
             {
                 "name": "oneclasssvm_test_case_1",
                 "parameters": {
@@ -402,7 +402,7 @@
                 }
             }
         ],
-        "OneClassSVMPredict": [
+        "tdml_OneClassSVMPredict": [
             {
                 "name": "oneclasssvmpredict_test_case_1",
                 "parameters": {
@@ -412,7 +412,7 @@
                 }
             }
         ],
-        "OneHotEncodingFit": [
+        "tdml_OneHotEncodingFit": [
             {
                 "name": "onehotencodingfit_test_case_1",
                 "parameters": {
@@ -424,7 +424,7 @@
                 }
             }
         ],
-        "OneHotEncodingTransform": [
+        "tdml_OneHotEncodingTransform": [
             {
                 "name": "onehotencodingtransform_test_case_1",
                 "parameters": {
@@ -434,7 +434,7 @@
                 }
             }
         ],
-        "OrdinalEncodingFit": [
+        "tdml_OrdinalEncodingFit": [
             {
                 "name": "ordinalencodingfit_test_case_1",
                 "parameters": {
@@ -443,7 +443,7 @@
                 }
             }
         ],
-        "OrdinalEncodingTransform": [
+        "tdml_OrdinalEncodingTransform": [
             {
                 "name": "ordinalencodingtransform_test_case_1",
                 "parameters": {
@@ -453,7 +453,7 @@
                 }
             }
         ],
-        "OutlierFilterFit": [
+        "tdml_OutlierFilterFit": [
             {
                 "name": "outlierfilterfit_test_case_1",
                 "parameters": {
@@ -467,7 +467,7 @@
                 }
             }
         ],
-        "OutlierFilterTransform": [
+        "tdml_OutlierFilterTransform": [
             {
                 "name": "outlierfiltertransform_test_case_1",
                 "parameters": {
@@ -476,7 +476,7 @@
                 }
             }
         ],
-        "Pack": [
+        "tdml_Pack": [
             {
                 "name": "pack_test_case_1",
                 "parameters": {
@@ -489,7 +489,7 @@
                 }
             }
         ],
-        "PolynomialFeaturesFit": [
+        "tdml_PolynomialFeaturesFit": [
             {
                 "name": "polynomialfeaturesfit_test_case_1",
                 "parameters": {
@@ -502,7 +502,7 @@
                 }
             }
         ],
-        "PolynomialFeaturesTransform": [
+        "tdml_PolynomialFeaturesTransform": [
             {
                 "name": "polynomialfeaturestransform_test_case_1",
                 "parameters": {
@@ -511,7 +511,7 @@
                 }
             }
         ],
-        "QQNorm": [
+        "tdml_QQNorm": [
             {
                 "name": "qqnorm_test_case_1",
                 "parameters": {
@@ -527,7 +527,7 @@
                 }
             }
         ],
-        "ROC": [
+        "tdml_ROC": [
             {
                 "name": "roc_test_case_1",
                 "parameters": {
@@ -539,7 +539,7 @@
                 }
             }
         ],
-        "RandomProjectionFit": [
+        "tdml_RandomProjectionFit": [
             {
                 "name": "randomprojectionfit_test_case_1",
                 "parameters": {
@@ -550,7 +550,7 @@
                 }
             }
         ],
-        "RandomProjectionMinComponents": [
+        "tdml_RandomProjectionMinComponents": [
             {
                 "name": "randomprojectionmincomponents_test_case_1",
                 "parameters": {
@@ -559,7 +559,7 @@
                 }
             }
         ],
-        "RandomProjectionTransform": [
+        "tdml_RandomProjectionTransform": [
             {
                 "name": "randomprojectiontransform_test_case_1",
                 "parameters": {
@@ -568,7 +568,7 @@
                 }
             }
         ],
-        "RegressionEvaluator": [
+        "tdml_RegressionEvaluator": [
             {
                 "name": "regressionevaluator_test_case_1",
                 "parameters": {
@@ -588,7 +588,7 @@
                 }
             }
         ],
-        "RoundColumns": [
+        "tdml_RoundColumns": [
             {
                 "name": "roundcolumns_test_case_1",
                 "parameters": {
@@ -602,7 +602,7 @@
                 }
             }
         ],
-        "RowNormalizeFit": [
+        "tdml_RowNormalizeFit": [
             {
                 "name": "rownormalizefit_test_case_1",
                 "parameters": {
@@ -617,7 +617,7 @@
                 }
             }
         ],
-        "RowNormalizeTransform": [
+        "tdml_RowNormalizeTransform": [
             {
                 "name": "rownormalizetransform_test_case_1",
                 "parameters": {
@@ -627,7 +627,7 @@
                 }
             }
         ],
-        "SMOTE": [
+        "tdml_SMOTE": [
             {
                 "name": "smote_test_case_1",
                 "parameters": {
@@ -648,7 +648,7 @@
                 }
             }
         ],
-        "SVM": [
+        "tdml_SVM": [
             {
                 "name": "svm_test_case_1",
                 "parameters": {
@@ -658,7 +658,7 @@
                 }
             }
         ],
-        "SVMPredict": [
+        "tdml_SVMPredict": [
             {
                 "name": "svmpredict_test_case_1",
                 "parameters": {
@@ -670,7 +670,7 @@
                 }
             }
         ],
-        "ScaleFit": [
+        "tdml_ScaleFit": [
             {
                 "name": "scalefit_test_case_1",
                 "parameters": {
@@ -684,7 +684,7 @@
                 }
             }
         ],
-        "ScaleTransform": [
+        "tdml_ScaleTransform": [
             {
                 "name": "scaletransform_test_case_1",
                 "parameters": {
@@ -694,7 +694,7 @@
                 }
             }
         ],
-        "SentimentExtractor": [
+        "tdml_SentimentExtractor": [
             {
                 "name": "sentimentextractor_test_case_1",
                 "parameters": {
@@ -703,7 +703,7 @@
                 }
             }
         ],
-        "Shap": [
+        "tdml_Shap": [
             {
                 "name": "shap_test_case_1",
                 "parameters": {
@@ -722,7 +722,7 @@
                 }
             }
         ],
-        "Silhouette": [
+        "tdml_Silhouette": [
             {
                 "name": "silhouette_test_case_1",
                 "parameters": {
@@ -737,7 +737,7 @@
                 }
             }
         ],
-        "SimpleImputeFit": [
+        "tdml_SimpleImputeFit": [
             {
                 "name": "simpleimputefit_test_case_1",
                 "parameters": {
@@ -749,7 +749,7 @@
                 }
             }
         ],
-        "SimpleImputeTransform": [
+        "tdml_SimpleImputeTransform": [
             {
                 "name": "simpleimputetransform_test_case_1",
                 "parameters": {
@@ -758,7 +758,7 @@
                 }
             }
         ],
-        "StrApply": [
+        "tdml_StrApply": [
             {
                 "name": "strapply_test_case_1",
                 "parameters": {
@@ -769,7 +769,7 @@
                 }
             }
         ],
-        "StringSimilarity": [
+        "tdml_StringSimilarity": [
             {
                 "name": "stringsimilarity_test_case_1",
                 "parameters": {
@@ -789,7 +789,7 @@
                 }
             }
         ],
-        "TDDecisionForestPredict": [
+        "tdml_TDDecisionForestPredict": [
             {
                 "name": "tddecisionforestpredict_test_case_1",
                 "parameters": {
@@ -799,7 +799,7 @@
                 }
             }
         ],
-        "TDNaiveBayesPredict": [
+        "tdml_TDNaiveBayesPredict": [
             {
                 "name": "tdnaivebayespredict_test_case_1",
                 "parameters": {
@@ -832,7 +832,7 @@
                 }
             }
         ],
-        "TFIDF": [
+        "tdml_TFIDF": [
             {
                 "name": "tfidf_test_case_1",
                 "parameters": {
@@ -848,7 +848,7 @@
                 }
             }
         ],
-        "TargetEncodingFit": [
+        "tdml_TargetEncodingFit": [
             {
                 "name": "targetencodingfit_test_case_1",
                 "parameters": {
@@ -867,7 +867,7 @@
                 }
             }
         ],
-        "TargetEncodingTransform": [
+        "tdml_TargetEncodingTransform": [
             {
                 "name": "targetencodingtransform_test_case_1",
                 "parameters": {
@@ -877,7 +877,7 @@
                 }
             }
         ],
-        "TextMorph": [
+        "tdml_TextMorph": [
             {
                 "name": "textmorph_test_case_1",
                 "parameters": {
@@ -894,7 +894,7 @@
                 }
             }
         ],
-        "TextParser": [
+        "tdml_TextParser": [
             {
                 "name": "textparser_test_case_1",
                 "parameters": {
@@ -906,7 +906,7 @@
                 }
             }
         ],
-        "TrainTestSplit": [
+        "tdml_TrainTestSplit": [
             {
                 "name": "traintestsplit_test_case_1",
                 "parameters": {
@@ -918,7 +918,7 @@
                 }
             }
         ],
-        "Transform": [
+        "tdml_Transform": [
             {
                 "name": "transform_test_case_1",
                 "parameters": {
@@ -931,7 +931,7 @@
                 }
             }
         ],
-        "UnivariateStatistics": [
+        "tdml_UnivariateStatistics": [
             {
                 "name": "univariatestatistics_test_case_1",
                 "parameters": {
@@ -957,7 +957,7 @@
                 }
             }
         ],
-        "Unpack": [
+        "tdml_Unpack": [
             {
                 "name": "unpack_test_case_1",
                 "parameters": {
@@ -980,7 +980,7 @@
                 }
             }
         ],
-        "Unpivoting": [
+        "tdml_Unpivoting": [
             {
                 "name": "unpivoting_test_case_1",
                 "parameters": {
@@ -992,7 +992,7 @@
                 }
             }
         ],
-        "VectorDistance": [
+        "tdml_VectorDistance": [
             {
                 "name": "vectordistance_test_case_1",
                 "parameters": {
@@ -1019,7 +1019,7 @@
                 }
             }
         ],
-        "WhichMax": [
+        "tdml_WhichMax": [
             {
                 "name": "whichmax_test_case_1",
                 "parameters": {
@@ -1028,7 +1028,7 @@
                 }
             }
         ],
-        "WhichMin": [
+        "tdml_WhichMin": [
             {
                 "name": "whichmin_test_case_1",
                 "parameters": {
@@ -1037,7 +1037,7 @@
                 }
             }
         ],
-        "WordEmbeddings": [
+        "tdml_WordEmbeddings": [
             {
                 "name": "wordembeddings_test_case_1",
                 "parameters": {
@@ -1056,7 +1056,7 @@
                 }
             }
         ],
-        "XGBoost": [
+        "tdml_XGBoost": [
             {
                 "name": "xgboost_test_case_1",
                 "parameters": {
@@ -1071,7 +1071,7 @@
                 }
             }
         ],
-        "XGBoostPredict": [
+        "tdml_XGBoostPredict": [
             {
                 "name": "xgboostpredict_test_case_1",
                 "parameters": {
@@ -1081,7 +1081,7 @@
                 }
             }
         ],
-        "ZTest": [
+        "tdml_ZTest": [
             {
                 "name": "ztest_test_case_1",
                 "parameters": {

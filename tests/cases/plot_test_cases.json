@@ -10,7 +10,7 @@
     }
   },
   "test_cases": {
-    "generate_line_plot": [
+    "plot_line_chart": [
       {
         "name": "test_line_plot_1",
         "parameters": {
@@ -30,7 +30,7 @@
         }
       }
     ],
-    "generate_polar_area_plot": [
+    "plot_polar_chart": [
       {
         "name": "test_polar_area_plot_2",
         "parameters": {
@@ -40,7 +40,7 @@
         }
       }
     ],
-    "generate_pie_plot": [
+    "plot_pie_chart": [
       {
         "name": "test_pie_plot_1",
         "parameters": {
@@ -50,7 +50,7 @@
         }
       }
     ],
-    "generate_radar_plot": [
+    "plot_radar_chart": [
       {
         "name": "test_radar_plot_1",
         "parameters": {
