@@ -156,13 +156,13 @@ def handle_teradata_vectorstore_similarity_search(conn: TeradataConnection, vs_n
         return create_response({"error": str(e)}, {"tool_name": "teradata_vectorstore_similarity_search", "vs_name": vs_name})
     
     
-def handle_teradata_vectorstore_ask(conn: TeradataConnection, vs_name: str, vsask: VectorStoreAsk, *args,
+def handle_teradata_vectorstore_ask(conn: TeradataConnection, vs_name: str, vs_ask: VectorStoreAsk, *args,
     **kwargs):
     try:
         create_teradataml_context()
         VSManager.health()
         vs = VectorStore(name=vs_name)
-        response = vs.ask(**vsask.model_dump())
+        response = vs.ask(**vs_ask.model_dump())
         metadata = { "tool_name": "teradata_vectorstore_ask" }
         return create_response(response, metadata)
     except Exception as e:

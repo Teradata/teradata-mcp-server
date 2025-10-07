@@ -9,6 +9,8 @@ def main():
     parser = argparse.ArgumentParser(description="Teradata MCP Server")
     parser.add_argument('--database_uri', type=str, required=False, help='Database URI to connect to: teradata://username:password@host:1025/schemaname')
     parser.add_argument('--action', type=str, choices=['setup', 'cleanup'], required=True, help='Action to perform: setup, test or cleanup')
+    parser.add_argument('--dbc_user', type=str, required=True, help='dbc user name')
+    parser.add_argument('--dbc_password', type=str, required=True, help='dbc password')
     # Extract known arguments and load them into the environment if provided
     args, unknown = parser.parse_known_args()
 
@@ -24,11 +26,16 @@ def main():
         password = parsed_url.password
         host = parsed_url.hostname
         database = user
-
-        eng = create_context(host=host, username=user, password=password)
-
+        
+        
     if args.action=='setup':
         # Set up the analytic functions test data.
+        
+        ct1 = create_context(host=host, username=args.dbc_user, password=args.dbc_password)
+        create_user_sql = "CREATE USER test1 AS PERM = 1e9 *(HASHAMP()+1) PASSWORD = test1;"
+        execute_sql(create_user_sql)
+        remove_context()
+        eng = create_context(host=host, username=user, password=password)
 
         # Setup for SentimentExtractor.
         load_example_data("sentimentextractor", ["sentiment_extract_input"])
@@ -41,18 +48,23 @@ def main():
         execute_sql(create_table_statement)
         insert_statement = """INSERT INTO sentiment_extract_new_data (id, review) VALUES (11, 'Great product!');"""
         execute_sql(insert_statement)
-        
-    elif args.action in ('cleanup'):
-
-        # Cleanup for ClassificationEvaluator
-        db_drop_table(table_name='sentiment_extract_input', suppress_error=True)
-    else:
-        raise ValueError(f"Unknown action: {args.action}")
-
-    # Drop the context if it was created
-    if eng:
         remove_context()
         
+    elif args.action in ('cleanup'):
+    
+        ct1 = create_context(host=host, username=args.dbc_user, password=args.dbc_password)
+        drop_user_sql = "drop user test1;"
+        execute_sql(drop_user_sql)
+        remove_context()
+
+        # Cleanup for ClassificationEvaluator
+        eng = create_context(host=host, username=user, password=password)
+        db_drop_table(table_name='sentiment_extract_input', suppress_error=True)
+        db_drop_table(table_name='sentiment_extract_new_data', suppress_error=True)
+        remove_context()
+    else:
+        raise ValueError(f"Unknown action: {args.action}")
+    
     print("Done.")
 
 

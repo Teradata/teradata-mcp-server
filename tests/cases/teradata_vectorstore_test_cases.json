@@ -10,8 +10,9 @@
       {
         "name": "test_vs_create",
         "parameters": {
+          "vs_name": "my_amazon_product_reviews",
           "vs_create": {
-            "description": "This contains info related to amazon product reviews",
+            "description": "This contains info related to amazon reviews",
             "object_names": "sentiment_extract_input",
             "key_columns": [
               "id"
@@ -20,10 +21,12 @@
               "review"
             ],
             "embeddings_base_url": "https://gpudev1-modelops.labs.teradata.com/serving/nvidia-llama-32-nv-embedqa-1b-v2/v1/embeddings",
+            "completions_base_url": "https://gpudev1-modelops.labs.teradata.com/serving/mistralai-mistral-7b-instruct-v03/v1",
             "embeddings_model": "nvidia/llama-3.2-nv-embedqa-1b-v2",
-            "embeddings_dims": 2048
-          },
-          "vs_name": "my_amazon_product_reviews"
+            "chat_completion_model": "mistralai/mistral-7b-instruct-v0.3",
+            "embeddings_dims": 2048,
+            "chat_completion_max_tokens": 8192
+          }
         }
       }
     ],
@@ -39,6 +42,19 @@
       {
         "name": "test_vs_list",
         "parameters": {}
+      }
+    ],
+    "teradata_vectorstore_update": [
+      {
+        "name": "test_vs_update",
+        "parameters": {
+          "vs_name": "my_amazon_product_reviews",
+          "vs_update": {
+            "description": "This contains info related to amazon reviews",
+            "object_names": "sentiment_extract_new_data",
+            "alter_operation": "ADD"
+          }
+        }
       }
     ],
     "teradata_vectorstore_similarity_search": [
@@ -57,31 +73,19 @@
         "name": "test_vs_ask",
         "parameters":{
           "vs_name": "my_amazon_product_reviews",
-          "vs_similaritysearch": {
+          "vs_ask": {
             "question": "best product recommend worth buying outstanding quality"
           }
         }
       }
     ],
-    "teradata_vectorstore_update": [
-      {
-        "name": "test_vs_update",
-        "parameters": {
-          "vs_name": "my_amazon_product_reviews",
-          "vs_update": {
-            "description": "This contains info related to amazon reviews",
-            "object_names": "sentiment_extract_new_data",
-            "alter_operation": "ADD"
-          }
-        }
-      }
-    ],
+    
     "teradata_vectorstore_grant_user_permission": [
       {
         "name": "test_vs_grant_user_permission",
         "parameters": {
           "vs_name": "my_amazon_product_reviews",
-          "user_name": "dbc",
+          "user_name": "test1",
           "permission": "USER"
         }
       }
@@ -91,7 +95,7 @@
         "name": "test_vs_revoke_user_permission",
         "parameters": {
           "vs_name": "my_amazon_product_reviews",
-          "user_name": "dbc",
+          "user_name": "test1",
           "permission": "USER"
         }
       }
