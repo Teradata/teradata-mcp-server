@@ -1,0 +1,66 @@
+{
+  "scripts": {
+    "pre_test": {
+      "command": "python tests/scripts/plot_setup.py --action setup",
+      "description": "Setup Plot test environment"
+    },
+    "post_test": {
+      "command": "python tests/scripts/plot_setup.py --action cleanup",
+      "description": "Teardown Plot test environment"
+    }
+  },
+  "test_cases": {
+    "plot_line_chart": [
+      {
+        "name": "test_line_plot_1",
+        "parameters": {
+          "table_name": "sales",
+          "labels": "accounts",
+          "columns": [
+            "Feb", "Jan"
+          ]
+        }
+      },
+      {
+        "name": "test_line_plot_2",
+        "parameters": {
+          "table_name": "sales",
+          "labels": "accounts",
+          "columns": "Feb"
+        }
+      }
+    ],
+    "plot_polar_chart": [
+      {
+        "name": "test_polar_area_plot_2",
+        "parameters": {
+          "table_name": "sales",
+          "labels": "accounts",
+          "column": "Feb"
+        }
+      }
+    ],
+    "plot_pie_chart": [
+      {
+        "name": "test_pie_plot_1",
+        "parameters": {
+          "table_name": "sales",
+          "labels": "accounts",
+          "column": "Feb"
+        }
+      }
+    ],
+    "plot_radar_chart": [
+      {
+        "name": "test_radar_plot_1",
+        "parameters": {
+          "table_name": "sales",
+          "labels": "accounts",
+          "columns": [
+            "Feb", "Jan"
+          ]
+        }
+      }
+    ]
+  }
+}

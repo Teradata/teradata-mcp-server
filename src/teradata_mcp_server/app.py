@@ -33,6 +33,12 @@ from teradata_mcp_server.middleware import RequestContextMiddleware
 from teradata_mcp_server.tools.utils.queryband import build_queryband
 from sqlalchemy.engine import Connection
 from fastmcp.server.dependencies import get_context
+from teradataml.analytics.json_parser.json_store import _JsonStore
+from teradata_mcp_server.tools.utils import (get_dynamic_function_definition,
+                                             get_anlytic_function_signature,
+                                             convert_tdml_docstring_to_mcp_docstring,
+                                             execute_analytic_function)
+import json
 
 
 def create_mcp_app(settings: Settings):
@@ -61,8 +67,18 @@ def create_mcp_app(settings: Settings):
     # Initialize TD connection and optional teradataml/EFS context
     # Pass settings object to TDConn instead of just connection_url
     tdconn = td.TDConn(settings=settings)
+
+    enable_analytic_functions = profile_name and profile_name == 'dataScientist'
+
     fs_config = None
-    if enableEFS:
+    if enableEFS or enable_analytic_functions:
+
+        try:
+            import teradataml as tdml
+        except (AttributeError, ImportError, ModuleNotFoundError) as e:
+            logger.warning(f"teradataml not installed - disabling analytic functions: {e}")
+            enable_analytic_functions = False
+
         # Only import FeatureStoreConfig (which depends on tdfs4ds) when EFS tools are enabled
         try:
             from teradata_mcp_server.tools.fs.fs_utils import FeatureStoreConfig
@@ -78,6 +94,7 @@ def create_mcp_app(settings: Settings):
                 logger.warning("teradataml not installed; EFS tools will operate without a teradataml context")
         except (AttributeError, ImportError, ModuleNotFoundError) as e:
             logger.warning(f"Feature Store module not available - disabling EFS functionality: {e}")
+            logger.warning(f"Analytic functions are not available.")
             enableEFS = False
 
     # EVS connection (optional)
@@ -275,6 +292,49 @@ def create_mcp_app(settings: Settings):
             logger.info(f"Created tool: {tool_name}")
     else:
         logger.warning("No module loader available, skipping code-defined tool registration")
+
+    from teradata_mcp_server.tools.constants import TD_ANALYTIC_FUNCS as funcs
+    if enable_analytic_functions:
+
+        tdml_processed_funcs = set(_JsonStore._get_function_list()[0].keys())
+
+        for func_name in funcs:
+
+            # Before adding the function, check if function is existed or not.
+            # Connection is not mandatory for MCP server. If connection is not there, then
+            # functions can not be added.
+            if func_name not in tdml_processed_funcs:
+                logger.info("Function {} is not available. Hence not adding it. ".format(func_name))
+                continue
+
+            func_metadata = _JsonStore.get_function_metadata(func_name)
+            func_obj = getattr(tdml, func_name, None)
+
+            inp_data = [t.get_lang_name() for t in func_metadata.input_tables]
+
+            # Generate function argument string.
+            func_args_str = get_anlytic_function_signature(
+                func_metadata.function_params)
+
+            func_name = "tdml_" + func_name
+            func_str = get_dynamic_function_definition().format(
+                analytic_function=func_name,
+                doc_string=func_obj.__init__.__doc__,
+                func_args_str=func_args_str,
+                tables_to_df=json.dumps(inp_data)
+            )
+
+            doc_string = convert_tdml_docstring_to_mcp_docstring(
+                func_obj.__init__.__doc__)
+
+            # Execute the generated function definition in the global scope.
+            # Global scope will have all other functions. So reference to other functions will work.
+            exec(func_str, globals())
+
+            # Register the function as a tool in MCP server.
+            func = globals()[func_name]
+
+            mcp.tool(name=func_name, description=doc_string)(func)
 
     # Load YAML-defined tools/resources/prompts
     custom_object_files = [file for file in os.listdir() if file.endswith("_objects.yml")]
