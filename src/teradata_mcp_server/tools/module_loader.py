@@ -28,6 +28,7 @@ class ModuleLoader:
         'sql_opt': 'teradata_mcp_server.tools.sql_opt',
         'sec': 'teradata_mcp_server.tools.sec',
         'tmpl': 'teradata_mcp_server.tools.tmpl',
+        'tdvs': 'teradata_mcp_server.tools.tdvs'
     }
 
     def __init__(self):
