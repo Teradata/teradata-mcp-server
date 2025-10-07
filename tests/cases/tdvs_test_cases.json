@@ -1,0 +1,112 @@
+{
+  "test_cases": {
+    "tdvs_get_health": [
+      {
+        "name": "test_get_vs_health",
+        "parameters": {}
+      }
+    ],
+    "tdvs_create": [
+      {
+        "name": "test_vs_create",
+        "parameters": {
+          "vs_name": "my_amazon_product_reviews",
+          "vs_create": {
+            "description": "This contains info related to amazon reviews",
+            "object_names": "sentiment_extract_input",
+            "key_columns": [
+              "id"
+            ],
+            "data_columns": [
+              "review"
+            ],
+            "embeddings_base_url": "https://gpudev1-modelops.labs.teradata.com/serving/nvidia-llama-32-nv-embedqa-1b-v2/v1/embeddings",
+            "completions_base_url": "https://gpudev1-modelops.labs.teradata.com/serving/mistralai-mistral-7b-instruct-v03/v1",
+            "embeddings_model": "nvidia/llama-3.2-nv-embedqa-1b-v2",
+            "chat_completion_model": "mistralai/mistral-7b-instruct-v0.3",
+            "embeddings_dims": 2048,
+            "chat_completion_max_tokens": 8192
+          }
+        }
+      }
+    ],
+    "tdvs_get_details": [
+      {
+        "name": "test_vs_get_details",
+        "parameters": {
+          "vs_name": "my_amazon_product_reviews"
+        }
+      }
+    ],
+    "tdvs_list": [
+      {
+        "name": "test_vs_list",
+        "parameters": {}
+      }
+    ],
+    "tdvs_update": [
+      {
+        "name": "test_vs_update",
+        "parameters": {
+          "vs_name": "my_amazon_product_reviews",
+          "vs_update": {
+            "description": "This contains info related to amazon reviews",
+            "object_names": "sentiment_extract_new_data",
+            "alter_operation": "ADD"
+          }
+        }
+      }
+    ],
+    "tdvs_similarity_search": [
+      {
+        "name": "test_vs_similarity_search",
+        "parameters":{
+          "vs_name": "my_amazon_product_reviews",
+          "vs_similaritysearch": {
+            "question": "best product recommend worth buying outstanding quality"
+          }
+        }
+      }
+    ],
+    "tdvs_ask": [
+      {
+        "name": "test_vs_ask",
+        "parameters":{
+          "vs_name": "my_amazon_product_reviews",
+          "vs_ask": {
+            "question": "best product recommend worth buying outstanding quality"
+          }
+        }
+      }
+    ],
+    
+    "tdvs_grant_user_permission": [
+      {
+        "name": "test_vs_grant_user_permission",
+        "parameters": {
+          "vs_name": "my_amazon_product_reviews",
+          "user_name": "test1",
+          "permission": "USER"
+        }
+      }
+    ],
+    "tdvs_revoke_user_permission": [
+      {
+        "name": "test_vs_revoke_user_permission",
+        "parameters": {
+          "vs_name": "my_amazon_product_reviews",
+          "user_name": "test1",
+          "permission": "USER"
+        }
+      }
+    ],
+    "tdvs_destroy": [
+      {
+        "name": "test_vs_destroy",
+        "parameters": {
+          "vs_name": "my_amazon_product_reviews"
+        }
+      }
+    ]
+  }
+}

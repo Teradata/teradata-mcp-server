@@ -1,6 +1,6 @@
 # 5-Minute Quick Start with Claude
 
-> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | **Quick Start** | [Installation](INSTALLATION.md) | [Configuration](CONFIGURATION.md)
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting started](GETTING_STARTED.md) | [Architecture](ARCHITECTURE.md) | [Installation](INSTALLATION.md) | [Configuration](CONFIGURATION.md) | [Security](SECURITY.md) | [Customization](CUSTOMIZING.md) | [Client Guide](../client_guide/CLIENT_GUIDE.md)
 
 > **🎯 Goal:** Get a working MCP server connected to Claude Desktop in 5 minutes
 
@@ -18,7 +18,7 @@ Before starting, ensure you have:
    - [Claude Desktop](https://claude.ai/download) installed
    - [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
      - macOS: `brew install uv`
-     - Windows: `winget install astral-sh.uv`
+     - Windows: `winget install astral-sh.uv`, alternatively `pip install uv`
 
 ## 🚀 Step 1: Test the Server (1 minute)
 
@@ -89,7 +89,8 @@ You should see Claude connect to your Teradata database and return results!
 
 **Server won't start?**
 - Check your `DATABASE_URI` format
-- Verify database connectivity: `ping your-host`
+- Check if the tool works with the --help arguments. Eg. `teradata-mcp-server --version`
+- Force update to the latest version `uvx teradata-mcp-server --no-cache`
 - Rollback to a prior version changing your config file: `"args": ["teradata-mcp-server==0.1.3", "--profile", "all"],`
 - See [Installation Guide](INSTALLATION.md) for alternative methods
 

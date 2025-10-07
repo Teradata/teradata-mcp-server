@@ -1,6 +1,6 @@
 # Server Configuration
 
-> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Quick Start](QUICK_START.md) | [Installation](INSTALLATION.md) | **Configuration**
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting started](GETTING_STARTED.md) | [Architecture](ARCHITECTURE.md) | [Installation](INSTALLATION.md) | [<u>**Configuration**</u>](CONFIGURATION.md) | [Security](SECURITY.md) | [Customization](CUSTOMIZING.md) | [Client Guide](../client_guide/CLIENT_GUIDE.md)
 
 > **🎯 Goal:** Configure your MCP server for optimal performance and security
 
@@ -297,6 +297,22 @@ export TD_MAX_OVERFLOW="20"
 export LOGGING_LEVEL="DEBUG"
 # Check for connection leaks in logs
 ```
+
+**Installing behind a proxy**
+
+For UV installations
+```bash
+export INTERNAL_PROXY=
+export UV_INDEX_INTERNAL_PROXY_USERNAME=
+export UV_INDEX_INTERNAL_PROXY_PASSWORD=
+export UV_INDEX=
+```
+
+for pip installations
+```bash
+pip install <package_name> --proxy ://[user:password@]proxy.server:port
+```
+
 
 ### Testing Your Configuration
 

@@ -1,5 +1,7 @@
 # Development Conventions
 
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting started](../server_guide/GETTING_STARTED.md) | [Architecture](../server_guide/ARCHITECTURE.md) | [Installation](../server_guide/INSTALLATION.md) | [Configuration](../server_guide/CONFIGURATION.md) | [Security](../server_guide/SECURITY.md) | [Customization](../server_guide/CUSTOMIZING.md) | [Client Guide](../client_guide/CLIENT_GUIDE.md) 
+
 This document provides guidelines for developing new tools for the Teradata MCP server.
 <br>
 
@@ -340,16 +342,25 @@ This split keeps MCP concerns (transport, context, auth, formatting) in the serv
 
 ## Interactive testing using the MCP Inspector
 
-The MCP inspector provides you with a convenient way to browse and test tools, resources and prompts:
+The [MCP inspector](https://www.npmjs.com/package/@modelcontextprotocol/inspector/v/0.9.0) provides you with a convenient way to browse and test tools, resources and prompts:
 
-**For development environment:**
+You can use the inspector to directly run the MCP server and connect over stdio:
+
+**Using the development environment:**
 ```bash
-uv run mcp dev ./src/teradata_mcp_server/server.py
+ npx modelcontextprotocol/inspector uv run teradata-mcp-server
 ```
 
-**For installed package:**
+**Using the installed package:**
 ```bash
-mcp dev teradata-mcp-server
+ npx modelcontextprotocol/inspector teradata-mcp-server
+```
+
+You may also run the MCP server as a separate process and connect to it form the inspector over http:
+
+```bash
+uv run teradata-mcp-server --mcp_transport streamable-http
+npx modelcontextprotocol/inspector
 ```
 
 ## Build, Test, and Publish

@@ -24,7 +24,7 @@ from typing import Any
 import yaml
 from fastmcp import FastMCP
 from fastmcp.prompts.prompt import TextContent, Message
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 from teradata_mcp_server.config import Settings
 from teradata_mcp_server import utils as config_utils
@@ -62,6 +62,7 @@ def create_mcp_app(settings: Settings):
     # Feature flags from profiles
     enableEFS = True if any(re.match(pattern, 'fs_*') for pattern in config.get('tool', [])) else False
     enableEVS = True if any(re.match(pattern, 'evs_*') for pattern in config.get('tool', [])) else False
+    enableTDVS = True if any(re.match(pattern, 'tdvs_*') for pattern in config.get('tool', [])) else False
 
     # Initialize TD connection and optional teradataml/EFS context
     # Pass settings object to TDConn instead of just connection_url
@@ -105,6 +106,17 @@ def create_mcp_app(settings: Settings):
         except Exception as e:
             logger.error(f"Unable to establish connection to EVS, disabling: {e}")
             enableEVS = False
+            
+    # TeradataVectorStore connection (optional)
+    tdvs = None
+    if len(os.getenv("TD_BASE_URL", "").strip()) > 0:
+        try:
+            from teradata_mcp_server.tools.tdvs.tdvs_utilies import create_teradataml_context
+            create_teradataml_context()
+            enableTDVS = True
+        except Exception as e:
+            logger.error(f"Unable to establish connection to Teradata Vector Store, disabling: {e}")
+            enableTDVS = False
 
     # Middleware (auth + request context)
     from teradata_mcp_server.tools.auth_cache import SecureAuthCache
@@ -260,6 +272,7 @@ def create_mcp_app(settings: Settings):
 
         _exec.__name__ = getattr(func, "__name__", "wrapped_tool")
         _exec.__signature__ = new_sig
+        _exec.__doc__ = func.__doc__
         if annotations:
             _exec.__annotations__ = annotations
         return _exec

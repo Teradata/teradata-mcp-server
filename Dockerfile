@@ -26,6 +26,8 @@ COPY ./src /app/src
 # Build and install the package
 RUN uv build && \
     pip install . && \
+    if [ "$ENABLE_FS_MODULE" = "true" ]; then pip install .[fs];fi && \
+    if [ "$ENABLE_EVS_MODULE" = "true" ]; then pip install .[evs];fi && \
     apt-get purge -y build-essential gcc && \
     rm -rf /var/lib/apt/lists/*
 

@@ -62,7 +62,7 @@ You can use Claude Desktop to give the  Teradata MCP server a quick try, Claude 
 **Pre-requisites**
 1. Get your Teradata database credentials or create a free sandbox at [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics).
 2. Install [Claude Desktop](https://claude.ai/download).
-3. Install [uv](https://docs.astral.sh/uv/getting-started/installation/). If you are on MacOS, Use Homebrew: `brew install uv`.
+3. Install [uv](https://docs.astral.sh/uv/getting-started/installation/). If you are on MacOS, Use Homebrew: `brew install uv`, on Windows you may use `pip install uv` as an alternative to the installer.
 
 Configure the claude_desktop_config.json (Settings>Developer>Edit Config) by adding the configuration below, updating the database username, password and URL:
 
@@ -80,85 +80,23 @@ Configure the claude_desktop_config.json (Settings>Developer>Edit Config) by add
 }
 ```
 
-## Setting up your environment
+## Installation Instructions
 
 Follow this process to install your server, connect it to your Teradata platform and integrated your tools.
 
 **Step 1.** - Identify the running Teradata System, you need username, password and host details. If you do not have a Teradata system to connect to, then leverage [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics)
 
-**Step 2.** - To install, configure and run the MCP server, refer to the [Getting started guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/server_guide/GETTING_STARTED.md), or see below for a quick [CLI installation](#CLI-Installation). You can easily [customize the server with your own tools, prompts and resources](docs/server_guide/CUSTOMIZING.md).
+**Step 2.** - To install, configure and run the MCP server, refer to the [Teradata MCP Server Documentation](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/README.md).
 
 **Step 3.** - There are many client options available, the [Client Guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/README.md#-client-guide) explains how to configure and run a sample of different clients.
 
 <br>
 
-Check out our [documentation](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/README.md) and libraries of [curated examples](https://github.com/Teradata/teradata-mcp-server/blob/main/examples/) or [video guides](https://github.com/Teradata/teradata-mcp-server/blob/doc-v1.4/docs/server_guide/VIDEO_LIBRARY.md).
+Check out our libraries of [curated examples](https://github.com/Teradata/teradata-mcp-server/blob/main/examples/) or [video guides](https://github.com/Teradata/teradata-mcp-server/blob/doc-v1.4/docs/server_guide/VIDEO_LIBRARY.md).
 
 <br>
 
-## CLI Installation
 
-We recommend `uv` or `pipx` to install teradata-mcp-server as a CLI tool on your system. 
-They provide isolated environments and ensure the `teradata-mcp-server` command is available system-wide without interfering with system Python.
-
-```bash
-uv tool install "teradata-mcp-server"
-```
-
-or with pipx
-
-```bash
-pipx install "teradata-mcp-server"
-```
-
-To install the optional Enterprise Feature Store (fs) and Enterprise Vector Store (evs) packages:
-```bash
-uv tool install "teradata-mcp-server[fs,evs]"
-```
-
-Alternatively, you may use pip in a virtual environment (Python>=3.11):
-
-```bash
-pip install teradata-mcp-server
-```
-
-For usage:
-
-```bash
-teradata-mcp-server --help
-```
-
-
-## Build from Source (Development)
-
-For development or customization, you can build from source:
-
-1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/). If you are on macOS, use Homebrew: `brew install uv`
-2. Clone this repository: `git clone https://github.com/Teradata/teradata-mcp-server.git`
-3. Navigate to the directory: `cd teradata-mcp-server`
-4. Run the server: `uv run teradata-mcp-server`
-
-For Claude Desktop with development build, use this configuration:
-
-```json
-{
-  "mcpServers": {
-    "teradata": {
-      "command": "uv",
-      "args": [
-        "--directory",
-        "<PATH_TO_DIRECTORY>/teradata-mcp-server",
-        "run",
-        "teradata-mcp-server"
-      ],
-      "env": {
-        "DATABASE_URI": "teradata://<USERNAME>:<PASSWORD>@<HOST_URL>:1025/<USERNAME>",
-        "MCP_TRANSPORT": "stdio"
-      }
-    }
-  }
-}
-```
 
 ## Contributing
 Please refer to the [Contributing](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/developer_guide/CONTRIBUTING.md) guide and the [Developer Guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/developer_guide/DEVELOPER_GUIDE.md).

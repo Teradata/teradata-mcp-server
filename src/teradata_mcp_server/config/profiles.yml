@@ -29,12 +29,14 @@ dataScientist:
     - ^sql_*
     - ^fs_*
     - ^qlty_*
+    - ^tdvs_*
     - ^sec_userDbPermissions
     - ^dba_userSqlList
     - ^plot_*
   prompt:
     - ^rag_*
     - ^sql_*
+    - ^tdvs_*
 
 eda:
   tool:

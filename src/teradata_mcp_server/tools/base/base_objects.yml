@@ -176,9 +176,11 @@ base_tableBusinessDesc:
    - The database name is {database_name}
 
    ## Phase 1 - Get the table DDL
-   - Get the table DDL from the user. The DDL should be a single string, and it should not contain any new lines or special characters. Use the base_tableDDL tool to get the DDL.
+   - Use the `base_tableDDL` function to get the DDL for the table.
+
 
    ## Phase 2 - Describe the table
+   - Based *only* on the DDL you just received. **Do not use any other tools or prompts for this description step.**   
    - Describe the table in a business context. The description should be a single string. 
    - The description should include the following: 
        - The purpose of the table
@@ -226,12 +228,12 @@ base_databaseBusinessDesc:
    - the database name is {database_name}
 
    ## Phase 1 - get the list of tables
-   - Get the list of tables in the database. Use the base_tableList tool to get the list.
+   - Use the `base_tableList` function to get the list of tables in the database.
 
    ## Phase 2 - describe the tables
    For each table, you will:
-   - Get the table DDL from the user. Use the base_tableDDL tool to get the DDL.
-   - Describe the table in a business context. The description should be a single string.
+   - Use the `base_tableDDL` function to get the DDL for the table.
+   - Based *only* on the DDL you just received, describe the table in a business context. **Do not use any other tools or prompts for this description step.**
 
    ## Phase 3 - Describe the database
    - Describe the database in a business context based on the business descriptions of the tables. 

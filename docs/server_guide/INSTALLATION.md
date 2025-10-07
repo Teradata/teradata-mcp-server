@@ -1,6 +1,6 @@
 # Installation & Deployment Guide
 
-> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Quick Start](QUICK_START.md) | **Installation** | [Configuration](CONFIGURATION.md)
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting started](GETTING_STARTED.md) | [Architecture](ARCHITECTURE.md) | [<u>**Installation**</u>](INSTALLATION.md) | [Configuration](CONFIGURATION.md) | [Security](SECURITY.md) | [Customization](CUSTOMIZING.md) | [Client Guide](../client_guide/CLIENT_GUIDE.md)
 
 > **🎯 Goal:** Choose and implement the best deployment method for your needs
 
@@ -38,6 +38,8 @@ uv tool install "teradata-mcp-server"
 # With optional Enterprise Feature Store and Vector Store
 uv tool install "teradata-mcp-server[fs,evs]"
 ```
+
+If the tool's path isn't resolved add it to your shell using `uv tool update-shell` and restart the terminal.
 
 ### Option B: Using pipx 
 ```bash

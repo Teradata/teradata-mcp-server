@@ -1,5 +1,7 @@
 # Documentation Strategy for Teradata MCP Server
 
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting started](../server_guide/GETTING_STARTED.md) | [Architecture](../server_guide/ARCHITECTURE.md) | [Installation](../server_guide/INSTALLATION.md) | [Configuration](../server_guide/CONFIGURATION.md) | [Security](../server_guide/SECURITY.md) | [Customization](../server_guide/CUSTOMIZING.md) | [Client Guide](../client_guide/CLIENT_GUIDE.md)
+
 ## 🎯 Documentation Overview 
 
 The documentation follows a **progressive disclosure design** with clear user journey optimization.Users should be guided through layered complexity: Quick Start (5 minutes) → Detailed Setup → Advanced Configuration → Development. Each document has a single responsibility and provides clear navigation to related topics, reducing cognitive load and time-to-success. 
