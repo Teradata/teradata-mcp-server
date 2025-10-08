@@ -16,7 +16,7 @@ docker build --build-arg ENABLE_FS_MODULE=true \
 3. **Build Flowise Container Image** from https://github.com/FlowiseAI/Flowise,  run below lines in cmd terminal.
 
 ```
-git clone git clone https://github.com/FlowiseAI/Flowise.git
+git clone https://github.com/FlowiseAI/Flowise.git
 cd Flowise
 docker build --no-cache -t flowise:latest .
 ```
@@ -114,7 +114,7 @@ docker compose up -d --remove-orphans
 
 7. **Validate docker container status**
 ```
-dokcer ps
+docker ps
 # teradata-mcp-server container logs
 docker logs teradata-mcp-server -f
 # Flowise Container logs

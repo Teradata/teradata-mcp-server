@@ -28,7 +28,7 @@ class ModuleLoader:
         'sql_opt': 'teradata_mcp_server.tools.sql_opt',
         'sec': 'teradata_mcp_server.tools.sec',
         'tmpl': 'teradata_mcp_server.tools.tmpl',
-        'plot': 'teradata_mcp_server.tools.plot'
+        'plot': 'teradata_mcp_server.tools.plot',
         'tdvs': 'teradata_mcp_server.tools.tdvs'
     }
 
