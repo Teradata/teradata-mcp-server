@@ -6,7 +6,7 @@ TD_MAX_OVERFLOW=10
 TDPOOL_TIMEOUT=30
 
 MCP_TRANSPORT=streamable-http  #stdio, sse, streamable-http
-MCP_HOST=127.0.0.1
+MCP_HOST=0.0.0.0
 MCP_PORT=8001
 MCP_PATH=/mcp/
 

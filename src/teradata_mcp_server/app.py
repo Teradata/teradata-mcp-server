@@ -53,6 +53,8 @@ def create_mcp_app(settings: Settings):
 
     mcp = FastMCP("teradata-mcp-server")
 
+    
+    
     # Profiles (load via utils to honor packaged + working-dir overrides)
     profile_name = settings.profile
     if not profile_name:
@@ -333,9 +335,8 @@ def create_mcp_app(settings: Settings):
 
             # Register the function as a tool in MCP server.
             func = globals()[func_name]
-
             mcp.tool(name=func_name, description=doc_string)(func)
-
+            logger.info("Created analytic function tool: {}".format(func_name))
     # Load YAML-defined tools/resources/prompts
     custom_object_files = [file for file in os.listdir() if file.endswith("_objects.yml")]
     if module_loader and profile_name:

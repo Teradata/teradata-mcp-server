@@ -31,6 +31,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 TD_VS_BASE_URL = os.getenv("TD_BASE_URL", None)
-TD_PAT_TOKEN = os.getenv("TD_PAT", None)
-TD_PEM_FILE = os.getenv("TD_PEM", None)
+TD_PAT_TOKEN = os.getenv("TD_PAT") or None
+TD_PEM_FILE = os.getenv("TD_PEM") or None
 DATABASE_URI = os.getenv("DATABASE_URI", None)  # e.g., "teradatasql://user:password@host/database"
