@@ -58,6 +58,10 @@ We are providing groupings of tools and associated helpful prompts to support al
 - **DBA** tools, prompts and resources to facilitate your platform administration tasks:
   - [DBA Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/dba/README.md)
   - [Security Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/sec/README.md)
+- **Data Scientist** Explore a collection of tools, prompts, and resources designed to help you build powerful [AI agents and workflows](./examples/app-flowise/flowise_teradata_agents/README.md) for data-driven applications.
+  - [Teradata Vector Store Tools](./src/teradata_mcp_server/tools/tdvs/README.md)
+  - [Teradataml Functions Tools](./src/teradata_mcp_server/tools/constants.py)
+  - [Plot Tools](./src/teradata_mcp_server/tools/plot/README.md)
 
 ## Quick start with Claude Desktop (no installation)
 > Prefer to use other tools? Check out our Quick Starts for [VS Code/Copilot](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/server_guide/QUICK_START_VSCODE.md), [Open WebUI](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/server_guide/QUICK_START_OPEN_WEBUI.md), or dive into [simple code examples](https://github.com/Teradata/teradata-mcp-server/blob/main/examples/README.md#client-applications)!
