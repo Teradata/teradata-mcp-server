@@ -45,7 +45,7 @@ MCP_PATH=/mcp/
 
 # ----- Enterprise Vector Store ----------
 TD_BASE_URL=https://host/api/accounts/40c83ff23b2e    #Your UES_URI, strip off the trailing /open-analytics
-#TD_PAT=gwxhQG2UZcDqQlp9LKWjEBfXB7                     #Your PAT
+#TD_PAT=gwxhQG2UZcDqQlp9LKWjEBfXB7                     #Your PAT if you have Teradata Lake system.
 TD_PEM=/root/td_ai_stack/demo_key.pem                 #Your PEM with full path where you kept on host                            
 VS_NAME=vs_example                                    #Your target Vector Store Name
 
