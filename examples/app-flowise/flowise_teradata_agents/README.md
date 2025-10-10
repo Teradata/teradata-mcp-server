@@ -1,9 +1,9 @@
 # Teradata Agents with Flowise AgentFlow and Teradata MCP Server
 
-[![Teradata Data Science Agent](https://img.shields.io/badge/Teradata--Data--Science--Agent-Setup%20Video-green?style=for-the-badge&logo=teradata)](../../../docs/media/flowise/GIFs/Teradata_Data_Science_Workflow_Agents_V2.mp4)
-[![Teradata Vector Store RAG Agent](https://img.shields.io/badge/Teradata--Vector--Store--Agent-Setup%20Video-green?style=for-the-badge&logo=teradata)](../../../docs/media/flowise/GIFs/Teradata%20Vector%20Store%20RAG%20Agent.mp4)
+[![Teradata Data Science Agent](https://img.shields.io/badge/Teradata--Data--Science--Agent-Setup%20Video-green?style=for-the-badge&logo=teradata)](https://youtu.be/xkmslhg_ulU)
+[![Teradata Vector Store RAG Agent](https://img.shields.io/badge/Teradata--Vector--Store--Agent-Setup%20Video-green?style=for-the-badge&logo=teradata)](https://youtu.be/aM01xOndsvk)
 [![Teradata Visualization Agent](https://img.shields.io/badge/Teradata--Visualization--Agent-Template-green?style=for-the-badge&logo=teradata)](./Teradata_visualized_Agents_V2.json)
-[![Teradata Customer Lifetime Value (CLV) Demo Agent](https://img.shields.io/badge/Teradata--Customer--Lifetime--Value--Agent--Demo-Setup%20Video-green?style=for-the-badge&logo=teradata)](../../../docs/media/flowise/GIFs/Teradata%20Vector%20Store%20RAG%20Agent.mp4)
+[![Teradata Customer Lifetime Value (CLV) Demo Agent](https://img.shields.io/badge/Teradata--Customer--Lifetime--Value--Agent--Demo-Setup%20Video-green?style=for-the-badge&logo=teradata)](https://youtu.be/pYx0dn65Z2s)
 
 
 
@@ -36,7 +36,7 @@ This agent template provides a complete **Flowise workflow** to interact with **
 
 **🎥 How-To Video**:
 
-Watch this step-by-step video tutorial — [Teradata Data Science Agent Setup](../../../docs/media/flowise/GIFs/Teradata_Data_Science_Workflow_Agents_V2.mp4)
+Watch this step-by-step video tutorial — [Teradata Data Science Agent Setup](https://youtu.be/xkmslhg_ulU)
 
 ---
 ### 🧩 Teradata Vector Store RAG Agent
@@ -54,7 +54,7 @@ This agent template provides a complete **Flowise workflow** to interact with th
 
 **🎥 How-To Video**:
 
-Watch this step-by-step video tutorial — [Teradata VectorStore RAG Agent Setup](../../../docs/media/flowise/GIFs/Teradata%20Vector%20Store%20RAG%20Agent.mp4)
+Watch this step-by-step video tutorial — [Teradata VectorStore RAG Agent Setup](https://youtu.be/aM01xOndsvk)
 
 ---
 ### 💼 Customer Lifetime Value (CLV) Demo Agent
@@ -73,7 +73,7 @@ It demonstrates practical use of LLMs for analytics, insights generation, and st
 
 **🎥 How-To Video**:
 
-Watch this step-by-step video tutorial — [Customer Lifetime Value (CLV) Demo Agent](../../../docs/media/flowise/GIFs/Customer_Lifetime_Value_Agent_V2_Demo.mp4)
+Watch this step-by-step video tutorial — [Customer Lifetime Value (CLV) Demo Agent](https://youtu.be/pYx0dn65Z2s)
 
 ---
 ### 📊 Teradata Visualization Agent
