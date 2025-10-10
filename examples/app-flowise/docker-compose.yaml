@@ -1,6 +1,6 @@
 services:
     flowise:
-        image: flowiseai/flowise:latest
+        image: flowise:latest
         restart: always
         environment:
             - PORT=${PORT}
@@ -12,7 +12,9 @@ services:
            # Default Teradata Configuration env to refer into flowise
             - TD_MCP_SERVER=http://teradata-mcp-server:8001/mcp
         ports:
-            - '${PORT}:${PORT}'
+            - "${PORT}:${PORT}"
+        extra_hosts:
+            - "dbccop1:${DATABASE_HOST}"
         container_name: flowise
         healthcheck:
             test: ['CMD', 'curl', '-f', 'http://localhost:${PORT}/api/v1/ping']
@@ -21,14 +23,8 @@ services:
             retries: 5
             start_period: 30s
         volumes:
-            - ${DATA_DIR:-./.flowise}:/root/.flowise
+            - ${DATA_DIR}/.flowise:/root/.flowise
     teradata-mcp-server:
-        build:
-            context: ../..
-            dockerfile: Dockerfile
-            args:
-                ENABLE_FS_MODULE: "true"
-                ENABLE_EVS_MODULE: "true"
         image: teradata-mcp-server:latest
         restart: always
         environment:
@@ -39,9 +35,17 @@ services:
             - MCP_HOST=${MCP_HOST}
             - MCP_PORT=${MCP_PORT}
             - PROFILE=${PROFILE}
+            - TD_BASE_URL=${TD_BASE_URL}
+            - TD_PAT=${TD_PAT}
+            - TD_PEM=${TD_PEM}
+            - VS_NAME=${VS_NAME}
         container_name: teradata-mcp-server
+        extra_hosts:
+            - "dbccop1:${DATABASE_HOST}"
         ports:
             - "${MCP_PORT}:${MCP_PORT}"
+        volumes:
+            - ${TD_PEM}:${TD_PEM}
         tty: true
 networks:
   default:

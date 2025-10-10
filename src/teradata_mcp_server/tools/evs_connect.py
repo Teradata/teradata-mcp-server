@@ -31,7 +31,7 @@ def get_evs() -> VectorStore:
 
     set_auth_token(
         base_url=os.getenv("TD_BASE_URL"),
-        pat_token=os.getenv("TD_PAT"),
+        pat_token=os.getenv("TD_PAT") or None,
         pem_file=os.getenv("TD_PEM") or None,
     )
     VSManager.health()

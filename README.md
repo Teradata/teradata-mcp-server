@@ -19,6 +19,9 @@
   <a href="https://pypi.org/project/teradata-mcp-server/">
     <img alt="downloads" src="https://img.shields.io/pypi/dm/teradata-mcp-server?label=downloads&color=2ea44f">
   </a>
+  <a href="./examples/app-flowise/flowise_teradata_agents/README.md">
+    <img alt="docs" src="https://img.shields.io/badge/Teradata--Agents-Setup-green">
+  </a>
 </p>
 
 <p align="center">
@@ -28,6 +31,7 @@
 <p align="center">
   ✨ <a href="https://github.com/Teradata/teradata-mcp-server?tab=readme-ov-file#quick-start-with-claude-desktop-no-installation">Quickstart with Claude Desktop </a> or <a href="https://github.com/Teradata/teradata-mcp-server/blob/main/docs/README.md#-quick-start"> your favorite tool</a> in <5 minute ✨
 </p>
+
 
 ## Overview
 The Teradata MCP server provides sets of tools and prompts, grouped as modules for interacting with Teradata databases. Enabling AI agents and users to query, analyze, and manage their data efficiently. 
