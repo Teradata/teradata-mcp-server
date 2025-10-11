@@ -210,17 +210,23 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
                                  date:  str | None = None,
                                  dayOfWeek:  str | None = None,
                                  hourOfDay:  str | None = None,
+                                 workloadType: str | None = None,
+                                 workloadComplexity: str | None = None,
+                                 AppId: str | None = None,
                                  *args, **kwargs):
 
     """
     Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.
 
     Arguments:
-      dimensions - list of dimensions to aggregate the resource usage summary. All dimensions are: ["LogDate", "hourOfDay", "dayOfWeek", "workloadType", "workloadComplexity", "UserName", "AppId", "StatementType"]
+      dimensions - list of dimensions to aggregate the resource usage summary. All dimensions are: ["LogDate", "hourOfDay", "dayOfWeek", "workloadType", "workloadComplexity", "UserName", "AppId"]
       user_name - user name
       date - Date to analyze, formatted as `YYYY-MM-DD`
       dayOfWeek - day of the week to analyze
       hourOfDay - hour of day to analyze
+      workloadType - workload type to analyze, example: 'LOAD', 'ETL/ELT', 'EXPORT', 'QUERY', 'ADMIN', 'OTHER'
+      workloadComplexity - workload complexity to analyze, example: 'Ingest & Prep', 'Answers', 'System/Procedural'
+      AppId - Application ID to analyze, example: 'TPTLOAD%', 'TPTUPD%', 'FASTLOAD%', 'MULTLOAD%', 'EXECUTOR%', 'JDBC%'
 
     """
     logger.debug(f"Tool: handle_dba_resusageSummary: Args: dimensions: {dimensions}")
@@ -228,7 +234,7 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
     comment="Total system resource usage summary."
 
     # If dimensions is not None or empty, filter in the allowed dimensions
-    allowed_dimensions = ["LogDate", "hourOfDay", "dayOfWeek", "workloadType", "workloadComplexity","UserName","AppId","StatementType"]
+    allowed_dimensions = ["LogDate", "hourOfDay", "dayOfWeek", "workloadType", "workloadComplexity","UserName","AppId"]
     unsupported_dimensions = []
     if dimensions is not None:
         unsupported_dimensions = [dim for dim in dimensions if dim not in allowed_dimensions]
@@ -253,6 +259,9 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
     filter_clause += f"AND LogDate = '{date}' " if date else ""
     filter_clause += f"AND dayOfWeek = '{dayOfWeek}' " if dayOfWeek else ""
     filter_clause += f"AND hourOfDay = '{hourOfDay}' " if hourOfDay else ""
+    filter_clause += f"AND workloadType = '{workloadType}' " if workloadType else ""
+    filter_clause += f"AND workloadComplexity = '{workloadComplexity}' " if workloadComplexity else ""
+    filter_clause += f"AND AppID LIKE '{AppId}' " if AppId else ""
 
     query = f"""
     SELECT
