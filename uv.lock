@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -373,7 +373,7 @@ version = "3.24.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
-    { name = "docstring-parser", marker = "python_full_version < '4.0'" },
+    { name = "docstring-parser", marker = "python_full_version < '4'" },
     { name = "rich" },
     { name = "rich-rst" },
 ]
@@ -2318,6 +2318,9 @@ fs = [
     { name = "tdfs4ds" },
     { name = "teradataml" },
 ]
+tdvs = [
+    { name = "teradatagenai" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -2336,11 +2339,12 @@ requires-dist = [
     { name = "sqlalchemy", specifier = ">=2.0.0,<3.0.0" },
     { name = "tdfs4ds", marker = "extra == 'fs'", specifier = ">=0.2.4.0" },
     { name = "teradatagenai", marker = "extra == 'evs'", specifier = ">=20.0.0.0" },
-    { name = "teradataml", marker = "extra == 'fs'", specifier = ">=20.0.0.5" },
+    { name = "teradatagenai", marker = "extra == 'tdvs'", specifier = ">=20.0.0.3" },
+    { name = "teradataml", marker = "extra == 'fs'", specifier = ">=20.0.0.7" },
     { name = "teradatasqlalchemy", specifier = ">=20.0.0.0" },
     { name = "types-pyyaml", marker = "extra == 'dev'" },
 ]
-provides-extras = ["fs", "evs", "dev"]
+provides-extras = ["fs", "evs", "tdvs", "dev"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "build", specifier = ">=1.3.0" }]

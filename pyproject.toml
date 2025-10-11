@@ -34,7 +34,7 @@ dependencies = [
 [project.optional-dependencies]
 # Feature Store functionality
 fs = [
-    "teradataml>=20.0.0.5",
+    "teradataml>=20.0.0.7",
     "tdfs4ds>=0.2.4.0",
 ]
 # Enterprise Vector Store functionality  
@@ -43,7 +43,7 @@ evs = [
 ]
 # Teradata Vector Store functionality
 tdvs = [
-    "teradatagenai>=20.0.0.0"
+    "teradatagenai>=20.0.0.3"
 ]
 # Development dependencies 
 dev = [

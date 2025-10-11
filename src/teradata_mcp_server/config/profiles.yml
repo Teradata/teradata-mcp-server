@@ -33,6 +33,7 @@ dataScientist:
     - ^sec_userDbPermissions
     - ^dba_userSqlList
     - ^plot_*
+    - ^tdml_*
   prompt:
     - ^rag_*
     - ^sql_*

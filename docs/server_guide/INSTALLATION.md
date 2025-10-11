@@ -110,14 +110,14 @@ docker compose up
 export DATABASE_URI="teradata://username:password@host:1025/database"
 
 # Build with optional modules (Feature Store, Vector Store)
-ENABLE_FS_MODULE=true ENABLE_EVS_MODULE=true docker compose build
+ENABLE_FS_MODULE=true ENABLE_TDVS_MODULE=true docker compose build
 docker compose up
 
 # Run with specific profile
 PROFILE=dba docker compose up
 
 # Combine options
-ENABLE_FS_MODULE=true PROFILE=dataScientist docker compose build
+ENABLE_FS_MODULE=true ENABLE_TDVS_MODULE=true PROFILE=dataScientist docker compose build
 PROFILE=dataScientist docker compose up
 
 # Run in background (production)

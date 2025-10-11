@@ -23,7 +23,7 @@ uv sync                      # create venv and install project deps
 
 > Tip: add extras for full dev (feature store, EVS) if you use them:
 ```bash
-uv sync --extra fs --extra evs
+uv sync --extra fs --extra tdvs
 ```
 
 ### 3) Run the server from source

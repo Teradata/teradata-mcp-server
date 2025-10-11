@@ -9,7 +9,8 @@ git clone https://github.com/Teradata/teradata-mcp-server.git
 cd teradata-mcp-server
 # build container from Source code
 docker build --build-arg ENABLE_FS_MODULE=true \
-   --build-arg ENABLE_EVS_MODULE=true \
+   --build-arg ENABLE_TDML_MODULE=true \
+   --build-arg ENABLE_TDVS_MODULE=true \
    -t teradata-mcp-server:latest .
 
 ```
@@ -34,6 +35,8 @@ LOGMECH=TD2  #TD2 or LDAP
 TD_POOL_SIZE=5
 TD_MAX_OVERFLOW=10
 TDPOOL_TIMEOUT=30
+PROFILE=dataScientist
+DATABASE_HOST=IP_OF_DB_NODE
 
 MCP_TRANSPORT=streamable-http  #stdio, sse, streamable-http
 MCP_HOST=0.0.0.0
@@ -42,8 +45,8 @@ MCP_PATH=/mcp/
 
 # ----- Enterprise Vector Store ----------
 TD_BASE_URL=https://host/api/accounts/40c83ff23b2e    #Your UES_URI, strip off the trailing /open-analytics
-TD_PAT=gwxhQG2UZcDqQlp9LKWjEBfXB7                     #Your PAT
-TD_PEM=./demo_key.pem                                 #Your PEM                                
+#TD_PAT=gwxhQG2UZcDqQlp9LKWjEBfXB7                     #Your PAT if you have Teradata Lake system.
+TD_PEM=/root/td_ai_stack/demo_key.pem                 #Your PEM with full path where you kept on host                            
 VS_NAME=vs_example                                    #Your target Vector Store Name
 
 # ------------ Flowise env varieable -------------------#
@@ -73,7 +76,9 @@ services:
            # Default Teradata Configuration env to refer into flowise
             - TD_MCP_SERVER=http://teradata-mcp-server:8001/mcp
         ports:
-            - '${PORT}:${PORT}'
+            - "${PORT}:${PORT}"
+        extra_hosts:
+            - "dbccop1:${DATABASE_HOST}"
         container_name: flowise
         healthcheck:
             test: ['CMD', 'curl', '-f', 'http://localhost:${PORT}/api/v1/ping']
@@ -94,9 +99,17 @@ services:
             - MCP_HOST=${MCP_HOST}
             - MCP_PORT=${MCP_PORT}
             - PROFILE=${PROFILE}
+            - TD_BASE_URL=${TD_BASE_URL}
+            - TD_PAT=${TD_PAT}
+            - TD_PEM=${TD_PEM}
+            - VS_NAME=${VS_NAME}
         container_name: teradata-mcp-server
+        extra_hosts:
+            - "dbccop1:${DATABASE_HOST}"
         ports:
             - "${MCP_PORT}:${MCP_PORT}"
+        volumes:
+            - ${TD_PEM}:${TD_PEM}
         tty: true
 networks:
   default:

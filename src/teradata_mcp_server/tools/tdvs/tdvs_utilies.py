@@ -38,10 +38,13 @@ def create_teradataml_context():
                        username=conn_url.username,
                        password=conn_url.password)
         logger.info("teradataml context ready.")
+    else:
+        logger.info("teradataml context already exists.")
 
     if TD_VS_BASE_URL is None:
         raise ValueError("TD_BASE_URL environment variable is not set.")
-
+    
+    logger.info(f"Vector Store base URL: {TD_VS_BASE_URL}")
     if TD_PAT_TOKEN is not None and TD_PEM_FILE is not None:
         set_auth_token(
             base_url=TD_VS_BASE_URL,

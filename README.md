@@ -19,6 +19,9 @@
   <a href="https://pypi.org/project/teradata-mcp-server/">
     <img alt="downloads" src="https://img.shields.io/pypi/dm/teradata-mcp-server?label=downloads&color=2ea44f">
   </a>
+  <a href="./examples/app-flowise/flowise_teradata_agents/README.md">
+    <img alt="docs" src="https://img.shields.io/badge/Teradata--Agents-Setup-green">
+  </a>
 </p>
 
 <p align="center">
@@ -28,6 +31,7 @@
 <p align="center">
   ✨ <a href="https://github.com/Teradata/teradata-mcp-server?tab=readme-ov-file#quick-start-with-claude-desktop-no-installation">Quickstart with Claude Desktop </a> or <a href="https://github.com/Teradata/teradata-mcp-server/blob/main/docs/README.md#-quick-start"> your favorite tool</a> in <5 minute ✨
 </p>
+
 
 ## Overview
 The Teradata MCP server provides sets of tools and prompts, grouped as modules for interacting with Teradata databases. Enabling AI agents and users to query, analyze, and manage their data efficiently. 
@@ -54,6 +58,10 @@ We are providing groupings of tools and associated helpful prompts to support al
 - **DBA** tools, prompts and resources to facilitate your platform administration tasks:
   - [DBA Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/dba/README.md)
   - [Security Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/sec/README.md)
+- **Data Scientist** tools, prompts, and resources to build powerful [AI agents and workflows](./examples/app-flowise/flowise_teradata_agents/README.md) for data-driven applications.
+  - [Teradata Vector Store Tools](./src/teradata_mcp_server/tools/tdvs/README.md)
+  - [Teradataml Functions Tools](./src/teradata_mcp_server/tools/constants.py)
+  - [Plot Tools](./src/teradata_mcp_server/tools/plot/README.md)
 
 ## Quick start with Claude Desktop (no installation)
 > Prefer to use other tools? Check out our Quick Starts for [VS Code/Copilot](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/server_guide/QUICK_START_VSCODE.md), [Open WebUI](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/server_guide/QUICK_START_OPEN_WEBUI.md), or dive into [simple code examples](https://github.com/Teradata/teradata-mcp-server/blob/main/examples/README.md#client-applications)!
