@@ -13,8 +13,40 @@ pip install open-webui
 open-webui serve
 ```
 
-Access the UI at http://localhost:8080.
-To add the MCP tools, navigate to Settings > Tools > Add Connection, and enter your mcpo server connection details (eg. `localhost:8001`, password = `top-secret` if you have executed the command line in the mcpo section).
+Access the Open Web UI at http://localhost:8080.
+
+To add the LLM Connection, navigate to Settings > admin Settings > Conections > + , and enter your LLM connection details.
+
+- Connection type should be external
+- URL should be the end point that servers the LLM
+- Bearer should be the end point API key
+- Prefix ID can be any unique string
+- Provider Type should be the company that serves the model
+- API version should be the model version string
+- Model Id should be the model name
+
+![LLM Connection example](../media/OpenWebUI-LLMConnection.png)
+
+
+
+To add the MCP tools, navigate to Settings > Admin Settings > External Tools > + , and enter your MCP server connection details.
+
+Assuming you ran the MCP server as
+
+```
+uv run teradata-mcp-server --mcp_transport streamable-http --mcp_host 127.0.0.1 --mcp_port 8001 --auth_mode none --database_uri "teradata://<username>:<password>@<database host>:1025/<default database>" --profile all
+```
+
+- Type should be MCP Streamable HTTP
+- URL should be http://localhost:8001/mcp or as defined when running the MCP server
+- Auth should be None, unless you started the MCP server with a different auth_mode
+- ID can be any unique string
+- Name can be any unique string
+- Descriontion can be any unique string
+
+![Connection example](../media/OpenWebUI-ToolConnection.png)
+
+Below is an example comfiguration for a 
 
 You should be able to see the tools in the Chat Control Valves section on the right and get your models to use it.
 
