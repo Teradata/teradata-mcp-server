@@ -208,6 +208,34 @@ Claude Desktop example for Basic with JWT in password (or Bearer):
 }
 ```
 
+Visual Studio Code example of mcp.json file for Basic user:pass:
+
+```
+   "mcp": {
+        "servers": {
+            "teradata-http": {
+                "type": "http",
+                "url": "http://127.0.0.1:8001/mcp/",
+                "headers": {"Authorization" : "Basic base64_string"}
+            }
+        }
+    }
+```
+
+Visual Studio Code example of mcp.json file for JWT
+
+```
+   "mcp": {
+        "servers": {
+            "teradata-http": {
+                "type": "http",
+                "url": "http://127.0.0.1:8001/mcp/",
+                "headers": {"Authorization" : "Bearer JWT_Token"}
+            }
+        }
+    }
+```
+
 ### OAuth mode details
 
 :warning: **NOT IMPLEMENTED**
