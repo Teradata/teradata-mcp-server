@@ -131,11 +131,12 @@ def execute_analytic_function(function_name: str, tables_to_df=[], **kwargs):
     function_name = function_name[5:]
 
     logger = logging.getLogger("teradata_mcp_server.utils")
-    logger.info("recieved kwargs: {} for the function {}".format(func_params, function_name))
+    logger.info("received kwargs: {} for the function {}".format(func_params, function_name))
 
     # Import the function dynamically based on its name
 
     from teradataml import DataFrame, in_schema, copy_to_sql
+    from teradataml.common.utils import UtilFuncs
     import teradataml as tdml
     # Teradataml accepts DataFrame as input, so we need to convert the table_name
     # and object to DataFrame. Some of the functions accepts object also. If object
@@ -147,6 +148,20 @@ def execute_analytic_function(function_name: str, tables_to_df=[], **kwargs):
 
         # Create DataFrame only if table_name is provided.
         if table_name:
+
+            # Table name can be provided with or without schema name. First, extract the schema name and table name.
+            db_name_extracted, table_name = (UtilFuncs._extract_db_name(table_name),
+                                             UtilFuncs._extract_table_name(table_name))
+
+            # In some rare cases, input is received with db_name and also table name with schema.
+            # If they are different, raise a ValueError.
+            if db_name and db_name_extracted and (db_name != db_name_extracted):
+                raise ValueError(f"Database name provided in 'database_name' argument: {db_name} is different "
+                                 f"from the database name provided in table name: {db_name_extracted}. "
+                                 f"Provide same values. Or, provide database name in table name only.")
+
+            db_name = db_name or db_name_extracted
+
             kwargs[arg_name] = DataFrame(in_schema(db_name, table_name)) if db_name else DataFrame(table_name)
 
     # Execute the function with the provided keyword arguments
@@ -171,7 +186,7 @@ def execute_analytic_function(function_name: str, tables_to_df=[], **kwargs):
     return create_response([rec._asdict() for rec in result_to_store.itertuples()], metadata)
 
 
-def convert_tdml_docstring_to_mcp_docstring(doc_string):
+def convert_tdml_docstring_to_mcp_docstring(doc_string, partition_order_cols_doc_str):
     """
     Convert TeradataML function docstring to MCP tool docstring format.
 
@@ -180,6 +195,12 @@ def convert_tdml_docstring_to_mcp_docstring(doc_string):
             Required Argument.
             Specifies the doc string for TeradataML function whose docstring needs to be converted.
             Types: str
+
+        partition_order_cols_doc_str:
+            Required Argument.
+            Specifies a list of docstring fragments (strings) related to partition columns and order columns
+            to be joined and appended.
+            Types: list of str
 
     RETURNS:
         str: Converted docstring in MCP tool format.
@@ -212,9 +233,10 @@ def convert_tdml_docstring_to_mcp_docstring(doc_string):
         returns the table name where the result is pushed. Otherwise, it returns
         a list of dictionaries containing the result.
 """
-
-    doc_string = doc_string.split("**generic_arguments")[0].strip() + addon_doc_string
-    return doc_string
+    base_doc = doc_string.split("**generic_arguments")[0].strip()
+    partition_order_doc = "".join(partition_order_cols_doc_str)
+    final_doc_string = base_doc + partition_order_doc + addon_doc_string
+    return final_doc_string
 
 
 def get_anlytic_function_signature(params):
@@ -270,3 +292,19 @@ def {analytic_function}({func_args_str}):
     '''
     return s
 
+
+def get_partition_col_order_col_doc_string(col_name):
+    """
+    Get the docstring for partition_column parameter.
+    """
+    return f"""
+
+        {col_name}_partition_column:
+            Optional Argument.
+            Specifies the column(s) to partition the table mentioned in argument '{col_name}'.
+            Types: str OR list of Strings (str)
+
+        {col_name}_order_column:
+            Optional Argument.
+            Specifies the column(s) to order the data inside the table mentioned in argument '{col_name}'.
+            Types: str OR list of Strings (str)"""

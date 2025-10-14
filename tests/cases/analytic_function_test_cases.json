@@ -20,6 +20,26 @@
                 }
             }
         ],
+        "tdml_Attribution": [
+            {
+                "name": "attribution_test_case_1",
+                "parameters": {
+                    "data": "attribution_sample_table1",
+                    "data_partition_column": "user_id",
+                    "data_order_column": "time_stamp",
+                    "data_optional": "attribution_sample_table2",
+                    "data_optional_partition_column": "user_id",
+                    "data_optional_order_column": "time_stamp",
+                    "event_column": "event",
+                    "conversion_data": "conversion_event_table",
+                    "optional_data": "optional_event_table",
+                    "timestamp_column": "time_stamp",
+                    "window_size": "rows:10&seconds:20",
+                    "model1_type": "model1_table",
+                    "model2_type": "model2_table"
+                }
+            }
+        ],
         "tdml_Antiselect": [
             {
                 "name": "antiselect_test_case_1",
@@ -223,6 +243,44 @@
                 }
             }
         ],
+        "tdml_GLM": [
+            {
+                "name": "GLM_test_case_1",
+                "parameters": {
+                    "data": "housing_train_segment",
+                    "formula": "price ~ bedrooms+bathrms+stories+driveway+recroom+fullbase+gashw+airco",
+                    "family": "GAUSSIAN",
+                    "batch_size": 10,
+                    "iter_max": 1000,
+                    "data_partition_column": "partition_id"
+                }
+            }
+        ],
+        "tdml_GLMPerSegment": [
+            {
+                "name": "glmpersegment_test_case_1",
+                "parameters": {
+                    "data": "gaussian_housing_train",
+                    "data_partition_column": "stories",
+                    "formula": "price ~ garagepl+lotsize+bedrooms+bathrms",
+                    "family": "Gaussian",
+                    "iter_max": 1000,
+                    "batch_size": 9
+                }
+            }
+        ],
+        "tdml_GLMPredictPerSegment": [
+            {
+                "name": "glmpredictpersegment_test_case_1",
+                "parameters": {
+                    "newdata": "gaussian_housing_train",
+                    "newdata_partition_column": "stories",
+                    "object": "glm_per_segment_op",
+                    "object_partition_column": "stories",
+                    "id_column": "sn"
+                }
+            }
+        ],
         "tdml_Histogram": [
             {
                 "name": "histogram_test_case_1",
@@ -319,6 +377,26 @@
                     "punctuation": "`~#^&*()-",
                     "reset": ".,?!",
                     "total_gram_count": false
+                }
+            }
+        ],
+        "tdml_NPath": [
+            {
+                "name": "npath_test_case_1",
+                "parameters": {
+                    "data1": "impressions",
+                    "data1_partition_column": "userid",
+                    "data1_order_column": "ts",
+                    "data2": "clicks2",
+                    "data2_partition_column": "userid",
+                    "data2_order_column": "ts",
+                    "data3": "tv_spots",
+                    "data3_partition_column": "ts",
+                    "data3_order_column": "ts",
+                    "result": ["COUNT(* of imp) as imp_cnt", "COUNT(* of tv_imp) as tv_imp_cnt"],
+                    "mode": "nonoverlapping",
+                    "pattern": "(imp|tv_imp)*.click",
+                    "symbols": ["true as imp", "true as click", "true as tv_imp"]
                 }
             }
         ],
@@ -511,6 +589,20 @@
                 }
             }
         ],
+        "tdml_Pivoting": [
+            {
+                "name": "pivoting_test_case_1",
+                "parameters": {
+                    "data": "titanic_dataset_unpivoted",
+                    "partition_columns": "passenger",
+                    "target_columns": "AttributeValue",
+                    "accumulate": "survived",
+                    "rows_per_partition": 2,
+                    "data_partition_column": "passenger",
+                    "data_order_column": "AttributeName"
+                }
+            }
+        ],
         "tdml_QQNorm": [
             {
                 "name": "qqnorm_test_case_1",
@@ -700,6 +792,19 @@
                 "parameters": {
                     "text_column": "review",
                     "data": "sentiment_extract_input"
+                }
+            }
+        ],
+        "tdml_Sessionize": [
+            {
+                "name": "sessionize_test_case_1",
+                "parameters": {
+                    "data": "sessionize_table",
+                    "data_partition_column": "partition_id",
+                    "data_order_column": "clicktime",
+                    "time_column": "clicktime",
+                    "time_out": 60.0,
+                    "click_lag": 0.2
                 }
             }
         ],

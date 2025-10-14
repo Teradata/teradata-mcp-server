@@ -33,6 +33,11 @@ def main():
         # Setup for ANOVA.
         load_example_data("teradataml", ["insect_sprays"])
 
+        # Setup for Attibution.
+        load_example_data("attribution", ["attribution_sample_table1",
+                                          "attribution_sample_table2", "conversion_event_table",
+                                          "optional_event_table", "model1_table", "model2_table"])
+
         # Setup for Antiselect.
         load_example_data("dataframe", ["sales"])
 
@@ -95,6 +100,35 @@ def main():
                                             tree_type='REGRESSION')
         DecisionForest_out.result.to_sql(table_name="decision_forest_op", if_exists="replace")
 
+        # Setup for GLM.
+        load_example_data('glm', ['housing_train_segment'])
+
+        # Setup for GLMPerSegment & GLMPerSegmentPredict.
+        load_example_data("decisionforestpredict", ["housing_train"])
+
+        # Filter the rows from train dataset with homestyle as Classic and Eclectic.
+        binomial_housing_train = DataFrame('housing_train', index_label="homestyle")
+        binomial_housing_train = binomial_housing_train.filter(like = 'ic', axis = 'rows')
+
+        # GLMPerSegment() function requires features in numeric format for processing,
+        # so dropping the non-numeric columns.
+        binomial_housing_train = binomial_housing_train.drop(columns=["driveway", "recroom",
+                                                                      "gashw", "airco", "prefarea",
+                                                                      "fullbase"])
+        gaussian_housing_train = binomial_housing_train.drop(columns="homestyle")
+        gaussian_housing_train.to_sql(table_name="gaussian_housing_train", if_exists="replace")
+
+        GLMPerSegment_out_1 = GLMPerSegment(data=gaussian_housing_train,
+                                            data_partition_column="stories",
+                                            input_columns=['garagepl', 'lotsize', 'bedrooms', 'bathrms'],
+                                            response_column="price",
+                                            family="Gaussian",
+                                            iter_max=1000,
+                                            batch_size=9)
+
+        # Print the result DataFrame.
+        GLMPerSegment_out_1.result.to_sql(table_name="glm_per_segment_op", if_exists="replace")
+
         # Setup for OneHotEncodingFit & Transform
         one_hot_encoding = OneHotEncodingFit(data=titanic,
                                              is_input_dense=True,
@@ -150,6 +184,9 @@ def main():
 
         # Setup for NGramSplitter.
         load_example_data("ngrams", ["paragraphs_input"])
+
+        # Setup for NPath.
+        load_example_data("NPath", ["impressions", "clicks2", "tv_spots", "clickstream"])
 
         # Setup for NaiveBayesTextClassifierPredict & Trainer.
         load_example_data("NaiveBayesTextClassifierPredict", ["complaints_tokens_test", "token_table"])
@@ -330,6 +367,9 @@ def main():
         # Setup for SentimentExtractor
         load_example_data("sentimentextractor", ["sentiment_extract_input"])
 
+        # Setup for sessionize
+        load_example_data("sessionize", ["sessionize_table"])
+
         # Setup for Shap
         load_example_data("byom", "iris_input")
         load_example_data("teradataml", ["cal_housing_ex_raw"])
@@ -471,6 +511,15 @@ def main():
         # Cleanup for ANOVA.
         db_drop_table(table_name="insect_sprays", suppress_error=True)
 
+        # Cleanup for Attibution.
+        for tbl in ["attribution_sample_table1",
+                    "attribution_sample_table2",
+                    "conversion_event_table",
+                    "optional_event_table",
+                    "model1_table",
+                    "model2_table"]:
+            db_drop_table(table_name=tbl, suppress_error=True)
+
         # Cleanup for Antiselect.
         db_drop_table(table_name="antiselect_input", suppress_error=True)
 
@@ -506,6 +555,14 @@ def main():
         db_drop_table(table_name="boston", suppress_error=True)
         db_drop_table(table_name="decision_forest_op", suppress_error=True)
 
+        # Clean up for GLM.
+        db_drop_table(table_name="housing_train_segment", suppress_error=True)
+
+        # Cleanup for GLMPerSegment.
+        db_drop_table(table_name="housing_train", suppress_error=True)
+        db_drop_table(table_name="gaussian_housing_train", suppress_error=True)
+        db_drop_table(table_name="glm_per_segment_op", suppress_error=True)
+
         # Cleanup for OneHotEncodingFit & Transform
         db_drop_table(table_name="one_hot_op", suppress_error=True)
 
@@ -536,6 +593,11 @@ def main():
 
         # Cleanup for NGramSplitter
         db_drop_table(table_name="paragraphs_input", suppress_error=True)
+
+        # Cleanup for NPath
+        db_drop_table(table_name="impressions", suppress_error=True)
+        db_drop_table(table_name="clicks2", suppress_error=True)
+        db_drop_table(table_name="tv_spots", suppress_error=True)
 
         # Cleanup for NaiveBayesTextClassifierPredict & Trainer
         db_drop_table(table_name="complaints_tokens_test", suppress_error=True)
@@ -598,6 +660,9 @@ def main():
 
         # Cleanup for SentimentExtractor
         db_drop_table(table_name="sentiment_extract_input", suppress_error=True)
+
+        # Cleanup for sessionize
+        db_drop_table(table_name="sessionize_table", suppress_error=True)
 
         # Cleanup for Shap
         db_drop_table(table_name="xgboost_op", suppress_error=True)

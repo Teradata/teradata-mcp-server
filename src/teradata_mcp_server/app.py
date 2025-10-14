@@ -37,7 +37,8 @@ from teradataml.analytics.json_parser.json_store import _JsonStore
 from teradata_mcp_server.tools.utils import (get_dynamic_function_definition,
                                              get_anlytic_function_signature,
                                              convert_tdml_docstring_to_mcp_docstring,
-                                             execute_analytic_function)
+                                             execute_analytic_function,
+                                             get_partition_col_order_col_doc_string)
 import json
 
 
@@ -75,8 +76,12 @@ def create_mcp_app(settings: Settings):
 
         try:
             import teradataml as tdml
+            tdml.create_context(tdsqlengine=tdconn.engine)
         except (AttributeError, ImportError, ModuleNotFoundError) as e:
             logger.warning(f"teradataml not installed - disabling analytic functions: {e}")
+            enable_analytic_functions = False
+        except Exception as e:
+            logger.warning(f"Error creating teradataml context - disabling analytic functions: {e}")
             enable_analytic_functions = False
 
         # Only import FeatureStoreConfig (which depends on tdfs4ds) when EFS tools are enabled
@@ -86,15 +91,10 @@ def create_mcp_app(settings: Settings):
             # teradataml is optional; warn if unavailable but keep EFS enabled
             try:
                 import teradataml as tdml
-                try:
-                    tdml.create_context(tdsqlengine=tdconn.engine)
-                except Exception as e:
-                    logger.warning(f"Error creating teradataml context: {e}")
             except (AttributeError, ImportError, ModuleNotFoundError):
                 logger.warning("teradataml not installed; EFS tools will operate without a teradataml context")
         except (AttributeError, ImportError, ModuleNotFoundError) as e:
             logger.warning(f"Feature Store module not available - disabling EFS functionality: {e}")
-            logger.warning(f"Analytic functions are not available.")
             enableEFS = False
 
     # EVS connection (optional)
@@ -304,17 +304,23 @@ def create_mcp_app(settings: Settings):
             # Connection is not mandatory for MCP server. If connection is not there, then
             # functions can not be added.
             if func_name not in tdml_processed_funcs:
-                logger.info("Function {} is not available. Hence not adding it. ".format(func_name))
+                logger.warning("Function {} is not available. Hence not adding it. ".format(func_name))
                 continue
 
             func_metadata = _JsonStore.get_function_metadata(func_name)
             func_obj = getattr(tdml, func_name, None)
+            func_params = func_metadata.function_params
 
             inp_data = [t.get_lang_name() for t in func_metadata.input_tables]
+            # Add partition_by parameters for func parameters.
+            additional_args_docs = []
+            for table in inp_data:
+                func_params["{}_partition_column".format(table)] = None
+                func_params["{}_order_column".format(table)] = None
+                additional_args_docs.append(get_partition_col_order_col_doc_string(table))
 
             # Generate function argument string.
-            func_args_str = get_anlytic_function_signature(
-                func_metadata.function_params)
+            func_args_str = get_anlytic_function_signature(func_params)
 
             func_name = "tdml_" + func_name
             func_str = get_dynamic_function_definition().format(
@@ -325,7 +331,7 @@ def create_mcp_app(settings: Settings):
             )
 
             doc_string = convert_tdml_docstring_to_mcp_docstring(
-                func_obj.__init__.__doc__)
+                func_obj.__init__.__doc__, additional_args_docs)
 
             # Execute the generated function definition in the global scope.
             # Global scope will have all other functions. So reference to other functions will work.
