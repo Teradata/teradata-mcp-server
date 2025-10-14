@@ -33,7 +33,6 @@ from teradata_mcp_server.middleware import RequestContextMiddleware
 from teradata_mcp_server.tools.utils.queryband import build_queryband
 from sqlalchemy.engine import Connection
 from fastmcp.server.dependencies import get_context
-from teradataml.analytics.json_parser.json_store import _JsonStore
 from teradata_mcp_server.tools.utils import (get_dynamic_function_definition,
                                              get_anlytic_function_signature,
                                              convert_tdml_docstring_to_mcp_docstring,
@@ -296,7 +295,7 @@ def create_mcp_app(settings: Settings):
     from teradata_mcp_server.tools.constants import TD_ANALYTIC_FUNCS as funcs
     if enable_analytic_functions:
 
-        tdml_processed_funcs = set(_JsonStore._get_function_list()[0].keys())
+        tdml_processed_funcs = set(tdml.analytics.json_parser.json_store._JsonStore._get_function_list()[0].keys())
 
         for func_name in funcs:
 
@@ -307,7 +306,7 @@ def create_mcp_app(settings: Settings):
                 logger.warning("Function {} is not available. Hence not adding it. ".format(func_name))
                 continue
 
-            func_metadata = _JsonStore.get_function_metadata(func_name)
+            func_metadata = tdml.analytics.json_parser.json_store._JsonStore.get_function_metadata(func_name)
             func_obj = getattr(tdml, func_name, None)
             func_params = func_metadata.function_params
 
