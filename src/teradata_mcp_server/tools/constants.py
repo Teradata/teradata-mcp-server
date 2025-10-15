@@ -60,7 +60,7 @@ TD_ANALYTIC_FUNCS = [
     'SVMPredict',
     'ScaleFit',
     'ScaleTransform',
-    'sessionize',
+    'Sessionize',
     'SentimentExtractor',
     'Shap',
     'Silhouette',
