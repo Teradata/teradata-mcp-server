@@ -12,6 +12,10 @@ The video library is a curation of videos that the community believes would be v
 
 
 ## Installation
-[Installing on a mac](https://www.youtube.com/watch?v=QokGX1a5ZuU) - this is a longer video walking you through the steps to install the server on your mac.
+
+[Installing streamable HTTP server](https://www.youtube.com/watch?v=TIZ7jSJXRMo) - this is the most flexible approach to installing the server
+
+[Installing for Development](https://www.youtube.com/watch?v=DDzbVCKbUgQ) - this installed from github so you have access to tall the source code
+
 
 
