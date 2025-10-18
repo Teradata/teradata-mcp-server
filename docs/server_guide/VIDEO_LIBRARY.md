@@ -17,5 +17,11 @@ The video library is a curation of videos that the community believes would be v
 
 [Installing for Development](https://www.youtube.com/watch?v=DDzbVCKbUgQ) - this installed from github so you have access to tall the source code
 
+## Configuration
+
+[Environment Variables and Profiles](https://youtu.be/-N6Phz7cWWo) - talks you through what the environment variables are for and how to change them, along with what profiles are and hoe to build your own.
+
+[Building custom tools, prompts and resources](https://youtu.be/rYXajF1q7GA) - talks you through how custom tools can be defined in a yml file 
+
 
 
