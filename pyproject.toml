@@ -29,7 +29,6 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "PyYAML>=6.0.0",
     "sqlalchemy>=2.0.0,<3.0.0",
-    "requests>=2.25.0",
 ]
 
 [project.optional-dependencies]
@@ -43,6 +42,12 @@ fs = [
 tdvs = [
     "teradatagenai>=20.0.0.3"
 ]
+
+# BAR (Backup and Restore) functionality
+bar = [
+    "requests>=2.25.0",
+]
+
 # Development dependencies 
 dev = [
     "ruff>=0.1.0",
