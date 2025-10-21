@@ -1,0 +1,56 @@
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+services:
+  mcp:
+    # Option A: build from this repo's Dockerfile (assumes you are working from the repo's examples/server-deployment/docker directory)
+    build:
+      context: ../../../
+      dockerfile: Dockerfile
+    # Option B: if you publish an image, replace with:
+    # image: ghcr.io/teradata/teradata-mcp-server:latest
+    container_name: teradata-mcp
+    env_file: .env
+    expose:
+      - "8001"                 # only visible inside the compose network
+    command:
+      - teradata-mcp-server
+      - --mcp_transport
+      - streamable-http
+      - --mcp_host
+      - 0.0.0.0
+      - --mcp_port
+      - "8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s = socket.socket(); s.settimeout(5); s.connect(('127.0.0.1', 8001)); s.close()"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - internal
+
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    depends_on:
+      mcp:
+        condition: service_healthy
+    environment:
+      # Set this to your (sub.)domain, e.g. mcp.teradata.org and ensure DNS points to this server
+      - DOMAIN=${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data          # certs / ACME storage
+      - caddy_config:/config
+      - ./site:/srv/site:ro       # optional favicon/landing page
+    networks:
+      - internal

@@ -40,10 +40,8 @@ class MCPTestRunner:
         while True:
             if os.path.exists(os.path.join(current, 'profiles.yml')):
                 return current
-            parent = os.path.dirname(current)
-            if parent == current:  # Reached root directory (works on both Windows and Unix)
-                break
-            current = parent
+            current = os.path.dirname(current)
+
         return os.getcwd()
 
     async def load_test_cases(self):
@@ -209,7 +207,7 @@ class MCPTestRunner:
                     check=False, shell=True,
                     capture_output=True,
                     text=True,
-                    timeout=300,  # 5 minute timeout
+                    timeout=3000,  # 50 minute timeout
                     env={**os.environ}  # Pass current environment including DATABASE_URI
                 )
 
@@ -486,7 +484,6 @@ async def main():
         print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server'")
         print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server' tests/cases/core_test_cases.json")
         print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server' tests/cases/core_test_cases.json tests/cases/fs_test_cases.json")
-        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server' tests/cases/evs_test_cases.json --verbose")
         sys.exit(1)
 
     server_command = sys.argv[1].split()

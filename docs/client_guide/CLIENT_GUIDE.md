@@ -1,5 +1,7 @@
 # Working with MCP Clients
 
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting started](../server_guide/GETTING_STARTED.md) | [Architecture](../server_guide/ARCHITECTURE.md) | [Installation](../server_guide/INSTALLATION.md) | [Configuration](../server_guide/CONFIGURATION.md) | [Security](../server_guide/SECURITY.md) | [Customization](../server_guide/CUSTOMIZING.md) | [<u>**Client Guide**</u>](CLIENT_GUIDE.md) 
+
 ![Getting Started](../media/MCP-quickstart.png)
 
 This documet will cover the process and options for getting a client tool to connect to the teradata-mcp-server.  Note that you have many client options, we will cover some but not all.
@@ -19,6 +21,7 @@ There are many client options that you can choose from, they each have different
 - [Google AgentSpace](./Google_agentspace.md)
 - [Open WebUI](./Open_WebUI.md)
 - [teradata-trusted-data-agent](https://github.com/rgeissen/teradata-trusted-data-agent)
+- [Perplexity Desktop](Perplexity%20Desktop.md)
 
 ## Audio Client
 - [MCP Voice Client](../../examples/MCP_VoiceClient/README.md)

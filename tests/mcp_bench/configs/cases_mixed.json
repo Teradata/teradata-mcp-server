@@ -1,0 +1,34 @@
+{
+  "test_cases": {
+    "base_databaseList": [
+      {
+        "name": "database_list_test",
+        "parameters": {}
+      }
+    ],
+    "base_readQuery": [
+      {
+        "name": "simple_query_test",
+        "parameters": {
+          "sql": "select top 10 * from dbc.tablesv"
+        }
+      },
+      {
+        "name": "tactical_query_test",
+        "parameters": {
+          "sql": "sel * from dbc.dbcinfo where infokey='VERSION'"
+        }
+      }
+
+    ],
+    "base_tableDDL": [
+      {
+        "name": "table_ddl_test",
+        "parameters": {
+          "database_name": "dbc",
+          "table_name": "tvm"
+        }
+      }
+    ]
+  }
+}

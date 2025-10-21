@@ -1,6 +1,6 @@
 # Installation & Deployment Guide
 
-> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Quick Start](QUICK_START.md) | **Installation** | [Configuration](CONFIGURATION.md)
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting started](GETTING_STARTED.md) | [Architecture](ARCHITECTURE.md) | [<u>**Installation**</u>](INSTALLATION.md) | [Configuration](CONFIGURATION.md) | [Security](SECURITY.md) | [Customization](CUSTOMIZING.md) | [Client Guide](../client_guide/CLIENT_GUIDE.md)
 
 > **🎯 Goal:** Choose and implement the best deployment method for your needs
 
@@ -9,6 +9,15 @@ This guide covers everything you need to deploy the Teradata MCP Server, from lo
 - **Installation Methods** - Different ways to install the server (CLI, Docker, pip, source)
 - **Production Deployment** - Remote deployment strategies for serving multiple clients
 - **Service Management** - Running as system services with automatic restart and monitoring
+
+## 🤔 What infrastructure do I need?
+
+The Teradata MCP server is lightweight and built on FastMCP, it is not intended to do heavy data transfer or data processing operations. 
+As an indication, base software fits in a 500MB container image, and takes the same memory footprint.
+
+The tested and supported OS are Linux, Windows and MacOS.
+
+You can find a [simple deployment example on AWS here](../../examples/server-deployment/quickstart-aws.md).
 
 ## 🤔 Which Installation Method?
 
@@ -36,8 +45,10 @@ We recommend `uv` or `pipx` to install teradata-mcp-server as a CLI tool. They p
 uv tool install "teradata-mcp-server"
 
 # With optional Enterprise Feature Store and Vector Store
-uv tool install "teradata-mcp-server[fs,evs]"
+uv tool install "teradata-mcp-server[fs,tdvs]"
 ```
+
+If the tool's path isn't resolved add it to your shell using `uv tool update-shell` and restart the terminal.
 
 ### Option B: Using pipx 
 ```bash
@@ -49,7 +60,7 @@ python -m pipx ensurepath
 pipx install "teradata-mcp-server"
 
 # With optional Enterprise Feature Store and Vector Store
-pipx install "teradata-mcp-server[fs,evs]"
+pipx install "teradata-mcp-server[fs,tdvs]"
 ```
 
 ### Usage
@@ -108,14 +119,14 @@ docker compose up
 export DATABASE_URI="teradata://username:password@host:1025/database"
 
 # Build with optional modules (Feature Store, Vector Store)
-ENABLE_FS_MODULE=true ENABLE_EVS_MODULE=true docker compose build
+ENABLE_FS_MODULE=true ENABLE_TDVS_MODULE=true docker compose build
 docker compose up
 
 # Run with specific profile
 PROFILE=dba docker compose up
 
 # Combine options
-ENABLE_FS_MODULE=true PROFILE=dataScientist docker compose build
+ENABLE_FS_MODULE=true ENABLE_TDVS_MODULE=true PROFILE=dataScientist docker compose build
 PROFILE=dataScientist docker compose up
 
 # Run in background (production)
@@ -165,7 +176,7 @@ pip install --upgrade pip
 pip install teradata-mcp-server
 
 # With enterprise features
-pip install "teradata-mcp-server[fs,evs]"
+pip install "teradata-mcp-server[fs,tdvs]"
 ```
 
 ### Usage

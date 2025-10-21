@@ -147,7 +147,7 @@ Currently available modules:
 - `core_test_cases.json` foundational test cases, default and mandatory cases for system integration testing.
 - `rag_test_cases.json` for RAG test cases.
 - `fs_test_cases.json` for Teradata Enterprise Feature Store testing.
-- `evs_test_cases.json` for Teradata Enterprise Vector Store testing.
+
 
 To specific modules, specify the module name in second position. eg.:
 ```bash

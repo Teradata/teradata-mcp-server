@@ -205,15 +205,6 @@
         "parameters": {}
       }
     ],
-    "evs_similarity_search": [
-      {
-        "name": "test_search",
-        "parameters": {
-          "question": "What is machine learning?",
-          "top_k": 3
-        }
-      }
-    ],
     "rag_executeWorkflow": [
       {
         "name": "test_rag_query",

@@ -1,5 +1,7 @@
 # Teradata MCP Server Documentation
 
+> **📍 Navigation:** [<u>**Documentation Home**</u>](README.md) | [Server Guide](#-server-guide) | [Client Guide](client_guide/CLIENT_GUIDE.md) | [Developer Guide](developer_guide/DEVELOPER_GUIDE.md) 
+
 This guide will help you get started, configure, and customize your Teradata MCP Server setup.
 
 ## 🚀 Quick Start
@@ -12,6 +14,7 @@ New to Teradata MCP Server? Choose your 5-minute quickstart to rapidly evaluate 
 | [VS Code + Copilot](server_guide/QUICK_START_VSCODE.md) | CLI (uv/pipx) | HTTP | Data Engineering, Agentic app development |
 | [Open WebUI](server_guide/QUICK_START_OPEN_WEBUI.md) | Docker | REST | Local AI, evaluate new LLMs |
 | [Code examples](../examples/README.md) | Python | HTTP | Build your own client. Example library using ADK, Bedrock, Langchain... |
+| [Flowise](../docs/client_guide/Flowise_with_teradata_mcp_Guide.md) | Docker | HTTP | Build AI Agents Visually |
 
 **Other Options:**
 - **[Getting Started Guide](server_guide/GETTING_STARTED.md)** - Detailed path selection and role-based recommendations
@@ -23,14 +26,12 @@ New to Teradata MCP Server? Choose your 5-minute quickstart to rapidly evaluate 
 Everything you need to know about running and configuring the MCP server:
 
 - **[Getting Started](server_guide/GETTING_STARTED.md)** - Choose your path (routing guide)
-- **[Quick Start (Claude)](server_guide/QUICK_START.md)** - 5-minute Claude Desktop setup using `stdio` transport mode
-- **[Quick Start (VS Code + Copilot)](server_guide/QUICK_START_VSCODE.md)** - 5-minute VS Code and GitHub Copilot setup using `streamable-http` transport mode
-- **[Quick Start (Open WebUI)](server_guide/QUICK_START_OPEN_WEBUI.md)** - 5-minute Open WebUI setup using REST interface
 - **[Installation](server_guide/INSTALLATION.md)** - Deployment methods and options
 - **[Configuration](server_guide/CONFIGURATION.md)** - Server settings and tuning
 - **[Architecture](server_guide/ARCHITECTURE.md)** - How components work together
 - **[Customizing](server_guide/CUSTOMIZING.md)** - Add your own tools and business logic
 - **[Security](server_guide/SECURITY.md)** - Authentication and access control
+
 
 ### 👥 Client Guide
 Connect different AI clients to your Teradata MCP Server:
@@ -43,6 +44,7 @@ Connect different AI clients to your Teradata MCP Server:
 - **[Open WebUI](client_guide/Open_WebUI.md)** - Web-based interface
 - **[REST API](client_guide/Rest_API.md)** - HTTP/API integration
 - **[MCP Inspector](client_guide/MCP_Inspector.md)** - Debugging and testing tool
+- **[Flowise](client_guide/Flowise_with_teradata_mcp_Guide.md)** - Build AI Agents Visually
 
 ### 🔧 Developer Guide
 Extend and contribute to the Teradata MCP Server:

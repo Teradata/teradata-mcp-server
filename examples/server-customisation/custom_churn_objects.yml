@@ -178,7 +178,7 @@ churn_setup_instructions:
                        WHEN IsActiveMember = 1 AND Tenure > 5 THEN 15.0 ELSE 25.0 END) >= 60 
                  THEN 'Local Market Issues'
             ELSE 'Standard Risk'
-        END AS critical_segment ,
+        END AS critical_segment 
     FROM DEMO_BankChurn.customer_churn;
 
     comment on column DEMO_BankChurn.fact_customer_churn.churn_probability as 'Churn probability Calculated using risk scoring rules';   

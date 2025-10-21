@@ -1,5 +1,7 @@
 # Adding New Modules
 
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting started](../server_guide/GETTING_STARTED.md) | [Architecture](../server_guide/ARCHITECTURE.md) | [Installation](../server_guide/INSTALLATION.md) | [Configuration](../server_guide/CONFIGURATION.md) | [Security](../server_guide/SECURITY.md) | [Customization](../server_guide/CUSTOMIZING.md) | [Client Guide](../client_guide/CLIENT_GUIDE.md)
+
 Here is a clear and reusable documentation-style guide that explains how to add a new tool implemented in Python to the Teradata MCP server. The design cleanly separates the MCP protocol from your Teradata‑specific logic: you implement a plain Python handler; the server auto‑registers it and wires MCP concerns (validation, context, query band, errors) for you.
 
 ---

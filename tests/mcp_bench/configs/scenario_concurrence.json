@@ -1,0 +1,26 @@
+{
+  "server": {
+    "host": "localhost",
+    "port": 8001
+  },
+  "streams": [
+    {
+      "stream_id": "stream_01",
+      "test_config": "tests/mcp_bench/configs/cases_mixed.json",
+      "duration": 30,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_02",
+      "test_config": "tests/mcp_bench/configs/cases_error.json",
+      "duration": 30,
+      "loop": true
+    },
+    {
+      "stream_id": "stream_03",
+      "test_config": "tests/mcp_bench/configs/cases_tactical.json",
+      "duration": 30,
+      "loop": true
+    }
+  ]
+}

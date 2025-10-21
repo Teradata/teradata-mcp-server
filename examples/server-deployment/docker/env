@@ -1,0 +1,9 @@
+# --- MCP server (FastMCP) ---
+DATABASE_URI=teradata://USER:PASS@HOST:1025/DEFAULT_DB_SCHEMA   # <-- Update here 
+MCP_TRANSPORT=streamable-http
+MCP_HOST=0.0.0.0
+MCP_PORT=8001
+ 
+# --- Caddy / HTTPS ---
+# Set this to the DNS name that points at your server
+DOMAIN=teradata-mcp.duckdns.org                                 # <-- Update here 

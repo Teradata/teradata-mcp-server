@@ -1,0 +1,26 @@
+# ----------- MCP server and Database configuration ------------#
+#DATABASE_URI=teradatasql://username:password@host/database     #Your database connection string - inherit from current environment, un-comment and change as needed
+LOGMECH=TD2  #TD2 or LDAP
+TD_POOL_SIZE=5
+TD_MAX_OVERFLOW=10
+TDPOOL_TIMEOUT=30
+PROFILE=dataScientist
+DATABASE_HOST=IP_OF_DB_NODE
+
+MCP_TRANSPORT=streamable-http  #stdio, sse, streamable-http
+MCP_HOST=0.0.0.0
+MCP_PORT=8001
+MCP_PATH=/mcp/
+
+# ----- Enterprise Vector Store ----------
+# Inherit from current environment, or un-comment and change as needed
+#TD_VS_BASE_URL=https://host/api/accounts/40c83ff23b2e          #Your UES_URI, strip off the trailing /open-analytics
+#TD_PAT=gwxhQG2UZcDqQlp9LKWjEBfXB7                              #Your PAT token
+TD_PEM=./demo_key.pem                                           #Your PEM with full path where you kept on host 
+#VS_NAME=vs_example                                             #Your target Vector Store Name
+
+# ------------ Flowise varibles -------------------#
+PORT=3000
+CORS_ORIGINS=*
+IFRAME_ORIGINS=*
+DATA_DIR=".flowise"                                             #Directory to store Flowise data - use demoproject in current directory, with new name/path to create a new project

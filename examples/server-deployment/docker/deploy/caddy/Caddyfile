@@ -1,0 +1,52 @@
+{$DOMAIN} {
+    tls {
+        issuer acme {
+            disable_tlsalpn_challenge    # force HTTP-01 on port 80
+            # ca https://acme-staging-v02.api.letsencrypt.org/directory  # optional during testing
+        }
+    }
+
+    encode gzip
+
+    @mcp {
+        path /mcp /mcp/ /mcp/*
+    }
+    handle @mcp {
+        # Ensure trailing slash for /mcp -> /mcp/
+        uri path_regexp ^/mcp$ /mcp/
+        reverse_proxy http://mcp:8001 {
+            # SSE/MCP streaming configuration
+            flush_interval -1
+            header_up X-Real-IP {remote_host}
+            # Disable buffering for SSE
+            @sse {
+                header Accept *text/event-stream*
+            }
+        }
+    }
+
+    # Serve favicon and icon files with proper caching
+    handle /favicon.ico {
+        root * /srv/site
+        header Cache-Control "public, max-age=86400, immutable"
+        header Content-Type "image/x-icon"
+        file_server
+    }
+    handle /favicon.png {
+        root * /srv/site
+        header Cache-Control "public, max-age=86400, immutable"
+        header Content-Type "image/png"
+        file_server
+    }
+    handle /site.webmanifest {
+        root * /srv/site
+        header Cache-Control "public, max-age=3600"
+        header Content-Type "application/manifest+json"
+        file_server
+    }
+    handle {
+        root * /srv/site
+        templates
+        file_server
+    }
+}

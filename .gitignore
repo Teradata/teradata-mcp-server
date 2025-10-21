@@ -7,9 +7,10 @@ working/
 .venv/
 *.egg-info/
 **/.ipynb_checkpoints/
-env
+/env
 CLAUDE.md
 var/
 /# Only ignore root-level overrides
 /profiles.yml
 /*_objects.yml
+examples/app-flowise/.*

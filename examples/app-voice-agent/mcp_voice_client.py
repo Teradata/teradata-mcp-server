@@ -1158,7 +1158,7 @@ async def main(debug=False, language='en', voice_id=None, mcp_server_url=DEFAULT
     # Create stream manager
     stream_manager = BedrockStreamManager(
         model_id='amazon.nova-sonic-v1:0', 
-        region='us-east-1', 
+        region='eu-north-1', 
         language=language, 
         voice_id=voice_id,
         mcp_server_url=mcp_server_url,

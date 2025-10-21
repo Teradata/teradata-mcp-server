@@ -24,7 +24,7 @@ from typing import Any
 import yaml
 from fastmcp import FastMCP
 from fastmcp.prompts.prompt import TextContent, Message
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 from teradata_mcp_server.config import Settings
 from teradata_mcp_server import utils as config_utils
@@ -33,6 +33,12 @@ from teradata_mcp_server.middleware import RequestContextMiddleware
 from teradata_mcp_server.tools.utils.queryband import build_queryband
 from sqlalchemy.engine import Connection
 from fastmcp.server.dependencies import get_context
+from teradata_mcp_server.tools.utils import (get_dynamic_function_definition,
+                                             get_anlytic_function_signature,
+                                             convert_tdml_docstring_to_mcp_docstring,
+                                             execute_analytic_function,
+                                             get_partition_col_order_col_doc_string)
+import json
 
 
 def create_mcp_app(settings: Settings):
@@ -55,13 +61,27 @@ def create_mcp_app(settings: Settings):
 
     # Feature flags from profiles
     enableEFS = True if any(re.match(pattern, 'fs_*') for pattern in config.get('tool', [])) else False
-    enableEVS = True if any(re.match(pattern, 'evs_*') for pattern in config.get('tool', [])) else False
+    enableTDVS = True if any(re.match(pattern, 'tdvs_*') for pattern in config.get('tool', [])) else False
 
     # Initialize TD connection and optional teradataml/EFS context
     # Pass settings object to TDConn instead of just connection_url
     tdconn = td.TDConn(settings=settings)
+
+    enable_analytic_functions = profile_name and profile_name == 'dataScientist'
+
     fs_config = None
-    if enableEFS:
+    if enableEFS or enable_analytic_functions:
+
+        try:
+            import teradataml as tdml
+            tdml.create_context(tdsqlengine=tdconn.engine)
+        except (AttributeError, ImportError, ModuleNotFoundError) as e:
+            logger.warning(f"teradataml not installed - disabling analytic functions: {e}")
+            enable_analytic_functions = False
+        except Exception as e:
+            logger.warning(f"Error creating teradataml context - disabling analytic functions: {e}")
+            enable_analytic_functions = False
+
         # Only import FeatureStoreConfig (which depends on tdfs4ds) when EFS tools are enabled
         try:
             from teradata_mcp_server.tools.fs.fs_utils import FeatureStoreConfig
@@ -69,25 +89,23 @@ def create_mcp_app(settings: Settings):
             # teradataml is optional; warn if unavailable but keep EFS enabled
             try:
                 import teradataml as tdml
-                try:
-                    tdml.create_context(tdsqlengine=tdconn.engine)
-                except Exception as e:
-                    logger.warning(f"Error creating teradataml context: {e}")
             except (AttributeError, ImportError, ModuleNotFoundError):
                 logger.warning("teradataml not installed; EFS tools will operate without a teradataml context")
         except (AttributeError, ImportError, ModuleNotFoundError) as e:
             logger.warning(f"Feature Store module not available - disabling EFS functionality: {e}")
             enableEFS = False
 
-    # EVS connection (optional)
-    evs = None
-    if len(os.getenv("VS_NAME", "").strip()) > 0:
+            
+    # TeradataVectorStore connection (optional)
+    tdvs = None
+    if len(os.getenv("TD_BASE_URL", "").strip()) > 0:
         try:
-            evs = td.get_evs()
-            enableEVS = True
+            from teradata_mcp_server.tools.tdvs.tdvs_utilies import create_teradataml_context
+            create_teradataml_context()
+            enableTDVS = True
         except Exception as e:
-            logger.error(f"Unable to establish connection to EVS, disabling: {e}")
-            enableEVS = False
+            logger.error(f"Unable to establish connection to Teradata Vector Store, disabling: {e}")
+            enableTDVS = False
 
     # Middleware (auth + request context)
     from teradata_mcp_server.tools.auth_cache import SecureAuthCache
@@ -243,7 +261,7 @@ def create_mcp_app(settings: Settings):
 
         _exec.__name__ = getattr(func, "__name__", "wrapped_tool")
         _exec.__signature__ = new_sig
-        _exec.__doc__ = func.__doc__  # Copy docstring from original function
+        _exec.__doc__ = func.__doc__
         if annotations:
             _exec.__annotations__ = annotations
         return _exec
@@ -263,6 +281,55 @@ def create_mcp_app(settings: Settings):
             logger.info(f"Created tool: {tool_name}")
     else:
         logger.warning("No module loader available, skipping code-defined tool registration")
+
+    from teradata_mcp_server.tools.constants import TD_ANALYTIC_FUNCS as funcs
+    if enable_analytic_functions:
+
+        tdml_processed_funcs = set(tdml.analytics.json_parser.json_store._JsonStore._get_function_list()[0].keys())
+
+        for func_name in funcs:
+
+            # Before adding the function, check if function is existed or not.
+            # Connection is not mandatory for MCP server. If connection is not there, then
+            # functions can not be added.
+            if func_name not in tdml_processed_funcs:
+                logger.warning("Function {} is not available. Hence not adding it. ".format(func_name))
+                continue
+
+            func_metadata = tdml.analytics.json_parser.json_store._JsonStore.get_function_metadata(func_name)
+            func_obj = getattr(tdml, func_name, None)
+            func_params = func_metadata.function_params
+
+            inp_data = [t.get_lang_name() for t in func_metadata.input_tables]
+            # Add partition_by parameters for func parameters.
+            additional_args_docs = []
+            for table in inp_data:
+                func_params["{}_partition_column".format(table)] = None
+                func_params["{}_order_column".format(table)] = None
+                additional_args_docs.append(get_partition_col_order_col_doc_string(table))
+
+            # Generate function argument string.
+            func_args_str = get_anlytic_function_signature(func_params)
+
+            func_name = "tdml_" + func_name
+            func_str = get_dynamic_function_definition().format(
+                analytic_function=func_name,
+                doc_string=func_obj.__init__.__doc__,
+                func_args_str=func_args_str,
+                tables_to_df=json.dumps(inp_data)
+            )
+
+            doc_string = convert_tdml_docstring_to_mcp_docstring(
+                func_obj.__init__.__doc__, additional_args_docs)
+
+            # Execute the generated function definition in the global scope.
+            # Global scope will have all other functions. So reference to other functions will work.
+            exec(func_str, globals())
+
+            # Register the function as a tool in MCP server.
+            func = globals()[func_name]
+
+            mcp.tool(name=func_name, description=doc_string)(func)
 
     # Load YAML-defined tools/resources/prompts
     custom_object_files = [file for file in os.listdir() if file.endswith("_objects.yml")]

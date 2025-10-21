@@ -1,6 +1,6 @@
 # Security Configuration
 
-> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting Started](GETTING_STARTED.md) | [Customizing](CUSTOMIZING.md) | **Security**
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting started](GETTING_STARTED.md) | [Architecture](ARCHITECTURE.md) | [Installation](INSTALLATION.md) | [Configuration](CONFIGURATION.md) | [<u>**Security**</u>](SECURITY.md) | [Customization](CUSTOMIZING.md) | [Client Guide](../client_guide/CLIENT_GUIDE.md)
 
 All database tool calls are traced using [Teradata DBQL](https://docs.teradata.com/r/Enterprise_IntelliFlex_VMware/Database-Administration/Tracking-Query-Behavior-with-Database-Query-Logging-Operational-DBAs), and the MCP server implements query banding by default.
 
@@ -171,6 +171,7 @@ For example, if using Keycloak or another OpenID Connect provider, a user could 
 ### Basic mode details
 
 :warning: **FEATURE CURRENTLY IN BETA**
+:warning: This will send your user database credentials over the network: ensure you use HTTPS encryption ([example here](../../examples/server-deployment/quickstart-aws.md#8-configure-https-with-caddy)).
 
 In `AUTH_MODE=basic`, the server accepts either `Basic` or `Bearer` headers.
 
@@ -206,6 +207,34 @@ Claude Desktop example for Basic with JWT in password (or Bearer):
     }
   }
 }
+```
+
+Visual Studio Code example of mcp.json file for Basic user:pass:
+
+```
+   "mcp": {
+        "servers": {
+            "teradata-http": {
+                "type": "http",
+                "url": "http://127.0.0.1:8001/mcp/",
+                "headers": {"Authorization" : "Basic base64_string"}
+            }
+        }
+    }
+```
+
+Visual Studio Code example of mcp.json file for JWT
+
+```
+   "mcp": {
+        "servers": {
+            "teradata-http": {
+                "type": "http",
+                "url": "http://127.0.0.1:8001/mcp/",
+                "headers": {"Authorization" : "Bearer JWT_Token"}
+            }
+        }
+    }
 ```
 
 ### OAuth mode details

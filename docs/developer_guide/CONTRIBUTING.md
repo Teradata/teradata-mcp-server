@@ -1,4 +1,7 @@
 # Contributing Guidelines
+
+> **📍 Navigation:** [Documentation Home](../README.md) | [Server Guide](../README.md#-server-guide) | [Getting started](../server_guide/GETTING_STARTED.md) | [Architecture](../server_guide/ARCHITECTURE.md) | [Installation](../server_guide/INSTALLATION.md) | [Configuration](../server_guide/CONFIGURATION.md) | [Security](../server_guide/SECURITY.md) | [Customization](../server_guide/CUSTOMIZING.md) | [Client Guide](../client_guide/CLIENT_GUIDE.md)
+
 Make sure you have setup your environment based on the Developer Guide in this repo. The goal is to allow contributions to this project by anyone, and that all code requirements are automated. Here are the guidelines we adhere to as a team.
 
 ## Development Guidelines
