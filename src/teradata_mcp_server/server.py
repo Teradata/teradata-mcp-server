@@ -24,6 +24,7 @@ def parse_args_to_settings() -> Settings:
     parser.add_argument('--mcp_port', type=int, required=False)
     parser.add_argument('--mcp_path', type=str, required=False)
     parser.add_argument('--database_uri', type=str, required=False, help='Override DATABASE_URI connection string')
+    parser.add_argument('--logmech', type=str, required=False)
     parser.add_argument('--auth_mode', type=str, required=False)
     parser.add_argument('--auth_cache_ttl', type=int, required=False)
     parser.add_argument('--logging_level', type=str, required=False)
@@ -38,6 +39,7 @@ def parse_args_to_settings() -> Settings:
         mcp_host=args.mcp_host if args.mcp_host is not None else env.mcp_host,
         mcp_port=args.mcp_port if args.mcp_port is not None else env.mcp_port,
         mcp_path=args.mcp_path if args.mcp_path is not None else env.mcp_path,
+        logmech=args.logmech if args.logmech is not None else env.logmech,
         auth_mode=(args.auth_mode or env.auth_mode).lower(),
         auth_cache_ttl=args.auth_cache_ttl if args.auth_cache_ttl is not None else env.auth_cache_ttl,
         logging_level=(args.logging_level or env.logging_level).upper(),

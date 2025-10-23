@@ -64,6 +64,19 @@ pipx install "teradata-mcp-server[fs,tdvs]"
 ```
 
 ### Usage
+All command line options take precedence over environment variable, which take precendece over .env file variables:
+
+teradata-mcp-server [-h] [-v] [--profile PROFILE] 
+    [--mcp_transport {stdio,streamable-http,sse}]
+    [--mcp_host MCP_HOST] 
+    [--mcp_port MCP_PORT] 
+    [--mcp_path MCP_PATH]
+    [--database_uri DATABASE_URI] 
+    [--logmech LOGMECH] 
+    [--auth_mode AUTH_MODE]
+    [--auth_cache_ttl AUTH_CACHE_TTL] 
+    [--logging_level LOGGING_LEVEL]
+
 ```bash
 # Available system-wide
 teradata-mcp-server --help
