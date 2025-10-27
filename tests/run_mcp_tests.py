@@ -37,7 +37,7 @@ class MCPTestRunner:
     def _find_project_root(self) -> str:
         """Find the project root directory (contains profiles.yml)."""
         current = os.path.abspath(os.getcwd())
-        while True:
+        while current != '/':
             if os.path.exists(os.path.join(current, 'profiles.yml')):
                 return current
             current = os.path.dirname(current)
