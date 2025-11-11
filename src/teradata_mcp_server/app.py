@@ -279,6 +279,7 @@ def create_mcp_app(settings: Settings):
             wrapped = make_tool_wrapper(func)
             mcp.tool(name=tool_name, description=wrapped.__doc__)(wrapped)
             logger.info(f"Created tool: {tool_name}")
+            logger.debug(f"Tool Docstring: {wrapped.__doc__}")
     else:
         logger.warning("No module loader available, skipping code-defined tool registration")
 
@@ -548,7 +549,7 @@ def create_mcp_app(settings: Settings):
         Returns:
             Query result as a formatted response.
         """
-        return mcp.tool(description=_dynamic_tool.__doc__)(_dynamic_tool)
+        return mcp.tool(name=name, description=_dynamic_tool.__doc__)(_dynamic_tool)
 
     # Register custom objects
     custom_terms: list[tuple[str, Any, str]] = []
