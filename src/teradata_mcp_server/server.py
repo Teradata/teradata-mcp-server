@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import os
 import signal
+import sys
 from dotenv import load_dotenv
 
 from teradata_mcp_server.config import Settings, settings_from_env
@@ -28,6 +29,14 @@ def parse_args_to_settings() -> Settings:
     parser.add_argument('--auth_mode', type=str, required=False)
     parser.add_argument('--auth_cache_ttl', type=int, required=False)
     parser.add_argument('--logging_level', type=str, required=False)
+    # querygrid arguments can be added here as needed
+    parser.add_argument('--qg_manager_host', type=str, required=False, help='QueryGrid Manager host')
+    parser.add_argument('--qg_manager_port', type=int, required=False, help='QueryGrid Manager port')
+    parser.add_argument('--qg_manager_username', type=str, required=False, help='QueryGrid Manager username')
+    parser.add_argument('--qg_manager_password', required=False, help='QueryGrid Manager password')
+    parser.add_argument('--qg_manager_verify_ssl', type=str, required=False, help='Verify SSL certificates for QueryGrid Manager (true/false, default: true)')
+
+
 
     args, _ = parser.parse_known_args()
 
@@ -43,20 +52,25 @@ def parse_args_to_settings() -> Settings:
         auth_mode=(args.auth_mode or env.auth_mode).lower(),
         auth_cache_ttl=args.auth_cache_ttl if args.auth_cache_ttl is not None else env.auth_cache_ttl,
         logging_level=(args.logging_level or env.logging_level).upper(),
+        qg_manager_host=args.qg_manager_host if args.qg_manager_host is not None else env.qg_manager_host,
+        qg_manager_port=args.qg_manager_port if args.qg_manager_port is not None else env.qg_manager_port,
+        qg_manager_username=args.qg_manager_username if args.qg_manager_username is not None else env.qg_manager_username,
+        qg_manager_password=args.qg_manager_password if args.qg_manager_password is not None else env.qg_manager_password,
+        qg_manager_verify_ssl=args.qg_manager_verify_ssl.lower() in ["true", "1", "yes"] if args.qg_manager_verify_ssl is not None else env.qg_manager_verify_ssl,
     )
 
 
 async def main():
     load_dotenv()
     settings = parse_args_to_settings()
-    mcp, logger = create_mcp_app(settings)
+    mcp, logger, cleanup = create_mcp_app(settings)
 
     # Graceful shutdown
     try:
         loop = asyncio.get_running_loop()
         for s in (signal.SIGTERM, signal.SIGINT):
             logger.info(f"Registering signal handler for {s.name}")
-            loop.add_signal_handler(s, lambda s=s: os._exit(0))
+            loop.add_signal_handler(s, lambda s=s: (cleanup(), os._exit(0)))
     except NotImplementedError:
         logger.warning("Signal handling not supported on this platform")
 

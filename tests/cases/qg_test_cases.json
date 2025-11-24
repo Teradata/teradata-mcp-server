@@ -1,0 +1,770 @@
+{
+  "test_cases": {
+    "qg_get_api_info": [
+      {
+        "name": "get_api_info",
+        "parameters": {},
+        "description": "Retrieve QueryGrid Manager API information including version and features"
+      }
+    ],
+    "qg_get_managers": [
+      {
+        "name": "get_all_managers",
+        "parameters": {},
+        "description": "Retrieve all QueryGrid managers"
+      },
+      {
+        "name": "get_managers_with_extra_info",
+        "parameters": {
+          "extra_info": true
+        },
+        "description": "Retrieve all managers with additional information"
+      },
+      {
+        "name": "get_managers_filtered_by_name",
+        "parameters": {
+          "filter_by_name": "qg-centos-6773"
+        },
+        "description": "Retrieve managers filtered by name"
+      }
+    ],
+    "qg_get_manager_by_id": [
+      {
+        "name": "get_specific_manager",
+        "parameters": {
+          "id": "a68b3790-683d-4cbb-aaf8-8f18b8619861"
+        },
+        "description": "Retrieve a specific manager by ID"
+      }
+    ],
+    "qg_get_nodes": [
+      {
+        "name": "get_all_nodes",
+        "parameters": {},
+        "description": "Retrieve all QueryGrid nodes"
+      },
+      {
+        "name": "get_nodes_with_details",
+        "parameters": {
+          "details": true,
+          "extra_info": true
+        },
+        "description": "Retrieve nodes with detailed information"
+      },
+      {
+        "name": "get_nodes_filtered_by_system_id",
+        "parameters": {
+          "filter_by_system_id": "9bc2af30-a865-4fe8-8a06-48d1c0d6be35",
+          "extra_info": true
+        },
+        "description": "Retrieve nodes filtered by system ID"
+      },
+      {
+        "name": "get_nodes_filtered_by_fabric_id_and_version",
+        "parameters": {
+          "filter_by_fabric_id": "7193ab30-766c-4f76-a0c2-c40b1f81304d",
+          "fabric_version": "03.09.00.01-4"
+        },
+        "description": "Retrieve nodes filtered by fabric and version"
+      },
+      {
+        "name": "get_nodes_filtered_by_bridge_id",
+        "parameters": {
+          "filter_by_bridge_id": "d6529e41-4b2f-4013-833c-50a38e730d6b"
+        },
+        "description": "Retrieve nodes filtered by bridge ID"
+      },
+      {
+        "name": "get_nodes_filtered_by_connector_id",
+        "parameters": {
+          "filter_by_connector_id": "b2df2354-0c7b-418a-8365-1252a64f0f25"
+        },
+        "description": "Retrieve nodes filtered by connector ID"
+      },
+      {
+        "name": "get_nodes_filtered_by_connector_version",
+        "parameters": {
+          "connector_version": "03.09.00.01-5"
+        },
+        "description": "Retrieve nodes filtered by connector version"
+      },
+      {
+        "name": "get_nodes_with_drivers_filter",
+        "parameters": {
+          "filter_by_connector_id": "b2df2354-0c7b-418a-8365-1252a64f0f25",
+          "drivers": "true"
+        },
+        "description": "Retrieve nodes with drivers filter"
+      },
+      {
+        "name": "get_nodes_filtered_by_name",
+        "parameters": {
+          "filter_by_name": "pe16-tdvm-smp-0041-01"
+        },
+        "description": "Retrieve nodes filtered by name"
+      }
+    ],
+    "qg_get_node_by_id": [
+      {
+        "name": "get_specific_node",
+        "parameters": {
+          "id": "c9af1ea7-d56a-4bdb-a77c-234841078c7a"
+        },
+        "description": "Retrieve a specific node by ID"
+      }
+    ],
+    "qg_get_node_heartbeat_by_id": [
+      {
+        "name": "get_node_heartbeat",
+        "parameters": {
+          "id": "c9af1ea7-d56a-4bdb-a77c-234841078c7a"
+        },
+        "description": "Retrieve the latest heartbeat sent by a specific node"
+      }
+    ],
+    "qg_get_systems": [
+      {
+        "name": "get_all_systems",
+        "parameters": {},
+        "description": "Retrieve all QueryGrid systems"
+      },
+      {
+        "name": "get_systems_with_extra_info",
+        "parameters": {
+          "extra_info": true
+        },
+        "description": "Retrieve systems with additional information"
+      },
+      {
+        "name": "get_systems_filtered_by_name",
+        "parameters": {
+          "filter_by_name": "test_system_0041"
+        },
+        "description": "Retrieve systems filtered by name"
+      },
+      {
+        "name": "get_systems_by_proxy_support",
+        "parameters": {
+          "filter_by_proxy_support": "NO_PROXY"
+        },
+        "description": "Retrieve systems filtered by proxy support type"
+      },
+      {
+        "name": "get_systems_filtered_by_tag",
+        "parameters": {
+          "filter_by_tag": "env:production,team:backend"
+        },
+        "description": "Retrieve systems filtered by tag"
+      }
+    ],
+    "qg_get_system_by_id": [
+      {
+        "name": "get_specific_system",
+        "parameters": {
+          "id": "9bc2af30-a865-4fe8-8a06-48d1c0d6be35"
+        },
+        "description": "Retrieve a specific system by ID"
+      },
+      {
+        "name": "get_specific_system_with_extra_info",
+        "parameters": {
+          "id": "9bc2af30-a865-4fe8-8a06-48d1c0d6be35",
+          "extra_info": true
+        },
+        "description": "Retrieve a specific system with additional information"
+      }
+    ],
+    "qg_get_connectors": [
+      {
+        "name": "get_all_connectors",
+        "parameters": {},
+        "description": "Retrieve all QueryGrid connectors"
+      },
+      {
+        "name": "get_connectors_flattened",
+        "parameters": {
+          "flatten": true,
+          "extra_info": true
+        },
+        "description": "Retrieve connectors with flattened structure"
+      },
+      {
+        "name": "get_connectors_filtered_by_name",
+        "parameters": {
+          "filter_by_name": "test_connector_0041"
+        },
+        "description": "Retrieve connectors filtered by name"
+      },
+      {
+        "name": "get_connectors_by_tag",
+        "parameters": {
+          "filter_by_tag": "env:production"
+        },
+        "description": "Retrieve connectors filtered by tag"
+      }
+    ],
+    "qg_get_connector_by_id": [
+      {
+        "name": "get_specific_connector",
+        "parameters": {
+          "id": "2f2f71d5-5edb-4fd0-9162-9063cd6b1e79"
+        },
+        "description": "Retrieve a specific connector by ID"
+      },
+      {
+        "name": "get_specific_connector_with_extra_info",
+        "parameters": {
+          "id": "2f2f71d5-5edb-4fd0-9162-9063cd6b1e79",
+          "extra_info": true
+        },
+        "description": "Retrieve a specific connector with additional information"
+      }
+    ],
+    "qg_get_connector_active": [
+      {
+        "name": "get_active_connector_config",
+        "parameters": {
+          "id": "2f2f71d5-5edb-4fd0-9162-9063cd6b1e79"
+        },
+        "description": "Retrieve active configuration for a connector"
+      }
+    ],
+    "qg_get_connector_pending": [
+      {
+        "name": "get_pending_connector_config",
+        "parameters": {
+          "id": "2f2f71d5-5edb-4fd0-9162-9063cd6b1e79"
+        },
+        "description": "Retrieve pending configuration for a connector"
+      }
+    ],
+    "qg_get_connector_previous": [
+      {
+        "name": "get_previous_connector_config",
+        "parameters": {
+          "id": "2f2f71d5-5edb-4fd0-9162-9063cd6b1e79"
+        },
+        "description": "Retrieve previous configuration for a connector"
+      }
+    ],
+    "qg_get_connector_drivers": [
+      {
+        "name": "get_connector_drivers",
+        "parameters": {
+          "id": "2f2f71d5-5edb-4fd0-9162-9063cd6b1e79",
+          "version_id": "7cf7c7e2-4698-4ae7-a555-a84f80c5a6ce"
+        },
+        "description": "Retrieve drivers for a specific connector version"
+      }
+    ],
+    "qg_get_links": [
+      {
+        "name": "get_all_links",
+        "parameters": {},
+        "description": "Retrieve all QueryGrid links"
+      },
+      {
+        "name": "get_links_flattened",
+        "parameters": {
+          "flatten": true,
+          "extra_info": true
+        },
+        "description": "Retrieve links with flattened structure"
+      },
+      {
+        "name": "get_links_filtered_by_name",
+        "parameters": {
+          "filter_by_name": "test_link_41_47"
+        },
+        "description": "Retrieve links filtered by name"
+      }
+    ],
+    "qg_get_link_by_id": [
+      {
+        "name": "get_specific_link",
+        "parameters": {
+          "id": "f5d72daf-aa8f-486c-8058-4fc587c0b471"
+        },
+        "description": "Retrieve a specific link by ID"
+      },
+      {
+        "name": "get_specific_link_with_extra_info",
+        "parameters": {
+          "id": "f5d72daf-aa8f-486c-8058-4fc587c0b471",
+          "extra_info": true
+        },
+        "description": "Retrieve a specific link with additional information"
+      }
+    ],
+    "qg_get_link_active": [
+      {
+        "name": "get_active_link_config",
+        "parameters": {
+          "id": "f5d72daf-aa8f-486c-8058-4fc587c0b471"
+        },
+        "description": "Retrieve active configuration for a link"
+      }
+    ],
+    "qg_get_link_pending": [
+      {
+        "name": "get_pending_link_config",
+        "parameters": {
+          "id": "f5d72daf-aa8f-486c-8058-4fc587c0b471"
+        },
+        "description": "Retrieve pending configuration for a link"
+      }
+    ],
+    "qg_get_link_previous": [
+      {
+        "name": "get_previous_link_config",
+        "parameters": {
+          "id": "f5d72daf-aa8f-486c-8058-4fc587c0b471"
+        },
+        "description": "Retrieve previous configuration for a link"
+      }
+    ],
+    "qg_get_fabrics": [
+      {
+        "name": "get_all_fabrics",
+        "parameters": {},
+        "description": "Retrieve all QueryGrid fabrics"
+      },
+      {
+        "name": "get_fabrics_flattened",
+        "parameters": {
+          "flatten": true,
+          "extra_info": true
+        },
+        "description": "Retrieve fabrics with flattened structure"
+      },
+      {
+        "name": "get_fabrics_filtered_by_name",
+        "parameters": {
+          "filter_by_name": "test_fabric"
+        },
+        "description": "Retrieve fabrics filtered by name"
+      },
+      {
+        "name": "get_fabrics_by_tag",
+        "parameters": {
+          "filter_by_tag": "env:production"
+        },
+        "description": "Retrieve fabrics filtered by tag"
+      }
+    ],
+    "qg_get_fabric_by_id": [
+      {
+        "name": "get_specific_fabric",
+        "parameters": {
+          "id": "7193ab30-766c-4f76-a0c2-c40b1f81304d"
+        },
+        "description": "Retrieve a specific fabric by ID"
+      },
+      {
+        "name": "get_specific_fabric_with_extra_info",
+        "parameters": {
+          "id": "7193ab30-766c-4f76-a0c2-c40b1f81304d",
+          "extra_info": true
+        },
+        "description": "Retrieve a specific fabric with additional information"
+      }
+    ],
+    "qg_get_fabric_active": [
+      {
+        "name": "get_active_fabric_config",
+        "parameters": {
+          "id": "7193ab30-766c-4f76-a0c2-c40b1f81304d"
+        },
+        "description": "Retrieve active configuration for a fabric"
+      }
+    ],
+    "qg_get_fabric_pending": [
+      {
+        "name": "get_pending_fabric_config",
+        "parameters": {
+          "id": "7193ab30-766c-4f76-a0c2-c40b1f81304d"
+        },
+        "description": "Retrieve pending configuration for a fabric"
+      }
+    ],
+    "qg_get_fabric_previous": [
+      {
+        "name": "get_previous_fabric_config",
+        "parameters": {
+          "id": "7193ab30-766c-4f76-a0c2-c40b1f81304d"
+        },
+        "description": "Retrieve previous configuration for a fabric"
+      }
+    ],
+    "qg_get_software": [
+      {
+        "name": "get_software_info",
+        "parameters": {},
+        "description": "Retrieve QueryGrid software information"
+      }
+    ],
+    "qg_get_software_jdbc_driver": [
+      {
+        "name": "get_software_jdbc_driver",
+        "parameters": {},
+        "description": "Retrieve QueryGrid software information for JDBC drivers"
+      }
+    ],
+    "qg_get_software_jdbc_driver_by_name": [
+      {
+        "name": "get_software_jdbc_driver_by_name",
+        "parameters": {
+          "jdbc_driver_name": "test_driver"
+        },
+        "description": "Retrieve software information for a specific JDBC driver"
+      }
+    ],
+    "qg_get_software_by_id": [
+      {
+        "name": "get_software_by_id",
+        "parameters": {
+          "id": "d13626fd-cb87-4a19-9c30-b74a6a1cf3de"
+        },
+        "description": "Retrieve a specific software package by ID"
+      }
+    ],
+    "qg_get_networks": [
+      {
+        "name": "get_all_networks",
+        "parameters": {},
+        "description": "Retrieve all QueryGrid networks"
+      },
+      {
+        "name": "get_networks_flattened",
+        "parameters": {
+          "flatten": true,
+          "extra_info": true
+        },
+        "description": "Retrieve networks with flattened structure"
+      },
+      {
+        "name": "get_networks_filtered_by_name",
+        "parameters": {
+          "filter_by_name": "test_network"
+        },
+        "description": "Retrieve networks filtered by name"
+      }
+    ],
+    "qg_get_network_by_id": [
+      {
+        "name": "get_specific_network",
+        "parameters": {
+          "id": "11fe9ff6-c3d2-4115-b0af-c26b1677c0a3"
+        },
+        "description": "Retrieve a specific network by ID"
+      },
+      {
+        "name": "get_specific_network_with_extra_info",
+        "parameters": {
+          "id": "11fe9ff6-c3d2-4115-b0af-c26b1677c0a3",
+          "extra_info": true
+        },
+        "description": "Retrieve a specific network with additional information"
+      }
+    ],
+    "qg_get_network_active": [
+      {
+        "name": "get_active_network_config",
+        "parameters": {
+          "id": "11fe9ff6-c3d2-4115-b0af-c26b1677c0a3"
+        },
+        "description": "Retrieve active configuration for a network"
+      }
+    ],
+    "qg_get_network_pending": [
+      {
+        "name": "get_pending_network_config",
+        "parameters": {
+          "id": "11fe9ff6-c3d2-4115-b0af-c26b1677c0a3"
+        },
+        "description": "Retrieve pending configuration for a network"
+      }
+    ],
+    "qg_get_network_previous": [
+      {
+        "name": "get_previous_network_config",
+        "parameters": {
+          "id": "11fe9ff6-c3d2-4115-b0af-c26b1677c0a3"
+        },
+        "description": "Retrieve previous configuration for a network"
+      }
+    ],
+    "qg_get_comm_policies": [
+      {
+        "name": "get_all_comm_policies",
+        "parameters": {},
+        "description": "Retrieve all QueryGrid communication policies"
+      },
+      {
+        "name": "get_comm_policies_flattened",
+        "parameters": {
+          "flatten": true,
+          "extra_info": true
+        },
+        "description": "Retrieve communication policies with flattened structure"
+      },
+      {
+        "name": "get_comm_policies_filtered_by_name",
+        "parameters": {
+          "filter_by_name": "No Compression"
+        },
+        "description": "Retrieve communication policies filtered by name"
+      }
+    ],
+    "qg_get_comm_policy_by_id": [
+      {
+        "name": "get_specific_comm_policy",
+        "parameters": {
+          "id": "4d530c9a-7d01-4735-9ca2-74541cc38ced"
+        },
+        "description": "Retrieve a specific communication policy by ID"
+      },
+      {
+        "name": "get_specific_comm_policy_with_extra_info",
+        "parameters": {
+          "id": "4d530c9a-7d01-4735-9ca2-74541cc38ced",
+          "extra_info": true
+        },
+        "description": "Retrieve a specific communication policy with additional information"
+      }
+    ],
+    "qg_get_comm_policy_active": [
+      {
+        "name": "get_active_comm_policy_config",
+        "parameters": {
+          "id": "4d530c9a-7d01-4735-9ca2-74541cc38ced"
+        },
+        "description": "Retrieve active configuration for a communication policy"
+      }
+    ],
+    "qg_get_comm_policy_pending": [
+      {
+        "name": "get_pending_comm_policy_config",
+        "parameters": {
+          "id": "4d530c9a-7d01-4735-9ca2-74541cc38ced"
+        },
+        "description": "Retrieve pending configuration for a communication policy"
+      }
+    ],
+    "qg_get_comm_policy_previous": [
+      {
+        "name": "get_previous_comm_policy_config",
+        "parameters": {
+          "id": "4d530c9a-7d01-4735-9ca2-74541cc38ced"
+        },
+        "description": "Retrieve previous configuration for a communication policy"
+      }
+    ],
+    "qg_get_bridges": [
+      {
+        "name": "get_all_bridges",
+        "parameters": {},
+        "description": "Retrieve all QueryGrid bridges"
+      },
+      {
+        "name": "get_bridges_filtered_by_system",
+        "parameters": {
+          "filter_by_system_id": "9bc2af30-a865-4fe8-8a06-48d1c0d6be35"
+        },
+        "description": "Retrieve bridges filtered by system"
+      },
+      {
+        "name": "get_bridges_filtered_by_name",
+        "parameters": {
+          "filter_by_name": "test_bridge"
+        },
+        "description": "Retrieve bridges filtered by name"
+      }
+    ],
+    "qg_get_bridge_by_id": [
+      {
+        "name": "get_specific_bridge",
+        "parameters": {
+          "id": "d6529e41-4b2f-4013-833c-50a38e730d6b"
+        },
+        "description": "Retrieve a specific bridge by ID"
+      }
+    ],
+    "qg_get_datacenters": [
+      {
+        "name": "get_all_datacenters",
+        "parameters": {},
+        "description": "Retrieve all QueryGrid datacenters"
+      },
+      {
+        "name": "get_datacenters_filtered_by_name",
+        "parameters": {
+          "filter_by_name": "test_datacenter"
+        },
+        "description": "Retrieve datacenters filtered by name"
+      }
+    ],
+    "qg_get_datacenter_by_id": [
+      {
+        "name": "get_specific_datacenter",
+        "parameters": {
+          "id": "8a0d2875-13c4-4796-8787-acc6805c3271"
+        },
+        "description": "Retrieve a specific datacenter by ID"
+      }
+    ],
+    "qg_get_node_virtual_ips": [
+      {
+        "name": "get_all_node_virtual_ips",
+        "parameters": {},
+        "description": "Retrieve all QueryGrid node virtual IPs"
+      }
+    ],
+    "qg_get_node_virtual_ip_by_id": [
+      {
+        "name": "get_specific_node_virtual_ip",
+        "parameters": {
+          "id": "8a0d2875-13c4-4796-8787-acc6805c3271"
+        },
+        "description": "Retrieve a specific node virtual IP by ID"
+      }
+    ],
+    "qg_get_query_summary": [
+      {
+        "name": "get_query_summary_recent",
+        "parameters": {
+          "last_modified_after": "2024-01-01T00:00:00Z"
+        },
+        "description": "Retrieve query summary for recent queries"
+      },
+      {
+        "name": "get_query_summary_completed",
+        "parameters": {
+          "completed": true
+        },
+        "description": "Retrieve summary of completed queries"
+      },
+      {
+        "name": "get_query_summary_with_phrase",
+        "parameters": {
+          "query_text_phrase": "SELECT * FROM"
+        },
+        "description": "Retrieve query summary filtered by search phrase"
+      },
+      {
+        "name": "get_query_summary_by_initiator_query_id",
+        "parameters": {
+          "initiator_query_id": "8a0d2875-13c4-4796-8787-acc6805c3271"
+        },
+        "description": "Retrieve query summary for specific initiator query ID"
+      },
+      {
+        "name": "get_query_summary_by_ref_ids",
+        "parameters": {
+          "query_ref_ids": "123e4567-e89b-12d3-a456-426614174000,223e4567-e89b-12d3-a456-426614174001"
+        },
+        "description": "Retrieve query summary filtered by reference IDs"
+      }
+    ],
+    "qg_get_query_by_id": [
+      {
+        "name": "get_specific_query",
+        "parameters": {
+          "id": "8a0d2875-13c4-4796-8787-acc6805c3271"
+        },
+        "description": "Retrieve a specific query by ID"
+      }
+    ],
+    "qg_get_query_details": [
+      {
+        "name": "get_query_details",
+        "parameters": {
+          "id": "8a0d2875-13c4-4796-8787-acc6805c3271"
+        },
+        "description": "Retrieve detailed information for a specific query"
+      }
+    ],
+    "qg_get_user_mappings": [
+      {
+        "name": "get_all_user_mappings",
+        "parameters": {},
+        "description": "Retrieve all QueryGrid user mappings"
+      },
+      {
+        "name": "get_user_mappings_filtered_by_name",
+        "parameters": {
+          "filter_by_name": "test_mapping"
+        },
+        "description": "Retrieve user mappings filtered by name"
+      }
+    ],
+    "qg_get_user_mapping_by_id": [
+      {
+        "name": "get_specific_user_mapping",
+        "parameters": {
+          "id": "77a7fb39-ab70-43d3-991c-ba36d9622fe1"
+        },
+        "description": "Retrieve a specific user mapping by ID"
+      }
+    ],
+    "qg_get_users": [
+      {
+        "name": "get_all_users",
+        "parameters": {},
+        "description": "Retrieve all QueryGrid users"
+      }
+    ],
+    "qg_get_user_by_username": [
+      {
+        "name": "get_specific_user",
+        "parameters": {
+          "username": "support"
+        },
+        "description": "Retrieve a specific user by username"
+      }
+    ],
+    "qg_get_issues": [
+      {
+        "name": "get_all_issues",
+        "parameters": {},
+        "description": "Retrieve all active QueryGrid issues"
+      }
+    ],
+    "qg_get_issue_by_id": [
+      {
+        "name": "get_specific_issue",
+        "parameters": {
+          "id": "4f25c89d-d1a7-4374-b592-20870f91c527"
+        },
+        "description": "Retrieve a specific issue by ID"
+      }
+    ],
+    "qg_get_diagnostic_check_status": [
+      {
+        "name": "get_diagnostic_check_status",
+        "parameters": {
+          "id": "4f25c89d-d1a7-4374-b592-20870f91c527"
+        },
+        "description": "Retrieve status of a specific diagnostic check"
+      }
+    ],
+    "qg_get_nodes_auto_install_status": [
+      {
+        "name": "get_nodes_auto_install_status",
+        "parameters": {
+          "id": "4f25c89d-d1a7-4374-b592-20870f91c527"
+        },
+        "description": "Retrieve automatic node installation status by installation ID"
+      }
+    ],
+    "qg_get_create_foreign_server_status": [
+      {
+        "name": "get_create_foreign_server_status",
+        "parameters": {
+          "id": "4f25c89d-d1a7-4374-b592-20870f91c527"
+        },
+        "description": "Retrieve CONNECTOR_CFS diagnostic check status for foreign server creation"
+      }
+    ]
+  }
+}

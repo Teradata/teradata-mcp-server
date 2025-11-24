@@ -54,3 +54,11 @@ bar:
     - ^bar_*
   resource:
     - ^bar_*
+
+qg:
+  tool:
+    - ^qg_*
+  prompt:
+    - ^qg_*
+  resource:
+    - ^qg_*
