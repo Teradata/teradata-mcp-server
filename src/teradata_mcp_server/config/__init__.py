@@ -34,6 +34,13 @@ class Settings:
     max_overflow: int = 10
     pool_timeout: int = 30
 
+    # QueryGrid Manager
+    qg_manager_host: str | None = None
+    qg_manager_port: int | None = None
+    qg_manager_username: str | None = None
+    qg_manager_password: str | None = None
+    qg_manager_verify_ssl: bool = True
+
     # Logging
     logging_level: str = os.getenv("LOGGING_LEVEL", "WARNING")
 
@@ -57,5 +64,10 @@ def settings_from_env() -> Settings:
         pool_size=int(os.getenv("TD_POOL_SIZE", "5")),
         max_overflow=int(os.getenv("TD_MAX_OVERFLOW", "10")),
         pool_timeout=int(os.getenv("TD_POOL_TIMEOUT", "30")),
+        qg_manager_host=os.getenv("QG_MANAGER_HOST") or None,
+        qg_manager_port=int(os.getenv("QG_MANAGER_PORT")) if os.getenv("QG_MANAGER_PORT") else None,
+        qg_manager_username=os.getenv("QG_MANAGER_USERNAME") or None,
+        qg_manager_password=os.getenv("QG_MANAGER_PASSWORD") or None,
+        qg_manager_verify_ssl=os.getenv("QG_MANAGER_VERIFY_SSL", "true").lower() in ["true", "1", "yes"],
         logging_level=os.getenv("LOGGING_LEVEL", "WARNING"),
     )

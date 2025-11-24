@@ -19,6 +19,7 @@ import asyncio
 import inspect
 import os
 import re
+import sys
 from importlib.resources import files as pkg_files
 from typing import Annotated, Any
 
@@ -64,6 +65,7 @@ def create_mcp_app(settings: Settings):
     enableEFS = True if any(re.match(pattern, 'fs_*') for pattern in config.get('tool', [])) else False
     enableTDVS = True if any(re.match(pattern, 'tdvs_*') for pattern in config.get('tool', [])) else False
     enableBAR = True if any(re.match(pattern, 'bar_*') for pattern in config.get('tool', [])) else False
+    enableQG = True if any(re.match(pattern, 'qg_*') for pattern in config.get('tool', [])) else False
 
     # Initialize TD connection and optional teradataml/EFS context
     # Pass settings object to TDConn instead of just connection_url
@@ -127,6 +129,18 @@ def create_mcp_app(settings: Settings):
         except (AttributeError, ImportError, ModuleNotFoundError) as e:
             logger.warning(f"BAR system dependencies not available - disabling BAR functionality: {e}")
             enableBAR = False
+
+    # QueryGrid dependencies (optional)
+    qg_manager = None
+    if enableQG:
+        try:
+            # Check for QG system availability by importing required modules
+            import requests
+            from teradata_mcp_server.tools.qg.qgm.querygrid_manager import QueryGridManager
+            qg_manager = QueryGridManager()
+        except (AttributeError, ImportError, ModuleNotFoundError) as e:
+            logger.warning(f"QG system dependencies not available - disabling QG functionality: {e}")
+            enableQG = False
 
     # Middleware (auth + request context)
     from teradata_mcp_server.tools.auth_cache import SecureAuthCache
@@ -321,6 +335,10 @@ def create_mcp_app(settings: Settings):
             inject_kwargs["fs_config"] = fs_config
             removable.add("fs_config")
 
+        if "qg_manager" in sig.parameters:
+            inject_kwargs["qg_manager"] = qg_manager
+            removable.add("qg_manager")
+
         params = [
             p for name, p in sig.parameters.items()
             if name not in removable and p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
@@ -357,6 +375,10 @@ def create_mcp_app(settings: Settings):
             # Skip BAR tools if BAR functionality is disabled
             if tool_name.startswith("bar_") and not enableBAR:
                 logger.info(f"Skipping BAR tool: {tool_name} (BAR functionality disabled)")
+                continue
+            # Skip QueryGrid tools if the functionality is disabled
+            if tool_name.startswith("qg_") and not enableQG:
+                logger.info(f"Skipping QueryGrid tool: {tool_name} (functionality disabled)")
                 continue
             wrapped = make_tool_wrapper(func)
             mcp.tool(name=tool_name, description=wrapped.__doc__)(wrapped)
@@ -795,4 +817,8 @@ Returns:
                 return {"error": f"Glossary term not found: {term_name}"}
 
     # Return the configured app and some handles used by the entrypoint if needed
-    return mcp, logger
+    def cleanup():
+        if qg_manager:
+            qg_manager.close()
+    
+    return mcp, logger, cleanup

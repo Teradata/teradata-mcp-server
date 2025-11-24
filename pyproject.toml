@@ -48,6 +48,11 @@ bar = [
     "requests>=2.25.0",
 ]
 
+# QueryGrid functionality
+qg = [
+    "requests>=2.25.0",
+]
+
 # Development dependencies 
 dev = [
     "ruff>=0.1.0",

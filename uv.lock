@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -2326,6 +2326,9 @@ fs = [
     { name = "tdfs4ds" },
     { name = "teradataml" },
 ]
+qg = [
+    { name = "requests" },
+]
 tdvs = [
     { name = "teradatagenai" },
 ]
@@ -2344,6 +2347,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "pyyaml", specifier = ">=6.0.0" },
     { name = "requests", marker = "extra == 'bar'", specifier = ">=2.25.0" },
+    { name = "requests", marker = "extra == 'qg'", specifier = ">=2.25.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
     { name = "sqlalchemy", specifier = ">=2.0.0,<3.0.0" },
     { name = "tdfs4ds", marker = "extra == 'fs'", specifier = ">=0.2.4.0" },
@@ -2352,7 +2356,7 @@ requires-dist = [
     { name = "teradatasqlalchemy", specifier = ">=20.0.0.0" },
     { name = "types-pyyaml", marker = "extra == 'dev'" },
 ]
-provides-extras = ["fs", "tdvs", "bar", "dev"]
+provides-extras = ["fs", "tdvs", "bar", "qg", "dev"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "build", specifier = ">=1.3.0" }]

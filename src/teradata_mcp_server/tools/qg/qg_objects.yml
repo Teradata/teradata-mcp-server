@@ -1,0 +1,9 @@
+# QueryGrid Objects Configuration
+# This file contains object definitions for QueryGrid tools, prompts, and resources
+
+# Note: The main QueryGrid tools are implemented in qg_tools.py as they require
+# complex HTTP API interactions with QGM systems that cannot be represented
+# as simple SQL queries.
+
+# Future QueryGrid-related prompts and simple tools can be defined here
+# following the standard YAML object format.
