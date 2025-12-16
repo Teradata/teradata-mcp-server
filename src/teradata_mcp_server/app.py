@@ -73,13 +73,43 @@ def create_mcp_app(settings: Settings):
     enableBAR = True if any(re.match(pattern, 'bar_*') for pattern in config.get('tool', [])) else False
     enableChat = True if any(re.match(pattern, 'chat_*') for pattern in config.get('tool', [])) else False
 
+    # Registry tools state (function will be defined later in code)
+    registry_tools_loaded = False
+    registry_load_callback = None  # Will be set when load function is defined
+
+    # TD connection supplier
+    tdconn = None
+    fs_config = None
+
+    def get_tdconn(recreate: bool = False):
+        nonlocal tdconn, fs_config, registry_tools_loaded
+
+        # Create connection if needed (first call or recreate requested)
+        if tdconn is None or recreate:
+            tdconn = td.TDConn(settings=settings)
+
+            if enableEFS:
+                try:
+                    import teradataml as tdml
+                    fs_config = td.FeatureStoreConfig()
+                    try:
+                        tdml.create_context(tdsqlengine=tdconn.engine)
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+
+            # Load registry tools if DB connection is available and callback is set
+            if getattr(tdconn, "engine", None) and not registry_tools_loaded and registry_load_callback:
+                registry_load_callback()
+
+        return tdconn
+
     # Initialize TD connection and optional teradataml/EFS context
-    # Pass settings object to TDConn instead of just connection_url
-    tdconn = td.TDConn(settings=settings)
+    tdconn = get_tdconn()
 
     enable_analytic_functions = profile_name and profile_name == 'dataScientist'
 
-    fs_config = None
     if enableEFS or enable_analytic_functions:
 
         try:
@@ -249,22 +279,6 @@ def create_mcp_app(settings: Settings):
     # Middleware (auth + request context)
     from teradata_mcp_server.tools.auth_cache import SecureAuthCache
     auth_cache = SecureAuthCache(ttl_seconds=settings.auth_cache_ttl)
-
-    def get_tdconn(recreate: bool = False):
-        nonlocal tdconn, fs_config
-        if recreate:
-            tdconn = td.TDConn(settings=settings)
-            if enableEFS:
-                try:
-                    import teradataml as tdml
-                    fs_config = td.FeatureStoreConfig()
-                    try:
-                        tdml.create_context(tdsqlengine=tdconn.engine)
-                    except Exception:
-                        pass
-                except Exception:
-                    pass
-        return tdconn
 
     middleware = RequestContextMiddleware(
         logger=logger,
@@ -889,6 +903,86 @@ Returns:
         for section in ("measures", "dimensions"):
             if section in obj and  any(re.match(pattern, name) for pattern in config.get('tool',[])):
                 custom_terms.extend((term, details, name) for term, details in obj[section].items())
+
+    # Registry tools: Load tools from database registry on first DB connection
+    registry_db = config.get('registry')
+
+    def load_registry_tools_once():
+        """Load all registry tools once when DB connection is available."""
+        nonlocal registry_tools_loaded, registry_load_callback
+
+        if registry_tools_loaded or not registry_db:
+            logger.info(f"No database registry configured or already loaded.")
+            return
+
+        logger.info(f"Loading registry tools from database: {registry_db}")
+
+        try:
+            from teradata_mcp_server.tools.registry import RegistryLoader
+            from teradata_mcp_server.tools.registry.registry_tools import build_registry_sql
+
+            loader = RegistryLoader(get_tdconn(), registry_db)
+            registry_tools = loader.load_tools()
+
+            if not registry_tools:
+                logger.warning(f"No tools found in registry database '{registry_db}'")
+                registry_tools_loaded = True
+                return
+
+            logger.info(f"Found {len(registry_tools)} tools in registry, registering...")
+
+            for tool_name, tool_def in registry_tools.items():
+                # Build tool using same pattern as YAML tools
+                description = tool_def.get('description', '')
+                param_defs = tool_def.get('parameters', {})
+
+                # Create parameters list
+                parameters = []
+                for param_name, p in sorted(param_defs.items(), key=lambda x: x[1].get('position', 0)):
+                    param_description = p.get("description", "")
+                    type_hint = p.get("type_hint", str)
+                    annotation = Annotated[type_hint, param_description] if param_description else type_hint
+                    default = inspect.Parameter.empty if p.get("required", True) else p.get("default", None)
+
+                    parameters.append(
+                        inspect.Parameter(param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                                        default=default, annotation=annotation)
+                    )
+
+                sig = inspect.Signature(parameters)
+
+                # Create executor that generates SQL and executes
+                def make_executor(tool_def_captured=tool_def, tool_name_captured=tool_name):
+                    def executor(**kwargs):
+                        sql = build_registry_sql(tool_def_captured, kwargs)
+                        return execute_db_tool(td.handle_base_readQuery, sql, tool_name=tool_name_captured, **kwargs)
+                    return executor
+
+                tool_func = create_mcp_tool(
+                    executor_func=make_executor(),
+                    signature=sig,
+                    validate_required=True,
+                    tool_name=tool_name,
+                )
+
+                # Register with MCP
+                mcp.tool(name=tool_name, description=description)(tool_func)
+                logger.info(f"Registered registry tool: {tool_name} ({tool_def['object_type']} {tool_def['db_object']})")
+
+            registry_tools_loaded = True
+            logger.info(f"Successfully registered {len(registry_tools)} registry tools")
+
+        except Exception as e:
+            logger.error(f"Failed to load registry tools: {e}", exc_info=True)
+            registry_tools_loaded = True  # Don't retry
+
+    # Set the callback so get_tdconn() can trigger registry loading
+    registry_load_callback = load_registry_tools_once
+
+    # Try to load registry immediately if DB connection already available
+    tdconn_check = get_tdconn()
+    if getattr(tdconn_check, "engine", None):
+        load_registry_tools_once()
 
     # Enrich glossary
     for term, details, tool_name in custom_terms:
