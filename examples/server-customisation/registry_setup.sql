@@ -10,7 +10,8 @@ CREATE TABLE mcp_tool(
     ToolName VARCHAR(128) CHARACTER SET UNICODE NOT CASESPECIFIC NOT NULL,
     DataBaseName VARCHAR(128) CHARACTER SET UNICODE NOT CASESPECIFIC NOT NULL,
     TableName VARCHAR(128) CHARACTER SET UNICODE NOT CASESPECIFIC NULL,
-    description VARCHAR(10000) CHARACTER SET UNICODE --The tool description can be infered from the object comment string, but we may want to override it
+    description VARCHAR(10000) CHARACTER SET UNICODE, --The tool description can be infered from the object comment string, but we may want to override it
+    registered_ts timestamp default current_timestamp
 ) UNIQUE PRIMARY INDEX(ToolName);
 
 CREATE TABLE mcp_tool_type(
@@ -29,7 +30,8 @@ r.ToolName,
 r.DataBaseName,
 r.TableName,
 coalesce(r.description, t.CommentString) description,
-t.TableKind toolType
+t.TableKind toolType,
+r.registered_ts
 from mcp_tool r
 join dbc.TablesV t
     on r.DataBaseName=t.DataBaseName
@@ -94,17 +96,18 @@ t.ToolName,
 r.databasename,
 r.tablename,
 trim(r.toolType) toolType,
+r.registered_ts,
 d.docstring,
 XMLAGG(tt.TagName||' ') Tags
 from mcp_toolV r
 join mcp_tool_user_access t
-    on t.ToolName=r.ToolName    
+    on t.ToolName=r.ToolName
 left join mcp_tool_tag tt
     on t.ToolName=tt.ToolName
 left join mcp_toolDocV d
-    on t.ToolName=d.ToolName    
+    on t.ToolName=d.ToolName
 where t.username=user
-group by 1, 2, 3, 4, 5;
+group by 1, 2, 3, 4, 5, 6;
 
 replace view mcp_list_toolParams as
 sel
@@ -204,10 +207,9 @@ EXEC dba_databaseSpace(database)
 -- ============================================================================
 -- Register the custom tools
 -- ============================================================================
-ins mcp_tool('get_weekday', 'demo_user', 'weekday', null);
-ins mcp_tool('dba_tableSpace', 'demo_user', 'dba_tableSpace', null);
-ins mcp_tool('dba_databaseSpace', 'demo_user', 'dba_databaseSpace', null);
-
+ins mcp_tool(toolname, databasename, tablename) values ('get_weekday', 'demo_user', 'weekday');
+ins mcp_tool(toolname, databasename, tablename) values('dba_tableSpace', 'demo_user', 'dba_tableSpace');
+ins mcp_tool(toolname, databasename, tablename) values('dba_databaseSpace', 'demo_user', 'dba_databaseSpace');
 
 ins mcp_tool_user_access
 sel ToolName, user from mcp_toolV;

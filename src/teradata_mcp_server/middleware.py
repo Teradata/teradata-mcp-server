@@ -19,7 +19,8 @@ from typing import Optional, Callable
 from uuid import uuid4
 
 from fastmcp.server.dependencies import get_http_headers
-from fastmcp.server.middleware import Middleware, MiddlewareContext
+from fastmcp.server.middleware import Middleware, MiddlewareContext, CallNext
+import mcp.types as mt
 
 
 @dataclass
@@ -46,14 +47,19 @@ class RequestContextMiddleware(Middleware):
         tdconn_supplier: Callable[[], object],
         auth_mode: str = "none",
         transport: str | None = None,
+        registry_load_callback: Optional[Callable[[Optional[str]], Optional[str]]] = None,
     ) -> None:
         self.logger = logger
         self.auth_cache = auth_cache
         self.tdconn_supplier = tdconn_supplier
         self.auth_mode = (auth_mode or "none").lower()
         self.transport = (transport or "stdio").lower()
+        self.registry_load_callback = registry_load_callback
+        self.registry_tools_loaded_ts: Optional[str] = None
+        self.logger.info(f"RequestContextMiddleware initialized: transport={self.transport}, auth_mode={self.auth_mode}, registry_callback={registry_load_callback is not None}")
 
     async def on_request(self, context: MiddlewareContext, call_next):
+        self.logger.info(f"on_request: Called with transport={self.transport}")
         # stdio: generate lightweight context; do not touch stdout
         if self.transport == "stdio":
             try:
@@ -190,6 +196,37 @@ class RequestContextMiddleware(Middleware):
                 self.logger.warning("No FastMCP context available - RequestContext not stored")
         except Exception as e:
             self.logger.debug(f"Error creating RequestContext: {e}")
+
+        return await call_next(context)
+
+    async def on_initialize(
+        self,
+        context: MiddlewareContext[mt.InitializeRequest],
+        call_next: CallNext[mt.InitializeRequest, None],
+    ) -> None:
+        """
+        Hook called when a client session initializes.
+
+        This is the perfect place to refresh registry tools, as it happens once per session
+        and after the database connection is available.
+        """
+        self.logger.info(f"on_initialize: Session initializing (registry_load_callback configured: {self.registry_load_callback is not None})")
+
+        # Trigger registry tool refresh if callback is configured
+        if self.registry_load_callback:
+            try:
+                self.logger.info(f"on_initialize: Refreshing registry tools (last_load_ts: {self.registry_tools_loaded_ts})")
+                # Call the registry load callback with current timestamp watermark
+                new_ts = self.registry_load_callback(self.registry_tools_loaded_ts)
+                if new_ts:
+                    self.registry_tools_loaded_ts = new_ts
+                    self.logger.info(f"on_initialize: Registry tools refreshed successfully, new watermark: {new_ts}")
+                else:
+                    self.logger.info("on_initialize: Registry refresh completed, no new timestamp returned")
+            except Exception as e:
+                self.logger.error(f"on_initialize: Error refreshing registry tools: {e}", exc_info=True)
+        else:
+            self.logger.info("on_initialize: No registry_load_callback configured, skipping registry refresh")
 
         return await call_next(context)
 

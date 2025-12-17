@@ -75,24 +75,30 @@ class RegistryLoader:
         '++': str,           # TD_ANYTYPE
     }
 
-    def __init__(self, tdconn, registry_db: str):
+    def __init__(self, tdconn, registry_db: str, last_load_ts: Optional[str] = None):
         """
         Initialize the registry loader.
 
         Args:
             tdconn: Teradata connection object with an engine attribute
             registry_db: Name of the database containing registry views
+            last_load_ts: Last load timestamp (ISO format) to filter tools registered since then
         """
         self.tdconn = tdconn
         self.registry_db = registry_db
         self.engine = tdconn.engine if hasattr(tdconn, 'engine') else None
+        self.last_load_ts = last_load_ts
 
-    def load_tools(self) -> Dict[str, Dict[str, Any]]:
+    def load_tools(self) -> tuple[Dict[str, Dict[str, Any]], Optional[str]]:
         """
-        Load all tool definitions from the database registry.
+        Load tool definitions from the database registry, optionally filtering by timestamp.
 
         Returns:
-            Dictionary mapping tool names to their definitions:
+            Tuple of (tool_definitions, current_timestamp):
+            - tool_definitions: Dictionary mapping tool names to their definitions
+            - current_timestamp: Database current timestamp to use as watermark for next refresh
+
+            Tool definition structure:
             {
                 'tool_name': {
                     'description': 'Tool description',
@@ -101,6 +107,7 @@ class RegistryLoader:
                     'db_object': 'db_name.table_name',
                     'object_type': 'UDF' or 'MACRO',
                     'tags': 'comma,separated,tags',
+                    'registered_ts': 'timestamp when tool was registered',
                     'parameters': {
                         'param_name': {
                             'type_hint': type,
@@ -114,56 +121,83 @@ class RegistryLoader:
         """
         if not self.engine:
             logger.warning("No database engine available - cannot load registry tools")
-            return {}
+            return {}, None
 
         try:
+            logger.info(f"RegistryLoader: Starting tool load from '{self.registry_db}' (filter timestamp: {self.last_load_ts or 'None - initial load'})")
+
             with self.engine.connect() as conn:
-                # Load tool metadata
-                tools_data = self._query_tools(conn)
+                # Load tool metadata (including current timestamp)
+                tools_data, current_ts = self._query_tools(conn)
+
+                logger.info(f"RegistryLoader: Query returned {len(tools_data)} tools, current_ts={current_ts}")
 
                 if not tools_data:
-                    logger.warning(f"No tools found in registry database '{self.registry_db}'")
-                    return {}
+                    if self.last_load_ts:
+                        logger.info(f"No new tools found in registry database '{self.registry_db}' since {self.last_load_ts}")
+                    else:
+                        logger.warning(f"No tools found in registry database '{self.registry_db}'")
+                    return {}, current_ts
 
                 # Load parameter metadata
                 params_data = self._query_params(conn)
+                logger.info(f"RegistryLoader: Loaded {len(params_data)} parameter definitions")
 
                 # Build tool definitions
                 tool_defs = self._build_tool_definitions(tools_data, params_data)
 
-                logger.info(f"Loaded {len(tool_defs)} tools from registry database '{self.registry_db}'")
-                return tool_defs
+                if self.last_load_ts:
+                    logger.info(f"Loaded {len(tool_defs)} new/updated tools from registry database '{self.registry_db}' since {self.last_load_ts}")
+                else:
+                    logger.info(f"Loaded {len(tool_defs)} tools from registry database '{self.registry_db}'")
+                return tool_defs, current_ts
 
         except Exception as e:
             logger.error(f"Failed to load tools from registry: {e}", exc_info=True)
-            return {}
+            return {}, None
 
-    def _query_tools(self, conn: Connection) -> list:
+    def _query_tools(self, conn: Connection) -> tuple[list, Optional[str]]:
         """
-        Query the mcp_list_tools view for tool metadata.
+        Query the mcp_list_tools view for tool metadata, optionally filtering by timestamp.
 
         Expected columns:
         - ToolName: Name of the tool
         - DataBaseName: Database where the object resides
         - TableName: Name of the database object (UDF/Macro name)
         - ToolType: Type of object ('F'=UDF, 'M'=Macro, 'T'=Table, 'V'=View)
+        - registered_ts: Timestamp when tool was registered/updated
         - docstring: Tool description/documentation
         - Tags: Comma-separated tags (optional)
+
+        Returns:
+            Tuple of (tools_list, current_timestamp)
         """
-        query = text(f"""
+        # Build WHERE clause for incremental loading
+        where_clause = ""
+        if self.last_load_ts:
+            where_clause = f"WHERE registered_ts > TIMESTAMP '{self.last_load_ts}'"
+
+        query_sql = f"""
             SELECT
                 ToolName,
                 DataBaseName,
                 TableName,
                 ToolType,
+                registered_ts,
                 docstring,
-                Tags
+                Tags,
+                current_timestamp
             FROM {self.registry_db}.mcp_list_tools
+            {where_clause}
             ORDER BY ToolName
-        """)
+        """
 
+        logger.info(f"RegistryLoader: Executing query on {self.registry_db}.mcp_list_tools with filter: {where_clause or 'NONE'}")
+
+        query = text(query_sql)
         result = conn.execute(query)
         tools = []
+        current_ts = None
 
         for row in result:
             tools.append({
@@ -171,12 +205,16 @@ class RegistryLoader:
                 'DataBaseName': row[1],
                 'TableName': row[2],
                 'ToolType': row[3] if len(row) > 3 else 'F',  # Default to Function/UDF
-                'docstring': row[4] if len(row) > 4 else '',
-                'Tags': row[5] if len(row) > 5 else '',
+                'registered_ts': row[4] if len(row) > 4 else None,
+                'docstring': row[5] if len(row) > 5 else '',
+                'Tags': row[6] if len(row) > 6 else '',
             })
+            # Capture current_timestamp from the first row (all rows have same value)
+            if current_ts is None and len(row) > 7:
+                current_ts = str(row[7]) if row[7] else None
 
-        logger.debug(f"Found {len(tools)} tools in registry")
-        return tools
+        logger.info(f"RegistryLoader: Found {len(tools)} tools in registry (filtered: {self.last_load_ts is not None})")
+        return tools, current_ts
 
     def _query_params(self, conn: Connection) -> list:
         """
@@ -254,10 +292,11 @@ class RegistryLoader:
                 'db_object': f"{tool['DataBaseName']}.{tool['TableName']}",
                 'object_type': tool['ToolType'],
                 'tags': tool.get('Tags', ''),
+                'registered_ts': tool.get('registered_ts'),
                 'parameters': self._build_params(tool_params)
             }
 
-            logger.info(f"Built definition for tool '{tool_name}' ({tool['ToolType']})")
+            logger.debug(f"Built definition for tool '{tool_name}' ({tool['ToolType']}, registered: {tool.get('registered_ts')})")
 
         return tool_defs
 

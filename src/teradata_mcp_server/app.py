@@ -73,16 +73,12 @@ def create_mcp_app(settings: Settings):
     enableBAR = True if any(re.match(pattern, 'bar_*') for pattern in config.get('tool', [])) else False
     enableChat = True if any(re.match(pattern, 'chat_*') for pattern in config.get('tool', [])) else False
 
-    # Registry tools state (function will be defined later in code)
-    registry_tools_loaded = False
-    registry_load_callback = None  # Will be set when load function is defined
-
     # TD connection supplier
     tdconn = None
     fs_config = None
 
     def get_tdconn(recreate: bool = False):
-        nonlocal tdconn, fs_config, registry_tools_loaded
+        nonlocal tdconn, fs_config
 
         # Create connection if needed (first call or recreate requested)
         if tdconn is None or recreate:
@@ -98,10 +94,6 @@ def create_mcp_app(settings: Settings):
                         pass
                 except Exception:
                     pass
-
-            # Load registry tools if DB connection is available and callback is set
-            if getattr(tdconn, "engine", None) and not registry_tools_loaded and registry_load_callback:
-                registry_load_callback()
 
         return tdconn
 
@@ -277,6 +269,7 @@ def create_mcp_app(settings: Settings):
             enableChat = False
 
     # Middleware (auth + request context)
+    # Note: registry_load_callback will be set later after load_registry_tools is defined
     from teradata_mcp_server.tools.auth_cache import SecureAuthCache
     auth_cache = SecureAuthCache(ttl_seconds=settings.auth_cache_ttl)
 
@@ -904,34 +897,49 @@ Returns:
             if section in obj and  any(re.match(pattern, name) for pattern in config.get('tool',[])):
                 custom_terms.extend((term, details, name) for term, details in obj[section].items())
 
-    # Registry tools: Load tools from database registry on first DB connection
+    # Registry tools: Load tools from database registry incrementally
     registry_db = config.get('registry')
 
-    def load_registry_tools_once():
-        """Load all registry tools once when DB connection is available."""
-        nonlocal registry_tools_loaded, registry_load_callback
+    def load_registry_tools(last_load_ts: Optional[str] = None) -> Optional[str]:
+        """
+        Load registry tools incrementally based on last load timestamp.
 
-        if registry_tools_loaded or not registry_db:
-            logger.info(f"No database registry configured or already loaded.")
-            return
+        Args:
+            last_load_ts: Timestamp of last load (None for initial load)
 
-        logger.info(f"Loading registry tools from database: {registry_db}")
+        Returns:
+            New timestamp to use as watermark for next refresh, or None if no tools loaded
+        """
+        if not registry_db:
+            logger.debug("No database registry configured")
+            return None
+
+        tdconn_local = get_tdconn()
+        if not getattr(tdconn_local, "engine", None):
+            logger.warning("No database engine available - cannot load registry tools")
+            return None
+
+        if last_load_ts:
+            logger.info(f"Loading registry tools from database '{registry_db}' (incremental since {last_load_ts})")
+        else:
+            logger.info(f"Loading registry tools from database '{registry_db}' (initial load)")
 
         try:
             from teradata_mcp_server.tools.registry import RegistryLoader
             from teradata_mcp_server.tools.registry.registry_tools import build_registry_sql
 
-            loader = RegistryLoader(get_tdconn(), registry_db)
-            registry_tools = loader.load_tools()
+            loader = RegistryLoader(tdconn_local, registry_db, last_load_ts=last_load_ts)
+            registry_tools, current_ts = loader.load_tools()
 
             if not registry_tools:
-                logger.warning(f"No tools found in registry database '{registry_db}'")
-                registry_tools_loaded = True
-                return
+                # No new tools, but still return current timestamp for next refresh
+                return current_ts
 
-            logger.info(f"Found {len(registry_tools)} tools in registry, registering...")
+            logger.info(f"Found {len(registry_tools)} {'new/updated ' if last_load_ts else ''}tools in registry, registering...")
 
             for tool_name, tool_def in registry_tools.items():
+                logger.info(f"[REGISTRY] Processing tool {tool_name} ({tool_def['object_type']} {tool_def['db_object']})")
+
                 # Build tool using same pattern as YAML tools
                 description = tool_def.get('description', '')
                 param_defs = tool_def.get('parameters', {})
@@ -950,6 +958,7 @@ Returns:
                     )
 
                 sig = inspect.Signature(parameters)
+                logger.info(f"[REGISTRY] Created signature for {tool_name}: {sig}")
 
                 # Create executor that generates SQL and executes
                 def make_executor(tool_def_captured=tool_def, tool_name_captured=tool_name):
@@ -964,25 +973,40 @@ Returns:
                     validate_required=True,
                     tool_name=tool_name,
                 )
+                logger.info(f"[REGISTRY] Created tool function for {tool_name}: {tool_func.__name__}")
 
-                # Register with MCP
-                mcp.tool(name=tool_name, description=description)(tool_func)
-                logger.info(f"Registered registry tool: {tool_name} ({tool_def['object_type']} {tool_def['db_object']})")
+                # Register with MCP - capture the result
+                registered_tool = mcp.tool(name=tool_name, description=description)(tool_func)
+                logger.info(f"[REGISTRY] Called mcp.tool() for {tool_name}, returned: {type(registered_tool).__name__}")
 
-            registry_tools_loaded = True
+                # Verify tool is in MCP's internal registry
+                try:
+                    tool_dict = mcp.get_tools()
+                    tool_names = list(tool_dict.keys())
+                    is_present = tool_name in tool_names
+                    logger.info(f"[REGISTRY] Verification: {tool_name} {'FOUND' if is_present else 'NOT FOUND'} in mcp.get_tools() (total: {len(tool_names)} tools)")
+                except Exception as e:
+                    logger.error(f"[REGISTRY] Error checking tool list: {e}")
+
+                logger.info(f"[REGISTRY] Registered registry tool: {tool_name} ({tool_def['object_type']} {tool_def['db_object']}, registered: {tool_def.get('registered_ts')})")
+
             logger.info(f"Successfully registered {len(registry_tools)} registry tools")
+            return current_ts
 
         except Exception as e:
             logger.error(f"Failed to load registry tools: {e}", exc_info=True)
-            registry_tools_loaded = True  # Don't retry
+            return None
 
-    # Set the callback so get_tdconn() can trigger registry loading
-    registry_load_callback = load_registry_tools_once
+    # Set the registry load callback in middleware for on_initialize hook
+    middleware.registry_load_callback = load_registry_tools
 
-    # Try to load registry immediately if DB connection already available
+    # Try initial load of registry tools if DB connection is available
+    # This ensures tools are available immediately for HTTP transport
     tdconn_check = get_tdconn()
-    if getattr(tdconn_check, "engine", None):
-        load_registry_tools_once()
+    if getattr(tdconn_check, "engine", None) and registry_db:
+        initial_ts = load_registry_tools()
+        if initial_ts:
+            middleware.registry_tools_loaded_ts = initial_ts
 
     # Enrich glossary
     for term, details, tool_name in custom_terms:
