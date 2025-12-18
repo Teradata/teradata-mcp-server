@@ -938,7 +938,7 @@ Returns:
             logger.info(f"Found {len(registry_tools)} {'new/updated ' if last_load_ts else ''}tools in registry, registering...")
 
             for tool_name, tool_def in registry_tools.items():
-                logger.info(f"[REGISTRY] Processing tool {tool_name} ({tool_def['object_type']} {tool_def['db_object']})")
+                logger.info(f"[REGISTRY] Registering tool {tool_name} ({tool_def['object_type']} {tool_def['db_object']})")
 
                 # Build tool using same pattern as YAML tools
                 description = tool_def.get('description', '')
@@ -958,7 +958,6 @@ Returns:
                     )
 
                 sig = inspect.Signature(parameters)
-                logger.info(f"[REGISTRY] Created signature for {tool_name}: {sig}")
 
                 # Create executor that generates SQL and executes
                 def make_executor(tool_def_captured=tool_def, tool_name_captured=tool_name):
@@ -973,24 +972,13 @@ Returns:
                     validate_required=True,
                     tool_name=tool_name,
                 )
-                logger.info(f"[REGISTRY] Created tool function for {tool_name}: {tool_func.__name__}")
 
                 # Register with MCP - capture the result
                 registered_tool = mcp.tool(name=tool_name, description=description)(tool_func)
-                logger.info(f"[REGISTRY] Called mcp.tool() for {tool_name}, returned: {type(registered_tool).__name__}")
-
-                # Verify tool is in MCP's internal registry
-                try:
-                    tool_dict = mcp.get_tools()
-                    tool_names = list(tool_dict.keys())
-                    is_present = tool_name in tool_names
-                    logger.info(f"[REGISTRY] Verification: {tool_name} {'FOUND' if is_present else 'NOT FOUND'} in mcp.get_tools() (total: {len(tool_names)} tools)")
-                except Exception as e:
-                    logger.error(f"[REGISTRY] Error checking tool list: {e}")
-
                 logger.info(f"[REGISTRY] Registered registry tool: {tool_name} ({tool_def['object_type']} {tool_def['db_object']}, registered: {tool_def.get('registered_ts')})")
 
             logger.info(f"Successfully registered {len(registry_tools)} registry tools")
+
             return current_ts
 
         except Exception as e:
