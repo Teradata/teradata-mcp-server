@@ -29,6 +29,7 @@ def parse_args_to_settings() -> Settings:
     parser.add_argument('--auth_mode', type=str, required=False)
     parser.add_argument('--auth_cache_ttl', type=int, required=False)
     parser.add_argument('--logging_level', type=str, required=False)
+    parser.add_argument('--progressive_disclosure', action='store_true', help='Enable progressive disclosure for tool registration instead of static tool listing')
 
     args, _ = parser.parse_known_args()
 
@@ -45,6 +46,7 @@ def parse_args_to_settings() -> Settings:
         auth_mode=(args.auth_mode or env.auth_mode).lower(),
         auth_cache_ttl=args.auth_cache_ttl if args.auth_cache_ttl is not None else env.auth_cache_ttl,
         logging_level=(args.logging_level or env.logging_level).upper(),
+        progressive_disclosure=args.progressive_disclosure or env.progressive_disclosure,
     )
 
 

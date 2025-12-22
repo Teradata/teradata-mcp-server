@@ -6,6 +6,7 @@ Modules are now loaded on-demand based on profile requirements.
 
 from .module_loader import ModuleLoader
 from .td_connect import TDConn  # explicit export for DB connection
+from .context_catalog import ContextCatalog  # explicit export for context catalog
 
 # Create a global module loader instance
 _module_loader = None

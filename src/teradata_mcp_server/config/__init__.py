@@ -38,6 +38,9 @@ class Settings:
     # Logging
     logging_level: str = os.getenv("LOGGING_LEVEL", "WARNING")
 
+    # Tools registration and execution method
+    progressive_disclosure: bool = False  # Whether to register tools dynamically for MCP access
+
 
 def settings_from_env() -> Settings:
     """Create Settings from environment variables only.
@@ -60,4 +63,5 @@ def settings_from_env() -> Settings:
         max_overflow=int(os.getenv("TD_MAX_OVERFLOW", "10")),
         pool_timeout=int(os.getenv("TD_POOL_TIMEOUT", "30")),
         logging_level=os.getenv("LOGGING_LEVEL", "WARNING"),
+        progressive_disclosure=os.getenv("PROGRESSIVE_DISCLOSURE", "false").lower() == "true",
     )

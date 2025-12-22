@@ -23,7 +23,7 @@ from importlib.resources import files as pkg_files
 from typing import Annotated, Any
 
 import yaml
-from fastmcp import FastMCP
+from fastmcp import FastMCP, settings
 from fastmcp.prompts.prompt import TextContent, Message
 from pydantic import Field, BaseModel
 
@@ -32,6 +32,7 @@ from teradata_mcp_server import utils as config_utils
 from teradata_mcp_server.utils import setup_logging, format_text_response, format_error_response, resolve_type_hint
 from teradata_mcp_server.middleware import RequestContextMiddleware
 from teradata_mcp_server.tools.utils.queryband import build_queryband
+from teradata_mcp_server.tools.utils.factory import create_mcp_tool
 from sqlalchemy.engine import Connection
 from fastmcp.server.dependencies import get_context
 from teradata_mcp_server.tools.utils import (get_dynamic_function_definition,
@@ -40,7 +41,7 @@ from teradata_mcp_server.tools.utils import (get_dynamic_function_definition,
                                              execute_analytic_function,
                                              get_partition_col_order_col_doc_string)
 import json
-
+from teradata_mcp_server.tools import ContextCatalog
 
 def create_mcp_app(settings: Settings):
     """Create and configure the FastMCP app with middleware, tools, prompts, resources."""
@@ -371,66 +372,6 @@ def create_mcp_app(settings: Settings):
             logger.error(f"Error in execute_db_tool: {e}", exc_info=True, extra={"session_info": {"tool_name": tool_name}})
             return format_error_response(str(e))
 
-    def create_mcp_tool(
-        *,
-        executor_func=None,
-        signature,
-        inject_kwargs=None,
-        validate_required=False,
-        tool_name="mcp_tool",
-        tool_description=None,
-    ):
-        """
-        Unified factory for creating async MCP tool functions.
-
-        All tool functions use asyncio.to_thread to execute blocking database operations.
-
-        Args:
-            executor_func: Callable that will be executed. Should be a function that
-                          calls execute_db_tool with appropriate arguments.
-            signature: The inspect.Signature for the MCP tool function.
-            inject_kwargs: Dict of kwargs to inject when calling executor_func.
-            validate_required: Whether to validate required parameters are present.
-            tool_name: Name to assign to the MCP tool function.
-            tool_description: Description/docstring for the MCP tool function.
-
-        Returns:
-            An async function suitable for use as an MCP tool.
-        """
-        inject_kwargs = inject_kwargs or {}
-
-        # Extract annotations from signature parameters
-        annotations = {
-            name: param.annotation
-            for name, param in signature.parameters.items()
-            if param.annotation is not inspect.Parameter.empty
-        }
-
-        if validate_required:
-            # Build list of required parameter names (those without defaults)
-            required_params = [
-                name for name, param in signature.parameters.items()
-                if param.default is inspect.Parameter.empty
-            ]
-
-            async def _mcp_tool(**kwargs):
-                missing = [n for n in required_params if n not in kwargs]
-                if missing:
-                    raise ValueError(f"Missing required parameters: {missing}")
-                merged_kwargs = {**inject_kwargs, **kwargs}
-                return await asyncio.to_thread(executor_func, **merged_kwargs)
-        else:
-            async def _mcp_tool(**kwargs):
-                merged_kwargs = {**inject_kwargs, **kwargs}
-                return await asyncio.to_thread(executor_func, **merged_kwargs)
-
-        _mcp_tool.__name__ = tool_name
-        _mcp_tool.__signature__ = signature
-        _mcp_tool.__doc__ = tool_description
-        _mcp_tool.__annotations__ = annotations
-
-        return _mcp_tool
-
     def make_tool_wrapper(func):
         """Create an MCP-facing wrapper for a handle_* function.
 
@@ -465,6 +406,23 @@ def create_mcp_app(settings: Settings):
             tool_description=func.__doc__,
         )
 
+    # If progressive disclosure enabled, initialize context catalog and search/execute tools
+    if settings.progressive_disclosure:
+        context_catalog = ContextCatalog()
+
+        # MCP tool to search for tools in the context catalog
+        @mcp.tool(name="search_tool", description="Search for tools matching a query string")
+        def search_tool(query: str):
+            return context_catalog.search_tools(query)
+
+        # MCP tool to execute a tool in the context catalog
+        @mcp.tool(name="execute_tool", description="Execute a tool by name with arguments")
+        def execute_tool(tool_name: str, **kwargs):
+            func = context_catalog.get_tool(tool_name)
+            if func is None:
+                raise ValueError(f"Tool '{tool_name}' not found in context catalog")
+            return execute_db_tool(func, **kwargs)
+
     # Register code tools via module loader
     module_loader = td.initialize_module_loader(config)
     if module_loader:
@@ -488,8 +446,15 @@ def create_mcp_app(settings: Settings):
                 logger.info(f"Skipping chat completion tool: {tool_name} (chat completion functionality disabled)")
                 continue
             wrapped = make_tool_wrapper(func)
-            mcp.tool(name=tool_name, description=wrapped.__doc__)(wrapped)
-            logger.info(f"Created tool: {tool_name}")
+
+            # Register tools for MCP access. We have two options:
+            #    - Static registration as individual MCP tools, via @mcp.tool decorator, so all tools are listed on list_tools()
+            #    - Progressive disclosure, so tools are executed and searched through the proxy MCP tools execute_tool() search_tool() 
+            if settings.progressive_disclosure:
+                context_catalog.register_tool(func)
+            else:
+                mcp.tool(name=tool_name, description=wrapped.__doc__)(wrapped)
+            logger.info(f"Created tool: {tool_name} {'for progressive disclosure' if settings.progressive_disclosure else 'as MCP tool'}")
             logger.debug(f"Tool Docstring: {wrapped.__doc__}")
     else:
         logger.warning("No module loader available, skipping code-defined tool registration")
