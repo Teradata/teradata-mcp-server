@@ -20,7 +20,7 @@ import inspect
 import os
 import re
 from importlib.resources import files as pkg_files
-from typing import Annotated, Any
+from typing import Annotated, Any, Dict, Optional
 
 import yaml
 from fastmcp import FastMCP, settings
@@ -409,24 +409,73 @@ def create_mcp_app(settings: Settings):
     # If progressive disclosure enabled, initialize context catalog and search/execute tools
     if settings.progressive_disclosure:
         context_catalog = ContextCatalog()
+        logger.info("Progressive disclosure mode enabled - tools will be registered in catalog")
 
         # MCP tool to search for tools in the context catalog
-        @mcp.tool(name="search_tool", description="Search for tools matching a query string")
-        def search_tool(query: str):
-            return context_catalog.search_tools(query)
+        @mcp.tool(name="search_tool")
+        def search_tool(
+            query: Annotated[str, "Keywords to search for (searches tool names, descriptions, parameters)"],
+            limit: Annotated[int, "Maximum number of results to return"] = 10
+        ):
+            """Search for available tools matching keywords.
+
+            Returns a list of matching tools with their descriptions and parameters.
+            Use this to discover what tools are available before executing them.
+
+            Example: search_tool("table list") to find tools related to listing tables.
+            """
+            try:
+                results = context_catalog.search_tools(query, limit)
+                return format_text_response({
+                    "query": query,
+                    "results_count": len(results),
+                    "tools": results
+                })
+            except Exception as e:
+                logger.error(f"Error in search_tool: {e}", exc_info=True)
+                return format_error_response(str(e))
 
         # MCP tool to execute a tool in the context catalog
-        @mcp.tool(name="execute_tool", description="Execute a tool by name with arguments")
-        def execute_tool(tool_name: str, **kwargs):
-            func = context_catalog.get_tool(tool_name)
-            if func is None:
-                raise ValueError(f"Tool '{tool_name}' not found in context catalog")
-            return execute_db_tool(func, **kwargs)
+        @mcp.tool(name="execute_tool")
+        def execute_tool(
+            tool_name: Annotated[str, "Name of the tool to execute (from search_tool results)"],
+            arguments: Annotated[Dict[str, Any], "Dictionary of arguments to pass to the tool"] = None
+        ):
+            """Execute a tool by name with provided arguments.
+
+            First use search_tool to find available tools, then execute them here.
+            The tool will validate arguments and execute the database operation.
+
+            Example: execute_tool("base_tableList", {"database_name": "demo"})
+            """
+            try:
+                if arguments is None:
+                    arguments = {}
+
+                # Validate tool exists
+                metadata = context_catalog.get_tool(tool_name)
+                if not metadata:
+                    return format_error_response(
+                        f"Tool '{tool_name}' not found. Use search_tool to find available tools."
+                    )
+
+                # Validate arguments
+                valid, error_msg = context_catalog.validate_arguments(tool_name, **arguments)
+                if not valid:
+                    return format_error_response(f"Invalid arguments: {error_msg}")
+
+                # Execute using existing infrastructure
+                return execute_db_tool(metadata.func, tool_name=tool_name, **arguments)
+            except Exception as e:
+                logger.error(f"Error in execute_tool: {e}", exc_info=True)
+                return format_error_response(str(e))
 
     # Register code tools via module loader
     module_loader = td.initialize_module_loader(config)
     if module_loader:
         all_functions = module_loader.get_all_functions()
+        registered_count = 0
+
         for name, func in all_functions.items():
             if not (inspect.isfunction(func) and name.startswith("handle_")):
                 continue
@@ -445,17 +494,34 @@ def create_mcp_app(settings: Settings):
             if tool_name.startswith("chat_") and not enableChat:
                 logger.info(f"Skipping chat completion tool: {tool_name} (chat completion functionality disabled)")
                 continue
-            wrapped = make_tool_wrapper(func)
 
-            # Register tools for MCP access. We have two options:
-            #    - Static registration as individual MCP tools, via @mcp.tool decorator, so all tools are listed on list_tools()
-            #    - Progressive disclosure, so tools are executed and searched through the proxy MCP tools execute_tool() search_tool() 
+            # Register tools for MCP access. We have two modes:
+            #    - Static registration: Individual MCP tools via @mcp.tool decorator, all listed in list_tools()
+            #    - Progressive disclosure: Tools registered in catalog, accessed via search_tool() and execute_tool()
             if settings.progressive_disclosure:
-                context_catalog.register_tool(func)
+                # Determine category from tool prefix
+                category = tool_name.split('_')[0] if '_' in tool_name else 'misc'
+                context_catalog.register_tool(func, category=category)
+                registered_count += 1
+                logger.debug(f"Registered tool in catalog: {tool_name} (category: {category})")
+
+                # Always register base_readQuery as a direct MCP tool (core tool)
+                if tool_name == "base_readQuery":
+                    wrapped = make_tool_wrapper(func)
+                    mcp.tool(name=tool_name, description=wrapped.__doc__)(wrapped)
+                    logger.info(f"Registered core tool as direct MCP tool: {tool_name}")
             else:
+                # Static mode: register all tools as MCP tools
+                wrapped = make_tool_wrapper(func)
                 mcp.tool(name=tool_name, description=wrapped.__doc__)(wrapped)
-            logger.info(f"Created tool: {tool_name} {'for progressive disclosure' if settings.progressive_disclosure else 'as MCP tool'}")
-            logger.debug(f"Tool Docstring: {wrapped.__doc__}")
+                registered_count += 1
+                logger.debug(f"Registered MCP tool: {tool_name}")
+
+        if settings.progressive_disclosure:
+            logger.info(f"Progressive disclosure: Registered {registered_count} tools in catalog")
+            logger.info(f"MCP exposes: search_tool, execute_tool, base_readQuery")
+        else:
+            logger.info(f"Static mode: Registered {registered_count} MCP tools")
     else:
         logger.warning("No module loader available, skipping code-defined tool registration")
 
