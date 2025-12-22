@@ -414,23 +414,37 @@ def create_mcp_app(settings: Settings):
         # MCP tool to search for tools in the context catalog
         @mcp.tool(name="search_tool")
         def search_tool(
-            query: Annotated[str, "Keywords to search for (searches tool names, descriptions, parameters)"],
-            limit: Annotated[int, "Maximum number of results to return"] = 10
+            query: Annotated[str, "Tool name or keywords to search for. Leave empty to list all tools."] = "",
+            limit: Annotated[int, "Maximum number of results for approximate matches"] = 10
         ):
-            """Search for available tools matching keywords.
+            """Search for available tools - supports three modes based on the query.
 
-            Returns a list of matching tools with their descriptions and parameters.
-            Use this to discover what tools are available before executing them.
+            THREE MODES:
 
-            Example: search_tool("table list") to find tools related to listing tables.
+            1. LIST ALL (empty query):
+               - Returns: All tool names only (no details)
+               - Use: To discover what tools exist
+               - Example: search_tool("") or search_tool()
+
+            2. EXACT MATCH (query = exact tool name):
+               - Returns: Full documentation with complete parameters
+               - Use: To get complete details about a specific tool
+               - Example: search_tool("base_readQuery")
+
+            3. SEARCH (query = keywords):
+               - Returns: Short summaries of matching tools
+               - Use: To find tools related to a topic
+               - Example: search_tool("table list")
+
+            WORKFLOW:
+            1. List all tools: search_tool("")
+            2. Find relevant tools: search_tool("table")
+            3. Get full docs: search_tool("base_tableList")
+            4. Execute: execute_tool("base_tableList", {"database_name": "demo"})
             """
             try:
                 results = context_catalog.search_tools(query, limit)
-                return format_text_response({
-                    "query": query,
-                    "results_count": len(results),
-                    "tools": results
-                })
+                return format_text_response(results)
             except Exception as e:
                 logger.error(f"Error in search_tool: {e}", exc_info=True)
                 return format_error_response(str(e))

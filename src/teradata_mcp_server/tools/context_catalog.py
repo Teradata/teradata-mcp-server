@@ -41,6 +41,7 @@ class ContextCatalog:
 
     def __init__(self):
         self._tools: Dict[str, ToolMetadata] = {}  # tool_name -> ToolMetadata
+        self._tools_lower: Dict[str, str] = {}  # lowercase_name -> actual_name (for exact match lookup)
         self._keyword_index: Dict[str, Set[str]] = {}  # keyword -> set of tool_names
         self._category_index: Dict[str, Set[str]] = {}  # category -> set of tool_names
         self.docs: Dict[str, str] = {}  # Collection of documentation snippets
@@ -57,6 +58,9 @@ class ContextCatalog:
 
         # Store in main registry
         self._tools[metadata.name] = metadata
+
+        # Store lowercase mapping for fast exact match lookup
+        self._tools_lower[metadata.name.lower()] = metadata.name
 
         # Index by category
         if metadata.category not in self._category_index:
@@ -94,34 +98,72 @@ class ContextCatalog:
         metadata = self.get_tool(tool_name)
         return metadata.func if metadata else None
 
-    def search_tools(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+    def search_tools(self, query: str = "", limit: int = 10) -> Dict[str, Any]:
         """
-        Search for tools matching keywords.
+        Search for tools by name or keywords, or list all tools.
+
+        Three modes:
+        1. Empty query: List all tool names (no details)
+        2. Exact tool name match: Return full documentation with parameters
+        3. Keywords: Return short summaries of matching tools
 
         Args:
-            query: Keywords to search for (searches tool names, descriptions, parameters)
-            limit: Maximum number of results to return
+            query: Tool name or keywords to search for (empty = list all)
+            limit: Maximum number of results for approximate matches
 
         Returns:
-            List of matching tools with their descriptions and parameters
+            Dictionary with search results based on mode
         """
-        query_keywords = set(query.lower().split())
+        # Mode 1: List all tools (empty query)
+        if not query or not query.strip():
+            return {
+                "match_type": "list_all",
+                "total_count": len(self._tools),
+                "tools": sorted(self._tools.keys())
+            }
+
+        query_stripped = query.strip()
+        query_lower = query_stripped.lower()
+
+        # Mode 2: Exact match (O(1) dictionary lookup)
+        if query_lower in self._tools_lower:
+            actual_name = self._tools_lower[query_lower]
+            exact_match = self._tools[actual_name]
+
+            return {
+                "match_type": "exact",
+                "tool": {
+                    "name": exact_match.name,
+                    "category": exact_match.category,
+                    "description": exact_match.description,
+                    "full_documentation": exact_match.full_doc,
+                    "parameters": {
+                        name: {
+                            "type": param.type.__name__ if hasattr(param.type, '__name__') else str(param.type),
+                            "required": param.required,
+                            "default": str(param.default) if param.default is not None else None,
+                            "description": param.description
+                        }
+                        for name, param in exact_match.parameters.items()
+                    }
+                }
+            }
+
+        # Mode 3: Approximate match (keyword search)
+        query_keywords = set(query_lower.split())
         scored_results = []
 
         for tool_name, metadata in self._tools.items():
-            # Calculate relevance score
             score = 0
 
-            # Exact name match (highest score)
-            if query.lower() == metadata.name.lower():
-                score += 200
-            elif query.lower() in metadata.name.lower():
+            # Partial name match
+            if query_lower in metadata.name.lower():
                 score += 100
 
             # Category match
-            if query.lower() == metadata.category.lower():
+            if query_lower == metadata.category.lower():
                 score += 75
-            elif query.lower() in metadata.category.lower():
+            elif query_lower in metadata.category.lower():
                 score += 50
 
             # Keyword matches
@@ -129,12 +171,12 @@ class ContextCatalog:
             score += len(matching_keywords) * 10
 
             # Description contains query
-            if query.lower() in metadata.description.lower():
+            if query_lower in metadata.description.lower():
                 score += 20
 
             # Parameter name matches
             for param_name in metadata.parameters.keys():
-                if query.lower() in param_name.lower():
+                if query_lower in param_name.lower():
                     score += 15
 
             if score > 0:
@@ -144,25 +186,41 @@ class ContextCatalog:
         scored_results.sort(reverse=True, key=lambda x: x[0])
         top_results = scored_results[:limit]
 
-        # Format for LLM consumption
-        return [
-            {
-                "name": meta.name,
-                "category": meta.category,
-                "description": meta.description,
-                "parameters": {
-                    name: {
-                        "type": param.type.__name__ if hasattr(param.type, '__name__') else str(param.type),
-                        "required": param.required,
-                        "default": str(param.default) if param.default is not None else None,
-                        "description": param.description
-                    }
-                    for name, param in meta.parameters.items()
-                },
-                "score": score
-            }
-            for score, meta in top_results
-        ]
+        return {
+            "match_type": "approximate",
+            "results_count": len(top_results),
+            "tools": [
+                {
+                    "name": meta.name,
+                    "category": meta.category,
+                    "summary": self._extract_short_summary(meta.full_doc),
+                    "score": score
+                }
+                for score, meta in top_results
+            ]
+        }
+
+    def _extract_short_summary(self, docstring: str) -> str:
+        """
+        Extract the first meaningful (non-blank) line from a docstring.
+
+        Args:
+            docstring: The full docstring
+
+        Returns:
+            The first non-blank line, or "No description available" if none found
+        """
+        if not docstring:
+            return "No description available"
+
+        lines = docstring.split('\n')
+        for line in lines:
+            stripped = line.strip()
+            # Skip empty lines and common section headers
+            if stripped and not stripped.lower().endswith(':'):
+                return stripped
+
+        return "No description available"
 
     def validate_arguments(self, tool_name: str, **kwargs) -> Tuple[bool, str]:
         """

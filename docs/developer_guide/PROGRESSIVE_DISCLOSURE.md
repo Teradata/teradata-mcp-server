@@ -10,26 +10,6 @@ Progressive disclosure is an optimization technique for MCP servers with a large
 - **Progressive Disclosure Mode**: 3 proxy tools + 1 core tool → ~500 tokens
 - **Savings**: 99% reduction in initial context window usage
 
-## Architecture
-
-### Components
-
-1. **ContextCatalog** ([src/teradata_mcp_server/tools/context_catalog.py](src/teradata_mcp_server/tools/context_catalog.py))
-   - MCP-agnostic registry for tool metadata
-   - Keyword-based search with scoring
-   - Argument validation
-   - Category organization (base, dba, fs, etc.)
-
-2. **Proxy MCP Tools** (in [src/teradata_mcp_server/app.py](src/teradata_mcp_server/app.py))
-   - `search_tool`: Search for tools by keywords
-   - `execute_tool`: Execute a tool by name with arguments
-   - `base_readQuery`: Core SQL query tool (always available)
-
-3. **Tool Functions** ([src/teradata_mcp_server/tools/*/](src/teradata_mcp_server/tools/))
-   - Pure Python functions (handle_* pattern)
-   - No MCP dependencies
-   - Reusable across different frameworks
-
 ## Usage
 
 ### Enabling Progressive Disclosure
@@ -45,60 +25,76 @@ export PROGRESSIVE_DISCLOSURE=true
 teradata-mcp-server
 ```
 
-**Via Python API:**
-```python
-from teradata_mcp_server.config import Settings
-from teradata_mcp_server.app import create_mcp_app
-
-settings = Settings(progressive_disclosure=True)
-mcp, logger = create_mcp_app(settings)
-```
-
 ### Using Progressive Disclosure
 
 #### 1. Search for Tools
 
+The `search_tool` supports two modes based on the query:
+
+**Exact Match** (query = exact tool name):
+```python
+# Get full documentation for a specific tool
+search_tool("base_readQuery")
+
+# Returns:
+{
+  "match_type": "exact",
+  "tool": {
+    "name": "base_readQuery",
+    "category": "base",
+    "description": "Execute a SQL query via SQLAlchemy, bind parameters...",
+    "full_documentation": "Execute a SQL query via SQLAlchemy...\n\nArguments:\n  sql - SQL text...",
+    "parameters": {
+      "sql": {
+        "type": "str",
+        "required": false,
+        "default": "None",
+        "description": "SQL text, with optional bind-parameter placeholders"
+      }
+    }
+  }
+}
+```
+
+**Approximate Match** (query = keywords):
 ```python
 # Search for table-related tools
 search_tool("table list")
 
 # Returns:
 {
-  "query": "table list",
+  "match_type": "approximate",
   "results_count": 2,
   "tools": [
     {
       "name": "base_tableList",
       "category": "base",
-      "description": "Lists all tables in a database.",
-      "parameters": {
-        "database_name": {
-          "type": "str",
-          "required": false,
-          "default": "None",
-          "description": "Database name"
-        }
-      },
+      "summary": "Lists all tables in a database.",
       "score": 120
     },
     {
       "name": "base_tableDDL",
       "category": "base",
-      "description": "Displays the DDL definition of a table.",
-      "parameters": {
-        "database_name": {"type": "str", "required": false, ...},
-        "table_name": {"type": "str", "required": true, ...}
-      },
+      "summary": "Displays the DDL definition of a table via SQLAlchemy...",
       "score": 100
     }
   ]
 }
 ```
 
+**Key Differences:**
+- **Exact match**: Full documentation + all parameters + complete docstring
+- **Approximate match**: Short summary (first meaningful line) only
+
+**Workflow:**
+1. Use keywords to discover tools: `search_tool("table")`
+2. Get full docs for specific tool: `search_tool("base_tableList")`
+3. Execute the tool: `execute_tool("base_tableList", {"database_name": "demo"})`
+
 #### 2. Execute a Tool
 
 ```python
-# Execute a tool with arguments
+# Execute a tool with arguments as a dictionary
 execute_tool("base_tableList", {"database_name": "demo"})
 
 # Returns: Query results (same format as static mode)
@@ -110,6 +106,81 @@ execute_tool("base_tableList", {"database_name": "demo"})
 # The base_readQuery tool is always available
 base_readQuery({"sql": "SELECT * FROM dbc.tables SAMPLE 5"})
 ```
+
+## Architecture
+
+### Components
+
+1. **ContextCatalog** ([src/teradata_mcp_server/tools/context_catalog.py](src/teradata_mcp_server/tools/context_catalog.py))
+   - MCP-agnostic registry for tool metadata
+   - Intelligent search with exact vs approximate matching
+   - Argument validation
+   - Category organization (base, dba, fs, etc.)
+
+2. **Proxy MCP Tools** (in [src/teradata_mcp_server/app.py](src/teradata_mcp_server/app.py))
+   - `search_tool`: Search with smart exact/approximate matching
+   - `execute_tool`: Execute a tool by name with arguments
+   - `base_readQuery`: Core SQL query tool (always available)
+
+3. **Tool Functions** ([src/teradata_mcp_server/tools/*/](src/teradata_mcp_server/tools/))
+   - Pure Python functions (handle_* pattern)
+   - No MCP dependencies
+   - Reusable across different frameworks
+
+## Search Algorithm
+
+### Exact Match Detection
+
+Case-insensitive comparison with tool name:
+- `"base_readQuery"` → Exact match
+- `"BASE_READQUERY"` → Exact match
+- `"base_readquery"` → Exact match
+
+### Approximate Match Scoring
+
+Weighted scoring system:
+- **Exact name match**: +200 points
+- **Partial name match**: +100 points
+- **Category exact match**: +75 points
+- **Category partial match**: +50 points
+- **Keyword matches**: +10 points per keyword
+- **Description contains query**: +20 points
+- **Parameter name match**: +15 points per parameter
+
+Results sorted by score (highest first) and limited by `limit` parameter.
+
+### Short Summary Extraction
+
+For approximate matches, extracts the first meaningful line from docstring:
+- Skips empty lines
+- Skips section headers (lines ending with `:`)
+- Returns first substantial line of text
+
+Example:
+```python
+"""Execute a SQL query via SQLAlchemy, bind parameters if provided.
+
+Arguments:
+  sql - SQL text
+"""
+# Summary: "Execute a SQL query via SQLAlchemy, bind parameters if provided."
+```
+
+## Tool Categories
+
+Tools are automatically categorized by their prefix:
+
+- `base_*`: Core database operations (tables, queries, DDL)
+- `dba_*`: Database administration tools
+- `fs_*`: Feature Store operations
+- `qlty_*`: Data quality tools
+- `sec_*`: Security and access management
+- `tdvs_*`: Teradata Vector Store operations
+- `plot_*`: Data visualization
+- `rag_*`: RAG (Retrieval-Augmented Generation) tools
+- `sql_opt_*`: SQL optimization tools
+- `chat_*`: Chat completion tools
+- `bar_*`: Backup and restore tools
 
 ## Comparison: Static vs Progressive Disclosure
 
@@ -136,42 +207,63 @@ settings = Settings(progressive_disclosure=True)
 mcp, logger = create_mcp_app(settings)
 
 # Client sees:
-# - search_tool
+# - search_tool (with exact/approximate matching)
 # - execute_tool
 # - base_readQuery (core tool)
 #
 # All other tools are in the catalog (100+ tools available)
 ```
 
-## Search Scoring Algorithm
+## Testing
 
-The search algorithm uses a weighted scoring system:
+### Unit Tests
 
-- **Exact name match**: +200 points
-- **Partial name match**: +100 points
-- **Category exact match**: +75 points
-- **Category partial match**: +50 points
-- **Keyword matches**: +10 points per keyword
-- **Description contains query**: +20 points
-- **Parameter name match**: +15 points per parameter
+```bash
+# Test catalog functionality
+python3 test_progressive_disclosure.py
 
-Results are sorted by score (highest first) and limited by the `limit` parameter.
+# Test search modes (exact vs approximate)
+python3 test_search_modes.py
+```
 
-## Tool Categories
+### Integration Tests
 
-Tools are automatically categorized by their prefix:
+```bash
+# Test server startup in both modes
+~/.local/bin/uv run python test_server_startup.py
+```
 
-- `base_*`: Core database operations (tables, queries, DDL)
-- `dba_*`: Database administration tools
-- `fs_*`: Feature Store operations
-- `qlty_*`: Data quality tools
-- `sec_*`: Security and access management
-- `tdvs_*`: Teradata Vector Store operations
-- `plot_*`: Data visualization
-- `rag_*`: RAG (Retrieval-Augmented Generation) tools
-- `sql_opt_*`: SQL optimization tools
-- `chat_*`: Chat completion tools
-- `bar_*`: Backup and restore tools
+### Existing Tests
+
+All existing tests continue to work:
+
+```bash
+export DATABASE_URI="teradata://user:pass@host:1025/database"
+uv run python tests/run_mcp_tests.py "uv run teradata-mcp-server"
+```
+
+## Benefits
+
+### For LLM Clients
+
+- **Reduced context window usage**: 99% reduction in initial tokens
+- **Two-tier discovery**: Quick summaries → detailed docs
+- **Efficient exploration**: Keywords find relevant tools fast
+- **Complete information**: Exact match provides full documentation
+
+### For Server Operators
+
+- **Scalability**: Support 1000+ tools without context bloat
+- **Flexibility**: Easy to add/remove tools
+- **Monitoring**: Can track which tools are searched/executed
+- **Cost reduction**: Lower token usage → lower API costs
+
+### For Developers
+
+- **Clean separation**: MCP logic separate from tool logic
+- **Reusability**: Tools work in any framework
+- **Maintainability**: Single source of truth for tool metadata
+- **Extensibility**: Easy to add new discovery methods
 
 ## Implementation Details
 
@@ -198,179 +290,21 @@ This allows tools to be reused in:
 - Direct Python scripts
 - Other agent frameworks
 
-### Argument Validation
-
-Progressive disclosure includes argument validation before execution:
-
-```python
-# Validate required parameters
-valid, error_msg = context_catalog.validate_arguments(
-    "base_tableList",
-    database_name="demo"
-)
-
-# Validate parameter types (future enhancement)
-# Check for unexpected parameters
-```
-
-## Testing
-
-### Unit Tests
-
-```bash
-python3 test_progressive_disclosure.py
-```
-
-Tests:
-- Tool registration and metadata extraction
-- Search functionality with scoring
-- Argument validation
-- Parameter description extraction
-- Category organization
-
-### Integration Tests
-
-```bash
-~/.local/bin/uv run python test_server_startup.py
-```
-
-Tests:
-- Server startup in static mode
-- Server startup in progressive disclosure mode
-- Backward compatibility
-
-### Existing Tests
-
-All existing tests continue to work:
-
-```bash
-export DATABASE_URI="teradata://user:pass@host:1025/database"
-uv run python tests/run_mcp_tests.py "uv run teradata-mcp-server"
-```
-
-## Future Enhancements
-
-### 1. Documentation Search
-
-```python
-@mcp.tool(name="search_doc")
-def search_doc(query: str):
-    """Search SQL operator and function documentation."""
-    return context_catalog.search_docs(query)
-```
-
-### 2. List Categories
-
-```python
-@mcp.tool(name="list_categories")
-def list_categories():
-    """List available tool categories."""
-    return context_catalog.get_categories()
-```
-
-### 3. Hybrid Mode
-
-Keep some tools static while others are progressive:
-
-```python
-# Always available (high frequency)
-- base_readQuery
-- base_tableList
-- base_tableDDL
-
-# Progressive disclosure (lower frequency)
-- All other tools
-```
-
-### 4. Usage Analytics
-
-Track which tools are searched/executed to optimize the catalog:
-
-```python
-catalog.record_usage("base_tableList")
-catalog.get_popular_tools(limit=10)
-```
-
-## Benefits
-
-### For LLM Clients
-
-- **Reduced context window usage**: 99% reduction in initial tokens
-- **Faster discovery**: Search finds relevant tools quickly
-- **Better descriptions**: Full parameter details on demand
-- **Organized access**: Tools grouped by category
-
-### For Server Operators
-
-- **Scalability**: Support 1000+ tools without context bloat
-- **Flexibility**: Easy to add/remove tools
-- **Monitoring**: Can track which tools are actually used
-- **Cost reduction**: Lower token usage → lower API costs
-
-### For Developers
-
-- **Clean separation**: MCP logic separate from tool logic
-- **Reusability**: Tools work in any framework
-- **Maintainability**: Single source of truth for tool metadata
-- **Extensibility**: Easy to add new discovery methods
-
-## Migration Guide
-
-### From Static to Progressive
-
-1. **Enable the flag**:
-   ```bash
-   teradata-mcp-server --progressive_disclosure
-   ```
-
-2. **Update client code**:
-   ```python
-   # Old (static mode)
-   base_tableList(database_name="demo")
-
-   # New (progressive mode)
-   search_tool("table list")  # Find the tool
-   execute_tool("base_tableList", {"database_name": "demo"})  # Execute it
-
-   # Or use core tool directly
-   base_readQuery({"sql": "SELECT * FROM demo.tables"})
-   ```
-
-3. **Test thoroughly**: Run all test suites to ensure compatibility
-
-### Backward Compatibility
+## Backward Compatibility
 
 - Default behavior unchanged (static mode)
 - All existing tools continue to work
 - No breaking changes to tool signatures
 - Existing tests pass without modification
 
-## Performance Characteristics
-
-### Startup Time
-
-- **Static Mode**: O(n) where n = number of tools (slower startup)
-- **Progressive Mode**: O(1) (fast startup, catalog built lazily)
-
-### Tool Execution
-
-- **Static Mode**: O(1) direct call
-- **Progressive Mode**: O(1) lookup + O(1) call (negligible overhead)
-
-### Search Performance
-
-- O(n × m) where n = number of tools, m = keywords per tool
-- Optimized with keyword indexing
-- Typical search: <10ms for 100 tools
-
 ## Conclusion
 
-Progressive disclosure is a powerful optimization for large MCP servers. It provides:
+Progressive disclosure with intelligent exact/approximate matching provides:
 
 - **Dramatic context window savings** (99% reduction)
+- **Smart discovery** (summaries vs full docs)
 - **Zero code duplication** (same tools, different registration)
 - **Clean architecture** (MCP-agnostic core)
 - **Backward compatibility** (opt-in feature)
-- **Future extensibility** (easy to enhance)
 
-The implementation demonstrates how to scale MCP servers to support hundreds of tools while maintaining excellent performance and developer experience.
+The two-tier search approach (exact match for details, approximate for exploration) optimizes the LLM experience for both discovery and execution workflows.
