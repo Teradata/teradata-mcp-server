@@ -989,6 +989,73 @@ Returns:
             if section in obj and  any(re.match(pattern, name) for pattern in config.get('tool',[])):
                 custom_terms.extend((term, details, name) for term, details in obj[section].items())
 
+    def create_registry_handler(tool_name, tool_def):
+        """
+        Create a handler function for a registry tool (from database).
+
+        This creates a handle_* style function that can be registered in the catalog
+        or wrapped as an MCP tool, just like Python-defined tools.
+
+        Returns: handler function with proper signature and metadata
+        """
+        from teradata_mcp_server.tools.registry.registry_tools import build_registry_sql
+
+        description = tool_def.get('description', '')
+        param_defs = tool_def.get('parameters', {})
+
+        # Build docstring with parameters
+        docstring_parts = [description]
+        if param_defs:
+            docstring_parts.append("\nArguments:")
+            for param_name, p in sorted(param_defs.items(), key=lambda x: x[1].get('position', 0)):
+                param_desc = p.get("description", "")
+                docstring_parts.append(f"  {param_name} - {param_desc}")
+        docstring_parts.append(f"\nRegistry tool: {tool_def['object_type']} {tool_def['db_object']}")
+
+        # Add required 'conn' parameter at the beginning (for catalog compatibility)
+        parameters = [
+            inspect.Parameter("conn", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD)
+        ]
+
+        # Add tool_name parameter (internal, will be filtered out)
+        parameters.append(
+            inspect.Parameter("tool_name", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None)
+        )
+
+        # Add registry parameters - separate required and optional
+        required_params = []
+        optional_params = []
+
+        for param_name, p in sorted(param_defs.items(), key=lambda x: x[1].get('position', 0)):
+            param_description = p.get("description", "")
+            type_hint = p.get("type_hint", str)
+            annotation = Annotated[type_hint, param_description] if param_description else type_hint
+            default = inspect.Parameter.empty if p.get("required", True) else p.get("default", None)
+
+            param = inspect.Parameter(param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                                     default=default, annotation=annotation)
+
+            if default is inspect.Parameter.empty:
+                required_params.append(param)
+            else:
+                optional_params.append(param)
+
+        # Build signature with correct order: conn, required_params, tool_name (default), optional_params
+        sig = inspect.Signature([parameters[0]] + required_params + [parameters[1]] + optional_params)
+
+        # Create the handler function (like handle_* functions)
+        def handler(conn, tool_name=None, **kwargs):
+            """Registry-defined database tool handler."""
+            sql = build_registry_sql(tool_def, kwargs)
+            return execute_db_tool(td.handle_base_readQuery, sql, tool_name=tool_name or tool_name, **kwargs)
+
+        # Set metadata on the handler
+        handler.__name__ = f"handle_{tool_name}"
+        handler.__doc__ = "\n".join(docstring_parts)
+        handler.__signature__ = sig
+
+        return handler
+
     # Registry tools: Load tools from database registry incrementally
     registry_db = config.get('registry')
 
@@ -1030,44 +1097,22 @@ Returns:
             logger.info(f"Found {len(registry_tools)} {'new/updated ' if last_load_ts else ''}tools in registry, registering...")
 
             for tool_name, tool_def in registry_tools.items():
-                logger.info(f"[REGISTRY] Registering tool {tool_name} ({tool_def['object_type']} {tool_def['db_object']})")
+                logger.info(f"[REGISTRY] Processing tool {tool_name} ({tool_def['object_type']} {tool_def['db_object']})")
 
-                # Build tool using same pattern as YAML tools
-                description = tool_def.get('description', '')
-                param_defs = tool_def.get('parameters', {})
+                # Create handler function (like handle_* functions)
+                handler = create_registry_handler(tool_name, tool_def)
 
-                # Create parameters list
-                parameters = []
-                for param_name, p in sorted(param_defs.items(), key=lambda x: x[1].get('position', 0)):
-                    param_description = p.get("description", "")
-                    type_hint = p.get("type_hint", str)
-                    annotation = Annotated[type_hint, param_description] if param_description else type_hint
-                    default = inspect.Parameter.empty if p.get("required", True) else p.get("default", None)
-
-                    parameters.append(
-                        inspect.Parameter(param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                                        default=default, annotation=annotation)
-                    )
-
-                sig = inspect.Signature(parameters)
-
-                # Create executor that generates SQL and executes
-                def make_executor(tool_def_captured=tool_def, tool_name_captured=tool_name):
-                    def executor(**kwargs):
-                        sql = build_registry_sql(tool_def_captured, kwargs)
-                        return execute_db_tool(td.handle_base_readQuery, sql, tool_name=tool_name_captured, **kwargs)
-                    return executor
-
-                tool_func = create_mcp_tool(
-                    executor_func=make_executor(),
-                    signature=sig,
-                    validate_required=True,
-                    tool_name=tool_name,
-                )
-
-                # Register with MCP - capture the result
-                registered_tool = mcp.tool(name=tool_name, description=description)(tool_func)
-                logger.info(f"[REGISTRY] Registered registry tool: {tool_name} ({tool_def['object_type']} {tool_def['db_object']}, registered: {tool_def.get('registered_ts')})")
+                # Register according to mode (SAME AS PYTHON/YAML TOOLS)
+                if settings.progressive_disclosure:
+                    # Determine category (could enhance registry to include category field)
+                    category = 'registry'
+                    context_catalog.register_tool(handler, category=category)
+                    logger.info(f"[REGISTRY] Registered in catalog: {tool_name} (category: {category}, type: {tool_def['object_type']}, object: {tool_def['db_object']})")
+                else:
+                    # Static mode: wrap and register as MCP tool
+                    wrapped = make_tool_wrapper(handler)
+                    mcp.tool(name=tool_name, description=wrapped.__doc__)(wrapped)
+                    logger.info(f"[REGISTRY] Registered as MCP tool: {tool_name} (type: {tool_def['object_type']}, object: {tool_def['db_object']}, registered: {tool_def.get('registered_ts')})")
 
             logger.info(f"Successfully registered {len(registry_tools)} registry tools")
 
