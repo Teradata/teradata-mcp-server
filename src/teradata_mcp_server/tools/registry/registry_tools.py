@@ -20,9 +20,12 @@ def build_registry_sql(tool_def: Dict[str, Any], params: Dict[str, Any]) -> str:
     This is used by the simplified registry implementation where registry tools
     are executed via handle_base_readQuery (same as YAML tools).
 
+    Supports the 'persist' parameter - if True, wraps the query in CREATE VOLATILE TABLE.
+    Note: The persist parameter is handled by handle_base_readQuery, not here.
+
     Args:
         tool_def: Tool definition from registry with db_object, object_type, parameters
-        params: Parameter values from the tool call
+        params: Parameter values from the tool call (may include 'persist')
 
     Returns:
         SQL statement as a string
@@ -34,11 +37,20 @@ def build_registry_sql(tool_def: Dict[str, Any], params: Dict[str, Any]) -> str:
     # Sort parameters by position
     sorted_params = sorted(params_def.items(), key=lambda x: x[1].get('position', 0))
 
-    # Build parameter list
+    # Build parameter list (excluding special params like 'persist', 'tool_name')
     param_values = []
+    special_params = {'persist', 'tool_name'}  # These are handled by handle_base_readQuery
+
     for param_name, param_info in sorted_params:
+        # Skip special parameters that aren't part of the DB object signature
+        if param_name in special_params:
+            continue
+        # Skip if not in params (allows for optional registry parameters)
+        if param_name not in params:
+            continue
         value = params.get(param_name)
-        formatted_value = _format_sql_value(value, param_info.get('type_hint', str))
+        type_hint = param_info.get('type_hint', str)
+        formatted_value = _format_sql_value(value, type_hint)
         param_values.append(formatted_value)
 
     params_str = ', '.join(param_values)
@@ -49,6 +61,7 @@ def build_registry_sql(tool_def: Dict[str, Any], params: Dict[str, Any]) -> str:
     else:  # UDF
         sql = f"SELECT {db_object}({params_str})"
 
+    # Note: persist wrapping is handled by handle_base_readQuery
     return sql
 
 def _format_sql_value(value: Any, python_type: type) -> str:
@@ -65,19 +78,19 @@ def _format_sql_value(value: Any, python_type: type) -> str:
     if value is None:
         return 'NULL'
 
-    # String types need quoting
-    if python_type in (str, type(None)):
-        # Escape single quotes by doubling them (SQL standard)
-        escaped_value = str(value).replace("'", "''")
-        return f"'{escaped_value}'"
-
-    # Boolean types
+    # Boolean types (check before numeric as bool is subclass of int)
     if python_type == bool:
         return '1' if value else '0'
 
     # Numeric types - convert to string without quotes
     if python_type in (int, float):
         return str(value)
+
+    # String types need quoting
+    if python_type in (str, type(None)):
+        # Escape single quotes by doubling them (SQL standard)
+        escaped_value = str(value).replace("'", "''")
+        return f"'{escaped_value}'"
 
     # Default: treat as string
     escaped_value = str(value).replace("'", "''")

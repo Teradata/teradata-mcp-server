@@ -317,7 +317,8 @@ class RegistryLoader:
 
         for param in sorted_params:
             param_name = param['ParamName']
-            param_type_str = param['ParamType'].upper()
+            # Strip whitespace from ParamType (database CHAR fields are space-padded)
+            param_type_str = param['ParamType'].strip().upper()
 
             # Map Teradata type to Python type
             python_type = self.TYPE_MAP.get(param_type_str, str)

@@ -15,6 +15,7 @@ def handle_base_readQuery(
     conn: Connection,
     sql: str | None = None,
     tool_name: str | None = None,
+    persist: bool = False,
     *args,
     **kwargs
 ):
@@ -22,12 +23,28 @@ def handle_base_readQuery(
     Execute a SQL query via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
     Arguments:
-      sql    - SQL text, with optional bind-parameter placeholders
+      sql     - SQL text, with optional bind-parameter placeholders
+      persist - Set to True to materializes results as a table and reuse it later
 
     Returns:
       ResponseType: formatted response with query results + metadata
+                   (includes 'volatile_table' field in metadata if persist=True)
     """
-    logger.debug(f"Tool: handle_base_readQuery: Args: sql: {sql}, args={args!r}, kwargs={kwargs!r}")
+    logger.debug(f"Tool: handle_base_readQuery: Args: sql: {sql}, persist: {persist}, args={args!r}, kwargs={kwargs!r}")
+
+    # Generate volatile table name if persisting
+    volatile_table_name = None
+    if persist:
+        import uuid
+        unique_id = str(uuid.uuid4()).replace('-', '_')[:16]
+        volatile_table_name = f"vt_{unique_id}"
+
+        # Strip trailing semicolons from the SQL
+        sql_clean = sql.rstrip().rstrip(';')
+
+        # Wrap in CREATE VOLATILE TABLE statement
+        sql = f"CREATE VOLATILE TABLE {volatile_table_name} AS ({sql_clean}) WITH DATA ON COMMIT PRESERVE ROWS"
+        logger.info(f"Persisting query results to volatile table: {volatile_table_name}")
 
     # 1. Build a textual SQL statement
     stmt = text(sql)
@@ -63,6 +80,16 @@ def handle_base_readQuery(
         "columns": columns,
         "row_count": len(data),
     }
+
+    # Add volatile table name if persisted
+    if volatile_table_name:
+        metadata["columns"] = None
+        metadata["row_count"] = None
+        metadata["volatile_table"] = volatile_table_name
+        metadata["persist"] = True
+        logger.info(f"Query results persisted to volatile table: {volatile_table_name}")
+        data = [{"results stored in volatile_table": volatile_table_name}]
+
     logger.debug(f"Tool: handle_base_readQuery: metadata: {metadata}")
     return create_response(data, metadata)
 

@@ -682,11 +682,13 @@ def create_mcp_app(settings: Settings):
 
         # Build docstring with parameters
         docstring_parts = [description]
-        if param_defs:
+        if param_defs or True:  # Always show Arguments section to include persist
             docstring_parts.append("\nArguments:")
             for param_name, p in param_defs.items():
                 param_desc = p.get("description", "")
                 docstring_parts.append(f"  {param_name} - {param_desc}")
+            # Add persist parameter documentation
+            docstring_parts.append(f"  persist - If True, materializes result as a volatile table and returns table name")
 
         # Add required 'conn' parameter at the beginning (for catalog compatibility)
         parameters.append(
@@ -696,6 +698,13 @@ def create_mcp_app(settings: Settings):
         # Add tool_name parameter (internal, will be filtered out)
         parameters.append(
             inspect.Parameter("tool_name", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None)
+        )
+
+        # Add persist parameter (for materializing results as volatile table)
+        persist_description = "If True, materializes result as a volatile table and returns table name"
+        parameters.append(
+            inspect.Parameter("persist", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                            default=False, annotation=Annotated[bool, persist_description])
         )
 
         # Add custom parameters - separate required and optional
@@ -717,9 +726,8 @@ def create_mcp_app(settings: Settings):
             else:
                 optional_params.append(param)
 
-        # Build signature with correct order: conn, tool_name (with default), then custom params
-        # But conn has no default, so we need: conn, required_custom_params, tool_name, optional_custom_params
-        sig = inspect.Signature([parameters[0]] + required_params + [parameters[1]] + optional_params)
+        # Build signature with correct order: conn, required_custom_params, tool_name, persist (both with defaults), optional_custom_params
+        sig = inspect.Signature([parameters[0]] + required_params + [parameters[1], parameters[2]] + optional_params)
 
         # Create the handler function (like handle_* functions)
         def handler(conn, tool_name=None, **kwargs):
@@ -1005,11 +1013,13 @@ Returns:
 
         # Build docstring with parameters
         docstring_parts = [description]
-        if param_defs:
+        if param_defs or True:  # Always show Arguments section to include persist
             docstring_parts.append("\nArguments:")
             for param_name, p in sorted(param_defs.items(), key=lambda x: x[1].get('position', 0)):
                 param_desc = p.get("description", "")
                 docstring_parts.append(f"  {param_name} - {param_desc}")
+            # Add persist parameter documentation
+            docstring_parts.append(f"  persist - If True, materializes result as a volatile table and returns table name")
         docstring_parts.append(f"\nRegistry tool: {tool_def['object_type']} {tool_def['db_object']}")
 
         # Add required 'conn' parameter at the beginning (for catalog compatibility)
@@ -1020,6 +1030,13 @@ Returns:
         # Add tool_name parameter (internal, will be filtered out)
         parameters.append(
             inspect.Parameter("tool_name", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None)
+        )
+
+        # Add persist parameter (for materializing results as volatile table)
+        persist_description = "If True, materializes result as a volatile table and returns table name"
+        parameters.append(
+            inspect.Parameter("persist", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                            default=False, annotation=Annotated[bool, persist_description])
         )
 
         # Add registry parameters - separate required and optional
@@ -1040,8 +1057,8 @@ Returns:
             else:
                 optional_params.append(param)
 
-        # Build signature with correct order: conn, required_params, tool_name (default), optional_params
-        sig = inspect.Signature([parameters[0]] + required_params + [parameters[1]] + optional_params)
+        # Build signature with correct order: conn, required_params, tool_name, persist (both with defaults), optional_params
+        sig = inspect.Signature([parameters[0]] + required_params + [parameters[1], parameters[2]] + optional_params)
 
         # Create the handler function (like handle_* functions)
         def handler(conn, tool_name=None, **kwargs):

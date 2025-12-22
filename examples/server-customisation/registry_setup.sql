@@ -43,7 +43,7 @@ replace view mcp_toolParamsV as
 SELECT 
     r.ToolName,
     c.ColumnName AS ParamName,
-    c.ColumnType AS ParamType,
+    trim(c.ColumnType) AS ParamType,
     c.ColumnLength AS ParamLength,
     c.ColumnId - 1024 AS ParamPosition,
     c.Nullable ParamRequired,
