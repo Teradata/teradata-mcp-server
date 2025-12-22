@@ -667,43 +667,71 @@ def create_mcp_app(settings: Settings):
             _dynamic_prompt.__name__ = prompt_name
             return mcp.prompt(description=desc)(_dynamic_prompt)
 
-    def make_custom_query_tool(name, tool):
+    def create_custom_query_handler(name, tool):
+        """
+        Create a handler function for a custom query tool (from YAML).
+
+        This creates a handle_* style function that can be registered in the catalog
+        or wrapped as an MCP tool, just like Python-defined tools.
+
+        Returns: (handler_function, description, signature)
+        """
         description = tool.get("description", "")
         param_defs = tool.get("parameters", {})
         parameters = []
+
+        # Build docstring with parameters
+        docstring_parts = [description]
         if param_defs:
-            description += "\nArguments:"
+            docstring_parts.append("\nArguments:")
+            for param_name, p in param_defs.items():
+                param_desc = p.get("description", "")
+                docstring_parts.append(f"  {param_name} - {param_desc}")
+
+        # Add required 'conn' parameter at the beginning (for catalog compatibility)
+        parameters.append(
+            inspect.Parameter("conn", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD)
+        )
+
+        # Add tool_name parameter (internal, will be filtered out)
+        parameters.append(
+            inspect.Parameter("tool_name", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None)
+        )
+
+        # Add custom parameters - separate required and optional
+        required_params = []
+        optional_params = []
+
         for param_name, p in param_defs.items():
             param_description = p.get("description", "")
             type_hint_raw = p.get("type_hint", "str")
-            type_hint = resolve_type_hint(type_hint_raw)  # Convert type string to actual type class
+            type_hint = resolve_type_hint(type_hint_raw)
             annotation = Annotated[type_hint, param_description] if param_description else type_hint
-            default = p.get("default", inspect.Parameter.empty)  # inspect.Parameter.empty if p.get("required", True) else p.get("default", None)
+            default = p.get("default", inspect.Parameter.empty)
 
-            parameters.append(
-                inspect.Parameter(param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=default, annotation=annotation)
-            )
+            param = inspect.Parameter(param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                                     default=default, annotation=annotation)
 
-            # Append parameter name and description to function description
-            # Disabled as already included in Annotations (consider introducing a way to toggle this if clients can't see annotations)
-            if False:
-                type_name = type_hint.__name__ if hasattr(type_hint, '__name__') else str(type_hint_raw)
-                description += f"\n    * {param_name}"
-                description += f": {param_description}" if param_description else ""
-                description += f" (type: {type_name})"
-        sig = inspect.Signature(parameters)
+            if default is inspect.Parameter.empty:
+                required_params.append(param)
+            else:
+                optional_params.append(param)
 
-        # Create executor function that will be run in thread
-        def executor(**kwargs):
-            return execute_db_tool(td.handle_base_readQuery, tool["sql"], tool_name=name, **kwargs)
+        # Build signature with correct order: conn, tool_name (with default), then custom params
+        # But conn has no default, so we need: conn, required_custom_params, tool_name, optional_custom_params
+        sig = inspect.Signature([parameters[0]] + required_params + [parameters[1]] + optional_params)
 
-        tool_func = create_mcp_tool(
-            executor_func=executor,
-            signature=sig,
-            validate_required=True,
-            tool_name=name,
-        )
-        return mcp.tool(name=name, description=description)(tool_func)
+        # Create the handler function (like handle_* functions)
+        def handler(conn, tool_name=None, **kwargs):
+            """Custom YAML-defined query tool handler."""
+            return execute_db_tool(td.handle_base_readQuery, tool["sql"], tool_name=tool_name or name, **kwargs)
+
+        # Set metadata on the handler
+        handler.__name__ = f"handle_{name}"
+        handler.__doc__ = "\n".join(docstring_parts)
+        handler.__signature__ = sig
+
+        return handler
 
     """
     Generate a SQL generation function that returns a query string for a given cube definition and tool parameters (grain, measures, filters...).
@@ -920,21 +948,40 @@ Returns:
     custom_terms: list[tuple[str, Any, str]] = []
     for name, obj in custom_objects.items():
         obj_type = obj.get("type")
+
+        # Handle custom query tools (from YAML)
         if obj_type == "tool" and any(re.match(pattern, name) for pattern in config.get('tool',[])):
-            fn = make_custom_query_tool(name, obj)
-            globals()[name] = fn
-            logger.info(f"Created tool: {name}")
+            # Create handler function (like handle_* functions)
+            handler = create_custom_query_handler(name, obj)
+
+            # Register according to mode (same pattern as Python tools)
+            if settings.progressive_disclosure:
+                # Determine category from tool prefix
+                category = name.split('_')[0] if '_' in name else 'custom'
+                context_catalog.register_tool(handler, category=category)
+                logger.info(f"Registered custom YAML tool in catalog: {name} (category: {category})")
+            else:
+                # Static mode: wrap and register as MCP tool
+                wrapped = make_tool_wrapper(handler)
+                mcp.tool(name=name, description=wrapped.__doc__)(wrapped)
+                logger.info(f"Registered custom YAML tool as MCP tool: {name}")
+
         elif obj_type == "prompt"  and any(re.match(pattern, name) for pattern in config.get('prompt',[])):
             fn = make_custom_prompt(name, obj["prompt"], obj.get("description", ""), obj.get("parameters", {}))
             globals()[name] = fn
             logger.info(f"Created prompt: {name}")
+
         elif obj_type == "cube"  and any(re.match(pattern, name) for pattern in config.get('tool',[])):
+            # TODO: Cube tools also need the same treatment for progressive disclosure
+            # For now, keeping them as direct MCP tools (can be addressed later if needed)
             fn = make_custom_cube_tool(name, obj)
             globals()[name] = fn
-            logger.info(f"Created cube: {name}")
+            logger.info(f"Created cube: {name} (always as MCP tool)")
+
         elif obj_type == "glossary"  and any(re.match(pattern, name) for pattern in config.get('resource',[])):
             custom_glossary = {k: v for k, v in obj.items() if k != "type"}
             logger.info(f"Added custom glossary entries for: {name}.")
+
         else:
             logger.info(f"Type {obj_type if obj_type else ''} for custom object {name} is {'unknown' if obj_type else 'undefined'}.")
 
