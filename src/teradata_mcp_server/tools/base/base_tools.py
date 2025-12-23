@@ -24,7 +24,7 @@ def handle_base_readQuery(
 
     Arguments:
       sql     - SQL text, with optional bind-parameter placeholders
-      persist - Set to True to materializes results as a table and reuse it later
+      persist - Set to True to persist the results as a table and reuse it later. Recommended for large result sets.
 
     Returns:
       ResponseType: formatted response with query results + metadata
@@ -41,6 +41,9 @@ def handle_base_readQuery(
 
         # Strip trailing semicolons from the SQL
         sql_clean = sql.rstrip().rstrip(';')
+        
+        #Remove the final ORDER BY clause if present
+        sql_clean = re.sub(r'ORDER BY [\w\W\s\S]*$', '', sql_clean, flags=re.IGNORECASE).strip()
 
         # Wrap in CREATE VOLATILE TABLE statement
         sql = f"CREATE VOLATILE TABLE {volatile_table_name} AS ({sql_clean}) WITH DATA ON COMMIT PRESERVE ROWS"
@@ -53,6 +56,11 @@ def handle_base_readQuery(
     result = conn.execute(stmt, kwargs) if kwargs else conn.execute(stmt)
 
     # 3. Fetch rows & column metadata
+
+    # If we persisted in a volatile table, we won't get any rows back, we sample the resulting voltile table instead
+    if volatile_table_name:
+        result = conn.execute(text(f'select top 10 * from {volatile_table_name}'))
+
     cursor = result.cursor  # underlying DB-API cursor
     raw_rows = cursor.fetchall() or []
     data = rows_to_json(cursor.description, raw_rows)
@@ -63,7 +71,7 @@ def handle_base_readQuery(
         }
         for col in (cursor.description or [])
     ]
-
+        
     # 4. Compile the statement with literal binds for “final SQL”
     #    Fallback to DefaultDialect if conn has no `.dialect`
     dialect = getattr(conn, "dialect", default.DefaultDialect())
@@ -83,12 +91,11 @@ def handle_base_readQuery(
 
     # Add volatile table name if persisted
     if volatile_table_name:
-        metadata["columns"] = None
         metadata["row_count"] = None
+        metadata["sample_size"] = 10
         metadata["volatile_table"] = volatile_table_name
         metadata["persist"] = True
         logger.info(f"Query results persisted to volatile table: {volatile_table_name}")
-        data = [{"results stored in volatile_table": volatile_table_name}]
 
     logger.debug(f"Tool: handle_base_readQuery: metadata: {metadata}")
     return create_response(data, metadata)

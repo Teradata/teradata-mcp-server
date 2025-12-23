@@ -102,23 +102,37 @@ class RegistryLoader:
 - `DATE` → `str`
 - Default → `str`
 
-#### 2. SQL Builder (`registry_tools.py`)
+#### 2. SQL Builder & Type Casting (`registry_tools.py`)
 
-Generates SQL statements for tool execution:
+Generates SQL statements with named parameter placeholders and handles type casting:
 
 ```python
-def build_registry_sql(tool_def: Dict[str, Any], params: Dict[str, Any]) -> str:
-    """Build SQL statement to execute a database-registered tool (UDF or Macro)."""
-    # For UDFs: SELECT * FROM db_object(param1, param2, ...)
-    # For Macros: EXEC db_object(param1, param2, ...)
-    # Handles parameter ordering, type formatting, NULL handling
+def build_registry_sql(tool_def: Dict[str, Any]) -> str:
+    """Build SQL with named parameter placeholders for safe binding."""
+    # For UDFs: SELECT database.function_name(:param1, :param2)
+    # For Macros: EXEC database.macro_name(:param1, :param2)
+    # Parameters sorted by position, using named placeholders
+
+def cast_parameters(params: Dict[str, Any], tool_def: Dict[str, Any]) -> Dict[str, Any]:
+    """Cast parameter values to correct Python types before SQLAlchemy binding."""
+    # Ensures integer parameters stay as int, not string
+    # Critical for Teradata operations like TOP N
 ```
 
 **SQL Generation**:
-- **UDF**: `SELECT * FROM database.function_name(param1, param2)`
-- **Macro**: `EXEC database.macro_name(param1, param2)`
+- **UDF**: `SELECT database.function_name(:param1, :param2)`
+- **Macro**: `EXEC database.macro_name(:param1, :param2)`
 - Parameters sorted by position
-- Values formatted by type (strings quoted, numbers unquoted, NULL handling)
+- Uses named placeholders (`:param_name`) for safe SQLAlchemy parameter binding
+- No value formatting needed - database handles escaping
+- Eliminates SQL injection risks
+
+**Type Casting**:
+- Parameters received from clients (JSON/HTTP) are often strings
+- `cast_parameters()` converts them to correct Python types based on tool definition
+- Example: String `'10'` → integer `10` for TOP N parameters
+- Essential for Teradata type-sensitive operations
+- Handles int, float, str, bool, and None/NULL values
 
 #### 3. Main Integration (`app.py`)
 
@@ -167,27 +181,50 @@ def execute_db_tool_with_registry(*args, **kwargs):
 
 ### Tool Registration
 
-Registry tools are registered using the same pattern as YAML tools:
+Registry tools are registered using the same pattern as YAML tools, with safe parameter binding:
 
 ```python
-# Create executor that generates SQL and executes
-def make_executor(tool_def_captured=tool_def, tool_name_captured=tool_name):
-    def executor(**kwargs):
-        sql = build_registry_sql(tool_def_captured, kwargs)
-        return execute_db_tool(td.handle_base_readQuery, sql, tool_name=tool_name_captured, **kwargs)
-    return executor
+# Create handler function (like handle_* functions)
+def handler(conn, tool_name=None, **kwargs):
+    """Registry-defined database tool handler."""
+    # Build SQL with named parameter placeholders
+    sql = build_registry_sql(tool_def)
 
-# Create MCP tool
-tool_func = create_mcp_tool(
-    executor_func=make_executor(),
-    signature=sig,
-    validate_required=True,
-    tool_name=tool_name,
-)
+    # Extract tool parameters (excluding special params)
+    special_params = {'persist', 'tool_name'}
+    tool_params = {k: v for k, v in kwargs.items() if k not in special_params}
+
+    # Extract special params for handle_base_readQuery
+    persist = kwargs.get('persist', False)
+
+    # Pass SQL with named placeholders and parameter values for safe binding
+    return execute_db_tool(
+        td.handle_base_readQuery,
+        sql,
+        tool_name=tool_name,
+        persist=persist,
+        **tool_params  # These will be safely bound by SQLAlchemy
+    )
+
+# Wrap handler as MCP tool
+wrapped = make_tool_wrapper(handler)
 
 # Register with FastMCP
-mcp.tool(name=tool_name, description=description)(tool_func)
+mcp.tool(name=tool_name, description=description)(wrapped)
 ```
+
+**Key Points**:
+- SQL is generated once with placeholders (`:param1`, `:param2`)
+- Parameter values are passed separately as kwargs
+- SQLAlchemy safely binds parameters, preventing SQL injection
+- Same secure pattern used by YAML tools
+
+**Important Limitations**:
+- **Registry tools do not support the `persist` parameter**:
+  - The `persist` parameter is not available for registry tools (both UDFs and Macros)
+  - Macros: Cannot be wrapped in `CREATE VOLATILE TABLE` (invalid: `CREATE VOLATILE TABLE vt AS (EXEC mydb.my_macro(param)) WITH DATA`) ❌
+  - UDFs: While technically possible, persist is disabled for consistency and simplicity
+  - If you need to persist results from registry tools, use YAML tools or Python tools instead
 
 ## Configuration
 

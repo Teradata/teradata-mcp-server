@@ -2,13 +2,23 @@
 
 ## Overview
 
-Progressive disclosure is an optimization technique for MCP servers with a large number of tools (100+). Instead of listing all tools in the `tools/list` response (which consumes significant context window space), tools are dynamically discovered and executed through a catalog system.
+We enable progressive disclosure of MCP tools and other assets (to be implemented) to optimize the context window usage. 
 
-## Context Window Savings
+This is particularly relevant considering the large number of tools that this server offers by default, and the pace at which new custom tools are created after deployment.
 
-- **Static Mode** (traditional): All 100+ tools listed → ~50,000 tokens
-- **Progressive Disclosure Mode**: 3 proxy tools + 1 core tool → ~500 tokens
-- **Savings**: 99% reduction in initial context window usage
+Instead of listing all tools in the `tools/list` response (which consumes significant context window space), tools are dynamically discovered and executed through a catalog system.
+
+```mermaid
+%%{init: {'theme':'neutral', 'themeVariables': { 'fontSize':'12px'}, 'flowchart':{'htmlLabels':true, 'curve':'basis', 'nodeSpacing': 30, 'rankSpacing': 30}}}%%
+flowchart TD
+    A[User Input] --> B[Current Context]
+    B --> C[Start Reasoning]
+    C --> D{Do I need more<br/>information?}
+    D -->|No| G[Answer]
+    D -->|Yes| E[Search for<br/>relevant tools]
+    E --> F[Execute tool and<br/>add to context]
+    F --> B
+```    
 
 ## Usage
 

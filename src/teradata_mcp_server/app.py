@@ -1013,14 +1013,13 @@ Returns:
 
         # Build docstring with parameters
         docstring_parts = [description]
-        if param_defs or True:  # Always show Arguments section to include persist
+        if param_defs:
             docstring_parts.append("\nArguments:")
             for param_name, p in sorted(param_defs.items(), key=lambda x: x[1].get('position', 0)):
                 param_desc = p.get("description", "")
                 docstring_parts.append(f"  {param_name} - {param_desc}")
-            # Add persist parameter documentation
-            docstring_parts.append(f"  persist - If True, materializes result as a volatile table and returns table name")
         docstring_parts.append(f"\nRegistry tool: {tool_def['object_type']} {tool_def['db_object']}")
+        docstring_parts.append(f"Note: Registry tools do not support the 'persist' parameter")
 
         # Add required 'conn' parameter at the beginning (for catalog compatibility)
         parameters = [
@@ -1030,13 +1029,6 @@ Returns:
         # Add tool_name parameter (internal, will be filtered out)
         parameters.append(
             inspect.Parameter("tool_name", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None)
-        )
-
-        # Add persist parameter (for materializing results as volatile table)
-        persist_description = "If True, materializes result as a volatile table and returns table name"
-        parameters.append(
-            inspect.Parameter("persist", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                            default=False, annotation=Annotated[bool, persist_description])
         )
 
         # Add registry parameters - separate required and optional
@@ -1057,14 +1049,43 @@ Returns:
             else:
                 optional_params.append(param)
 
-        # Build signature with correct order: conn, required_params, tool_name, persist (both with defaults), optional_params
-        sig = inspect.Signature([parameters[0]] + required_params + [parameters[1], parameters[2]] + optional_params)
+        # Build signature: conn, required_params, tool_name (with default), optional_params
+        sig = inspect.Signature([parameters[0]] + required_params + [parameters[1]] + optional_params)
 
         # Create the handler function (like handle_* functions)
         def handler(conn, tool_name=None, **kwargs):
             """Registry-defined database tool handler."""
-            sql = build_registry_sql(tool_def, kwargs)
-            return execute_db_tool(td.handle_base_readQuery, sql, tool_name=tool_name or tool_name, **kwargs)
+            from teradata_mcp_server.tools.registry.registry_tools import cast_parameters, build_registry_sql_with_values
+
+            logger.info(f"[REGISTRY_HANDLER] Starting handler for tool '{tool_name}'")
+            logger.info(f"[REGISTRY_HANDLER] Received kwargs: {kwargs}")
+
+            # Extract tool parameters (excluding special params)
+            # Note: persist is not supported for registry tools
+            special_params = {'tool_name'}
+            tool_params = {k: v for k, v in kwargs.items() if k not in special_params}
+            logger.info(f"[REGISTRY_HANDLER] Tool params before casting: {tool_params}")
+
+            # Cast parameters to their correct types based on tool definition
+            # This ensures values are properly typed before formatting into SQL
+            cast_params = cast_parameters(tool_params, tool_def)
+            logger.info(f"[REGISTRY_HANDLER] Tool params after casting: {cast_params}")
+
+            # Build SQL with values formatted as literals
+            # This approach is necessary because SQLAlchemy parameter binding doesn't
+            # preserve type information correctly with the Teradata driver
+            sql = build_registry_sql_with_values(tool_def, cast_params)
+            logger.info(f"[REGISTRY_HANDLER] Generated SQL: {sql}")
+
+            # Execute the SQL without parameters (values already in SQL)
+            # Note: persist=False for registry tools (not supported)
+            return execute_db_tool(
+                td.handle_base_readQuery,
+                sql,  # SQL string with values already formatted
+                tool_name=tool_name or tool_name,
+                persist=False  # Registry tools do not support persist
+                # No **kwargs here - values are already in the SQL string
+            )
 
         # Set metadata on the handler
         handler.__name__ = f"handle_{tool_name}"
