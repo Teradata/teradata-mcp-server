@@ -217,7 +217,7 @@ my-teradata-config/
 ```
 
 ### Complete Example
-See the provided [`custom_objects.yml`](../custom_objects.yml) in the repository for a complete working example.
+See the provided [`custom_objects.yml`](../../examples/server-customisation/custom_objects.yml) in the repository for a complete working example.
 
 ### Running with Custom Configuration
 ```bash

@@ -7,25 +7,11 @@ import json
 import logging
 import os
 
-MAX_PORT = 65535
-
-logger = logging.getLogger("teradata_mcp_server")
-
-# Setup logging to file (always add file handler)
-log_dir = os.path.join(os.path.dirname(__file__), '../../../logs')
-os.makedirs(log_dir, exist_ok=True)
-log_file = os.path.join(log_dir, 'bar_tools.log')
-file_handler = logging.FileHandler(log_file)
-formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s %(message)s')
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-logger.setLevel(logging.DEBUG)
-logger.info('Logging initialized to %s', log_file)
-logger.info('TEST LOG ENTRY: bar_tools.py imported and logging is active.')
-
 from teradata_mcp_server.tools.utils import create_response
 
 from .dsa_client import dsa_client
+
+MAX_PORT = 65535
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -44,7 +30,7 @@ def list_disk_file_systems() -> str:
         Formatted summary of all disk file systems with their configurations
     """
     try:
-        logger.info("Listing disk file systems via DSA API")
+        logger.info("bar: Listing disk file systems via DSA API")
 
         # Make request to DSA API
         response = dsa_client._make_request(
@@ -52,7 +38,7 @@ def list_disk_file_systems() -> str:
             endpoint="dsa/components/backup-applications/disk-file-system"
         )
 
-        logger.debug(f"DSA API response: {response}")
+        logger.debug(f"bar: DSA API response: {response}")
 
         results = []
         results.append("🗂️ DSA Disk File Systems")
@@ -90,7 +76,7 @@ def list_disk_file_systems() -> str:
         return "\n".join(results)
 
     except Exception as e:
-        logger.error(f"Failed to list disk file systems: {str(e)}")
+        logger.error(f"bar: Failed to list disk file systems: {str(e)}")
         return f"❌ Error listing disk file systems: {str(e)}"
 
 
@@ -108,7 +94,7 @@ def config_disk_file_system(file_system_path: str, max_files: int) -> str:
         Formatted result of the configuration operation with status and any validation messages
     """
     try:
-        logger.info(f"Configuring disk file system: {file_system_path} with max files: {max_files}")
+        logger.info(f"bar: Configuring disk file system: {file_system_path} with max files: {max_files}")
 
         # First, get the existing file systems
         try:
@@ -120,12 +106,12 @@ def config_disk_file_system(file_system_path: str, max_files: int) -> str:
             existing_file_systems = []
             if existing_response.get('status') == 'LIST_DISK_FILE_SYSTEMS_SUCCESSFUL':
                 existing_file_systems = existing_response.get('fileSystems', [])
-                logger.info(f"Found {len(existing_file_systems)} existing file systems")
+                logger.info(f"bar: Found {len(existing_file_systems)} existing file systems")
             else:
-                logger.info("No existing file systems found or unable to retrieve them")
+                logger.info("bar: No existing file systems found or unable to retrieve them")
 
         except Exception as e:
-            logger.warning(f"Could not retrieve existing file systems: {e}")
+            logger.warning(f"bar: Could not retrieve existing file systems: {e}")
             existing_file_systems = []
 
         # Check if the new file system path already exists and update it, or add it
@@ -140,7 +126,7 @@ def config_disk_file_system(file_system_path: str, max_files: int) -> str:
                     "maxFiles": max_files
                 })
                 path_exists = True
-                logger.info(f"Updating existing file system: {file_system_path}")
+                logger.info(f"bar: Updating existing file system: {file_system_path}")
             else:
                 # Keep existing file system unchanged
                 file_systems_to_configure.append(fs)
@@ -151,14 +137,14 @@ def config_disk_file_system(file_system_path: str, max_files: int) -> str:
                 "fileSystemPath": file_system_path,
                 "maxFiles": max_files
             })
-            logger.info(f"Adding new file system: {file_system_path}")
+            logger.info(f"bar: Adding new file system: {file_system_path}")
 
         # Prepare request data with all file systems (existing + new/updated)
         request_data = {
             "fileSystems": file_systems_to_configure
         }
 
-        logger.info(f"Configuring {len(file_systems_to_configure)} file systems total")
+        logger.info(f"bar: Configuring {len(file_systems_to_configure)} file systems total")
 
         # Make request to DSA API
         response = dsa_client._make_request(
@@ -167,7 +153,7 @@ def config_disk_file_system(file_system_path: str, max_files: int) -> str:
             data=request_data
         )
 
-        logger.debug(f"DSA API response: {response}")
+        logger.debug(f"bar: DSA API response: {response}")
 
         results = []
         results.append("🗂️ DSA Disk File System Configuration")
@@ -211,7 +197,7 @@ def config_disk_file_system(file_system_path: str, max_files: int) -> str:
         return "\n".join(results)
 
     except Exception as e:
-        logger.error(f"Failed to configure disk file system: {str(e)}")
+        logger.error(f"bar: Failed to configure disk file system: {str(e)}")
         return f"❌ Error configuring disk file system '{file_system_path}': {str(e)}"
 
 
@@ -229,7 +215,7 @@ def delete_disk_file_systems() -> str:
         backup operations or file target groups are using these file systems.
     """
     try:
-        logger.info("Deleting all disk file system configurations via DSA API")
+        logger.info("bar: Deleting all disk file system configurations via DSA API")
 
         # Make request to DSA API
         response = dsa_client._make_request(
@@ -237,7 +223,7 @@ def delete_disk_file_systems() -> str:
             endpoint="dsa/components/backup-applications/disk-file-system"
         )
 
-        logger.debug(f"DSA API response: {response}")
+        logger.debug(f"bar: DSA API response: {response}")
 
         results = []
         results.append("🗂️ DSA Disk File System Deletion")
@@ -284,7 +270,7 @@ def delete_disk_file_systems() -> str:
         return "\n".join(results)
 
     except Exception as e:
-        logger.error(f"Failed to delete disk file systems: {str(e)}")
+        logger.error(f"bar: Failed to delete disk file systems: {str(e)}")
         return f"❌ Error deleting disk file systems: {str(e)}"
 
 
@@ -306,7 +292,7 @@ def remove_disk_file_system(file_system_path: str) -> str:
         or file target groups. Remove those dependencies first.
     """
     try:
-        logger.info(f"Removing disk file system: {file_system_path}")
+        logger.info(f"bar: Removing disk file system: {file_system_path}")
 
         # First, get the existing file systems
         try:
@@ -318,13 +304,13 @@ def remove_disk_file_system(file_system_path: str) -> str:
             existing_file_systems = []
             if existing_response.get('status') == 'LIST_DISK_FILE_SYSTEMS_SUCCESSFUL':
                 existing_file_systems = existing_response.get('fileSystems', [])
-                logger.info(f"Found {len(existing_file_systems)} existing file systems")
+                logger.info(f"bar: Found {len(existing_file_systems)} existing file systems")
             else:
-                logger.warning("No existing file systems found or unable to retrieve them")
+                logger.warning("bar: No existing file systems found or unable to retrieve them")
                 return f"❌ Could not retrieve existing file systems to remove '{file_system_path}'"
 
         except Exception as e:
-            logger.error(f"Could not retrieve existing file systems: {e}")
+            logger.error(f"bar: Could not retrieve existing file systems: {e}")
             return f"❌ Error retrieving existing file systems: {str(e)}"
 
         # Check if the file system to remove exists
@@ -334,7 +320,7 @@ def remove_disk_file_system(file_system_path: str) -> str:
         for fs in existing_file_systems:
             if fs.get('fileSystemPath') == file_system_path:
                 path_exists = True
-                logger.info(f"Found file system to remove: {file_system_path}")
+                logger.info(f"bar: Found file system to remove: {file_system_path}")
             else:
                 # Keep this file system
                 file_systems_to_keep.append(fs)
@@ -362,7 +348,7 @@ def remove_disk_file_system(file_system_path: str) -> str:
             "fileSystems": file_systems_to_keep
         }
 
-        logger.info(f"Removing '{file_system_path}', keeping {len(file_systems_to_keep)} file systems")
+        logger.info(f"bar: Removing '{file_system_path}', keeping {len(file_systems_to_keep)} file systems")
 
         # Make request to DSA API to reconfigure with remaining file systems
         response = dsa_client._make_request(
@@ -371,7 +357,7 @@ def remove_disk_file_system(file_system_path: str) -> str:
             data=request_data
         )
 
-        logger.debug(f"DSA API response: {response}")
+        logger.debug(f"bar: DSA API response: {response}")
 
         results = []
         results.append("🗂️ DSA Disk File System Removal")
@@ -424,7 +410,7 @@ def remove_disk_file_system(file_system_path: str) -> str:
         return "\n".join(results)
 
     except Exception as e:
-        logger.error(f"Failed to remove disk file system: {str(e)}")
+        logger.error(f"bar: Failed to remove disk file system: {str(e)}")
         return f"❌ Error removing disk file system '{file_system_path}': {str(e)}"
 
 
@@ -453,7 +439,7 @@ def manage_dsa_disk_file_systems(
         Result of the requested operation
     """
 
-    logger.info(f"DSA Disk File System Management - Operation: {operation}")
+    logger.info(f"bar: DSA Disk File System Management - Operation: {operation}")
 
     try:
         # List operation
@@ -485,7 +471,7 @@ def manage_dsa_disk_file_systems(
             return f"❌ Error: Unknown operation '{operation}'. Available operations: {', '.join(available_operations)}"
 
     except Exception as e:
-        logger.error(f"DSA Disk File System Management error - Operation: {operation}, Error: {str(e)}")
+        logger.error(f"bar: DSA Disk File System Management error - Operation: {operation}, Error: {str(e)}")
         return f"❌ Error during {operation}: {str(e)}"
 
 
@@ -508,7 +494,7 @@ def list_aws_s3_backup_configurations () -> str:
     """
 
     try:
-        logger.info("Listing AWS S3 target systems via DSA API")
+        logger.info("bar: Listing AWS S3 target systems via DSA API")
 
         # Make request to DSA API
         response = dsa_client._make_request(
@@ -517,7 +503,7 @@ def list_aws_s3_backup_configurations () -> str:
         )
 
         # Add debug log for full API response
-        logger.debug("[DEBUG] Full DSA API response from aws-s3 endpoint: %r", response)
+        logger.debug("bar: Full DSA API response from aws-s3 endpoint: %r", response)
 
         results = []
         results.append("🗂️ DSA AWS S3 Backup Solution Systems Available")
@@ -604,7 +590,7 @@ def list_aws_s3_backup_configurations () -> str:
         return "\n".join(results)
 
     except Exception as e:
-        logger.error(f"Failed to list AWS S3 Backup Solutions Configured: {str(e)}")
+        logger.error(f"bar: Failed to list AWS S3 Backup Solutions Configured: {str(e)}")
         return f"❌ Error listing AWS S3 Backup Solutions Configured: {str(e)}"
 
 
@@ -622,7 +608,7 @@ def delete_aws_s3_backup_configurations() -> str:
         backup operations or target groups are using these configurations.
     """
     try:
-        logger.info("Deleting all AWS S3 backup configurations via DSA API")
+        logger.info("bar: Deleting all AWS S3 backup configurations via DSA API")
 
         # Make request to DSA API
         response = dsa_client._make_request(
@@ -630,7 +616,7 @@ def delete_aws_s3_backup_configurations() -> str:
             endpoint="dsa/components/backup-applications/aws-s3"
         )
 
-        logger.debug(f"DSA API response: {response}")
+        logger.debug(f"bar: DSA API response: {response}")
 
         results = []
         results.append("🗂️ DSA AWS S3 Backup Configuration Deletion")
@@ -677,7 +663,7 @@ def delete_aws_s3_backup_configurations() -> str:
         return "\n".join(results)
 
     except Exception as e:
-        logger.error(f"Failed to delete AWS S3 backup configurations: {str(e)}")
+        logger.error(f"bar: Failed to delete AWS S3 backup configurations: {str(e)}")
         return f"❌ Error deleting AWS S3 backup configurations: {str(e)}"
 
 
@@ -700,7 +686,7 @@ def remove_AWS_S3_backup_configuration(aws_acct_name: str) -> str:
         or target groups. Remove those dependencies first.
     """
     try:
-        logger.info(f"Removing AWS S3 configuration: {aws_acct_name}")
+        logger.info(f"bar: Removing AWS S3 configuration: {aws_acct_name}")
 
         # Prepare request data with aws_acct_name as that is the input for the
         request_data = aws_acct_name
@@ -716,21 +702,21 @@ def remove_AWS_S3_backup_configuration(aws_acct_name: str) -> str:
             if existing_response.get('status') == 'LIST_AWS_APP_SUCCESSFUL':
                 # Use the exact same logic as the list function
                 aws_list = existing_response.get('aws', [])
-                logger.debug(f"AWS list from API: {aws_list}")
-                logger.debug(f"AWS list type: {type(aws_list)}, length: {len(aws_list) if aws_list else 0}")
+                logger.debug(f"bar: AWS list from API: {aws_list}")
+                logger.debug(f"bar: AWS list type: {type(aws_list)}, length: {len(aws_list) if aws_list else 0}")
                 if aws_list and isinstance(aws_list, list):
                     # For consistency with list function, treat each aws entry as a configuration
                     existing_s3_configurations = aws_list
-                    logger.info(f"Successfully parsed {len(existing_s3_configurations)} S3 configurations")
+                    logger.info(f"bar: Successfully parsed {len(existing_s3_configurations)} S3 configurations")
                 else:
-                    logger.warning(f"No aws list found or wrong type. aws_list: {aws_list}")
+                    logger.warning(f"bar: No aws list found or wrong type. aws_list: {aws_list}")
             else:
-                logger.warning("No existing S3 configurations found or unable to retrieve them")
-                logger.debug(f"API response status: {existing_response.get('status')}")
+                logger.warning("bar: No existing S3 configurations found or unable to retrieve them")
+                logger.debug(f"bar: API response status: {existing_response.get('status')}")
                 return f"❌ Could not retrieve existing S3 configurations to remove '{aws_acct_name}'"
 
         except Exception as e:
-            logger.error(f"Could not retrieve existing S3 configurations: {e}")
+            logger.error(f"bar: Could not retrieve existing S3 configurations: {e}")
             return f"❌ Error retrieving existing S3 configurations: {str(e)}"
 
         # Check if the S3 configuration to remove, actually exists or not
@@ -742,10 +728,10 @@ def remove_AWS_S3_backup_configuration(aws_acct_name: str) -> str:
             config_aws_rest = s3.get('configAwsRest', {})
             current_acct_name = config_aws_rest.get('acctName', '')
 
-            logger.debug(f"Checking S3 config - current_acct_name: '{current_acct_name}', target: '{aws_acct_name}'")
+            logger.debug(f"bar: Checking S3 config - current_acct_name: '{current_acct_name}', target: '{aws_acct_name}'")
             if current_acct_name == aws_acct_name:
                 s3config_exists = True
-                logger.info(f"Found S3 configuration to remove: {aws_acct_name}")
+                logger.info(f"bar: Found S3 configuration to remove: {aws_acct_name}")
             else:
                 # Keep this S3 configuration
                 s3_configurations_to_keep.append(s3)
@@ -800,20 +786,20 @@ def remove_AWS_S3_backup_configuration(aws_acct_name: str) -> str:
             results.append("=" * 50)
             return "\n".join(results)
 
-        logger.info(f"Removing '{aws_acct_name}', keeping {len(s3_configurations_to_keep)} S3 configurations")
+        logger.info(f"bar: Removing '{aws_acct_name}', keeping {len(s3_configurations_to_keep)} S3 configurations")
 
         # this code logic is not required. If the account is found, we can just delete it, do not complicate with reconfiguring the rest
         # reconfiguring the rest is not going to work in the single call to the API
         # Make request to DSA API to reconfigure with remaining S3 configurations
         # If no configurations remain, we need to delete all instead of posting empty config
         #if not s3_configurations_to_keep:
-        #    logger.info("No S3 configurations remaining, deleting all S3 configurations")
+        #    logger.info("bar: No S3 configurations remaining, deleting all S3 configurations")
         #    response = dsa_client._make_request(
         #        method="DELETE",
         #        endpoint="dsa/components/backup-applications/aws-s3"
         #    )
         #else:
-        #    logger.info(f"Reconfiguring with {len(s3_configurations_to_keep)} remaining S3 configurations")
+        #    logger.info(f"bar: Reconfiguring with {len(s3_configurations_to_keep)} remaining S3 configurations")
         #    response = dsa_client._make_request(
         #       method="POST",
         #        endpoint="dsa/components/backup-applications/aws-s3",
@@ -829,7 +815,7 @@ def remove_AWS_S3_backup_configuration(aws_acct_name: str) -> str:
                 endpoint=f"dsa/components/backup-applications/aws-s3/{aws_acct_name}/"
         )
 
-        logger.debug(f"DSA API response: {response}")
+        logger.debug(f"bar: DSA API response: {response}")
 
         results = []
         results.append("🗂️ DSA S3 Configuration Removal")
@@ -883,7 +869,7 @@ def remove_AWS_S3_backup_configuration(aws_acct_name: str) -> str:
         return "\n".join(results)
 
     except Exception as e:
-        logger.error(f"Failed to remove AWS S3 configuration: {str(e)}")
+        logger.error(f"bar: Failed to remove AWS S3 configuration: {str(e)}")
         return f"❌ Error removing AWS S3 configuration '{aws_acct_name}': {str(e)}"
 
 
@@ -922,7 +908,7 @@ def manage_AWS_S3_backup_configurations(
         Result of the requested operation
     """
 
-    logger.info(f"DSA AWS S3 Backup Solution Management - Operation: {operation}")
+    logger.info(f"bar: DSA AWS S3 Backup Solution Management - Operation: {operation}")
 
     try:
         # List operation
@@ -1021,7 +1007,7 @@ def manage_AWS_S3_backup_configurations(
             ]
             return f"❌ Error: Unknown operation '{operation}'. Available operations: {', '.join(available_operations)}"
     except Exception as e:
-        logger.error(f"DSA AWS S3 Configuration Management error - Operation: {operation}, Error: {str(e)}")
+        logger.error(f"bar: DSA AWS S3 Configuration Management error - Operation: {operation}, Error: {str(e)}")
         return f"❌ Error during {operation}: {str(e)}"
 
 
@@ -1088,7 +1074,7 @@ def manage_dsa_media_servers(
             return _list_media_server_consumers_by_name(server_name)
 
     except Exception as e:
-        logger.error(f"Failed to execute media server operation '{operation}': {str(e)}")
+        logger.error(f"bar: Failed to execute media server operation '{operation}': {str(e)}")
         return f"❌ Error executing media server operation '{operation}': {str(e)}"
 
 
@@ -1117,7 +1103,7 @@ def _list_media_servers() -> str:
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to list media servers: {str(e)}")
+        logger.error(f"bar: Failed to list media servers: {str(e)}")
         return f"❌ Error listing media servers: {str(e)}"
 
 
@@ -1147,7 +1133,7 @@ def _get_media_server(server_name: str) -> str:
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to get media server '{server_name}': {str(e)}")
+        logger.error(f"bar:Failed to get media server '{server_name}': {str(e)}")
         return f"❌ Error getting media server '{server_name}': {str(e)}"
 
 
@@ -1208,7 +1194,7 @@ def _add_media_server(
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to add media server '{server_name}': {str(e)}")
+        logger.error(f"bar: Failed to add media server '{server_name}': {str(e)}")
         return f"❌ Error adding media server '{server_name}': {str(e)}"
 
 
@@ -1243,7 +1229,7 @@ def _delete_media_server(server_name: str, virtual: bool = False) -> str:
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to delete media server '{server_name}': {str(e)}")
+        logger.error(f"bar: Failed to delete media server '{server_name}': {str(e)}")
         return f"❌ Error deleting media server '{server_name}': {str(e)}"
 
 
@@ -1272,7 +1258,7 @@ def _list_media_server_consumers() -> str:
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to list media server consumers: {str(e)}")
+        logger.error(f"bar: Failed to list media server consumers: {str(e)}")
         return f"❌ Error listing media server consumers: {str(e)}"
 
 
@@ -1302,7 +1288,7 @@ def _list_media_server_consumers_by_name(server_name: str) -> str:
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to list consumers for media server '{server_name}': {str(e)}")
+        logger.error(f"bar: Failed to list consumers for media server '{server_name}': {str(e)}")
         return f"❌ Error listing consumers for media server '{server_name}': {str(e)}"
 
 #------------------ Teradata System Management Operations ------------------#
@@ -1364,7 +1350,7 @@ def manage_dsa_systems(
             return _get_system_consumer(component_name)
 
     except Exception as e:
-        logger.error(f"Failed to execute Teradata system operation '{operation}': {str(e)}")
+        logger.error(f"bar: Failed to execute Teradata system operation '{operation}': {str(e)}")
         return f"❌ Error executing Teradata system operation '{operation}': {str(e)}"
 
 
@@ -1381,7 +1367,7 @@ def _list_teradata_systems() -> str:
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to list Teradata systems: {str(e)}")
+        logger.error(f"bar: Failed to list Teradata systems: {str(e)}")
         return f"❌ Error listing Teradata systems: {str(e)}"
 
 
@@ -1403,7 +1389,7 @@ def _get_teradata_system(system_name: str) -> str:
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to get Teradata system '{system_name}': {str(e)}")
+        logger.error(f"bar: Failed to get Teradata system '{system_name}': {str(e)}")
         return f"❌ Error getting Teradata system '{system_name}': {str(e)}"
 
 
@@ -1446,7 +1432,7 @@ def _config_teradata_system(
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to configure Teradata system '{system_name}': {str(e)}")
+        logger.error(f"bar: Failed to configure Teradata system '{system_name}': {str(e)}")
         return f"❌ Error configuring Teradata system '{system_name}': {str(e)}"
 
 
@@ -1469,7 +1455,7 @@ def _enable_teradata_system(system_name: str) -> str:
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to enable Teradata system '{system_name}': {str(e)}")
+        logger.error(f"bar: Failed to enable Teradata system '{system_name}': {str(e)}")
         return f"❌ Error enabling Teradata system '{system_name}': {str(e)}"
 
 
@@ -1491,7 +1477,7 @@ def _delete_teradata_system(system_name: str) -> str:
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to delete Teradata system '{system_name}': {str(e)}")
+        logger.error(f"bar: Failed to delete Teradata system '{system_name}': {str(e)}")
         return f"❌ Error deleting Teradata system '{system_name}': {str(e)}"
 
 
@@ -1508,7 +1494,7 @@ def _list_system_consumers() -> str:
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to list system consumers: {str(e)}")
+        logger.error(f"bar: Failed to list system consumers: {str(e)}")
         return f"❌ Error listing system consumers: {str(e)}"
 
 
@@ -1530,7 +1516,7 @@ def _get_system_consumer(component_name: str) -> str:
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to get system consumer '{component_name}': {str(e)}")
+        logger.error(f"bar: Failed to get system consumer '{component_name}': {str(e)}")
         return f"❌ Error getting system consumer '{component_name}': {str(e)}"
 
 #------------------ Disk File Target Group Operations ------------------#
@@ -1544,7 +1530,7 @@ def _list_disk_file_target_groups(replication: bool = False) -> str:
         )
         return json.dumps(response, indent=2)
     except Exception as e:
-        logger.error(f"Failed to list disk file target groups: {str(e)}")
+        logger.error(f"bar: Failed to list disk file target groups: {str(e)}")
         return f"❌ Error listing disk file target groups: {str(e)}"
 
 
@@ -1557,7 +1543,7 @@ def _get_disk_file_target_group(target_group_name: str, replication: bool = Fals
         )
         return json.dumps(response, indent=2)
     except Exception as e:
-        logger.error(f"Failed to get disk file target group '{target_group_name}': {str(e)}")
+        logger.error(f"bar: Failed to get disk file target group '{target_group_name}': {str(e)}")
         return f"❌ Error getting disk file target group '{target_group_name}': {str(e)}"
 
 
@@ -1571,7 +1557,7 @@ def _create_disk_file_target_group(target_group_config: str, replication: bool =
         except json.JSONDecodeError as e:
             return f"❌ Error: Invalid JSON in target_group_config: {str(e)}"
 
-        logger.info(f"Creating target disk file system '{target_group_name}' via DSA API")
+        logger.info(f"bar: Creating target disk file system '{target_group_name}' via DSA API")
 
         response = dsa_client._make_request(
             method="POST",
@@ -1580,7 +1566,7 @@ def _create_disk_file_target_group(target_group_config: str, replication: bool =
         )
         return json.dumps(response, indent=2)
     except Exception as e:
-        logger.error(f"Failed to create disk file target group: {str(e)}")
+        logger.error(f"bar: Failed to create disk file target group: {str(e)}")
         return f"❌ Error creating disk file target group: {str(e)}"
 
 
@@ -1593,7 +1579,7 @@ def _enable_disk_file_target_group(target_group_name: str) -> str:
         )
         return json.dumps(response, indent=2)
     except Exception as e:
-        logger.error(f"Failed to enable disk file target group '{target_group_name}': {str(e)}")
+        logger.error(f"bar: Failed to enable disk file target group '{target_group_name}': {str(e)}")
         return f"❌ Error enabling disk file target group '{target_group_name}': {str(e)}"
 
 
@@ -1606,7 +1592,7 @@ def _disable_disk_file_target_group(target_group_name: str) -> str:
         )
         return json.dumps(response, indent=2)
     except Exception as e:
-        logger.error(f"Failed to disable disk file target group '{target_group_name}': {str(e)}")
+        logger.error(f"bar: Failed to disable disk file target group '{target_group_name}': {str(e)}")
         return f"❌ Error disabling disk file target group '{target_group_name}': {str(e)}"
 
 
@@ -1623,7 +1609,7 @@ def _delete_disk_file_target_group(
         )
         return json.dumps(response, indent=2)
     except Exception as e:
-        logger.error(f"Failed to delete disk file target group '{target_group_name}': {str(e)}")
+        logger.error(f"bar: Failed to delete disk file target group '{target_group_name}': {str(e)}")
         return f"❌ Error deleting disk file target group '{target_group_name}': {str(e)}"
 
 
@@ -1654,7 +1640,7 @@ def manage_dsa_disk_file_target_groups(
         JSON string with operation results
     """
     try:
-        logger.info(f"Managing DSA disk file target groups - operation: {operation}")
+        logger.info(f"bar: Managing DSA disk file target groups - operation: {operation}")
 
         if operation == "list":
             return _list_disk_file_target_groups(replication)
@@ -1691,7 +1677,7 @@ def manage_dsa_disk_file_target_groups(
             }, indent=2)
 
     except Exception as e:
-        logger.error(f"Error in manage_dsa_disk_file_target_groups: {e}")
+        logger.error(f"bar: Error in manage_dsa_disk_file_target_groups: {e}")
         return json.dumps({
             "status": "error",
             "data": f"❌ Error in disk file target group operation: {str(e)}"
@@ -1715,7 +1701,7 @@ def _list_jobs(bucket_size: int = 100, bucket: int = 1, job_type: str = "*%",
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to list jobs: {str(e)}")
+        logger.error(f"bar: Failed to list jobs: {str(e)}")
         return f"❌ Error listing jobs: {str(e)}"
 
 
@@ -1729,7 +1715,7 @@ def _get_job(job_name: str) -> str:
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to get job '{job_name}': {str(e)}")
+        logger.error(f"bar: Failed to get job '{job_name}': {str(e)}")
         return f"❌ Error getting job '{job_name}': {str(e)}"
 
 
@@ -1744,7 +1730,7 @@ def _create_job(job_config: dict) -> str:
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to create job: {str(e)}")
+        logger.error(f"bar: Failed to create job: {str(e)}")
         return f"❌ Error creating job: {str(e)}"
 
 
@@ -1759,7 +1745,7 @@ def _update_job(job_config: dict) -> str:
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to update job: {str(e)}")
+        logger.error(f"bar: Failed to update job: {str(e)}")
         return f"❌ Error updating job: {str(e)}"
 
 
@@ -1774,7 +1760,7 @@ def _run_job(job_config: dict) -> str:
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to run job: {str(e)}")
+        logger.error(f"bar: Failed to run job: {str(e)}")
         return f"❌ Error running job: {str(e)}"
 
 
@@ -1788,7 +1774,7 @@ def _get_job_status(job_name: str) -> str:
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to get job status for '{job_name}': {str(e)}")
+        logger.error(f"bar: Failed to get job status for '{job_name}': {str(e)}")
         return f"❌ Error getting job status for '{job_name}': {str(e)}"
 
 
@@ -1803,7 +1789,7 @@ def _retire_job(job_name: str, retired: bool = True) -> str:
 
     except Exception as e:
         action = "retire" if retired else "unretire"
-        logger.error(f"Failed to {action} job '{job_name}': {str(e)}")
+        logger.error(f"bar: Failed to {action} job '{job_name}': {str(e)}")
         return f"❌ Error {action}ing job '{job_name}': {str(e)}"
 
 
@@ -1817,7 +1803,7 @@ def _delete_job(job_name: str) -> str:
         return json.dumps(response, indent=2)
 
     except Exception as e:
-        logger.error(f"Failed to delete job '{job_name}': {str(e)}")
+        logger.error(f"bar: Failed to delete job '{job_name}': {str(e)}")
         return f"❌ Error deleting job '{job_name}': {str(e)}"
 
 
@@ -1837,7 +1823,7 @@ def manage_job_operations(operation: str, job_name: str = None, job_config: str 
     import json
 
     try:
-        logger.info(f"DSA Job Operation: {operation}")
+        logger.info(f"bar: DSA Job Operation: {operation}")
 
         if operation == "list":
             # List all jobs with default parameters
@@ -1900,7 +1886,7 @@ def manage_job_operations(operation: str, job_name: str = None, job_config: str 
             return f"❌ Error: Unknown operation '{operation}'. Available operations: {', '.join(available_operations)}"
 
     except Exception as e:
-        logger.error(f"Failed to execute job operation '{operation}': {str(e)}")
+        logger.error(f"bar: Failed to execute job operation '{operation}': {str(e)}")
         return f"❌ Error executing job operation '{operation}': {str(e)}"
 
 
@@ -1935,7 +1921,7 @@ def handle_bar_manageDsaDiskFileSystem(
     Returns:
         ResponseType: formatted response with operation results + metadata
     """
-    logger.debug(f"Tool: handle_bar_manageDsaDiskFileSystem: Args: operation: {operation}, file_system_path: {file_system_path}, max_files: {max_files}")
+    logger.debug(f"bar: Tool: handle_bar_manageDsaDiskFileSystem: Args: operation: {operation}, file_system_path: {file_system_path}, max_files: {max_files}")
 
     try:
         # Run the synchronous operation
@@ -1953,11 +1939,11 @@ def handle_bar_manageDsaDiskFileSystem(
             "success": True
         }
 
-        logger.debug(f"Tool: handle_bar_manageDsaDiskFileSystem: metadata: {metadata}")
+        logger.debug(f"bar: Tool: handle_bar_manageDsaDiskFileSystem: metadata: {metadata}")
         return create_response(result, metadata)
 
     except Exception as e:
-        logger.error(f"Error in handle_bar_manageDsaDiskFileSystem: {e}")
+        logger.error(f"bar: Error in handle_bar_manageDsaDiskFileSystem: {e}")
         error_result = f"❌ Error in DSA disk file system operation: {str(e)}"
         metadata = {
             "tool_name": "bar_manageDsaDiskFileSystem",
@@ -2004,9 +1990,9 @@ def handle_bar_manageAWSS3Operations(
     Returns:
         ResponseType: formatted response with operation results + metadata
     """
-    logger.info("handle_bar_manageAWSS3Operations called with operation=%s, accessId=%s, acctName=%s", operation, accessId, acctName)
-    logger.debug(f"Tool: handle_bar_manageAWSS3Operations: Args: operation: {operation}, accessId: {accessId}, accessKey: {accessKey}, bucketsByRegion: {bucketsByRegion}, acctName: {acctName}")
-    logger.debug(f"[DEBUG] bucketsByRegion type: {type(bucketsByRegion)} value: {bucketsByRegion}")
+    logger.info("bar: handle_bar_manageAWSS3Operations called with operation=%s, accessId=%s, acctName=%s", operation, accessId, acctName)
+    logger.debug(f"bar: Tool: handle_bar_manageAWSS3Operations: Args: operation: {operation}, accessId: {accessId}, accessKey: {accessKey}, bucketsByRegion: {bucketsByRegion}, acctName: {acctName}")
+    logger.debug(f"bar: bucketsByRegion type: {type(bucketsByRegion)} value: {bucketsByRegion}")
     try:
         # Run the synchronous operation
         result = manage_AWS_S3_backup_configurations(
@@ -2031,10 +2017,10 @@ def handle_bar_manageAWSS3Operations(
             "acctName": acctName,
             "success": True
         }
-        logger.debug(f"Tool: handle_bar_manageAWSS3Operations: metadata: {metadata}")
+        logger.debug(f"bar: Tool: handle_bar_manageAWSS3Operations: metadata: {metadata}")
         return create_response(result, metadata)
     except Exception as e:
-        logger.error(f"Error in handle_bar_manageAWSS3Operations: {e}")
+        logger.error(f"bar: Error in handle_bar_manageAWSS3Operations: {e}")
         error_result = f"❌ Error in DSA AWS S3 operation: {str(e)}"
         metadata = {
             "tool_name": "bar_manageAWSS3Operations",
@@ -2083,7 +2069,7 @@ def handle_bar_manageMediaServer(
     Returns:
         ResponseType: formatted response with media server operation results + metadata
     """
-    logger.debug(f"Tool: handle_bar_manageMediaServer: Args: operation: {operation}, server_name: {server_name}, port: {port}")
+    logger.debug(f"bar: Tool: handle_bar_manageMediaServer: Args: operation: {operation}, server_name: {server_name}, port: {port}")
 
     try:
         # Validate operation
@@ -2118,10 +2104,10 @@ def handle_bar_manageMediaServer(
             "server_name": server_name,
             "success": True
         }
-        logger.debug(f"Tool: handle_bar_manageMediaServer: metadata: {metadata}")
+        logger.debug(f"bar: Tool: handle_bar_manageMediaServer: metadata: {metadata}")
         return create_response(result, metadata)
     except Exception as e:
-        logger.error(f"Error in handle_bar_manageMediaServer: {e}")
+        logger.error(f"bar: Error in handle_bar_manageMediaServer: {e}")
         error_result = f"❌ Error in DSA media server operation: {str(e)}"
         metadata = {
             "tool_name": "bar_manageMediaServer",
@@ -2172,7 +2158,7 @@ def handle_bar_manageTeradataSystem(
         Dict containing the result and metadata
     """
     try:
-        logger.debug(f"Tool: handle_bar_manageTeradataSystem: Args: operation: {operation}, system_name: {system_name}")
+        logger.debug(f"bar: Tool: handle_bar_manageTeradataSystem: Args: operation: {operation}, system_name: {system_name}")
 
         # Validate operation
         valid_operations = [
@@ -2211,11 +2197,11 @@ def handle_bar_manageTeradataSystem(
         if component_name:
             metadata["component_name"] = component_name
 
-        logger.debug(f"Tool: handle_bar_manageTeradataSystem: metadata: {metadata}")
+        logger.debug(f"bar: Tool: handle_bar_manageTeradataSystem: metadata: {metadata}")
         return create_response(result, metadata)
 
     except Exception as e:
-        logger.error(f"Error in handle_bar_manageTeradataSystem: {e}")
+        logger.error(f"bar: Error in handle_bar_manageTeradataSystem: {e}")
         error_result = f"❌ Error in DSA Teradata system operation: {str(e)}"
         metadata = {
             "tool_name": "bar_manageTeradataSystem",
@@ -2301,7 +2287,7 @@ def handle_bar_manageDiskFileTargetGroup(
         JSON string containing the operation results and status
     """
     try:
-        logger.info(f"BAR Disk File Target Group Management - Operation: {operation}")
+        logger.info(f"bar: BAR Disk File Target Group Management - Operation: {operation}")
 
         result = manage_dsa_disk_file_target_groups(
             operation=operation,
@@ -2325,11 +2311,11 @@ def handle_bar_manageDiskFileTargetGroup(
         if delete_all_data:
             metadata["delete_all_data"] = delete_all_data
 
-        logger.debug(f"Tool: handle_bar_manageDiskFileTargetGroup: metadata: {metadata}")
+        logger.debug(f"bar: Tool: handle_bar_manageDiskFileTargetGroup: metadata: {metadata}")
         return create_response(result, metadata)
 
     except Exception as e:
-        logger.error(f"Error in handle_bar_manageDiskFileTargetGroup: {e}")
+        logger.error(f"bar: Error in handle_bar_manageDiskFileTargetGroup: {e}")
         error_result = f"❌ Error in DSA disk file target group operation: {str(e)}"
         metadata = {
             "tool_name": "bar_manageDiskFileTargetGroup",
@@ -2780,7 +2766,7 @@ def handle_bar_manageJob(
         8. Suggest using status operation to monitor job progress after running
     """
     try:
-        logger.debug(f"Tool: bar_manageJob: Args: operation: {operation}, job_name: {job_name}")
+        logger.debug(f"bar: Tool: bar_manageJob: Args: operation: {operation}, job_name: {job_name}")
 
         # Validate operation
         valid_operations = [
@@ -2815,11 +2801,11 @@ def handle_bar_manageJob(
         if job_config:
             metadata["job_config"] = job_config
 
-        logger.debug(f"Tool: bar_manageJob: metadata: {metadata}")
+        logger.debug(f"bar: Tool: bar_manageJob: metadata: {metadata}")
         return create_response(result, metadata)
 
     except Exception as e:
-        logger.error(f"Error in bar_manageJob: {e}")
+        logger.error(f"bar: Error in bar_manageJob: {e}")
         error_result = f"❌ Error in DSA job management operation: {str(e)}"
         metadata = {
             "tool_name": "bar_manageJob",

@@ -72,7 +72,7 @@ class DSAClient:
         if not self.base_url.endswith('/'):
             self.base_url += '/'
 
-        logger.info(f"Initialized DSA client for {self.base_url}")
+        logger.info(f"bar: Initialized DSA client for {self.base_url}")
 
     def _get_auth(self) -> tuple | None:
         """Get authentication credentials if available"""
@@ -119,7 +119,7 @@ class DSAClient:
         # Prepare authentication
         auth = self._get_auth()
 
-        logger.debug(f"Making {method} request to {url} with params: {params}")
+        logger.debug(f"bar: Making {method} request to {url} with params: {params}")
 
         try:
             response = requests.request(
@@ -132,31 +132,31 @@ class DSAClient:
                 verify=self.verify_ssl,
                 timeout=self.timeout
             )
-            logger.debug(f"Response status: {response.status_code}")
+            logger.debug(f"bar: Response status: {response.status_code}")
             # Handle authentication errors
             if response.status_code == RETURN_401:
                 raise DSAAuthenticationError("Authentication failed - check username and password")
             # Handle other client/server errors
             if response.status_code >= RETURN_400:
-                error_msg = f"DSA API error: {response.status_code} - {response.text}"
+                error_msg = f"bar: DSA API error: {response.status_code} - {response.text}"
                 logger.error(error_msg)
                 raise DSAAPIError(error_msg)
             # Parse JSON response
             try:
                 return response.json()
             except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse JSON response: {e}")
+                logger.error(f"bar: Failed to parse JSON response: {e}")
                 raise DSAAPIError(f"Invalid JSON response from DSA API: {e}") from e
         except requests.exceptions.ConnectionError as e:
-            error_msg = f"Failed to connect to DSA server at {url}: {e}"
+            error_msg = f"bar: Failed to connect to DSA server at {url}: {e}"
             logger.error(error_msg)
             raise DSAConnectionError(error_msg) from e
         except requests.exceptions.Timeout as e:
-            error_msg = f"Request timeout connecting to DSA server: {e}"
+            error_msg = f"bar: Request timeout connecting to DSA server: {e}"
             logger.error(error_msg)
             raise DSAConnectionError(error_msg) from e
         except requests.exceptions.RequestException as e:
-            error_msg = f"HTTP error communicating with DSA server: {e}"
+            error_msg = f"bar: HTTP error communicating with DSA server: {e}"
             logger.error(error_msg)
             raise DSAConnectionError(error_msg) from e
 
