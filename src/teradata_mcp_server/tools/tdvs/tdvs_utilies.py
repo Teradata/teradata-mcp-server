@@ -1,21 +1,15 @@
-import os
 import logging
-import requests
-
-
-from typing import Union
+import os
 from functools import lru_cache
+from typing import Union
 from urllib.parse import urlparse
+
+import requests
 from teradatagenai import VSManager
 from teradataml import create_context, get_context, set_auth_token
 
 from ..td_connect import TDConn
-from .constants import (
-    TD_VS_BASE_URL,
-    TD_PAT_TOKEN,
-    TD_PEM_FILE,
-    DATABASE_URI
-)
+from .constants import DATABASE_URI, TD_PAT_TOKEN, TD_PEM_FILE, TD_VS_BASE_URL
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 log_level = logging._nameToLevel[LOG_LEVEL]
@@ -31,7 +25,7 @@ def create_teradataml_context():
     td_conn = TDConn()
     if DATABASE_URI is None:
         raise ValueError("DATABASE_URI environment variable is not set.")
-    
+
     conn_url = urlparse(DATABASE_URI)
     if get_context() is None:
         create_context(host=conn_url.hostname,
@@ -43,7 +37,7 @@ def create_teradataml_context():
 
     if TD_VS_BASE_URL is None:
         raise ValueError("TD_BASE_URL environment variable is not set.")
-    
+
     logger.info(f"Vector Store base URL: {TD_VS_BASE_URL}")
     if TD_PAT_TOKEN is not None and TD_PEM_FILE is not None:
         set_auth_token(

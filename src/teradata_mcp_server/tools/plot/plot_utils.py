@@ -1,5 +1,6 @@
-import logging
 import json
+import logging
+
 from teradata_mcp_server.tools.utils import create_response
 
 # Define the logger.
@@ -54,17 +55,19 @@ def get_plot_json_data(conn, table_name, labels, columns, chart_type='line'):
 
     # For polar plot, every dataset needs different colors.
     if chart_type in ('polar', 'pie'):
-        for i, dataset in enumerate(datasets_):
+        for _i, dataset in enumerate(datasets_):
             # Remove borderColor and add backgroundColor
             dataset.pop('borderColor', None)
             dataset['backgroundColor'] = colors
 
-    chart_data = {"labels": [str(l) for l in labels],
-                  "datasets": datasets_}
+    chart_data = {
+        "labels": [str(L) for L in labels],
+        "datasets": datasets_
+    }
     logger.debug("Chart data: %s", json.dumps(chart_data, indent=2))
 
     return create_response(data=chart_data, metadata={
-            "tool_description": "chart js {} plot data".format(chart_type),
+            "tool_description": f"chart js {chart_type} plot data",
             "table_name": table_name,
             "labels": labels,
             "columns": columns
@@ -76,7 +79,7 @@ def get_radar_plot_json_data(conn, table_name, labels, columns):
     Helper function to fetch data from a Teradata table and formats it for plotting.
     Right now, designed only to support line plots from chart.js .
     """
-    logger.debug(f"Tool: get_json_data_for_plotting")
+    logger.debug("Tool: get_json_data_for_plotting")
     # Define the colors first.
     border_colors = [
         'rgb(255, 99, 132)',
@@ -138,8 +141,10 @@ def get_radar_plot_json_data(conn, table_name, labels, columns):
             "pointHoverBorderColor": point_background_color[i % len(point_background_color)]
         })
 
-    chart_data = {"labels": [str(l) for l in labels],
-                  "datasets": datasets_}
+    chart_data = {
+        "labels": [str(L) for L in labels],
+        "datasets": datasets_
+    }
     logger.debug("Chart data: %s", json.dumps(chart_data, indent=2))
 
     return create_response(data=chart_data, metadata={

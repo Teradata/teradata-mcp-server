@@ -22,7 +22,7 @@ from .queryband import build_queryband, sanitize_qb_value  # noqa: F401
 # -------------------- Serialization & response helpers -------------------- #
 def serialize_teradata_types(obj: Any) -> Any:
     """Convert Teradata-specific types to JSON serializable formats."""
-    if isinstance(obj, (date, datetime)):
+    if isinstance(obj, date | datetime):
         return obj.isoformat()
     if isinstance(obj, Decimal):
         return float(obj)
@@ -54,7 +54,7 @@ def create_response(data: Any, metadata: dict[str, Any] | None = None, error: di
 
 
 # ------------------------------ Auth helpers ------------------------------ #
-def parse_auth_header(auth_header: Optional[str]) -> tuple[str, str]:
+def parse_auth_header(auth_header: str | None) -> tuple[str, str]:
     """Parse an HTTP Authorization header into (scheme, value).
 
     Returns ("", "") if header is missing or malformed. Scheme is lowercased
@@ -69,7 +69,7 @@ def parse_auth_header(auth_header: Optional[str]) -> tuple[str, str]:
         return "", ""
 
 
-def compute_auth_token_sha256(auth_header: Optional[str]) -> Optional[str]:
+def compute_auth_token_sha256(auth_header: str | None) -> str | None:
     """Return a hex SHA-256 over the value portion of Authorization header."""
     scheme, value = parse_auth_header(auth_header)
     if not value:
@@ -82,7 +82,7 @@ def compute_auth_token_sha256(auth_header: Optional[str]) -> Optional[str]:
         return None
 
 
-def parse_basic_credentials(b64_value: str) -> tuple[Optional[str], Optional[str]]:
+def parse_basic_credentials(b64_value: str) -> tuple[str | None, str | None]:
     """Decode a Basic credential value into (username, secret)."""
     try:
         raw = base64.b64decode(b64_value).decode("utf-8")
@@ -98,7 +98,7 @@ def parse_basic_credentials(b64_value: str) -> tuple[Optional[str], Optional[str
         return None, None
 
 
-def infer_logmech_from_header(auth_header: Optional[str], default_basic_logmech: str = "LDAP") -> tuple[str, str]:
+def infer_logmech_from_header(auth_header: str | None, default_basic_logmech: str = "LDAP") -> tuple[str, str]:
     """Infer LOGMECH and the credential payload based on the header.
 
     Returns (logmech, payload) where:
@@ -114,7 +114,7 @@ def infer_logmech_from_header(auth_header: Optional[str], default_basic_logmech:
     return "", ""
 
 
-def execute_analytic_function(function_name: str, tables_to_df=[], **kwargs):
+def execute_analytic_function(function_name: str, tables_to_df=None, **kwargs):
     """
     Executes the specified analytic function with the provided keyword arguments.
 
@@ -125,23 +125,25 @@ def execute_analytic_function(function_name: str, tables_to_df=[], **kwargs):
     """
     # Log the received keyword arguments. But make sure not to log sensitive information.
     # Hence remove 'headers' from print.
+    if tables_to_df is None:
+        tables_to_df = []
     func_params = {k: v for k, v in kwargs.items() if k != 'headers'}
 
     # Analytic functions are called with 'tdml_' prefix. Remove it.
     function_name = function_name[5:]
 
     logger = logging.getLogger("teradata_mcp_server.utils")
-    logger.info("received kwargs: {} for the function {}".format(func_params, function_name))
+    logger.info(f"received kwargs: {func_params} for the function {function_name}")
 
     # Import the function dynamically based on its name
 
-    from teradataml import DataFrame, in_schema, copy_to_sql
-    from teradataml.common.utils import UtilFuncs
     import teradataml as tdml
+    from teradataml import DataFrame, copy_to_sql, in_schema
+    from teradataml.common.utils import UtilFuncs
     # Teradataml accepts DataFrame as input, so we need to convert the table_name
     # and object to DataFrame. Some of the functions accepts object also. If object
     # is provided, we convert it to DataFrame as well.
-    db_name = kwargs.get('database_name', None)
+    db_name = kwargs.get('database_name')
     for arg_name in tables_to_df:
 
         table_name = kwargs.get(arg_name)
@@ -263,7 +265,7 @@ def get_anlytic_function_signature(params):
     # Generate function argument string.
     func_args_str = ", ".join(
         [
-            "{} = {}".format(param, '"{}"'.format(value) if isinstance(value, str) else value)
+            "{} = {}".format(param, f'"{value}"' if isinstance(value, str) else value)
             for param, value in function_params.items()
         ]
     )
@@ -282,7 +284,7 @@ def {analytic_function}({func_args_str}):
     Most Importantly:
           Never add optional arguments while function calling, unless specified in user query.
           Never include empty list in any of the function arguments.
-          For any argument, user can pass multiple values. 
+          For any argument, user can pass multiple values.
           Do not consider a comma seperated values in such case.
           Generate a list of values in such case and pass it as argument.
     """

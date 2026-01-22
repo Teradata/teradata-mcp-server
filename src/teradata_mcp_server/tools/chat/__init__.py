@@ -1,2 +1,2 @@
-from .chat_tools import *
 from .chat_resources import *
+from .chat_tools import *

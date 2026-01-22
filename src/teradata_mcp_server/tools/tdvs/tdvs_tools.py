@@ -14,34 +14,28 @@
 #  LLMs can interact with external systems, perform computations, and take       #
 #  actions in the real world.                                                    #
 # ------------------------------------------------------------------------------ #
-import os
-import logging
 import json
-import yaml
-import requests
-import pandas as pd
-
+import logging
+import os
 from typing import Union
-from teradatagenai import VSManager, VectorStore
+
+import pandas as pd
+import requests
+import yaml
+from teradatagenai import VectorStore, VSManager
 from teradataml import remove_context
-from teradatagenai import VSManager, VectorStore
 from teradatasql import TeradataConnection
 
-from .tdvs_utilies import create_teradataml_context
 from teradata_mcp_server.tools.utils import create_response
 
-from .types import (
-    VectorStoreSimilaritySearch,
-    VectorStoreAsk,
-    VectorStoreCreate,
-    VectorStoreUpdate
-)
+from .tdvs_utilies import create_teradataml_context
+from .types import VectorStoreAsk, VectorStoreCreate, VectorStoreSimilaritySearch, VectorStoreUpdate
 
 logger = logging.getLogger("teradata_mcp_server")
 
 # Load YAML
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-with open(f"{BASE_DIR}/tdvs_prompts.yaml", "r") as file:
+with open(f"{BASE_DIR}/tdvs_prompts.yaml") as file:
     vs_prompts = yaml.safe_load(file)
 
 def handle_tdvs_get_health(conn: TeradataConnection, *args,
@@ -57,7 +51,7 @@ def handle_tdvs_get_health(conn: TeradataConnection, *args,
     except Exception as e:
         logger.error(f"Error getting vector store health: {e}")
         return create_response({"error": str(e)}, {"tool_name": "tdvs_get_health"})
-    
+
 
 def handle_tdvs_list(conn: TeradataConnection, *args,
     **kwargs,):
@@ -74,8 +68,8 @@ def handle_tdvs_list(conn: TeradataConnection, *args,
     except Exception as e:
         logger.error(f"Error listing vector stores: {e}")
         return create_response({"error": str(e)}, {"tool_name": "tdvs_list"})
-    
-            
+
+
 def handle_tdvs_get_details(conn: TeradataConnection, vs_name: str, *args,
     **kwargs):
     try:
@@ -89,7 +83,7 @@ def handle_tdvs_get_details(conn: TeradataConnection, vs_name: str, *args,
     except Exception as e:
         logger.error(f"Error getting vector store details for '{vs_name}': {e}")
         return create_response({"error": str(e)}, {"tool_name": "tdvs_get_details", "vs_name": vs_name})
-    
+
 
 def handle_tdvs_destroy(conn: TeradataConnection, vs_name: str, *args,
     **kwargs):
@@ -122,8 +116,8 @@ def handle_tdvs_grant_user_permission(conn: TeradataConnection, vs_name: str, us
     except Exception as e:
         logger.error(f"Error granting permission to user '{user_name}' on vector store '{vs_name}': {e}")
         return create_response({"error": str(e)}, {"tool_name": "tdvs_grant_user_permission", "vs_name": vs_name, "user_name": user_name})
-            
-            
+
+
 def handle_tdvs_revoke_user_permission(conn: TeradataConnection, vs_name: str, user_name: str, permission: str, *args,
     **kwargs):
     try:
@@ -141,7 +135,7 @@ def handle_tdvs_revoke_user_permission(conn: TeradataConnection, vs_name: str, u
     except Exception as e:
         logger.error(f"Error revoking permission from user '{user_name}' on vector store '{vs_name}': {e}")
         return create_response({"error": str(e)}, {"tool_name": "tdvs_revoke_user_permission", "vs_name": vs_name, "user_name": user_name})
-    
+
 
 def handle_tdvs_similarity_search(conn: TeradataConnection, vs_name: str, vs_similaritysearch: VectorStoreSimilaritySearch, *args,
     **kwargs):
@@ -154,8 +148,8 @@ def handle_tdvs_similarity_search(conn: TeradataConnection, vs_name: str, vs_sim
     except Exception as e:
         logger.error(f"Error performing similarity search on vector store '{vs_name}': {e}")
         return create_response({"error": str(e)}, {"tool_name": "tdvs_similarity_search", "vs_name": vs_name})
-    
-    
+
+
 def handle_tdvs_ask(conn: TeradataConnection, vs_name: str, vs_ask: VectorStoreAsk, *args,
     **kwargs):
     try:
@@ -168,8 +162,8 @@ def handle_tdvs_ask(conn: TeradataConnection, vs_name: str, vs_ask: VectorStoreA
     except Exception as e:
         logger.error(f"Error asking vector store '{vs_name}': {e}")
         return create_response({"error": str(e)}, {"tool_name": "tdvs_ask", "vs_name": vs_name})
-            
-            
+
+
 def handle_tdvs_create(conn: TeradataConnection, vs_name: str, vs_create: VectorStoreCreate, *args,
     **kwargs):
     try:
@@ -187,7 +181,7 @@ def handle_tdvs_create(conn: TeradataConnection, vs_name: str, vs_create: Vector
     except Exception as e:
         logger.error(f"Error creating vector store '{vs_name}': {e}")
         return create_response({"error": str(e)}, {"tool_name": "tdvs_create", "vs_name": vs_name})
-            
+
 
 def handle_tdvs_update(conn: TeradataConnection, vs_name: str, vs_update: VectorStoreUpdate, *args,
     **kwargs):
@@ -198,7 +192,7 @@ def handle_tdvs_update(conn: TeradataConnection, vs_name: str, vs_update: Vector
         for(key, value) in vs_update.model_dump().items():
             if value is not None:
                 update_kwargs[key] = value
-        
+
         response = vs.update(**update_kwargs)
         metadata = { "tool_name": "tdvs_update" }
         return create_response(response, metadata)

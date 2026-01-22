@@ -1,21 +1,21 @@
 import logging
-from typing import Optional, TYPE_CHECKING
-from urllib.parse import urlparse, quote_plus
+from typing import TYPE_CHECKING, Optional
+from urllib.parse import quote_plus, urlparse
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
-from sqlalchemy.pool import QueuePool, NullPool
+from sqlalchemy.pool import NullPool, QueuePool
 
+from .auth_validation import (
+    AuthValidator,
+    InvalidTokenFormatError,
+    InvalidUsernameError,
+    RateLimiter,
+    RateLimitExceededError,
+)
 from .utils import (
     parse_auth_header,
     parse_basic_credentials,
-)
-from .auth_validation import (
-    AuthValidator,
-    RateLimiter,
-    InvalidUsernameError,
-    InvalidTokenFormatError,
-    RateLimitExceededError,
 )
 
 if TYPE_CHECKING:
@@ -34,14 +34,14 @@ class TDConn:
     def __init__(self, settings: Optional['Settings'] = None):
         """
         Initialize TDConn with configuration from Settings object.
-        
+
         Args:
             settings: Settings object containing database configuration
         """
         if settings is None:
             # Backward compatibility: create minimal settings from environment
             import os
-            
+
             # Fallback to environment variables if no settings provided
             self._rate_limiter = RateLimiter(
                 max_attempts=int(os.getenv("AUTH_RATE_LIMIT_ATTEMPTS", "5")),
@@ -52,7 +52,7 @@ class TDConn:
                 logger.warning("No database configuration provided, database connection will not be established.")
                 self.engine = None
                 return
-            
+
             logmech = os.getenv("LOGMECH", "TD2")
             pool_size = int(os.getenv("TD_POOL_SIZE", "5"))
             max_overflow = int(os.getenv("TD_MAX_OVERFLOW", "10"))
@@ -68,7 +68,7 @@ class TDConn:
                 logger.warning("No database URI specified in settings, database connection will not be established.")
                 self.engine = None
                 return
-            
+
             logmech = settings.logmech
             pool_size = settings.pool_size
             max_overflow = settings.max_overflow
@@ -116,7 +116,7 @@ class TDConn:
     # ------------------------------------------------------------------
     # Auth header parsing & validation (for AUTH_MODE=basic)
     # ------------------------------------------------------------------
-    def validate_auth_header(self, auth_header: str) -> Optional[str]:
+    def validate_auth_header(self, auth_header: str) -> str | None:
         """
         Validate an HTTP Authorization header against Teradata and return the
         database username (principal) to impersonate if valid, else None.
@@ -128,10 +128,10 @@ class TDConn:
           - If scheme == Bearer: treat value as a JWT and validate using
             LOGMECH=JWT with LOGDATA=token=<jwt>. The returned principal is
             the authenticated database user from the connection.
-        
+
         Raises:
           - RateLimitExceededError: If too many auth attempts from this client
-          - InvalidUsernameError: If username format is invalid  
+          - InvalidUsernameError: If username format is invalid
           - InvalidTokenFormatError: If token format is invalid
         """
         # Apply rate limiting
@@ -139,7 +139,7 @@ class TDConn:
         client_id = generate_client_id(auth_header)
         if not self._rate_limiter.is_allowed(client_id):
             raise RateLimitExceededError(self._rate_limiter.window_seconds)
-        
+
         scheme, value = parse_auth_header(auth_header)
         if not scheme or not value:
             return None
@@ -148,15 +148,15 @@ class TDConn:
             # Validate Basic token format first
             if not AuthValidator.validate_basic_token(value):
                 raise InvalidTokenFormatError("Invalid Basic authentication token format")
-                
+
             user, secret = parse_basic_credentials(value)
             if not user or not secret:
                 return None
-                
+
             # Validate username format
             if not AuthValidator.validate_username(user):
                 raise InvalidUsernameError(f"Invalid username format: {user}")
-            
+
             result = self._validate_basic_credentials(user, secret, self._default_basic_logmech)
             if result:
                 # Clear rate limit on successful authentication
@@ -167,14 +167,14 @@ class TDConn:
             token = value
             if not token:
                 return None
-                
+
             # Validate JWT format first
             if not AuthValidator.validate_jwt_format(token):
                 raise InvalidTokenFormatError("Invalid JWT token format")
-            
+
             result = self._validate_jwt_token(token)
             if result:
-                # Clear rate limit on successful authentication  
+                # Clear rate limit on successful authentication
                 self._rate_limiter.clear_client(client_id)
             return result
 
@@ -182,7 +182,7 @@ class TDConn:
         return None
 
     # ----------------- credential validation against TD ---------------------
-    def _validate_basic_credentials(self, user: str, secret: str, logmech: str) -> Optional[str]:
+    def _validate_basic_credentials(self, user: str, secret: str, logmech: str) -> str | None:
         """Validate user/password credentials against Teradata database.
         Uses the same host/port as the service account, but connects to the user's default database.
         Returns the validated username on success, None otherwise.
@@ -206,7 +206,7 @@ class TDConn:
             logger.debug(f"Basic credential validation failed for user '{user}' with LOGMECH={logmech}: {e}")
             return None
 
-    def _validate_jwt_token(self, jwt_token: str) -> Optional[str]:
+    def _validate_jwt_token(self, jwt_token: str) -> str | None:
         """Validate JWT token against Teradata database and return authenticated username.
         Uses LOGMECH=JWT with the token passed via LOGDATA.
         Returns the database username of the authenticated user, None on failure.

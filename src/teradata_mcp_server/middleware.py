@@ -14,8 +14,9 @@ Behavior by transport:
 import hashlib
 import os
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Optional, Callable
+from typing import Optional
 from uuid import uuid4
 
 from fastmcp.server.dependencies import get_http_headers
@@ -29,13 +30,13 @@ class RequestContext:
     session_id: str | None = None
     forwarded_for: str | None = None
     user_agent: str | None = None
-    tenant: Optional[str] = None
+    tenant: str | None = None
     auth_scheme: str | None = None
     auth_token_sha256: str | None = None
-    user_id: Optional[str] = None
+    user_id: str | None = None
     client_session_id: str | None = None
     correlation_id: str | None = None
-    assume_user: Optional[str] = None
+    assume_user: str | None = None
 
 
 class RequestContextMiddleware(Middleware):
@@ -149,14 +150,16 @@ class RequestContextMiddleware(Middleware):
                     validated_user = tdconn.validate_auth_header(auth_hdr)
                 except Exception as e:
                     from teradata_mcp_server.tools.auth_validation import (
-                        RateLimitExceededError, InvalidUsernameError, InvalidTokenFormatError,
+                        InvalidTokenFormatError,
+                        InvalidUsernameError,
+                        RateLimitExceededError,
                     )
                     if isinstance(e, RateLimitExceededError):
                         self.logger.warning(f"Rate limit exceeded for auth attempt: {e}")
-                        raise PermissionError("Too many authentication attempts. Please try again later.")
-                    elif isinstance(e, (InvalidUsernameError, InvalidTokenFormatError)):
+                        raise PermissionError("Too many authentication attempts. Please try again later.") from e
+                    elif isinstance(e, InvalidUsernameError | InvalidTokenFormatError):
                         self.logger.warning(f"Invalid auth format: {e}")
-                        raise PermissionError("Invalid authentication format")
+                        raise PermissionError("Invalid authentication format") from e
                     else:
                         self.logger.error(f"Validation error in TDConn.validate_auth_header: {e}")
                         validated_user = None

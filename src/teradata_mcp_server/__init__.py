@@ -6,7 +6,7 @@ Lightweight MCP server tools for Teradata.
 """
 
 
-from importlib.metadata import version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError, version
 
 try:
     __version__ = version("teradata-mcp-server")

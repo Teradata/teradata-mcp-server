@@ -6,15 +6,16 @@
   2. All src/tools/*/*.yml + working directory *.yml (working dir wins)
 """
 
-import sys
 import json
 import logging
 import logging.config
 import logging.handlers
 import os
-from pathlib import Path
-from typing import Any, Dict, Optional
+import sys
 from importlib.resources import files as pkg_files
+from pathlib import Path
+from typing import Any
+
 import yaml
 
 logger = logging.getLogger("teradata_mcp_server")
@@ -47,7 +48,7 @@ class CustomJSONFormatter(logging.Formatter):
         return json.dumps(log_entry, ensure_ascii=False)
 
 
-def _default_log_dir(transport: str) -> Optional[str]:
+def _default_log_dir(transport: str) -> str | None:
     """Choose a default per-user log directory when not using stdio.
     Returns None for stdio to avoid writing logs when stdout is the protocol stream.
     """
@@ -104,7 +105,7 @@ def setup_logging(level: str = "WARNING", transport: str = "stdio") -> logging.L
         }
 
     logger_handlers = list(handlers.keys())
-    root_handlers = [h for h in handlers.keys() if h == "console"]  # only console for root
+    root_handlers = [h for h in handlers if h == "console"]  # only console for root
 
     log_config = {
         "version": 1,
@@ -137,6 +138,7 @@ def format_text_response(text: Any):
     Strings are pretty-printed if JSON; other values are stringified.
     """
     import json
+
     from mcp import types
 
     if isinstance(text, str):
@@ -186,7 +188,7 @@ def resolve_type_hint(type_hint):
 
 
 # -------------------- Configuration loading -------------------- #
-def load_profiles(working_dir: Optional[Path] = None) -> Dict[str, Any]:
+def load_profiles(working_dir: Path | None = None) -> dict[str, Any]:
     """
     Load profiles using the layered configuration strategy.
 
@@ -210,7 +212,7 @@ def load_profiles(working_dir: Optional[Path] = None) -> Dict[str, Any]:
     return profiles
 
 
-def load_all_objects(working_dir: Optional[Path] = None) -> Dict[str, Any]:
+def load_all_objects(working_dir: Path | None = None) -> dict[str, Any]:
     """
     Load all MCP objects (tools, prompts, etc.) using the layered configuration strategy.
 
@@ -275,31 +277,31 @@ def load_all_objects(working_dir: Optional[Path] = None) -> Dict[str, Any]:
     return objects
 
 
-def get_profile_config(profile_name: Optional[str] = None) -> Dict[str, Any]:
+def get_profile_config(profile_name: str | None = None) -> dict[str, Any]:
     """Get profile configuration or return all if no profile specified."""
     if not profile_name:
         return {'tool': ['.*'], 'prompt': ['.*'], 'resource': ['.*']}
-    
+
     profiles = load_profiles()
     if profile_name not in profiles:
         available = list(profiles.keys())
         raise ValueError(f"Profile '{profile_name}' not found. Available: {available}")
-    
+
     return profiles[profile_name]
 
 
-def get_profile_run_config(profile_name: Optional[str] = None) -> Dict[str, Any]:
+def get_profile_run_config(profile_name: str | None = None) -> dict[str, Any]:
     """Get the 'run' configuration section from a profile."""
     if not profile_name:
         return {}
-    
+
     profiles = load_profiles()
     if profile_name not in profiles:
         return {}
-    
+
     profile = profiles[profile_name]
     run_config = profile.get('run', {})
-    
+
     # Expand environment variables in run config values
     expanded_config = {}
     for key, value in run_config.items():
@@ -308,34 +310,34 @@ def get_profile_run_config(profile_name: Optional[str] = None) -> Dict[str, Any]
             expanded_config[key] = os.path.expandvars(value)
         else:
             expanded_config[key] = value
-    
+
     return expanded_config
 
 
-def apply_profile_defaults_to_env(profile_name: Optional[str] = None) -> None:
+def apply_profile_defaults_to_env(profile_name: str | None = None) -> None:
     """Apply profile run configuration to environment variables if not already set."""
     if not profile_name:
         return
-    
+
     profile_run_config = get_profile_run_config(profile_name)
     if not profile_run_config:
         return
-    
+
     import os
-    
+
     # Map profile run keys to environment variable names
     key_mapping = {
         'database_uri': 'DATABASE_URI',
-        'mcp_transport': 'MCP_TRANSPORT', 
+        'mcp_transport': 'MCP_TRANSPORT',
         'mcp_host': 'MCP_HOST',
         'mcp_port': 'MCP_PORT',
         'mcp_path': 'MCP_PATH',
         'logmech': 'LOGMECH',
     }
-    
+
     for run_key, run_value in profile_run_config.items():
         env_key = key_mapping.get(run_key, run_key.upper())
-        
+
         # Only set if environment variable is not already set
         if env_key not in os.environ:
             os.environ[env_key] = str(run_value)

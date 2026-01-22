@@ -4,11 +4,12 @@ import argparse
 import asyncio
 import os
 import signal
+
 from dotenv import load_dotenv
 
-from teradata_mcp_server.config import Settings, settings_from_env
-from teradata_mcp_server.app import create_mcp_app
 from teradata_mcp_server import __version__
+from teradata_mcp_server.app import create_mcp_app
+from teradata_mcp_server.config import Settings, settings_from_env
 
 
 def parse_args_to_settings() -> Settings:

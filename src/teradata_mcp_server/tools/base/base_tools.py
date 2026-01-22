@@ -76,7 +76,7 @@ def handle_base_databaseList(conn: TeradataConnection, *args, **kwargs):
     Returns:
       ResponseType: formatted response with query results + metadata
     """
-    logger.debug(f"Tool: handle_base_databaseList: Args: None")
+    logger.debug("Tool: handle_base_databaseList: Args: None")
 
     sql = "select DataBaseName, DECODE(DBKind, 'U', 'User', 'D','DataBase') as DBType, CommentString from dbc.DatabasesV dv where OwnerName <> 'PDCRADM'"
 

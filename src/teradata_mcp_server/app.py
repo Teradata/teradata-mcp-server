@@ -16,7 +16,9 @@ High-level architecture:
   request context when using HTTP.
 """
 import asyncio
+import contextlib
 import inspect
+import json
 import os
 import re
 from importlib.resources import files as pkg_files
@@ -24,22 +26,23 @@ from typing import Annotated, Any
 
 import yaml
 from fastmcp import FastMCP
-from fastmcp.prompts.prompt import TextContent, Message
-from pydantic import Field, BaseModel
-
-from teradata_mcp_server.config import Settings
-from teradata_mcp_server import utils as config_utils
-from teradata_mcp_server.utils import setup_logging, format_text_response, format_error_response, resolve_type_hint
-from teradata_mcp_server.middleware import RequestContextMiddleware
-from teradata_mcp_server.tools.utils.queryband import build_queryband
-from sqlalchemy.engine import Connection
+from fastmcp.prompts.prompt import Message, TextContent
 from fastmcp.server.dependencies import get_context
-from teradata_mcp_server.tools.utils import (get_dynamic_function_definition,
-                                             get_anlytic_function_signature,
-                                             convert_tdml_docstring_to_mcp_docstring,
-                                             execute_analytic_function,
-                                             get_partition_col_order_col_doc_string)
-import json
+from pydantic import BaseModel, Field
+from sqlalchemy.engine import Connection
+
+from teradata_mcp_server import utils as config_utils
+from teradata_mcp_server.config import Settings
+from teradata_mcp_server.middleware import RequestContextMiddleware
+from teradata_mcp_server.tools.utils import (
+    convert_tdml_docstring_to_mcp_docstring,
+    execute_analytic_function,
+    get_anlytic_function_signature,
+    get_dynamic_function_definition,
+    get_partition_col_order_col_doc_string,
+)
+from teradata_mcp_server.tools.utils.queryband import build_queryband
+from teradata_mcp_server.utils import format_error_response, format_text_response, resolve_type_hint, setup_logging
 
 
 def create_mcp_app(settings: Settings):
@@ -48,6 +51,7 @@ def create_mcp_app(settings: Settings):
 
     # Set global config directory for layered configuration loading
     from pathlib import Path
+
     from teradata_mcp_server import config_loader
     config_dir = Path(settings.config_dir).resolve() if settings.config_dir else Path.cwd()
     config_loader.set_global_config_dir(config_dir)
@@ -68,10 +72,10 @@ def create_mcp_app(settings: Settings):
     config = config_utils.get_profile_config(profile_name)
 
     # Feature flags from profiles
-    enableEFS = True if any(re.match(pattern, 'fs_*') for pattern in config.get('tool', [])) else False
-    enableTDVS = True if any(re.match(pattern, 'tdvs_*') for pattern in config.get('tool', [])) else False
-    enableBAR = True if any(re.match(pattern, 'bar_*') for pattern in config.get('tool', [])) else False
-    enableChat = True if any(re.match(pattern, 'chat_*') for pattern in config.get('tool', [])) else False
+    enable_efs = bool(any(re.match(pattern, 'fs_*') for pattern in config.get('tool', [])))
+    enable_tdvs = bool(any(re.match(pattern, 'tdvs_*') for pattern in config.get('tool', [])))
+    enable_bar = bool(any(re.match(pattern, 'bar_*') for pattern in config.get('tool', [])))
+    enable_chat = bool(any(re.match(pattern, 'chat_*') for pattern in config.get('tool', [])))
 
     # Initialize TD connection and optional teradataml/EFS context
     # Pass settings object to TDConn instead of just connection_url
@@ -80,7 +84,7 @@ def create_mcp_app(settings: Settings):
     enable_analytic_functions = profile_name and profile_name == 'dataScientist'
 
     fs_config = None
-    if enableEFS or enable_analytic_functions:
+    if enable_efs or enable_analytic_functions:
 
         try:
             import teradataml as tdml
@@ -103,25 +107,26 @@ def create_mcp_app(settings: Settings):
                 logger.warning("teradataml not installed; EFS tools will operate without a teradataml context")
         except (AttributeError, ImportError, ModuleNotFoundError) as e:
             logger.warning(f"Feature Store module not available - disabling EFS functionality: {e}")
-            enableEFS = False
+            enable_efs = False
 
-            
+
     # TeradataVectorStore connection (optional)
     tdvs = None
     if len(os.getenv("TD_BASE_URL", "").strip()) > 0:
         try:
             from teradata_mcp_server.tools.tdvs.tdvs_utilies import create_teradataml_context
             create_teradataml_context()
-            enableTDVS = True
+            enable_tdvs = True
         except Exception as e:
             logger.error(f"Unable to establish connection to Teradata Vector Store, disabling: {e}")
-            enableTDVS = False
+            enable_tdvs = False
 
     # BAR (Backup and Restore) system dependencies (optional)
-    if enableBAR:
+    if enable_bar:
         try:
             # Check for BAR system availability by importing required modules
             import requests
+
             from teradata_mcp_server.tools.bar.dsa_client import DSAClient
             # Verify DSA connection if environment variables are set
             dsa_base_url = os.getenv("DSA_BASE_URL")
@@ -131,13 +136,13 @@ def create_mcp_app(settings: Settings):
                 logger.info("BAR system configured with DSA connection")
             else:
                 logger.warning("BAR tools enabled but DSA connection not configured (missing DSA_BASE_URL or DSA_HOST/DSA_PORT) - disabling BAR functionality")
-                enableBAR = False
+                enable_bar = False
         except (AttributeError, ImportError, ModuleNotFoundError) as e:
             logger.warning(f"BAR system dependencies not available - disabling BAR functionality: {e}")
-            enableBAR = False
+            enable_bar = False
 
     # Chat Completion module validation (optional)
-    if enableChat:
+    if enable_chat:
         try:
             from teradata_mcp_server.tools.chat.chat_tools import load_chat_config
 
@@ -146,7 +151,7 @@ def create_mcp_app(settings: Settings):
             base_url = chat_config.get("base_url", "").strip()
             model = chat_config.get("model", "").strip()
             function_db = chat_config.get("databases", {}).get("function_db", "").strip()
-            
+
             if not base_url or not model:
                 logger.warning(
                     f"Chat completion config missing required parameters "
@@ -154,13 +159,13 @@ def create_mcp_app(settings: Settings):
                     f"model: {'set' if model else 'not set'}) - "
                     f"disabling chat completion functionality"
                 )
-                enableChat = False
+                enable_chat = False
             elif not function_db:
                 logger.warning(
                     "Chat completion config missing function database "
                     "(databases.function_db not set) - disabling chat completion functionality"
                 )
-                enableChat = False
+                enable_chat = False
             else:
                 # Tests 2 & 3: Check database function existence and permissions
                 # Only perform these if we can establish a connection
@@ -168,38 +173,38 @@ def create_mcp_app(settings: Settings):
                     # Check if connection is available
                     if not getattr(tdconn, "engine", None):
                         logger.info(
-                            f"Chat completion module config validated (base_url, model, function_db set). "
-                            f"Database checks (function existence and permissions) will be skipped in stdio mode - "
-                            f"they will be validated on first tool use."
+                            "Chat completion module config validated (base_url, model, function_db set). "
+                            "Database checks (function existence and permissions) will be skipped in stdio mode - "
+                            "they will be validated on first tool use."
                         )
                     else:
                         with tdconn.engine.connect() as conn:
                             from sqlalchemy import text
-                            
+
                             # Test 2: Check if CompleteChat function exists in configured database
                             check_function_sql = text(f"""
-                                SELECT 1 
-                                FROM DBC.FunctionsV 
-                                WHERE DatabaseName = '{function_db}' 
+                                SELECT 1
+                                FROM DBC.FunctionsV
+                                WHERE DatabaseName = '{function_db}'
                                 AND FunctionName = 'CompleteChat'
                             """)
                             result = conn.execute(check_function_sql)
                             function_exists = result.fetchone() is not None
-                            
+
                             if not function_exists:
                                 logger.warning(
                                     f"CompleteChat function not found in database '{function_db}' - "
                                     f"disabling chat completion functionality"
                                 )
-                                enableChat = False
+                                enable_chat = False
                             else:
                                 # Test 3: Check if current user has execute permission on CompleteChat
                                 # This includes: direct function grants, database-level grants, and role-based grants
-                                
+
                                 # First, get current username
                                 username_result = conn.execute(text("SELECT USER"))
                                 current_user = username_result.fetchone()[0]
-                                
+
                                 check_permission_sql = text(f"""
                                     SELECT 1
                                     FROM DBC.AllRightsV
@@ -215,14 +220,14 @@ def create_mcp_app(settings: Settings):
                                 """)
                                 result = conn.execute(check_permission_sql)
                                 has_permission = result.fetchone() is not None
-                                
+
                                 if not has_permission:
                                     logger.warning(
                                         f"User '{current_user}' does not have EXECUTE FUNCTION permission "
                                         f"on {function_db}.CompleteChat (checked direct grants, database-level grants, and role-based grants) - "
                                         f"disabling chat completion functionality"
                                     )
-                                    enableChat = False
+                                    enable_chat = False
                                 else:
                                     logger.info(
                                         f"Chat completion module validated successfully "
@@ -238,13 +243,13 @@ def create_mcp_app(settings: Settings):
                         f"Database validation skipped (connection not available at startup): {db_error}. "
                         f"Function existence and permissions will be validated on first tool use."
                     )
-                    
+
         except (AttributeError, ImportError, ModuleNotFoundError) as e:
             logger.warning(f"Chat completion module not available - disabling chat completion functionality: {e}")
-            enableChat = False
+            enable_chat = False
         except Exception as e:
             logger.warning(f"Error loading chat completion config - disabling chat completion functionality: {e}")
-            enableChat = False
+            enable_chat = False
 
     # Middleware (auth + request context)
     from teradata_mcp_server.tools.auth_cache import SecureAuthCache
@@ -254,14 +259,12 @@ def create_mcp_app(settings: Settings):
         nonlocal tdconn, fs_config
         if recreate:
             tdconn = td.TDConn(settings=settings)
-            if enableEFS:
+            if enable_efs:
                 try:
                     import teradataml as tdml
                     fs_config = td.FeatureStoreConfig()
-                    try:
+                    with contextlib.suppress(Exception):
                         tdml.create_context(tdsqlengine=tdconn.engine)
-                    except Exception:
-                        pass
                 except Exception:
                     pass
         return tdconn
@@ -473,11 +476,11 @@ def create_mcp_app(settings: Settings):
                 logger.debug(f"Skipping template tool: {tool_name}")
                 continue
             # Skip BAR tools if BAR functionality is disabled
-            if tool_name.startswith("bar_") and not enableBAR:
+            if tool_name.startswith("bar_") and not enable_bar:
                 logger.info(f"Skipping BAR tool: {tool_name} (BAR functionality disabled)")
                 continue
             # Skip chat completion tools if chat completion functionality is disabled
-            if tool_name.startswith("chat_") and not enableChat:
+            if tool_name.startswith("chat_") and not enable_chat:
                 logger.info(f"Skipping chat completion tool: {tool_name} (chat completion functionality disabled)")
                 continue
             wrapped = make_tool_wrapper(func)
@@ -498,7 +501,7 @@ def create_mcp_app(settings: Settings):
             # Connection is not mandatory for MCP server. If connection is not there, then
             # functions can not be added.
             if func_name not in tdml_processed_funcs:
-                logger.warning("Function {} is not available. Hence not adding it. ".format(func_name))
+                logger.warning(f"Function {func_name} is not available. Hence not adding it. ")
                 continue
 
             func_metadata = tdml.analytics.json_parser.json_store._JsonStore.get_function_metadata(func_name)
@@ -509,16 +512,16 @@ def create_mcp_app(settings: Settings):
             # Add partition_by parameters for func parameters.
             additional_args_docs = []
             for table in inp_data:
-                func_params["{}_partition_column".format(table)] = None
-                func_params["{}_order_column".format(table)] = None
+                func_params[f"{table}_partition_column"] = None
+                func_params[f"{table}_order_column"] = None
                 additional_args_docs.append(get_partition_col_order_col_doc_string(table))
 
             # Generate function argument string.
             func_args_str = get_anlytic_function_signature(func_params)
 
-            func_name = "tdml_" + func_name
+            full_func_name = "tdml_" + func_name
             func_str = get_dynamic_function_definition().format(
-                analytic_function=func_name,
+                analytic_function=full_func_name,
                 doc_string=func_obj.__init__.__doc__,
                 func_args_str=func_args_str,
                 tables_to_df=json.dumps(inp_data)
@@ -532,9 +535,9 @@ def create_mcp_app(settings: Settings):
             exec(func_str, globals())
 
             # Register the function as a tool in MCP server.
-            func = globals()[func_name]
+            func = globals()[full_func_name]
 
-            mcp.tool(name=func_name, description=doc_string)(func)
+            mcp.tool(name=full_func_name, description=doc_string)(func)
 
     # Load YAML-defined tools/resources/prompts from config directory
     custom_object_files = [config_dir / file for file in os.listdir(config_dir) if file.endswith("_objects.yml")]
@@ -698,7 +701,7 @@ def create_mcp_app(settings: Settings):
             where_dim_clause = f"WHERE {dim_filters}" if dim_filters else ""
             where_meas_clause = f"WHERE {meas_filters}" if meas_filters else ""
             order_clause = f"ORDER BY {order_by}" if order_by else ""
-            
+
             sql = (
                 f"SELECT {top_clause} * from\n"
                 "(SELECT\n"
@@ -712,7 +715,7 @@ def create_mcp_app(settings: Settings):
                 ") AS a\n"
                 f"{where_meas_clause}"
                 f"{order_clause}"
-                ";"            
+                ";"
             )
             return sql
         return _cube_query_tool

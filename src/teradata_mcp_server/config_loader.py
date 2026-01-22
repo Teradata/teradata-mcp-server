@@ -4,23 +4,24 @@ Loads static configs from src/teradata_mcp_server/config/*.yml,
 then overrides top-level keys with any custom configs from the config directory.
 """
 
-from pathlib import Path
-from typing import Any, Dict, Optional
-from importlib.resources import files as pkg_files
-import yaml
 import logging
+from importlib.resources import files as pkg_files
+from pathlib import Path
+from typing import Any
+
+import yaml
 
 logger = logging.getLogger("teradata_mcp_server")
 
 # Global config directory for convenience
-_global_config_dir: Optional[Path] = None
+_global_config_dir: Path | None = None
 
 
-def load_yaml(file_path: Path) -> Dict[str, Any]:
+def load_yaml(file_path: Path) -> dict[str, Any]:
     """Load YAML file, return empty dict if not found or invalid."""
     try:
         if file_path.exists():
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 data = yaml.safe_load(f)
                 return data if isinstance(data, dict) else {}
     except Exception as e:
@@ -30,9 +31,9 @@ def load_yaml(file_path: Path) -> Dict[str, Any]:
 
 def load_config(
     config_name: str,
-    config_dir: Optional[Path] = None,
-    defaults: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+    config_dir: Path | None = None,
+    defaults: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Load config: start with defaults, then packaged config, then override with custom config.
 
     Args:

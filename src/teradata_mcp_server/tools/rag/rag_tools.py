@@ -2,8 +2,8 @@ import json
 import logging
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
 from pathlib import Path
+from typing import Any
 
 import yaml
 from teradatasql import TeradataConnection
@@ -167,7 +167,7 @@ def handle_rag_Execute_Workflow(
 
     WORKFLOW STEPS (executed automatically):
     1. Configuration setup using configurable values from rag_config.yml
-    2. Store user query with '/rag ' prefix stripping  
+    2. Store user query with '/rag ' prefix stripping
     3. Generate query embeddings using either BYOM (ONNXEmbeddings) or IVSM functions based on config
     4. Perform semantic search against precomputed chunk embeddings
     5. Return context chunks for answer generation
@@ -222,7 +222,7 @@ def handle_rag_Execute_Workflow(
 
     # Check version and delegate to appropriate implementation
     version = config.get('version', 'ivsm').lower()
-    
+
     if version == 'ivsm':
         return _execute_rag_workflow_ivsm(conn, question, k, config, *args, **kwargs)
     elif version == 'byom':
@@ -233,7 +233,7 @@ def handle_rag_Execute_Workflow(
 
 def _execute_rag_workflow_byom(conn: TeradataConnection, question: str, k: int | None, config: dict, *args, **kwargs):
     """Execute RAG workflow using BYOM (ONNXEmbeddings)"""
-    
+
     # Use config default if k not provided
     if k is None:
         k = config['retrieval']['default_k']
@@ -366,7 +366,7 @@ def _execute_rag_workflow_byom(conn: TeradataConnection, question: str, k: int |
 
 def _execute_rag_workflow_ivsm(conn: TeradataConnection, question: str, k: int | None, config: dict, *args, **kwargs):
     """Execute RAG workflow using IVSM functions"""
-    
+
     # Use config default if k not provided
     if k is None:
         k = config['retrieval']['default_k']

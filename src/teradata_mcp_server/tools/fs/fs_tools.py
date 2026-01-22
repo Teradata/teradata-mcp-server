@@ -30,7 +30,7 @@ def handle_fs_isFeatureStorePresent(conn: TeradataConnection, database_name: str
     Args:
         database_name (str): The name of the database to check for the feature store.
     """
-    
+
     logger.info(f"Tool: handle_fs_isFeatureStorePresent: Args: database_name: {database_name}")
 
     data: list | bool = False
@@ -54,7 +54,7 @@ def handle_fs_isFeatureStorePresent(conn: TeradataConnection, database_name: str
 #       conn (TeradataConnection) - Teradata connection object for executing SQL queries
 # #     Returns: True or False
 def handle_fs_getDataDomains(conn: TeradataConnection, fs_config, *args, **kwargs):
-    """ 
+    """
     List the available data domains. Requires a configured `database_name`  in the feature store config. Use this to explore which entities can be used when building a dataset.
     """
 
@@ -190,7 +190,7 @@ def handle_fs_getFeatureDataModel(conn: TeradataConnection, fs_config, *args, **
 #       database_name - the database name to check for existence
 # #     Returns: True or False
 def handle_fs_getAvailableEntities(conn: TeradataConnection, fs_config, *args, **kwargs):
-    """ 
+    """
     List the available entities for a given data domain. Requires a configured `database_name` and `data_domain` and  `entity` in the feature store config. Use this to explore which entities can be used when building a dataset.
     """
     database_name = fs_config.database_name
@@ -244,7 +244,7 @@ def handle_fs_getAvailableEntities(conn: TeradataConnection, fs_config, *args, *
 #       database_name - the database name to check for existence
 # #     Returns: True or False
 def handle_fs_getAvailableDatasets(conn: TeradataConnection, fs_config, *args, **kwargs):
-    """ 
+    """
     List the list of available datasets.Requires a configured `database_name` in the feature store config.Use this to explore the datasets that are available .
     """
 
@@ -282,7 +282,7 @@ def handle_fs_getAvailableDatasets(conn: TeradataConnection, fs_config, *args, *
 #       database_name - the database name to check for existence
 # #     Returns: True or False
 def handle_fs_getFeatures(conn: TeradataConnection, fs_config, *args, **kwargs):
-    """ 
+    """
     List the list of features. Requires a configured `database_name` and  `data_domain` in the feature store config. Use this to explore the features available .
     """
 

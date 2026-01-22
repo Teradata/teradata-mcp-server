@@ -1,15 +1,15 @@
 ##################################################################################
 # SQL Clustering Optimization Tools
 ##################################################################################
- 
-import logging
-import yaml
-from typing import Optional, Any, Dict, List
+
 import json
+import logging
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
+
+import yaml
 from teradatasql import TeradataConnection
-from pathlib import Path
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -177,31 +177,31 @@ def handle_sql_Execute_Full_Pipeline(
         - Embedding models and tokenizers must be installed in feature_ext_db
         - Sufficient space in feature_ext_db for intermediate and final tables
         """
-    
+
     config = SQL_CLUSTERING_CONFIG
-    
+
     # Use config defaults if not provided
     if optimal_k is None:
         optimal_k = config['clustering']['optimal_k']
     if max_queries is None:
         max_queries = config['clustering']['max_queries']
-    
+
     logger.debug(f"handle_sql_Execute_Full_Pipeline: optimal_k={optimal_k}, max_queries={max_queries}")
-    
+
     # Extract config values
     feature_db = config['databases']['feature_db']
     model_db = config['databases']['model_db']
     model_id = config['model']['model_id']
-    
+
     tables = config['tables']
     embedding_config = config['embedding']
     clustering_config = config['clustering']
 
     with conn.cursor() as cur:
-        
+
         # Create main SQL query log table
         logger.debug(f"Step 1: Creating main query log table {feature_db}.{tables['sql_query_log_main']}")
-        
+
         try:
             cur.execute(f"DROP TABLE {feature_db}.{tables['sql_query_log_main']}")
             logger.debug(f"Dropped existing table {feature_db}.{tables['sql_query_log_main']}")
@@ -210,7 +210,7 @@ def handle_sql_Execute_Full_Pipeline(
 
         main_query_sql = f"""
         CREATE TABLE {feature_db}.{tables['sql_query_log_main']} AS (
-            SELECT 
+            SELECT
                 CAST(a.QueryID AS BIGINT) AS id,
                 a.SQLTextInfo AS txt,
                 b.username,
@@ -219,13 +219,13 @@ def handle_sql_Execute_Full_Pipeline(
                 b.ampcputime,
                 b.TotalIOCount AS logicalio,
                 b.wdname,
-                CASE WHEN b.ampcputime < HashAmp()+1 OR (b.ampcputime / (HashAmp()+1)) = 0 
+                CASE WHEN b.ampcputime < HashAmp()+1 OR (b.ampcputime / (HashAmp()+1)) = 0
                      THEN 0 ELSE b.maxampcputime/(b.ampcputime / (HashAmp()+1)) END (DEC(8,2)) AS CPUSKW,
-                CASE WHEN b.ampcputime < HashAmp()+1 OR (b.TotalIOCount / (HashAmp()+1)) = 0 
+                CASE WHEN b.ampcputime < HashAmp()+1 OR (b.TotalIOCount / (HashAmp()+1)) = 0
                      THEN 0 ELSE b.maxampio/(b.TotalIOCount / (HashAmp()+1)) END (DEC(8,2)) AS IOSKW,
-                CASE WHEN b.ampcputime < HashAmp()+1 OR b.TotalIOCount = 0 
+                CASE WHEN b.ampcputime < HashAmp()+1 OR b.TotalIOCount = 0
                      THEN 0 ELSE (b.ampcputime * 1000)/b.TotalIOCount END AS PJI,
-                CASE WHEN b.ampcputime < HashAmp()+1 OR b.ampcputime = 0 
+                CASE WHEN b.ampcputime < HashAmp()+1 OR b.ampcputime = 0
                      THEN 0 ELSE b.TotalIOCount/(b.ampcputime * 1000) END AS UII,
                 CAST(EXTRACT(HOUR FROM ((b.FirstRespTime - b.StartTime) HOUR(3) TO SECOND(6))) * 3600
                      + EXTRACT(MINUTE FROM ((b.FirstRespTime - b.StartTime) HOUR(3) TO SECOND(6))) * 60
@@ -234,10 +234,10 @@ def handle_sql_Execute_Full_Pipeline(
                      + EXTRACT(MINUTE FROM ((b.FirstRespTime - b.StartTime) HOUR(3) TO SECOND(6))) * 60
                      + EXTRACT(SECOND FROM ((b.FirstRespTime - b.StartTime) HOUR(3) TO SECOND(6))) AS DECIMAL(10,2)))/60.0 AS response_mins,
                 CASE WHEN b.delaytime IS NULL THEN 0.0 ELSE b.delaytime END AS delaytime
-            FROM DBC.DBQLSqlTbl a 
+            FROM DBC.DBQLSqlTbl a
             JOIN (
                 -- OPTIMIZATION: Filter to top queries by CPU BEFORE joining
-                SELECT * FROM DBC.DBQLOgTbl 
+                SELECT * FROM DBC.DBQLOgTbl
                 WHERE LOWER(statementtype) IN ('select','create table')
                 QUALIFY ROW_NUMBER() OVER (ORDER BY ampcputime DESC) <= {max_queries}
             ) b ON a.queryid = b.queryid AND a.procid = b.procid
@@ -245,17 +245,17 @@ def handle_sql_Execute_Full_Pipeline(
                 a.SQLTextInfo NOT LIKE '%SET QUERY_BAND%' AND
                 a.SQLTextInfo NOT LIKE '%ParamValue%' AND
                 a.SQLTextInfo NOT LIKE '%SELECT CURRENT_TIMESTAMP%' AND
-                LOWER(a.SQLTextInfo) NOT LIKE '%dbc.%' AND 
+                LOWER(a.SQLTextInfo) NOT LIKE '%dbc.%' AND
                 a.SqlRowNo = 1
         ) WITH DATA
         """
-        
+
         cur.execute(main_query_sql)
-        logger.debug(f"Created main query log table")
+        logger.debug("Created main query log table")
 
         # Create tokenized table for embeddings
         logger.debug(f"Step 2: Creating tokenized table {feature_db}.{tables['sql_log_tokenized_for_embeddings']}")
-        
+
         try:
             cur.execute(f"DROP TABLE {feature_db}.{tables['sql_log_tokenized_for_embeddings']}")
         except Exception as e:
@@ -270,7 +270,7 @@ def handle_sql_Execute_Full_Pipeline(
                 attention_mask
             FROM ivsm.tokenizer_encode(
                 ON (SELECT * FROM {feature_db}.{tables['sql_query_log_main']})
-                ON (SELECT model AS tokenizer FROM {model_db}.{tables['embedding_tokenizers']} 
+                ON (SELECT model AS tokenizer FROM {model_db}.{tables['embedding_tokenizers']}
                     WHERE model_id = '{model_id}') DIMENSION
                 USING
                     ColumnsToPreserve('id', 'txt')
@@ -281,13 +281,13 @@ def handle_sql_Execute_Full_Pipeline(
             ) AS dt
         ) WITH DATA
         """
-        
+
         cur.execute(tokenize_sql)
-        logger.debug(f"Created tokenized table")
+        logger.debug("Created tokenized table")
 
         # Create embeddings table
         logger.debug(f"Step 3: Creating embeddings table {feature_db}.{tables['sql_log_embeddings']}")
-        
+
         try:
             cur.execute(f"DROP TABLE {feature_db}.{tables['sql_log_embeddings']}")
         except Exception as e:
@@ -298,7 +298,7 @@ def handle_sql_Execute_Full_Pipeline(
             SELECT *
             FROM ivsm.IVSM_score(
                 ON {feature_db}.{tables['sql_log_tokenized_for_embeddings']}
-                ON (SELECT * FROM {model_db}.{tables['embedding_models']} 
+                ON (SELECT * FROM {model_db}.{tables['embedding_models']}
                     WHERE model_id = '{model_id}') DIMENSION
                 USING
                     ColumnsToPreserve('id', 'txt')
@@ -309,13 +309,13 @@ def handle_sql_Execute_Full_Pipeline(
             ) a
         ) WITH DATA
         """
-        
+
         cur.execute(embeddings_sql)
-        logger.debug(f"Created embeddings table")
+        logger.debug("Created embeddings table")
 
         # Create embeddings store table
         logger.debug(f"Step 4: Creating embeddings store table {feature_db}.{tables['sql_log_embeddings_store']}")
-        
+
         try:
             cur.execute(f"DROP TABLE {feature_db}.{tables['sql_log_embeddings_store']}")
         except Exception as e:
@@ -335,13 +335,13 @@ def handle_sql_Execute_Full_Pipeline(
             ) a
         ) WITH DATA
         """
-        
+
         cur.execute(embeddings_store_sql)
-        logger.debug(f"Created embeddings store table")
+        logger.debug("Created embeddings store table")
 
         # Perform K-means clustering
         logger.debug(f"Step 5: Performing K-means clustering with k={optimal_k}")
-        
+
         try:
             cur.execute(f"DROP TABLE {feature_db}.{tables['sql_query_clusters_temp']}")
         except Exception as e:
@@ -364,13 +364,13 @@ def handle_sql_Execute_Full_Pipeline(
             JOIN {feature_db}.{tables['sql_query_log_main']} a ON a.id = dt.id
         ) WITH DATA
         """
-        
+
         cur.execute(kmeans_sql)
-        logger.debug(f"Created temporary clusters table")
+        logger.debug("Created temporary clusters table")
 
         # Create final clusters table with silhouette scores
-        logger.debug(f"Step 6: Creating final clusters table with silhouette scores")
-        
+        logger.debug("Step 6: Creating final clusters table with silhouette scores")
+
         try:
             cur.execute(f"DROP TABLE {feature_db}.{tables['sql_query_clusters']}")
         except Exception as e:
@@ -378,11 +378,11 @@ def handle_sql_Execute_Full_Pipeline(
 
         final_clusters_sql = f"""
         CREATE TABLE {feature_db}.{tables['sql_query_clusters']} AS (
-            SELECT a.*, b.silhouette_score 
+            SELECT a.*, b.silhouette_score
             FROM {feature_db}.{tables['sql_query_clusters_temp']} a
             JOIN (SELECT * FROM TD_Silhouette(
-                ON (SELECT td_clusterid_kmeans, b.* 
-                    FROM {feature_db}.{tables['sql_query_clusters_temp']} a 
+                ON (SELECT td_clusterid_kmeans, b.*
+                    FROM {feature_db}.{tables['sql_query_clusters_temp']} a
                     JOIN {feature_db}.{tables['sql_log_embeddings_store']} b
                     ON a.id = b.id) AS InputTable
                 USING
@@ -394,13 +394,13 @@ def handle_sql_Execute_Full_Pipeline(
             ON a.id = b.id
         ) WITH DATA PRIMARY INDEX(id)
         """
-        
+
         cur.execute(final_clusters_sql)
-        logger.debug(f"Created final clusters table")
+        logger.debug("Created final clusters table")
 
         # Create cluster statistics table
-        logger.debug(f"Step 7: Creating cluster statistics table")
-        
+        logger.debug("Step 7: Creating cluster statistics table")
+
         try:
             cur.execute(f"DROP TABLE {feature_db}.{tables['query_cluster_stats']}")
         except Exception as e:
@@ -409,19 +409,19 @@ def handle_sql_Execute_Full_Pipeline(
         cluster_stats_sql = f"""
         CREATE TABLE {feature_db}.{tables['query_cluster_stats']} AS (
             SELECT a.td_clusterid_kmeans,
-                AVG(a.numsteps) AS avg_numsteps, 
+                AVG(a.numsteps) AS avg_numsteps,
                 VAR_SAMP(a.numsteps) AS var_numsteps,
-                AVG(a.ampcputime) AS avg_cpu, 
+                AVG(a.ampcputime) AS avg_cpu,
                 VAR_SAMP(a.ampcputime) AS var_cpu,
-                AVG(a.logicalio) AS avg_io, 
+                AVG(a.logicalio) AS avg_io,
                 VAR_SAMP(a.logicalio) AS var_io,
-                AVG(a.cpuskw) AS avg_cpuskw, 
+                AVG(a.cpuskw) AS avg_cpuskw,
                 VAR_SAMP(a.cpuskw) AS var_cpuskw,
-                AVG(a.ioskw) AS avg_ioskw, 
+                AVG(a.ioskw) AS avg_ioskw,
                 VAR_SAMP(a.ioskw) AS var_ioskw,
-                AVG(a.pji) AS avg_pji, 
+                AVG(a.pji) AS avg_pji,
                 VAR_SAMP(a.pji) AS var_pji,
-                AVG(a.uii) AS avg_uii, 
+                AVG(a.uii) AS avg_uii,
                 VAR_SAMP(a.uii) AS var_uii,
                 MAX(un.top_username) AS top_username,
                 MAX(top_wdname) AS top_wdname,
@@ -429,23 +429,23 @@ def handle_sql_Execute_Full_Pipeline(
                 MAX(s1.silhouette_score) AS overall_silhouette_score,
                 MAX(s2.silhouette_score) AS cluster_silhouette_score,
                 COUNT(*) AS queries
-            FROM {feature_db}.{tables['sql_query_clusters']} a 
+            FROM {feature_db}.{tables['sql_query_clusters']} a
             JOIN (
-                SELECT td_clusterid_kmeans, 
+                SELECT td_clusterid_kmeans,
                        username AS top_UserName
                 FROM {feature_db}.{tables['sql_query_clusters']}
                 GROUP BY td_clusterid_kmeans, username
                 QUALIFY ROW_NUMBER() OVER (PARTITION BY td_clusterid_kmeans ORDER BY COUNT(*) DESC) = 1
             ) un ON a.td_clusterid_kmeans = un.td_clusterid_kmeans
             JOIN (
-                SELECT td_clusterid_kmeans, 
+                SELECT td_clusterid_kmeans,
                        wdname AS top_wdname
                 FROM {feature_db}.{tables['sql_query_clusters']}
                 GROUP BY td_clusterid_kmeans, wdname
                 QUALIFY ROW_NUMBER() OVER (PARTITION BY td_clusterid_kmeans ORDER BY COUNT(*) DESC) = 1
             ) wd ON un.td_clusterid_kmeans = wd.td_clusterid_kmeans
             JOIN (
-                SELECT td_clusterid_kmeans, 
+                SELECT td_clusterid_kmeans,
                        appid AS top_AppId
                 FROM {feature_db}.{tables['sql_query_clusters']}
                 GROUP BY td_clusterid_kmeans, appid
@@ -453,8 +453,8 @@ def handle_sql_Execute_Full_Pipeline(
             ) ap ON un.td_clusterid_kmeans = ap.td_clusterid_kmeans
             CROSS JOIN (
                 SELECT * FROM TD_Silhouette(
-                    ON (SELECT td_clusterid_kmeans, b.* 
-                        FROM {feature_db}.{tables['sql_query_clusters']} a 
+                    ON (SELECT td_clusterid_kmeans, b.*
+                        FROM {feature_db}.{tables['sql_query_clusters']} a
                         JOIN {feature_db}.{tables['sql_log_embeddings_store']} b
                         ON a.id = b.id) AS InputTable
                     USING
@@ -466,8 +466,8 @@ def handle_sql_Execute_Full_Pipeline(
             ) AS s1
             JOIN (
                 SELECT * FROM TD_Silhouette(
-                    ON (SELECT td_clusterid_kmeans, b.* 
-                        FROM {feature_db}.{tables['sql_query_clusters']} a 
+                    ON (SELECT td_clusterid_kmeans, b.*
+                        FROM {feature_db}.{tables['sql_query_clusters']} a
                         JOIN {feature_db}.{tables['sql_log_embeddings_store']} b
                         ON a.id = b.id) AS InputTable
                     USING
@@ -480,17 +480,17 @@ def handle_sql_Execute_Full_Pipeline(
             GROUP BY a.td_clusterid_kmeans
         ) WITH DATA PRIMARY INDEX(td_clusterid_kmeans)
         """
-        
+
         cur.execute(cluster_stats_sql)
-        logger.debug(f"Created cluster statistics table")
+        logger.debug("Created cluster statistics table")
 
         # Get final results
         cur.execute(f"SELECT COUNT(*) FROM {feature_db}.{tables['sql_query_clusters']}")
         total_queries = cur.fetchone()[0]
-        
+
         cur.execute(f"SELECT COUNT(DISTINCT td_clusterid_kmeans) FROM {feature_db}.{tables['sql_query_clusters']}")
         total_clusters = cur.fetchone()[0]
-        
+
         cur.execute(f"SELECT AVG(silhouette_score) FROM {feature_db}.{tables['sql_query_clusters']}")
         avg_silhouette = cur.fetchone()[0]
 
@@ -498,8 +498,8 @@ def handle_sql_Execute_Full_Pipeline(
     metadata = {
         "tool_name": "sql_Execute_Full_Pipeline",
         "workflow_steps": [
-            "query_log_extracted", "queries_tokenized", "embeddings_generated", 
-            "embeddings_stored", "kmeans_clustering_completed", "silhouette_scores_calculated", 
+            "query_log_extracted", "queries_tokenized", "embeddings_generated",
+            "embeddings_stored", "kmeans_clustering_completed", "silhouette_scores_calculated",
             "cluster_statistics_generated"
         ],
         "configuration": {
@@ -580,28 +580,28 @@ def handle_sql_Analyze_Cluster_Stats(
         **OUTPUT FORMAT:**
         Returns detailed cluster statistics with performance rankings, categories, and metadata for LLM analysis and optimization recommendations.
         """
-    
+
     config = SQL_CLUSTERING_CONFIG
-    
+
     logger.debug(f"handle_sql_Analyze_Cluster_Stats: sort_by={sort_by_metric}, limit={limit_results}")
-    
+
     feature_db = config['databases']['feature_db']
     stats_table = config['tables']['query_cluster_stats']
-    
+
     # Validate sort metric
     valid_metrics = [
         'avg_cpu', 'avg_io', 'avg_cpuskw', 'avg_ioskw', 'avg_pji', 'avg_uii',
         'avg_numsteps', 'queries', 'cluster_silhouette_score'
     ]
-    
+
     if sort_by_metric not in valid_metrics:
         sort_by_metric = 'avg_cpu'  # Default fallback
 
     with conn.cursor() as cur:
-        
+
         # Build the query with optional limit
         limit_clause = f"TOP {limit_results}" if limit_results else ""
-        
+
         # Get thresholds from config
         thresholds = config.get('performance_thresholds', {})
         cpu_high = thresholds.get('cpu', {}).get('high', 100)
@@ -611,19 +611,19 @@ def handle_sql_Analyze_Cluster_Stats(
         stats_query = f"""
         SELECT {limit_clause}
             td_clusterid_kmeans,
-            avg_numsteps, 
+            avg_numsteps,
             var_numsteps,
-            avg_cpu, 
+            avg_cpu,
             var_cpu,
-            avg_io, 
+            avg_io,
             var_io,
-            avg_cpuskw, 
+            avg_cpuskw,
             var_cpuskw,
-            avg_ioskw, 
+            avg_ioskw,
             var_ioskw,
-            avg_pji, 
+            avg_pji,
             var_pji,
-            avg_uii, 
+            avg_uii,
             var_uii,
             top_username,
             top_wdname,
@@ -632,7 +632,7 @@ def handle_sql_Analyze_Cluster_Stats(
             cluster_silhouette_score,
             queries,
             -- Additional analysis columns with configurable thresholds
-            CASE 
+            CASE
                 WHEN avg_cpuskw > {skew_high} THEN 'HIGH_CPU_SKEW'
                 WHEN avg_ioskw > {skew_high} THEN 'HIGH_IO_SKEW'
                 WHEN avg_cpu > {cpu_high} THEN 'HIGH_CPU_USAGE'
@@ -643,13 +643,13 @@ def handle_sql_Analyze_Cluster_Stats(
         FROM {feature_db}.{stats_table}
         ORDER BY {sort_by_metric} DESC
         """
-        
+
         cur.execute(stats_query)
         data = rows_to_json(cur.description, cur.fetchall())
-        
+
         # Get summary statistics
         cur.execute(f"""
-        SELECT 
+        SELECT
             COUNT(*) AS total_clusters,
             AVG(avg_cpu) AS system_avg_cpu,
             AVG(avg_io) AS system_avg_io,
@@ -658,9 +658,9 @@ def handle_sql_Analyze_Cluster_Stats(
             MIN(cluster_silhouette_score) AS min_silhouette_score
         FROM {feature_db}.{stats_table}
         """)
-        
+
         summary_stats = rows_to_json(cur.description, cur.fetchall())[0]
-        
+
         logger.debug(f"Retrieved {len(data)} cluster statistics")
 
     # Return results with metadata
@@ -682,7 +682,7 @@ def handle_sql_Analyze_Cluster_Stats(
 
 def handle_sql_Retrieve_Cluster_Queries(
     conn,
-    cluster_ids: List[int],
+    cluster_ids: list[int],
     metric: str = "ampcputime",
     limit_per_cluster: int = 250,
     *args,
@@ -723,7 +723,7 @@ def handle_sql_Retrieve_Cluster_Queries(
         - **CPU Categories**: VERY_HIGH_CPU (>config.very_high), HIGH_CPU (>config.high), MEDIUM_CPU (>10s), LOW_CPU
         - **CPU Skew**: SEVERE_CPU_SKEW (>config.severe), HIGH_CPU_SKEW (>config.high), MODERATE_CPU_SKEW (>config.moderate), NORMAL
         - **I/O Skew**: SEVERE_IO_SKEW (>config.severe), HIGH_IO_SKEW (>config.high), MODERATE_IO_SKEW (>config.moderate), NORMAL
-        
+
         Use thresholds set in config file for, CPU - high, very_high, Skew moderate, high, severe
 
         **TYPICAL OPTIMIZATION WORKFLOW:**
@@ -743,22 +743,22 @@ def handle_sql_Retrieve_Cluster_Queries(
         **OUTPUT INCLUDES:**
         - Complete SQL query text for each query
         - All performance metrics, user, application, and workload context, cluster membership and rankings
-        - Performance categories for quick filtering        
+        - Performance categories for quick filtering
         """
-    
+
     config = SQL_CLUSTERING_CONFIG
-    
+
     logger.debug(f"handle_sql_Retrieve_Cluster_Queries: clusters={cluster_ids}, metric={metric}, limit={limit_per_cluster}")
-    
+
     feature_db = config['databases']['feature_db']
     clusters_table = config['tables']['sql_query_clusters']
-    
+
     # Validate metric
     valid_metrics = [
         'ampcputime', 'logicalio', 'cpuskw', 'ioskw', 'pji', 'uii',
         'numsteps', 'response_secs', 'delaytime'
     ]
-    
+
     if metric not in valid_metrics:
         metric = 'ampcputime'  # Default fallback
 
@@ -766,7 +766,7 @@ def handle_sql_Retrieve_Cluster_Queries(
     cluster_ids_str = ','.join(map(str, cluster_ids))
 
     with conn.cursor() as cur:
-        
+
         # Get thresholds from config
         thresholds = config.get('performance_thresholds', {})
         cpu_high = thresholds.get('cpu', {}).get('high', 100)
@@ -774,9 +774,9 @@ def handle_sql_Retrieve_Cluster_Queries(
         skew_moderate = thresholds.get('skew', {}).get('moderate', 2.0)
         skew_high = thresholds.get('skew', {}).get('high', 3.0)
         skew_severe = thresholds.get('skew', {}).get('severe', 5.0)
-        
+
         retrieve_queries_sql = f"""
-        SELECT 
+        SELECT
             td_clusterid_kmeans,
             id,
             txt,
@@ -799,19 +799,19 @@ def handle_sql_Retrieve_Cluster_Queries(
             -- Overall ranking across all selected clusters
             ROW_NUMBER() OVER (ORDER BY {metric} DESC) AS overall_rank,
             -- Performance categorization with configurable thresholds
-            CASE 
+            CASE
                 WHEN ampcputime > {cpu_very_high} THEN 'VERY_HIGH_CPU'
                 WHEN ampcputime > {cpu_high} THEN 'HIGH_CPU'
                 WHEN ampcputime > 10 THEN 'MEDIUM_CPU'
                 ELSE 'LOW_CPU'
             END AS cpu_category,
-            CASE 
+            CASE
                 WHEN cpuskw > {skew_severe} THEN 'SEVERE_CPU_SKEW'
                 WHEN cpuskw > {skew_high} THEN 'HIGH_CPU_SKEW'
                 WHEN cpuskw > {skew_moderate} THEN 'MODERATE_CPU_SKEW'
                 ELSE 'NORMAL_CPU_SKEW'
             END AS cpu_skew_category,
-            CASE 
+            CASE
                 WHEN ioskw > {skew_severe} THEN 'SEVERE_IO_SKEW'
                 WHEN ioskw > {skew_high} THEN 'HIGH_IO_SKEW'
                 WHEN ioskw > {skew_moderate} THEN 'MODERATE_IO_SKEW'
@@ -822,13 +822,13 @@ def handle_sql_Retrieve_Cluster_Queries(
         QUALIFY ROW_NUMBER() OVER (PARTITION BY td_clusterid_kmeans ORDER BY {metric} DESC) <= {limit_per_cluster}
         ORDER BY td_clusterid_kmeans, {metric} DESC
         """
-        
+
         cur.execute(retrieve_queries_sql)
         data = rows_to_json(cur.description, cur.fetchall())
-        
+
         # Get summary by cluster
         cur.execute(f"""
-        SELECT 
+        SELECT
             td_clusterid_kmeans,
             COUNT(*) AS queries_retrieved,
             AVG({metric}) AS avg_metric_value,
@@ -839,9 +839,9 @@ def handle_sql_Retrieve_Cluster_Queries(
         GROUP BY td_clusterid_kmeans
         ORDER BY td_clusterid_kmeans
         """)
-        
+
         cluster_summary = rows_to_json(cur.description, cur.fetchall())
-        
+
         logger.debug(f"Retrieved {len(data)} queries from {len(cluster_ids)} clusters")
 
     # Return results with metadata
