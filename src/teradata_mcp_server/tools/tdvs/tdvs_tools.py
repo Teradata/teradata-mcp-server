@@ -142,7 +142,8 @@ def handle_tdvs_similarity_search(conn: TeradataConnection, vs_name: str, vs_sim
     try:
         create_teradataml_context()
         vs = VectorStore(vs_name)
-        data = vs.similarity_search(**vs_similaritysearch.model_dump())
+        search_kwargs = {k: v for k, v in vs_similaritysearch.model_dump().items() if v is not None}
+        data = vs.similarity_search(**search_kwargs)
         metadata = { "tool_name": "tdvs_similarity_search" }
         return create_response(data, metadata)
     except Exception as e:
@@ -156,7 +157,8 @@ def handle_tdvs_ask(conn: TeradataConnection, vs_name: str, vs_ask: VectorStoreA
         create_teradataml_context()
         VSManager.health()
         vs = VectorStore(name=vs_name)
-        response = vs.ask(**vs_ask.model_dump())
+        ask_kwargs = {k: v for k, v in vs_ask.model_dump().items() if v is not None}
+        response = vs.ask(**ask_kwargs)
         metadata = { "tool_name": "tdvs_ask" }
         return create_response(response, metadata)
     except Exception as e:
