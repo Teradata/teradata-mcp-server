@@ -331,30 +331,27 @@ dba_userActivityAnalysis:
   type: prompt
   description: "Analyze Teradata user activity patterns for the past 7 days (prompt_type: reporting)"
   prompt: |
-    Analyze Teradata user activity patterns for the past 7 days, focusing on resource consumption and query behavior. Create a comprehensive analysis dashboard for DBA review with detailed breakdowns of user behavior and system impact.
+    You are a Teradata DBA analyzing user activity patterns for the past 7 days.
 
-    Primary Analysis Requirements:
-        • Rank users by resource consumption priority: CPU time (primary), I/O operations (secondary), memory usage (tertiary)
-        • Categorize all queries by complexity type (simple/medium/complex based on execution characteristics)
-        • Provide hourly activity breakdowns showing all usage periods color coded by CPU usage
-        • Include user names directly in all reports and analysis
-    Detailed Reporting Structure:
-        • System-wide resource consumption overview with hourly heatmaps for the 7-day period
-        • Complete user ranking table showing CPU time, I/O operations, and memory usage with percentage of total system resources
-        • Activity pattern analysis displaying each user's peak activity hours and workload distribution
-    Top 5 Resource Consumers Deep Dive:
-        • Individual user profiles with recent SQL activity logs and execution statistics
-        • Table access frequency analysis showing most queried objects per user
-        • Query complexity distribution and execution time patterns
-        • Hourly activity charts showing when each high-consumption user is most active
-    Output Format:
-        - Dashboard-style presentation with sortable tables and visual charts
-        - Color-coded metrics to highlight resource usage levels
-        - Include specific query examples and table access patterns
-        - Target audience: Database administrators for performance monitoring and user guidance assessment
-        - Ensure that dashboard is mobile friendly and scales easily
+    ## Phase 1 - Get resource usage data
+    Use dba_resusageSummary tool with dimensions=["LogDate","hourOfDay","UserName"] to get system-wide resource consumption.
+    This returns CPU time, I/O operations, and memory usage broken down by date, hour, and user.
 
-    Think through the problem
+    ## Phase 2 - Get recent SQL activity
+    Use dba_userSqlList tool (no arguments) to get SQL statements executed by all users in the past 7 days.
+
+    ## Phase 3 - Present user activity analysis
+    Using ALL data from Phase 1 and Phase 2, generate a comprehensive DBA dashboard report with the following sections:
+    1. System-wide resource consumption overview with hourly heatmaps for the 7-day period, color-coded by CPU usage levels
+    2. User ranking table: rank all users by CPU time (primary), I/O operations (secondary), memory usage (tertiary), showing percentage of total system resources. Include user names directly in all tables
+    3. Activity pattern analysis: each user's peak activity hours and workload distribution
+    4. Top 5 resource consumers deep dive:
+       - Individual user profiles with recent SQL activity logs and execution statistics
+       - Table access frequency analysis showing most queried objects per user
+       - Query complexity distribution (simple/medium/complex based on execution characteristics) and execution time patterns
+       - Hourly activity charts showing when each high-consumption user is most active
+    5. Output format: dashboard-style presentation with sortable tables, color-coded metrics to highlight resource usage levels, include specific query examples and table access patterns
+    Present the complete analysis as the final output
 
 dba_systemVoice:
   type: prompt

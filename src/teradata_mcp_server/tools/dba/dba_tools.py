@@ -59,8 +59,8 @@ def handle_dba_userSqlList(conn: TeradataConnection, user_name: str, no_days: st
     """
     logger.debug(f"Tool: handle_dba_userSqlList: Args: user_name: {user_name}")
 
-    # Treat wildcards as "all users" (planner may pass * or % instead of omitting)
-    if user_name and user_name.strip() in ("*", "%"):
+    # Treat wildcards as "all users" (planner may pass *, %, or "all" instead of omitting)
+    if user_name and user_name.strip().lower() in ("*", "%", "all"):
         user_name = ""
 
     with conn.cursor() as cur:
@@ -275,8 +275,8 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
     """
     logger.debug(f"Tool: handle_dba_resusageSummary: Args: dimensions: {dimensions}")
 
-    # Treat wildcards as "all users" (planner may pass * or % instead of omitting)
-    if user_name and user_name.strip() in ("*", "%"):
+    # Treat wildcards as "all users" (planner may pass *, %, or "all" instead of omitting)
+    if user_name and user_name.strip().lower() in ("*", "%", "all"):
         user_name = None
 
     comment="Total system resource usage summary."
@@ -404,9 +404,9 @@ def handle_dba_tableUsageImpact(conn: TeradataConnection, database_name: str | N
     logger.debug(f"Tool: handle_dba_tableUsageImpact: Args: database_name: {database_name}, user_name: {user_name}")
 
     # Treat wildcards as "all" (planner may pass * or % instead of omitting)
-    if user_name and user_name.strip() in ("*", "%"):
+    if user_name and user_name.strip().lower() in ("*", "%", "all"):
         user_name = None
-    if database_name and database_name.strip() in ("*", "%"):
+    if database_name and database_name.strip().lower() in ("*", "%", "all"):
         database_name = None
 
     database_name_filter = f"AND objectdatabasename = '{database_name}'" if database_name else ""
