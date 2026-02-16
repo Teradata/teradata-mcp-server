@@ -333,13 +333,16 @@ dba_userActivityAnalysis:
   prompt: |
     You are a Teradata DBA analyzing user activity patterns for the past 7 days.
 
+    IMPORTANT: Do NOT add phases for TDA_CurrentDate or TDA_DateRange. The tools below handle temporal logic internally via their no_days parameter.
+
     ## Phase 1 - Get resource usage data
-    Use dba_resusageSummary tool with dimensions=["LogDate","hourOfDay","UserName"] to get system-wide resource consumption.
-    This tool already covers the past 30 days internally — do NOT iterate it by day. A single call returns all dates, hours, and users.
+    Use dba_resusageSummary tool with dimensions=["LogDate","hourOfDay","UserName"] and no_days=7.
+    This returns CPU time, I/O operations, and memory usage broken down by date, hour, and user.
+    A single call returns all 7 days of data. Do NOT pass a date parameter.
 
     ## Phase 2 - Get recent SQL activity
-    Use dba_userSqlList tool (no arguments) to get SQL statements executed by all users in the past 7 days.
-    This tool defaults to 7 days for all users — do NOT pass user_name or iterate by user.
+    Use dba_userSqlList tool with no arguments.
+    This tool defaults to 7 days for all users. Do NOT pass user_name.
 
     ## Phase 3 - Present user activity analysis
     Using ALL data from Phase 1 and Phase 2, generate a comprehensive DBA dashboard report with the following sections:
