@@ -46,7 +46,7 @@ def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: 
 
 #------------------ Tool  ------------------#
 # Get user SQL tool
-def handle_dba_userSqlList(conn: TeradataConnection, user_name: str, no_days: str | int | None = 7,  *args, **kwargs):
+def handle_dba_userSqlList(conn: TeradataConnection, user_name: str = "", no_days: str | int | None = 7,  *args, **kwargs):
     """
     Get a list of SQL run by a user in the last number of days if a user name is provided, otherwise get list of all SQL in the last number of days.
 
