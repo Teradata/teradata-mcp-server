@@ -273,22 +273,28 @@ dba_databaseHealthAssessment :
   prompt: |
     Generate a comprehensive Teradata system health dashboard for the last 30 days, structured as an executive summary followed by detailed technical analysis.
 
-    ## Phase 1 - Get list of databases
+    ## Phase 1 - Get list of databases and space metrics
     Use base_databaseList tool with scope='{database_scope}' to get a list of databases.
     Create a list of database names for the phases below.
     Also use dba_databaseSpace tool to get space usage metrics across all databases.
+    Also use dba_tableSpace tool with top_n=10 and exclude_system=true to get the top 10 space-consuming tables.
 
     ## Phase 2 - Resource usage analysis for the last 30 days
-    Use dba_resusageSummary tool to gather CPU, IO, and Memory resource usage patterns for the last 30 days.
-    Collect both summary dimensions and heatmap dimensions (by weekday and hour of day).
+    Use dba_resusageSummary tool with no_days=30 to gather CPU, IO, and Memory resource usage patterns.
+    The tool uses no_days to calculate the date range internally - do NOT pass a date parameter.
+    Call the tool twice:
+      1. First call with dimensions=["LogDate"] for the daily summary trend
+      2. Second call with dimensions=["LogDate","hourOfDay"] for the 30-day heatmap (date x hour matrix)
 
     ## Phase 3 - Flow control analysis for the last 30 days
-    Use dba_flowControl tool to gather flow control metrics for the last 30 days.
-    The tool accepts start_date and end_date parameters in YYYY-MM-DD format.
+    IMPORTANT: This is a SINGLE tool call, not a date iteration. Do NOT generate a date list or iterate per day.
+    Use dba_flowControl tool ONCE with start_date = 30 days before today and end_date = today, both in YYYY-MM-DD format.
+    Calculate these dates yourself and pass them directly as arguments.
 
     ## Phase 4 - User delay analysis for the last 30 days
-    Use dba_userDelay tool to gather user delay data for the last 30 days.
-    The tool accepts start_date and end_date parameters in YYYY-MM-DD format.
+    IMPORTANT: This is a SINGLE tool call, not a date iteration. Do NOT generate a date list or iterate per day.
+    Use dba_userDelay tool ONCE with the same date range as Phase 3: start_date = 30 days before today, end_date = today, both in YYYY-MM-DD format.
+    Calculate these dates yourself and pass them directly as arguments.
 
     ## Phase 5 - Database-level detail
     Cycle through the list of databases from Phase 1, for each database do the following steps in order:
@@ -306,9 +312,8 @@ dba_databaseHealthAssessment :
     Detailed Technical Analysis:
     * Complete space utilization breakdown across all databases with visual charts
     * Top 10 space-consuming tables with growth trends and utilization percentages
-    * CPU Resource usage heatmaps showing patterns by weekday and hour of day
-    * IO Resource usage heatmaps showing patterns by weekday and hour of day
-    * Memory Resource usage heatmaps showing patterns by weekday and hour of day
+    * CPU Resource usage heatmaps showing all dates in the 30-day period by hour of day (rows = dates, columns = hours 0-23)
+    * IO Resource usage heatmaps showing all dates in the 30-day period by hour of day (rows = dates, columns = hours 0-23)
     * Flow control metrics and user delay analysis with performance bottleneck identification
     * Database and table activity rankings showing most frequently accessed objects
 

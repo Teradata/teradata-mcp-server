@@ -287,6 +287,10 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
             no_days = int(no_days)
         except (ValueError, TypeError):
             no_days = 30
+        # no_days defines a date range; ignore single-date filter to avoid conflicting constraints
+        if date is not None:
+            logger.debug(f"Tool: handle_dba_resusageSummary: Ignoring date={date} because no_days={no_days} is set")
+            date = None
 
     comment="Total system resource usage summary."
 
