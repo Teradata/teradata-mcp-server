@@ -223,34 +223,27 @@ base_databaseBusinessDesc:
 
    ## your role will work through the phases
    Perform the phases in order, and do not skip any phase.
-   
-   ## Phase 0 - Get the database name from the user
-   - the database name is {database_name}
 
-   ## Phase 1 - get the list of tables
+   ## Phase 1 - Get the list of tables
+   - The database name is {database_name}
    - Use the `base_tableList` function to get the list of tables in the database.
 
-   ## Phase 2 - describe the tables
-   For each table, you will:
+   ## Phase 2 - Get the DDL for each table
+   For each table from Phase 1:
    - Use the `base_tableDDL` function to get the DDL for the table.
-   - Based *only* on the DDL you just received, describe the table in a business context. **Do not use any other tools or prompts for this description step.**
 
    ## Phase 3 - Describe the database
-   - Describe the database in a business context based on the business descriptions of the tables. 
-   - The description should be a paragraph. 
-
-
-   ## Communication guidelines:
-         - Be concise but informative in your explanations
-         - Clearly indicate which phase the process is currently in
-         - summarize the outcome of the phase before moving to the next phase
+   Using ALL DDL definitions collected in Phase 2:
+   - For each table, describe its business purpose based *only* on its DDL.
+   - Then describe the overall database in a business context based on all table descriptions.
+   - Present the result as the final output.
 
    ## Final output guidelines:
-         - return in markdown
-         - Example:
-         ***Database Name:*** `database_name`
+   - return in markdown
+   - Example:
+   ***Database Name:*** `database_name`
 
-         ***Description:*** `database_description`
+   ***Description:*** `database_description`
   parameters:
     database_name:
       name: database_name
