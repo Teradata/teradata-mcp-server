@@ -100,8 +100,6 @@ select = [
     "PL",  # pylint
 ]
 ignore = [
-    "F403",  # Wildcard imports (temporarily ignore for gradual refactoring)
-    "F401",  # Unused imports in __init__.py files (common pattern for re-exports)
     "E402",  # Module level import not at top (some tools have conditional imports)
     "E501",  # strings over 120 characters
     "N816",  # Variable naming (existing legacy naming)
@@ -118,7 +116,6 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"*/__init__.py" = ["F403", "F401"]  # Allow wildcard imports and unused imports in __init__.py
 "tests/*" = ["F401", "F403", "PLR0913"]  # More lenient for test files
 
 [tool.ruff.lint.isort]

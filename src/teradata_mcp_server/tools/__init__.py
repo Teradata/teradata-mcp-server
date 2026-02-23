@@ -5,7 +5,7 @@ Modules are now loaded on-demand based on profile requirements.
 """
 
 from .module_loader import ModuleLoader
-from .td_connect import TDConn  # explicit export for DB connection
+from .td_connect import TDConn as TDConn  # explicit re-export for DB connection
 
 # Create a global module loader instance
 _module_loader = None
