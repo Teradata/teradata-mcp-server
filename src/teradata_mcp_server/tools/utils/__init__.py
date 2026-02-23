@@ -14,7 +14,7 @@ import logging
 from collections import OrderedDict
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 
 from .queryband import build_queryband, sanitize_qb_value  # noqa: F401
 

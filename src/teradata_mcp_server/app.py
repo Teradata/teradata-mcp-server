@@ -28,7 +28,7 @@ import yaml
 from fastmcp import FastMCP
 from fastmcp.prompts.prompt import Message, TextContent
 from fastmcp.server.dependencies import get_context
-from pydantic import BaseModel, Field
+from pydantic import Field
 from sqlalchemy.engine import Connection
 
 from teradata_mcp_server import utils as config_utils
@@ -36,7 +36,7 @@ from teradata_mcp_server.config import Settings
 from teradata_mcp_server.middleware import RequestContextMiddleware
 from teradata_mcp_server.tools.utils import (
     convert_tdml_docstring_to_mcp_docstring,
-    execute_analytic_function,
+    execute_analytic_function,  # noqa: F401 -- used via exec(func_str, globals())
     get_anlytic_function_signature,
     get_dynamic_function_definition,
     get_partition_col_order_col_doc_string,
@@ -125,9 +125,9 @@ def create_mcp_app(settings: Settings):
     if enable_bar:
         try:
             # Check for BAR system availability by importing required modules
-            import requests
+            import requests  # noqa: F401 -- availability check for BAR dependencies
 
-            from teradata_mcp_server.tools.bar.dsa_client import DSAClient
+            from teradata_mcp_server.tools.bar.dsa_client import DSAClient  # noqa: F401 -- availability check for BAR dependencies
             # Verify DSA connection if environment variables are set
             dsa_base_url = os.getenv("DSA_BASE_URL")
             dsa_host = os.getenv("DSA_HOST")

@@ -8,8 +8,6 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-import yaml
-from teradatasql import TeradataConnection
 
 logger = logging.getLogger("teradata_mcp_server")
 

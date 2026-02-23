@@ -6,9 +6,7 @@ Follows the tmpl package pattern for semantic layer tools.
 import logging
 import os
 import re
-from pathlib import Path
 
-import yaml
 from teradatasql import TeradataConnection
 
 from teradata_mcp_server.tools.utils import create_response, rows_to_json

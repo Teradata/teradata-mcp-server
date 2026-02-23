@@ -1,10 +1,8 @@
 import logging
 import os
 from functools import lru_cache
-from typing import Union
 from urllib.parse import urlparse
 
-import requests
 from teradatagenai import VSManager
 from teradataml import create_context, get_context, set_auth_token
 

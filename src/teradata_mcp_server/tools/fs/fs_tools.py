@@ -13,7 +13,6 @@ from teradata_mcp_server.tools.utils import create_response, rows_to_json
 
 logger = logging.getLogger("teradata_mcp_server")
 
-from teradata_mcp_server.tools.utils import serialize_teradata_types
 
 #------------------ Do not make changes above  ------------------#
 

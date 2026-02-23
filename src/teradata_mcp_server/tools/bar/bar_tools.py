@@ -5,7 +5,6 @@ BAR (Backup and Restore) Tools for Teradata DSA MCP Server
 
 import json
 import logging
-import os
 
 from teradata_mcp_server.tools.utils import create_response
 

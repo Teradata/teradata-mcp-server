@@ -1,5 +1,4 @@
 import logging
-import re
 
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, default

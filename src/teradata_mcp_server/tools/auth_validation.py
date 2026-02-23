@@ -8,7 +8,6 @@ import threading
 import time
 from collections import defaultdict, deque
 from functools import wraps
-from typing import Optional
 
 BASE_URL_PARTS = 3
 

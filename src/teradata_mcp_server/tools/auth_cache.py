@@ -5,7 +5,6 @@ Secure authentication session cache with expiration and thread safety.
 import threading
 import time
 from dataclasses import dataclass
-from typing import NamedTuple, Optional
 
 
 @dataclass

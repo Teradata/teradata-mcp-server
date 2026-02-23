@@ -12,11 +12,9 @@ Behavior by transport:
 """
 
 import hashlib
-import os
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Optional
 from uuid import uuid4
 
 from fastmcp.server.dependencies import get_http_headers

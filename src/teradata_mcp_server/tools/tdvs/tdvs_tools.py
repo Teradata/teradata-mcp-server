@@ -17,13 +17,9 @@
 import json
 import logging
 import os
-from typing import Union
 
-import pandas as pd
-import requests
 import yaml
 from teradatagenai import VectorStore, VSManager
-from teradataml import remove_context
 from teradatasql import TeradataConnection
 
 from teradata_mcp_server.tools.utils import create_response
