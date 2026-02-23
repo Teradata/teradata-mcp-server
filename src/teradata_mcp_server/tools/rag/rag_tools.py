@@ -1,3 +1,4 @@
+import contextlib
 import json
 import logging
 from datetime import date, datetime
@@ -305,11 +306,8 @@ def _execute_rag_workflow_byom(conn: TeradataConnection, question: str, k: int |
 
         # Drop existing embeddings table
         drop_sql = f"DROP TABLE {database_name}.{dst_table}"
-        try:
+        with contextlib.suppress(Exception):
             cur.execute(drop_sql)
-            logger.debug(f"Dropped existing table {database_name}.{dst_table}")
-        except Exception as e:
-            logger.debug(f"DROP failed or table not found: {e}")
 
         # Create embeddings table
         create_sql = f"""
@@ -496,11 +494,8 @@ def _execute_rag_workflow_ivsm(conn: TeradataConnection, question: str, k: int |
 
         # Drop existing embeddings table
         drop_sql = f"DROP TABLE {database_name}.{dst_table}"
-        try:
+        with contextlib.suppress(Exception):
             cur.execute(drop_sql)
-            logger.debug(f"Dropped existing table {database_name}.{dst_table}")
-        except Exception as e:
-            logger.debug(f"DROP failed or table not found: {e}")
 
         # Create embeddings table
         create_sql = f"""

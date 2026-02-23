@@ -2,12 +2,12 @@
 # SQL Clustering Optimization Tools
 ##################################################################################
 
+import contextlib
 import json
 import logging
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
-
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -200,11 +200,8 @@ def handle_sql_Execute_Full_Pipeline(
         # Create main SQL query log table
         logger.debug(f"Step 1: Creating main query log table {feature_db}.{tables['sql_query_log_main']}")
 
-        try:
+        with contextlib.suppress(Exception):
             cur.execute(f"DROP TABLE {feature_db}.{tables['sql_query_log_main']}")
-            logger.debug(f"Dropped existing table {feature_db}.{tables['sql_query_log_main']}")
-        except Exception as e:
-            logger.debug(f"DROP failed or table not found: {e}")
 
         main_query_sql = f"""
         CREATE TABLE {feature_db}.{tables['sql_query_log_main']} AS (
@@ -254,10 +251,8 @@ def handle_sql_Execute_Full_Pipeline(
         # Create tokenized table for embeddings
         logger.debug(f"Step 2: Creating tokenized table {feature_db}.{tables['sql_log_tokenized_for_embeddings']}")
 
-        try:
+        with contextlib.suppress(Exception):
             cur.execute(f"DROP TABLE {feature_db}.{tables['sql_log_tokenized_for_embeddings']}")
-        except Exception as e:
-            logger.debug(f"DROP failed or table not found: {e}")
 
         tokenize_sql = f"""
         CREATE TABLE {feature_db}.{tables['sql_log_tokenized_for_embeddings']} AS (
@@ -286,10 +281,8 @@ def handle_sql_Execute_Full_Pipeline(
         # Create embeddings table
         logger.debug(f"Step 3: Creating embeddings table {feature_db}.{tables['sql_log_embeddings']}")
 
-        try:
+        with contextlib.suppress(Exception):
             cur.execute(f"DROP TABLE {feature_db}.{tables['sql_log_embeddings']}")
-        except Exception as e:
-            logger.debug(f"DROP failed or table not found: {e}")
 
         embeddings_sql = f"""
         CREATE TABLE {feature_db}.{tables['sql_log_embeddings']} AS (
@@ -314,10 +307,8 @@ def handle_sql_Execute_Full_Pipeline(
         # Create embeddings store table
         logger.debug(f"Step 4: Creating embeddings store table {feature_db}.{tables['sql_log_embeddings_store']}")
 
-        try:
+        with contextlib.suppress(Exception):
             cur.execute(f"DROP TABLE {feature_db}.{tables['sql_log_embeddings_store']}")
-        except Exception as e:
-            logger.debug(f"DROP failed or table not found: {e}")
 
         embeddings_store_sql = f"""
         CREATE TABLE {feature_db}.{tables['sql_log_embeddings_store']} AS (
@@ -340,10 +331,8 @@ def handle_sql_Execute_Full_Pipeline(
         # Perform K-means clustering
         logger.debug(f"Step 5: Performing K-means clustering with k={optimal_k}")
 
-        try:
+        with contextlib.suppress(Exception):
             cur.execute(f"DROP TABLE {feature_db}.{tables['sql_query_clusters_temp']}")
-        except Exception as e:
-            logger.debug(f"DROP failed or table not found: {e}")
 
         kmeans_sql = f"""
         CREATE TABLE {feature_db}.{tables['sql_query_clusters_temp']} AS (
@@ -369,10 +358,8 @@ def handle_sql_Execute_Full_Pipeline(
         # Create final clusters table with silhouette scores
         logger.debug("Step 6: Creating final clusters table with silhouette scores")
 
-        try:
+        with contextlib.suppress(Exception):
             cur.execute(f"DROP TABLE {feature_db}.{tables['sql_query_clusters']}")
-        except Exception as e:
-            logger.debug(f"DROP failed or table not found: {e}")
 
         final_clusters_sql = f"""
         CREATE TABLE {feature_db}.{tables['sql_query_clusters']} AS (
@@ -399,10 +386,8 @@ def handle_sql_Execute_Full_Pipeline(
         # Create cluster statistics table
         logger.debug("Step 7: Creating cluster statistics table")
 
-        try:
+        with contextlib.suppress(Exception):
             cur.execute(f"DROP TABLE {feature_db}.{tables['query_cluster_stats']}")
-        except Exception as e:
-            logger.debug(f"DROP failed or table not found: {e}")
 
         cluster_stats_sql = f"""
         CREATE TABLE {feature_db}.{tables['query_cluster_stats']} AS (
