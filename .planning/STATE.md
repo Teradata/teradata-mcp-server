@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Every tool package has explicit, traceable imports — no implicit exports, no name shadowing risks
-**Current focus:** Phase 5 Plan 1 COMPLETE — all F401 violations resolved, tdvs __all__ added
+**Current focus:** Phase 5 COMPLETE -- F401/F403 enforcement active, all 5 phases done
 
 ## Current Position
 
-Phase: 5 of 5 (Ruff Enforcement) -- IN PROGRESS
-Plan: 1 of 2 in current phase -- COMPLETE
-Status: All 24 F401 violations resolved. 22 unused imports removed, 3 side-effect imports annotated. tdvs __all__ added. Ready for Plan 02 (suppression removal).
-Last activity: 2026-02-22 -- Fixed all F401 violations across 14 files
+Phase: 5 of 5 (Ruff Enforcement) -- COMPLETE
+Plan: 2 of 2 in current phase -- COMPLETE
+Status: All phases complete. F401/F403 ruff enforcement active. Wildcard imports now cause immediate lint failure. 51 handlers + 1 class discoverable across 12 tool packages.
+Last activity: 2026-02-22 -- Removed F401/F403 suppressions from pyproject.toml
 
-Progress: [##########] 95%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
+- Total plans completed: 9
 - Average duration: 2min
-- Total execution time: 15min
+- Total execution time: 17min
 
 **By Phase:**
 
@@ -31,10 +31,10 @@ Progress: [##########] 95%
 | 02-low-risk-conversions | 2/2 | 2min | 1min |
 | 03-medium-risk-conversions | 2/2 | 3min | 1.5min |
 | 04-utility-dependent-conversions | 2/2 | 2min | 1min |
-| 05-ruff-enforcement | 1/2 | 3min | 3min |
+| 05-ruff-enforcement | 2/2 | 5min | 2.5min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (1min), 03-02 (2min), 04-01 (1min), 04-02 (1min), 05-01 (3min)
+- Last 5 plans: 03-02 (2min), 04-01 (1min), 04-02 (1min), 05-01 (3min), 05-02 (2min)
 - Trend: stable
 
 *Updated after each plan completion*
@@ -66,6 +66,7 @@ Recent decisions affecting current work:
 - 04-02: Phase 4 complete: all 11 packages converted and cross-verified (49 handlers + 1 class, zero wildcard imports)
 - 05-01: Safer approach: annotated 3 side-effect imports with noqa FIRST, then ran ruff autofix to remove 21 truly unused
 - 05-01: Manually removed Optional from utils/__init__.py since per-file-ignores suppressed F401 in __init__.py files
+- 05-02: Used explicit re-export alias (TDConn as TDConn) to satisfy F401 for intentional re-exports in tools/__init__.py
 
 ### Pending Todos
 
@@ -79,5 +80,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 05-01-PLAN.md (all F401 violations resolved; 22 unused imports removed; 3 side-effect imports annotated; tdvs __all__ added)
+Stopped at: Completed 05-02-PLAN.md -- ALL PHASES COMPLETE. F401/F403 enforcement active. Project migration finished.
 Resume file: None

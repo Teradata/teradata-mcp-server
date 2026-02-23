@@ -260,13 +260,10 @@ def create_mcp_app(settings: Settings):
         if recreate:
             tdconn = td.TDConn(settings=settings)
             if enable_efs:
-                try:
+                with contextlib.suppress(Exception):
                     import teradataml as tdml
                     fs_config = td.FeatureStoreConfig()
-                    with contextlib.suppress(Exception):
-                        tdml.create_context(tdsqlengine=tdconn.engine)
-                except Exception:
-                    pass
+                    tdml.create_context(tdsqlengine=tdconn.engine)
         return tdconn
 
     middleware = RequestContextMiddleware(
