@@ -16,7 +16,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Low-Risk Conversions** - Convert tmpl, sec, rag, dba, qlty — simplest packages, validates the pattern
 - [x] **Phase 3: Medium-Risk Conversions** - Convert chat, base, bar — each has a known complication requiring care
 - [x] **Phase 4: Utility-Dependent Conversions** - Convert fs, plot, sql_opt — require non-trivial decisions beyond mechanical swap
-- [ ] **Phase 5: Ruff Enforcement** - Remove F403/F401 suppressions and confirm clean enforcement
+- [x] **Phase 5: Ruff Enforcement** - Remove F403/F401 suppressions and confirm clean enforcement
+- [x] **Phase 6: Exception Suppression** - Replace try/except suppression patterns with idiomatic `contextlib.suppress()` calls
 
 ## Phase Details
 
@@ -93,13 +94,13 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Fix all 24 F401 violations (21 removals + 3 noqa annotations) and add __all__ to tdvs/__init__.py
-- [ ] 05-02-PLAN.md — Remove F403/F401 suppressions from pyproject.toml; verify ruff check clean; confirm ModuleLoader discovers all handlers
+- [x] 05-01-PLAN.md — Fix all 24 F401 violations (21 removals + 3 noqa annotations) and add __all__ to tdvs/__init__.py
+- [x] 05-02-PLAN.md — Remove F403/F401 suppressions from pyproject.toml; verify ruff check clean; confirm ModuleLoader discovers all handlers
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -107,4 +108,14 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Low-Risk Conversions | 2/2 | ✓ Complete | 2026-02-22 |
 | 3. Medium-Risk Conversions | 2/2 | ✓ Complete | 2026-02-22 |
 | 4. Utility-Dependent Conversions | 2/2 | ✓ Complete | 2026-02-22 |
-| 5. Ruff Enforcement | 0/2 | Not started | - |
+| 5. Ruff Enforcement | 2/2 | ✓ Complete | 2026-02-22 |
+| 6. Exception Suppression | 1/1 | ✓ Complete | 2026-02-22 |
+
+### Phase 6: Exception Suppression with contextlib.suppress
+
+**Goal:** Replace try/except suppression patterns (try/except-pass and DROP TABLE log-and-ignore) with idiomatic `contextlib.suppress()` calls across 3 source files
+**Depends on:** Phase 5
+**Plans:** 1 plan
+
+Plans:
+- [x] 06-01-PLAN.md — Convert 10 try/except suppression patterns to contextlib.suppress across app.py, sql_opt_tools.py, and rag_tools.py
