@@ -64,10 +64,8 @@ async def main():
         logger.warning("Signal handling not supported on this platform")
 
     # Run transport
-    if settings.mcp_transport == 'sse':
-        await mcp.run_sse_async(host=settings.mcp_host, port=settings.mcp_port, path=settings.mcp_path)
-    elif settings.mcp_transport == 'streamable-http':
-        await mcp.run_http_async(transport='streamable-http', host=settings.mcp_host, port=settings.mcp_port, path=settings.mcp_path)
+    if settings.mcp_transport in ['sse', 'streamable-http']:
+        await mcp.run_http_async(transport=settings.mcp_transport, host=settings.mcp_host, port=settings.mcp_port, path=settings.mcp_path)
     else:
         await mcp.run_stdio_async()
 
