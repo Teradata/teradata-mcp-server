@@ -70,3 +70,9 @@ profiles:
     mcp_prompt: churn_assistant_prompt
     language: "en"
     voice_id: "matthew"    
+
+  commercial:
+    mcp_server_url: "http://127.0.0.1:8001/mcp"
+    mcp_prompt: churn_assistant_prompt
+    language: "en"
+    voice_id: "matthew"        
