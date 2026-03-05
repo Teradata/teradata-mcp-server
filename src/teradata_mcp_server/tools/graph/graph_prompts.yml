@@ -1,0 +1,179 @@
+tool_descriptions:
+    graph_queryDependenciesAgent: |
+      Use this tool to analyse object dependencies in Teradata using graph traversal.
+      
+      WHEN TO USE THIS TOOL:
+      - User asks about object dependencies (upstream/downstream)
+      - User wants impact analysis ("what breaks if I change/drop X?")
+      - User wants data lineage ("where does this data come from?")
+      - User asks "what depends on X?" or "what does X depend on?"
+      - User wants to understand relationships between database objects
+      - User asks about blast radius or cascading effects of changes
+      
+      TOOL PARAMETERS:
+      -----------------
+      object_name: str = Field(..., description="""
+        Object name pattern(s) to analyse. CRITICAL: This is a STRING parameter, not an array.
+        
+        SINGLE OBJECT:
+        - 'DEV01_StGeo_STD_T.mortgage_account' (specific table)
+        - 'DBC.TablesV' (system table)
+        
+        MULTIPLE OBJECTS (CSV - Comma-Separated Values):
+        - '%WBC%.%,%StGeo%.%' (all objects in WBC and StGeo databases)
+        - 'DEV01_%.%,DEV02_%.%' (all objects in DEV01 and DEV02)
+        - 'DB.Table1,DB.Table2,DB.Table3' (specific objects)
+        
+        CRITICAL FOR AI AGENTS:
+        Pass as a SINGLE STRING with commas, NOT as an array.
+        ✅ CORRECT: object_name="%WBC%.%,%StGeo%.%"
+        ❌ WRONG:   object_name=["%WBC%.%", "%StGeo%.%"]
+        
+        Whitespace is automatically trimmed by the stored procedure, so these are equivalent:
+        - '%WBC%.%,%StGeo%.%' (no spaces)
+        - '%WBC%.%, %StGeo%.%' (spaces after commas - OK)
+        
+        When user says "WBC and StGeo", convert to: "%WBC%.%,%StGeo%.%"
+        When user says "all tables in DEV01 and DEV02", convert to: "DEV01_%.%,DEV02_%.%"
+      """)
+      
+      max_depth_up: int = Field(default=3, description="""
+        Maximum levels to traverse UPSTREAM (what this object depends on).
+        Range: 0-10. Default: 3
+        
+        0 = No upstream analysis (downstream only)
+        1 = Direct dependencies only (immediate parents)
+        3 = Standard depth (good balance for most queries)
+        5 = Deep lineage analysis
+        10 = Maximum depth (complete lineage trace)
+        
+        When user says "where does data come from", use max_depth_up=10, max_depth_down=0
+        When user says "immediate dependencies", use max_depth_up=1
+      """)
+      
+      max_depth_down: int = Field(default=3, description="""
+        Maximum levels to traverse DOWNSTREAM (what depends on this object).
+        Range: 0-10. Default: 3
+        
+        0 = No downstream analysis (upstream only)
+        1 = Direct dependents only (immediate children)
+        3 = Standard depth (typical blast radius)
+        5 = Deep impact analysis
+        10 = Maximum depth (complete impact trace)
+        
+        When user asks "what breaks if I drop X", use max_depth_up=0, max_depth_down=5
+        When user asks "impact analysis", use max_depth_down=5
+      """)
+      
+      exclude_objects: str = Field(default='', description="""
+        Comma-separated list of object patterns to EXCLUDE (SERVER-SIDE filter).
+        Matches against DatabaseName.ObjectName format.
+        
+        CRITICAL: This is very powerful for reducing result size and query time.
+        
+        Common patterns:
+        - 'PRD_%,PROD_%' (exclude production databases)
+        - 'TST_%,UAT_%,STG_%' (exclude test/staging environments)
+        - 'OLD_%,ARCHIVE_%,DEPRECATED_%' (exclude legacy databases)
+        - '%.temp_%,%.bak_%' (exclude temporary and backup objects)
+        - 'DFJ%,C_D02%,SANDBOX_%' (exclude personal/sandbox schemas)
+        
+        When user says "excluding production", use: exclude_objects="PRD_%,PROD_%"
+        When user says "only development", use: exclude_objects="PRD_%,TST_%,UAT_%,STG_%"
+      """)
+      
+      include_containers: str = Field(default='', description="""
+        Comma-separated list of schemas/databases to INCLUDE (whitelist).
+        Empty = all containers included (subject to exclude_objects filter).
+        
+        Examples:
+        - 'DEV01_StGeo_%,DEV02_WBC_%' (only these database families)
+        - 'MORTGAGE_%,LENDING_%' (only these business domains)
+        
+        When user says "focus on DEV01", use: include_containers="DEV01_%"
+      """)
+      
+      edge_repository: str = Field(default='DEV_01_ODEX_STD_0_V.ODEXRepository', description="""
+        ODEX repository table containing pre-computed dependency data.
+        Default is usually correct. Only change if user specifies different environment.
+      """)
+      
+      return_format: str = Field(default='detailed', description="""
+        Output format: 'detailed', 'summary', or 'edges_only'
+        
+        'detailed' (default): Full nodes, edges, statistics, metadata
+          Use when: User wants to see full dependency graph or needs visualization
+        
+        'summary': High-level statistics and counts only
+          Use when: User asks "how many", "quick check", "impact count"
+        
+        'edges_only': Raw edge data without derived nodes
+          Use when: User wants raw data for graph construction
+      """)
+      
+      USAGE EXAMPLES:
+      ---------------
+      
+      Example 1 - Impact Analysis:
+      User: "What breaks if I drop vw_borrower_risk_assessment?"
+      AI should call:
+        object_name="DEV02_WBC_RPT_V.vw_borrower_risk_assessment"
+        max_depth_up=0
+        max_depth_down=5
+        exclude_objects="PRD_%,TST_%"
+        return_format="detailed"
+      
+      Example 2 - Multiple Objects:
+      User: "Analyse dependencies for all WBC and StGeo objects"
+      AI should call:
+        object_name="%WBC%.%,%StGeo%.%"  # CSV string, NOT array!
+        max_depth_up=3
+        max_depth_down=3
+        exclude_objects="PRD_%"
+        return_format="detailed"
+      
+      Example 3 - Data Lineage:
+      User: "Where does the mortgage risk report data come from?"
+      AI should call:
+        object_name="DEV01_StGeo_RPT_V.mortgage_risk_analysis"
+        max_depth_up=10  # Deep upstream trace
+        max_depth_down=0  # No downstream needed
+        return_format="detailed"
+      
+      Example 4 - Quick Impact Check:
+      User: "How many objects will be affected if I modify Table1?"
+      AI should call:
+        object_name="DEV01_StGeo_STD_T.Table1"
+        max_depth_down=5
+        return_format="summary"  # Just need counts
+      
+      Example 5 - Project Scope:
+      User: "Show dependencies for all tables in DEV01 and DEV02, excluding production"
+      AI should call:
+        object_name="DEV01_%.%,DEV02_%.%"  # CSV string
+        max_depth_up=3
+        max_depth_down=3
+        exclude_objects="PRD_%,PROD_%"
+        return_format="detailed"
+      
+      COMMON MISTAKES TO AVOID:
+      -------------------------
+      ❌ Passing object_name as array: object_name=["%WBC%.%", "%StGeo%.%"]
+         ✅ Correct: object_name="%WBC%.%,%StGeo%.%"
+      
+      ❌ Making multiple tool calls for multiple objects
+         ✅ Correct: Single call with CSV: object_name="DB.Table1,DB.Table2"
+      
+      ❌ Using max_depth=10 by default (slow!)
+         ✅ Correct: Start with max_depth=3, increase if needed
+      
+      ❌ Forgetting to exclude production when user wants "dev only"
+         ✅ Correct: Add exclude_objects="PRD_%,PROD_%,TST_%"
+      
+      PERFORMANCE TIPS:
+      -----------------
+      - Start with max_depth=3 (good balance)
+      - Use exclude_objects liberally (can reduce results by 20-50%)
+      - Use return_format="summary" for quick checks
+      - Use include_containers to limit scope when possible
+      - For very large result sets (depth 10), warn user about potential wait time

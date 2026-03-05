@@ -44,7 +44,7 @@ eda:
     - "base_(?!(writeQuery|dynamicQuery)$).*"
     - qlty_.*
     - sec_userDbPermissions
-    
+
 bar:
   tool:
     - ^bar_*
@@ -61,3 +61,12 @@ llmUser:
     - ^chat_*
   prompt:
     - ^chat_*
+
+graph:
+  tool:
+    - ^graph_.*     
+  prompt:
+    - ^graph_.*
+  resource:
+    - .*
+
