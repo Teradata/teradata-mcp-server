@@ -527,3 +527,152 @@ def util_base_dynamicQuery(conn: TeradataConnection, sql_generator: callable, *a
         }
         logger.debug(f"Tool: util_base_dynamicQuery: metadata: {metadata}")
         return create_response(data, metadata)
+
+
+
+
+#------------------ Tool  ------------------#
+# Extract and save DDL tool
+def handle_base_saveDDL(
+    conn: TeradataConnection,
+    database_name: str,
+    object_name: str,
+    object_type: str = "PROCEDURE",
+    output_dir: str = "./ddls_extracted",
+    *args,
+    **kwargs
+):
+    """
+    Extracts the complete DDL of a Teradata object and saves it to a .sql file.
+    
+    This tool solves the token limit problem by executing the extraction and file save
+    operation directly on the server side, without needing to pass large DDL content
+    through the response.
+    
+    Arguments:
+      database_name - Database name (e.g., 'MKTG_USR')
+      object_name - Object name (e.g., 'SP_LOAD_VARIABLES_ARGUMENTARIO_IAG_FICHA_CLIENTE')
+      object_type - Type of object: 'PROCEDURE', 'TABLE', 'VIEW' (default: 'PROCEDURE')
+      output_dir - Directory where to save the DDL file (default: './ddls_extracted')
+    
+    Returns:
+      ResponseType: formatted response with file path, size, and metadata
+    """
+    import os
+    from datetime import datetime
+    from pathlib import Path
+    
+    logger.debug(
+        f"Tool: handle_base_saveDDL: Args: database_name={database_name}, "
+        f"object_name={object_name}, object_type={object_type}, output_dir={output_dir}"
+    )
+    
+    # Validate object type
+    valid_types = ["PROCEDURE", "TABLE", "VIEW", "MACRO", "FUNCTION"]
+    object_type_upper = object_type.upper()
+    if object_type_upper not in valid_types:
+        error_msg = f"Invalid object_type '{object_type}'. Must be one of: {', '.join(valid_types)}"
+        logger.error(error_msg)
+        return create_response(
+            [{"error": error_msg}],
+            {"tool_name": "base_saveDDL", "status": "error"}
+        )
+    
+    # Build the SHOW command
+    show_commands = {
+        "PROCEDURE": f"SHOW PROCEDURE {database_name}.{object_name}",
+        "TABLE": f"SHOW TABLE {database_name}.{object_name}",
+        "VIEW": f"SHOW VIEW {database_name}.{object_name}",
+        "MACRO": f"SHOW MACRO {database_name}.{object_name}",
+        "FUNCTION": f"SHOW FUNCTION {database_name}.{object_name}"
+    }
+    
+    sql = show_commands[object_type_upper]
+    logger.info(f"Executing: {sql}")
+    
+    try:
+        # Execute the SHOW command
+        with conn.cursor() as cur:
+            rows = cur.execute(sql)
+            raw_rows = rows.fetchall()
+            
+            if not raw_rows:
+                error_msg = f"No DDL found for {object_type} {database_name}.{object_name}"
+                logger.warning(error_msg)
+                return create_response(
+                    [{"error": error_msg}],
+                    {"tool_name": "base_saveDDL", "status": "not_found"}
+                )
+            
+            # Concatenate all rows to get complete DDL
+            ddl_parts = [row[0] for row in raw_rows if row and row[0]]
+            ddl_raw = ''.join(ddl_parts)
+            
+            # Format DDL: Replace \r with newlines and \t with spaces
+            # This fixes the single-line output issue
+            ddl_complete = ddl_raw.replace('\r', '\n').replace('\t', '    ')
+            
+            ddl_size = len(ddl_complete)
+            
+            logger.info(f"DDL extracted: {ddl_size} chars from {len(raw_rows)} rows (formatted)")
+            
+            # Create output directory if it doesn't exist
+            output_path = Path(output_dir)
+            output_path.mkdir(parents=True, exist_ok=True)
+            
+            # Generate filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{object_name}_DDL.sql"
+            filepath = output_path / filename
+            
+            # Prepare file header with metadata
+            header = f"""/*
+ * File: {filename}
+ * Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+ * Type: {object_type_upper}
+ * Database: {database_name}
+ * Object: {object_name}
+ * Size: {ddl_size} characters
+ */
+
+"""
+            
+            # Write DDL to file
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(header)
+                f.write(ddl_complete)
+            
+            file_size_bytes = filepath.stat().st_size
+            
+            logger.info(f"DDL saved successfully to: {filepath} ({file_size_bytes} bytes)")
+            
+            # Return success response
+            data = [{
+                "status": "success",
+                "filepath": str(filepath.absolute()),
+                "filename": filename,
+                "ddl_size_chars": ddl_size,
+                "file_size_bytes": file_size_bytes,
+                "rows_concatenated": len(raw_rows),
+                "object_type": object_type_upper,
+                "database": database_name,
+                "object": object_name
+            }]
+            
+            metadata = {
+                "tool_name": "base_saveDDL",
+                "sql": sql,
+                "output_dir": str(output_path.absolute()),
+                "timestamp": timestamp,
+                "success": True
+            }
+            
+            return create_response(data, metadata)
+            
+    except Exception as e:
+        error_msg = f"Error extracting/saving DDL: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return create_response(
+            [{"error": error_msg, "exception_type": type(e).__name__}],
+            {"tool_name": "base_saveDDL", "status": "error", "sql": sql}
+        )
