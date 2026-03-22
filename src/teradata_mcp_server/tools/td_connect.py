@@ -24,14 +24,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger("teradata_mcp_server")
 
 
-
 # This class is used to connect to Teradata database using SQLAlchemy (teradatasqlalchemy driver)
 #     It uses the connection URL from the environment variable DATABASE_URI from a .env file
 #     The connection URL should be in the format: teradata://username:password@host:port/database
 class TDConn:
     engine: Engine | None = None
 
-    def __init__(self, settings: Optional['Settings'] = None):
+    def __init__(self, settings: Optional["Settings"] = None):
         """
         Initialize TDConn with configuration from Settings object.
 
@@ -45,7 +44,7 @@ class TDConn:
             # Fallback to environment variables if no settings provided
             self._rate_limiter = RateLimiter(
                 max_attempts=int(os.getenv("AUTH_RATE_LIMIT_ATTEMPTS", "5")),
-                window_seconds=int(os.getenv("AUTH_RATE_LIMIT_WINDOW", "60"))
+                window_seconds=int(os.getenv("AUTH_RATE_LIMIT_WINDOW", "60")),
             )
             connection_url = os.getenv("DATABASE_URI")
             if connection_url is None:
@@ -60,8 +59,7 @@ class TDConn:
         else:
             # Use settings object
             self._rate_limiter = RateLimiter(
-                max_attempts=settings.auth_rate_limit_attempts,
-                window_seconds=settings.auth_rate_limit_window
+                max_attempts=settings.auth_rate_limit_attempts, window_seconds=settings.auth_rate_limit_window
             )
             connection_url = settings.database_uri
             if connection_url is None:
@@ -80,13 +78,11 @@ class TDConn:
         password = parsed_url.password
         self._base_host = parsed_url.hostname
         self._base_port = parsed_url.port or 1025
-        self._base_db = parsed_url.path.lstrip('/')
+        self._base_db = parsed_url.path.lstrip("/")
         self._default_basic_logmech = logmech
 
         # Build SQLAlchemy connection string for teradatasqlalchemy
-        sqlalchemy_url = (
-            f"teradatasql://{user}:{password}@{self._base_host}:{self._base_port}/{self._base_db}?LOGMECH={self._default_basic_logmech}"
-        )
+        sqlalchemy_url = f"teradatasql://{user}:{password}@{self._base_host}:{self._base_port}/{self._base_db}?LOGMECH={self._default_basic_logmech}"
 
         try:
             self.engine = create_engine(
@@ -136,6 +132,7 @@ class TDConn:
         """
         # Apply rate limiting
         from .auth_validation import generate_client_id
+
         client_id = generate_client_id(auth_header)
         if not self._rate_limiter.is_allowed(client_id):
             raise RateLimitExceededError(self._rate_limiter.window_seconds)
@@ -190,9 +187,7 @@ class TDConn:
         try:
             # For basic credential validation, just validate the credentials without specifying a database
             # Let Teradata use the user's default database
-            sqlalchemy_url = (
-                f"teradatasql://{user}:{secret}@{self._base_host}:{self._base_port}?LOGMECH={logmech}"
-            )
+            sqlalchemy_url = f"teradatasql://{user}:{secret}@{self._base_host}:{self._base_port}?LOGMECH={logmech}"
             engine = create_engine(
                 sqlalchemy_url,
                 poolclass=NullPool,
@@ -213,9 +208,7 @@ class TDConn:
         """
         try:
             # No username needed for JWT LOGMECH
-            sqlalchemy_url = (
-                f"teradatasql://@{self._base_host}:{self._base_port}/{self._base_db}?LOGMECH=JWT&LOGDATA=token={quote_plus(jwt_token)}"
-            )
+            sqlalchemy_url = f"teradatasql://@{self._base_host}:{self._base_port}/{self._base_db}?LOGMECH=JWT&LOGDATA=token={quote_plus(jwt_token)}"
             engine = create_engine(
                 sqlalchemy_url,
                 poolclass=NullPool,
@@ -224,7 +217,9 @@ class TDConn:
             with engine.connect() as conn:
                 # Get the authenticated database username
                 result = conn.exec_driver_sql("SELECT USER")
-                username = result.fetchone()[0]
+                row = result.fetchone()
+                assert row is not None
+                username: str = row[0]
             engine.dispose()
             return username
         except Exception as e:

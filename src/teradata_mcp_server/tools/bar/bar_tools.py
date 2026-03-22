@@ -6,6 +6,7 @@ BAR (Backup and Restore) Tools for Teradata DSA MCP Server
 import json
 import logging
 import os
+from typing import Any
 
 from teradata_mcp_server.tools.utils import create_response
 
@@ -16,7 +17,8 @@ MAX_PORT = 65535
 logger = logging.getLogger("teradata_mcp_server")
 
 
-#------------------ Disk File System Operations ------------------#
+# ------------------ Disk File System Operations ------------------#
+
 
 def list_disk_file_systems() -> str:
     """List all configured disk file systems in DSA
@@ -34,8 +36,7 @@ def list_disk_file_systems() -> str:
 
         # Make request to DSA API
         response = dsa_client._make_request(
-            method="GET",
-            endpoint="dsa/components/backup-applications/disk-file-system"
+            method="GET", endpoint="dsa/components/backup-applications/disk-file-system"
         )
 
         logger.debug(f"bar: DSA API response: {response}")
@@ -44,8 +45,8 @@ def list_disk_file_systems() -> str:
         results.append("🗂️ DSA Disk File Systems")
         results.append("=" * 50)
 
-        if response.get('status') == 'LIST_DISK_FILE_SYSTEMS_SUCCESSFUL':
-            file_systems = response.get('fileSystems', [])
+        if response.get("status") == "LIST_DISK_FILE_SYSTEMS_SUCCESSFUL":
+            file_systems = response.get("fileSystems", [])
 
             if file_systems:
                 results.append(f"📊 Total File Systems: {len(file_systems)}")
@@ -67,10 +68,10 @@ def list_disk_file_systems() -> str:
         else:
             results.append("❌ Failed to list disk file systems")
             results.append(f"📊 Status: {response.get('status', 'Unknown')}")
-            if response.get('validationlist'):
-                validation = response['validationlist']
-                if validation.get('serverValidationList'):
-                    for error in validation['serverValidationList']:
+            if response.get("validationlist"):
+                validation = response["validationlist"]
+                if validation.get("serverValidationList"):
+                    for error in validation["serverValidationList"]:
                         results.append(f"❌ Error: {error.get('message', 'Unknown error')}")
 
         return "\n".join(results)
@@ -99,13 +100,12 @@ def config_disk_file_system(file_system_path: str, max_files: int) -> str:
         # First, get the existing file systems
         try:
             existing_response = dsa_client._make_request(
-                method="GET",
-                endpoint="dsa/components/backup-applications/disk-file-system"
+                method="GET", endpoint="dsa/components/backup-applications/disk-file-system"
             )
 
             existing_file_systems = []
-            if existing_response.get('status') == 'LIST_DISK_FILE_SYSTEMS_SUCCESSFUL':
-                existing_file_systems = existing_response.get('fileSystems', [])
+            if existing_response.get("status") == "LIST_DISK_FILE_SYSTEMS_SUCCESSFUL":
+                existing_file_systems = existing_response.get("fileSystems", [])
                 logger.info(f"bar: Found {len(existing_file_systems)} existing file systems")
             else:
                 logger.info("bar: No existing file systems found or unable to retrieve them")
@@ -119,12 +119,9 @@ def config_disk_file_system(file_system_path: str, max_files: int) -> str:
         path_exists = False
 
         for fs in existing_file_systems:
-            if fs.get('fileSystemPath') == file_system_path:
+            if fs.get("fileSystemPath") == file_system_path:
                 # Update existing file system
-                file_systems_to_configure.append({
-                    "fileSystemPath": file_system_path,
-                    "maxFiles": max_files
-                })
+                file_systems_to_configure.append({"fileSystemPath": file_system_path, "maxFiles": max_files})
                 path_exists = True
                 logger.info(f"bar: Updating existing file system: {file_system_path}")
             else:
@@ -133,24 +130,17 @@ def config_disk_file_system(file_system_path: str, max_files: int) -> str:
 
         # If path doesn't exist, add the new file system
         if not path_exists:
-            file_systems_to_configure.append({
-                "fileSystemPath": file_system_path,
-                "maxFiles": max_files
-            })
+            file_systems_to_configure.append({"fileSystemPath": file_system_path, "maxFiles": max_files})
             logger.info(f"bar: Adding new file system: {file_system_path}")
 
         # Prepare request data with all file systems (existing + new/updated)
-        request_data = {
-            "fileSystems": file_systems_to_configure
-        }
+        request_data = {"fileSystems": file_systems_to_configure}
 
         logger.info(f"bar: Configuring {len(file_systems_to_configure)} file systems total")
 
         # Make request to DSA API
         response = dsa_client._make_request(
-            method="POST",
-            endpoint="dsa/components/backup-applications/disk-file-system",
-            data=request_data
+            method="POST", endpoint="dsa/components/backup-applications/disk-file-system", data=request_data
         )
 
         logger.debug(f"bar: DSA API response: {response}")
@@ -164,7 +154,7 @@ def config_disk_file_system(file_system_path: str, max_files: int) -> str:
         results.append(f"🔄 Operation: {'Update' if path_exists else 'Add'}")
         results.append("")
 
-        if response.get('status') == 'CONFIG_DISK_FILE_SYSTEM_SUCCESSFUL':
+        if response.get("status") == "CONFIG_DISK_FILE_SYSTEM_SUCCESSFUL":
             results.append("✅ Disk file system configured successfully")
             results.append(f"📊 Status: {response.get('status')}")
             results.append(f"✔️ Valid: {response.get('valid', False)}")
@@ -175,19 +165,19 @@ def config_disk_file_system(file_system_path: str, max_files: int) -> str:
             results.append(f"✔️ Valid: {response.get('valid', False)}")
 
             # Show validation errors if any
-            if response.get('validationlist'):
-                validation = response['validationlist']
+            if response.get("validationlist"):
+                validation = response["validationlist"]
                 results.append("")
                 results.append("🔍 Validation Details:")
 
-                if validation.get('serverValidationList'):
-                    for error in validation['serverValidationList']:
+                if validation.get("serverValidationList"):
+                    for error in validation["serverValidationList"]:
                         results.append(f"❌ Server Error: {error.get('message', 'Unknown error')}")
                         results.append(f"   Code: {error.get('code', 'N/A')}")
                         results.append(f"   Status: {error.get('valStatus', 'N/A')}")
 
-                if validation.get('clientValidationList'):
-                    for error in validation['clientValidationList']:
+                if validation.get("clientValidationList"):
+                    for error in validation["clientValidationList"]:
                         results.append(f"❌ Client Error: {error.get('message', 'Unknown error')}")
 
         results.append("")
@@ -219,8 +209,7 @@ def delete_disk_file_systems() -> str:
 
         # Make request to DSA API
         response = dsa_client._make_request(
-            method="DELETE",
-            endpoint="dsa/components/backup-applications/disk-file-system"
+            method="DELETE", endpoint="dsa/components/backup-applications/disk-file-system"
         )
 
         logger.debug(f"bar: DSA API response: {response}")
@@ -229,7 +218,7 @@ def delete_disk_file_systems() -> str:
         results.append("🗂️ DSA Disk File System Deletion")
         results.append("=" * 50)
 
-        if response.get('status') == 'DELETE_COMPONENT_SUCCESSFUL':
+        if response.get("status") == "DELETE_COMPONENT_SUCCESSFUL":
             results.append("✅ All disk file systems deleted successfully")
             results.append(f"📊 Status: {response.get('status')}")
             results.append(f"✔️ Valid: {response.get('valid', False)}")
@@ -240,23 +229,23 @@ def delete_disk_file_systems() -> str:
             results.append(f"✔️ Valid: {response.get('valid', False)}")
 
             # Show validation errors if any
-            if response.get('validationlist'):
-                validation = response['validationlist']
+            if response.get("validationlist"):
+                validation = response["validationlist"]
                 results.append("")
                 results.append("🔍 Validation Details:")
 
-                if validation.get('serverValidationList'):
-                    for error in validation['serverValidationList']:
+                if validation.get("serverValidationList"):
+                    for error in validation["serverValidationList"]:
                         results.append(f"❌ Server Error: {error.get('message', 'Unknown error')}")
                         results.append(f"   Code: {error.get('code', 'N/A')}")
                         results.append(f"   Status: {error.get('valStatus', 'N/A')}")
 
-                if validation.get('clientValidationList'):
-                    for error in validation['clientValidationList']:
+                if validation.get("clientValidationList"):
+                    for error in validation["clientValidationList"]:
                         results.append(f"❌ Client Error: {error.get('message', 'Unknown error')}")
 
                 # If deletion failed due to dependencies, provide guidance
-                if any('in use by' in error.get('message', '') for error in validation.get('serverValidationList', [])):
+                if any("in use by" in error.get("message", "") for error in validation.get("serverValidationList", [])):
                     results.append("")
                     results.append("💡 Helpful Notes:")
                     results.append("   • Remove all backup jobs using these file systems first")
@@ -297,13 +286,12 @@ def remove_disk_file_system(file_system_path: str) -> str:
         # First, get the existing file systems
         try:
             existing_response = dsa_client._make_request(
-                method="GET",
-                endpoint="dsa/components/backup-applications/disk-file-system"
+                method="GET", endpoint="dsa/components/backup-applications/disk-file-system"
             )
 
             existing_file_systems = []
-            if existing_response.get('status') == 'LIST_DISK_FILE_SYSTEMS_SUCCESSFUL':
-                existing_file_systems = existing_response.get('fileSystems', [])
+            if existing_response.get("status") == "LIST_DISK_FILE_SYSTEMS_SUCCESSFUL":
+                existing_file_systems = existing_response.get("fileSystems", [])
                 logger.info(f"bar: Found {len(existing_file_systems)} existing file systems")
             else:
                 logger.warning("bar: No existing file systems found or unable to retrieve them")
@@ -318,7 +306,7 @@ def remove_disk_file_system(file_system_path: str) -> str:
         file_systems_to_keep = []
 
         for fs in existing_file_systems:
-            if fs.get('fileSystemPath') == file_system_path:
+            if fs.get("fileSystemPath") == file_system_path:
                 path_exists = True
                 logger.info(f"bar: Found file system to remove: {file_system_path}")
             else:
@@ -327,7 +315,7 @@ def remove_disk_file_system(file_system_path: str) -> str:
 
         # If path doesn't exist, return error
         if not path_exists:
-            available_paths = [fs.get('fileSystemPath', 'N/A') for fs in existing_file_systems]
+            available_paths = [fs.get("fileSystemPath", "N/A") for fs in existing_file_systems]
             results = []
             results.append("🗂️ DSA Disk File System Removal")
             results.append("=" * 50)
@@ -344,17 +332,13 @@ def remove_disk_file_system(file_system_path: str) -> str:
             return "\n".join(results)
 
         # Prepare request data with remaining file systems
-        request_data = {
-            "fileSystems": file_systems_to_keep
-        }
+        request_data = {"fileSystems": file_systems_to_keep}
 
         logger.info(f"bar: Removing '{file_system_path}', keeping {len(file_systems_to_keep)} file systems")
 
         # Make request to DSA API to reconfigure with remaining file systems
         response = dsa_client._make_request(
-            method="POST",
-            endpoint="dsa/components/backup-applications/disk-file-system",
-            data=request_data
+            method="POST", endpoint="dsa/components/backup-applications/disk-file-system", data=request_data
         )
 
         logger.debug(f"bar: DSA API response: {response}")
@@ -366,7 +350,7 @@ def remove_disk_file_system(file_system_path: str) -> str:
         results.append(f"📊 Remaining File Systems: {len(file_systems_to_keep)}")
         results.append("")
 
-        if response.get('status') == 'CONFIG_DISK_FILE_SYSTEM_SUCCESSFUL':
+        if response.get("status") == "CONFIG_DISK_FILE_SYSTEM_SUCCESSFUL":
             results.append("✅ Disk file system removed successfully")
             results.append(f"📊 Status: {response.get('status')}")
             results.append(f"✔️ Valid: {response.get('valid', False)}")
@@ -375,8 +359,8 @@ def remove_disk_file_system(file_system_path: str) -> str:
                 results.append("")
                 results.append("📋 Remaining file systems:")
                 for fs in file_systems_to_keep:
-                    path = fs.get('fileSystemPath', 'N/A')
-                    max_files = fs.get('maxFiles', 'N/A')
+                    path = fs.get("fileSystemPath", "N/A")
+                    max_files = fs.get("maxFiles", "N/A")
                     results.append(f"   • {path} (Max Files: {max_files})")
             else:
                 results.append("")
@@ -388,19 +372,19 @@ def remove_disk_file_system(file_system_path: str) -> str:
             results.append(f"✔️ Valid: {response.get('valid', False)}")
 
             # Show validation errors if any
-            if response.get('validationlist'):
-                validation = response['validationlist']
+            if response.get("validationlist"):
+                validation = response["validationlist"]
                 results.append("")
                 results.append("🔍 Validation Details:")
 
-                if validation.get('serverValidationList'):
-                    for error in validation['serverValidationList']:
+                if validation.get("serverValidationList"):
+                    for error in validation["serverValidationList"]:
                         results.append(f"❌ Server Error: {error.get('message', 'Unknown error')}")
                         results.append(f"   Code: {error.get('code', 'N/A')}")
                         results.append(f"   Status: {error.get('valStatus', 'N/A')}")
 
-                if validation.get('clientValidationList'):
-                    for error in validation['clientValidationList']:
+                if validation.get("clientValidationList"):
+                    for error in validation["clientValidationList"]:
                         results.append(f"❌ Client Error: {error.get('message', 'Unknown error')}")
 
         results.append("")
@@ -415,9 +399,7 @@ def remove_disk_file_system(file_system_path: str) -> str:
 
 
 def manage_dsa_disk_file_systems(
-    operation: str,
-    file_system_path: str | None = None,
-    max_files: int | None = None
+    operation: str, file_system_path: str | None = None, max_files: int | None = None
 ) -> str:
     """Unified DSA Disk File System Management Tool
 
@@ -465,9 +447,7 @@ def manage_dsa_disk_file_systems(
             return remove_disk_file_system(file_system_path)
 
         else:
-            available_operations = [
-                "list", "config", "delete_all", "remove"
-            ]
+            available_operations = ["list", "config", "delete_all", "remove"]
             return f"❌ Error: Unknown operation '{operation}'. Available operations: {', '.join(available_operations)}"
 
     except Exception as e:
@@ -478,10 +458,10 @@ def manage_dsa_disk_file_systems(
 """
 #PA255044 ->  START -- AWS S3 Configuration Tool
 """
-#------------------ AWS S3 Backup Solution Configuration and Operations ------------------#
+# ------------------ AWS S3 Backup Solution Configuration and Operations ------------------#
 
 
-def list_aws_s3_backup_configurations () -> str:
+def list_aws_s3_backup_configurations() -> str:
     """List the configured AWS S3 object store systems in DSA
 
     Lists all configured AWS S3 storage target systems that are currently available configured for the backup operations, showing:
@@ -497,10 +477,7 @@ def list_aws_s3_backup_configurations () -> str:
         logger.info("bar: Listing AWS S3 target systems via DSA API")
 
         # Make request to DSA API
-        response = dsa_client._make_request(
-            method="GET",
-            endpoint="dsa/components/backup-applications/aws-s3"
-        )
+        response = dsa_client._make_request(method="GET", endpoint="dsa/components/backup-applications/aws-s3")
 
         # Add debug log for full API response
         logger.debug("bar: Full DSA API response from aws-s3 endpoint: %r", response)
@@ -509,9 +486,9 @@ def list_aws_s3_backup_configurations () -> str:
         results.append("🗂️ DSA AWS S3 Backup Solution Systems Available")
         results.append("=" * 50)
 
-        if response.get('status') == 'LIST_AWS_APP_SUCCESSFUL':
+        if response.get("status") == "LIST_AWS_APP_SUCCESSFUL":
             # Extract all AWS configurations from the aws list
-            aws_list = response.get('aws', [])
+            aws_list = response.get("aws", [])
 
             total_configurations = 0
             total_buckets = 0
@@ -523,15 +500,15 @@ def list_aws_s3_backup_configurations () -> str:
 
                 # Process each AWS configuration
                 for config_idx, aws_config in enumerate(aws_list, 1):
-                    config_aws_est = aws_config.get('configAwsRest', {})
-                    account_name = config_aws_est.get('acctName', 'N/A')
-                    access_id = config_aws_est.get('accessId', 'N/A')
+                    config_aws_est = aws_config.get("configAwsRest", {})
+                    account_name = config_aws_est.get("acctName", "N/A")
+                    access_id = config_aws_est.get("accessId", "N/A")
 
                     results.append(f"🔧 AWS Configuration #{config_idx}")
                     results.append(f"   📋 Account Name: {account_name}")
                     results.append(f"   🔑 Access ID: {access_id}")
 
-                    buckets_by_region = config_aws_est.get('bucketsByRegion', [])
+                    buckets_by_region = config_aws_est.get("bucketsByRegion", [])
 
                     # Handle if bucketsByRegion is a dict (single region) or list
                     if isinstance(buckets_by_region, dict):
@@ -539,24 +516,24 @@ def list_aws_s3_backup_configurations () -> str:
                     config_bucket_count = 0
                     if buckets_by_region:
                         for i, region in enumerate(buckets_by_region, 1):
-                            region_name = region.get('region', 'N/A')
+                            region_name = region.get("region", "N/A")
                             results.append(f"   🗂️ Region #{i}: {region_name}")
-                            buckets = region.get('buckets', [])
+                            buckets = region.get("buckets", [])
                             if isinstance(buckets, dict):
                                 buckets = [buckets]
                             if buckets:
                                 for j, bucket in enumerate(buckets, 1):
                                     config_bucket_count += 1
                                     total_buckets += 1
-                                    bucket_name = bucket.get('bucketName', 'N/A')
+                                    bucket_name = bucket.get("bucketName", "N/A")
                                     results.append(f"      📁 Bucket #{j}: {bucket_name}")
-                                    prefix_list = bucket.get('prefixList', [])
+                                    prefix_list = bucket.get("prefixList", [])
                                     if isinstance(prefix_list, dict):
                                         prefix_list = [prefix_list]
                                     if prefix_list:
                                         for k, prefix in enumerate(prefix_list, 1):
-                                            prefix_name = prefix.get('prefixName', 'N/A')
-                                            storage_devices = prefix.get('storageDevices', 'N/A')
+                                            prefix_name = prefix.get("prefixName", "N/A")
+                                            storage_devices = prefix.get("storageDevices", "N/A")
                                             results.append(f"         🔖 Prefix #{k}: {prefix_name}")
                                             results.append(f"            Storage Devices: {storage_devices}")
                                     else:
@@ -581,10 +558,10 @@ def list_aws_s3_backup_configurations () -> str:
         else:
             results.append("❌ Failed to list AWS S3 Backup Solutions Configured")
             results.append(f"📊 Status: {response.get('status', 'Unknown')}")
-            if response.get('validationlist'):
-                validation = response['validationlist']
-                if validation.get('serverValidationList'):
-                    for error in validation['serverValidationList']:
+            if response.get("validationlist"):
+                validation = response["validationlist"]
+                if validation.get("serverValidationList"):
+                    for error in validation["serverValidationList"]:
                         results.append(f"❌ Error: {error.get('message', 'Unknown error')}")
 
         return "\n".join(results)
@@ -611,10 +588,7 @@ def delete_aws_s3_backup_configurations() -> str:
         logger.info("bar: Deleting all AWS S3 backup configurations via DSA API")
 
         # Make request to DSA API
-        response = dsa_client._make_request(
-            method="DELETE",
-            endpoint="dsa/components/backup-applications/aws-s3"
-        )
+        response = dsa_client._make_request(method="DELETE", endpoint="dsa/components/backup-applications/aws-s3")
 
         logger.debug(f"bar: DSA API response: {response}")
 
@@ -622,7 +596,7 @@ def delete_aws_s3_backup_configurations() -> str:
         results.append("🗂️ DSA AWS S3 Backup Configuration Deletion")
         results.append("=" * 50)
 
-        if response.get('status') == 'DELETE_COMPONENT_SUCCESSFUL':
+        if response.get("status") == "DELETE_COMPONENT_SUCCESSFUL":
             results.append("✅ All AWS S3 backup configurations deleted successfully")
             results.append(f"📊 Status: {response.get('status')}")
             results.append(f"✔️ Valid: {response.get('valid', False)}")
@@ -633,23 +607,23 @@ def delete_aws_s3_backup_configurations() -> str:
             results.append(f"✔️ Valid: {response.get('valid', False)}")
 
             # Show validation errors if any
-            if response.get('validationlist'):
-                validation = response['validationlist']
+            if response.get("validationlist"):
+                validation = response["validationlist"]
                 results.append("")
                 results.append("🔍 Validation Details:")
 
-                if validation.get('serverValidationList'):
-                    for error in validation['serverValidationList']:
+                if validation.get("serverValidationList"):
+                    for error in validation["serverValidationList"]:
                         results.append(f"❌ Server Error: {error.get('message', 'Unknown error')}")
                         results.append(f"   Code: {error.get('code', 'N/A')}")
                         results.append(f"   Status: {error.get('valStatus', 'N/A')}")
 
-                if validation.get('clientValidationList'):
-                    for error in validation['clientValidationList']:
+                if validation.get("clientValidationList"):
+                    for error in validation["clientValidationList"]:
                         results.append(f"❌ Client Error: {error.get('message', 'Unknown error')}")
 
                 # If deletion failed due to dependencies, provide guidance
-                if any('in use by' in error.get('message', '') for error in validation.get('serverValidationList', [])):
+                if any("in use by" in error.get("message", "") for error in validation.get("serverValidationList", [])):
                     results.append("")
                     results.append("💡 Helpful Notes:")
                     results.append("   • Remove all backup jobs using these AWS S3 configurations first")
@@ -665,7 +639,6 @@ def delete_aws_s3_backup_configurations() -> str:
     except Exception as e:
         logger.error(f"bar: Failed to delete AWS S3 backup configurations: {str(e)}")
         return f"❌ Error deleting AWS S3 backup configurations: {str(e)}"
-
 
 
 def remove_AWS_S3_backup_configuration(aws_acct_name: str) -> str:
@@ -694,14 +667,13 @@ def remove_AWS_S3_backup_configuration(aws_acct_name: str) -> str:
         # First, get the existing S3 configurations
         try:
             existing_response = dsa_client._make_request(
-                method="GET",
-                endpoint="dsa/components/backup-applications/aws-s3"
+                method="GET", endpoint="dsa/components/backup-applications/aws-s3"
             )
 
             existing_s3_configurations = []
-            if existing_response.get('status') == 'LIST_AWS_APP_SUCCESSFUL':
+            if existing_response.get("status") == "LIST_AWS_APP_SUCCESSFUL":
                 # Use the exact same logic as the list function
-                aws_list = existing_response.get('aws', [])
+                aws_list = existing_response.get("aws", [])
                 logger.debug(f"bar: AWS list from API: {aws_list}")
                 logger.debug(f"bar: AWS list type: {type(aws_list)}, length: {len(aws_list) if aws_list else 0}")
                 if aws_list and isinstance(aws_list, list):
@@ -725,10 +697,12 @@ def remove_AWS_S3_backup_configuration(aws_acct_name: str) -> str:
 
         for s3 in existing_s3_configurations:
             # Extract account name from the nested structure
-            config_aws_rest = s3.get('configAwsRest', {})
-            current_acct_name = config_aws_rest.get('acctName', '')
+            config_aws_rest = s3.get("configAwsRest", {})
+            current_acct_name = config_aws_rest.get("acctName", "")
 
-            logger.debug(f"bar: Checking S3 config - current_acct_name: '{current_acct_name}', target: '{aws_acct_name}'")
+            logger.debug(
+                f"bar: Checking S3 config - current_acct_name: '{current_acct_name}', target: '{aws_acct_name}'"
+            )
             if current_acct_name == aws_acct_name:
                 s3config_exists = True
                 logger.info(f"bar: Found S3 configuration to remove: {aws_acct_name}")
@@ -741,31 +715,31 @@ def remove_AWS_S3_backup_configuration(aws_acct_name: str) -> str:
             available_s3_configs = []
             debug_info = []
             for i, s3 in enumerate(existing_s3_configurations):
-                config_aws_rest = s3.get('configAwsRest', {})
-                acct_name = config_aws_rest.get('acctName', 'N/A')
+                config_aws_rest = s3.get("configAwsRest", {})
+                acct_name = config_aws_rest.get("acctName", "N/A")
 
                 # Also collect bucket names as potential identifiers
                 bucket_names = []
-                buckets_by_region = config_aws_rest.get('bucketsByRegion', [])
+                buckets_by_region = config_aws_rest.get("bucketsByRegion", [])
                 if isinstance(buckets_by_region, dict):
                     buckets_by_region = [buckets_by_region]
                 for region in buckets_by_region:
-                    buckets = region.get('buckets', [])
+                    buckets = region.get("buckets", [])
                     if isinstance(buckets, dict):
                         buckets = [buckets]
                     for bucket in buckets:
-                        bucket_name = bucket.get('bucketName', '')
+                        bucket_name = bucket.get("bucketName", "")
                         if bucket_name:
                             bucket_names.append(bucket_name)
 
                 available_s3_configs.append(acct_name)
                 # Add debug info about the structure - show all possible account fields
-                debug_info.append(f"Config #{i+1}: Top level keys: {list(s3.keys())}")
+                debug_info.append(f"Config #{i + 1}: Top level keys: {list(s3.keys())}")
                 debug_info.append(f"   configAwsRest keys: {list(config_aws_rest.keys())}")
                 debug_info.append(f"   Bucket names: {bucket_names}")
                 # Look for any field that might contain account info
                 for key, value in config_aws_rest.items():
-                    if 'acc' in key.lower() or 'name' in key.lower() or 'id' in key.lower():
+                    if "acc" in key.lower() or "name" in key.lower() or "id" in key.lower():
                         debug_info.append(f"   {key}: {value}")
             results = []
             results.append("🗂️ DSA S3 Configuration Removal")
@@ -792,13 +766,13 @@ def remove_AWS_S3_backup_configuration(aws_acct_name: str) -> str:
         # reconfiguring the rest is not going to work in the single call to the API
         # Make request to DSA API to reconfigure with remaining S3 configurations
         # If no configurations remain, we need to delete all instead of posting empty config
-        #if not s3_configurations_to_keep:
+        # if not s3_configurations_to_keep:
         #    logger.info("bar: No S3 configurations remaining, deleting all S3 configurations")
         #    response = dsa_client._make_request(
         #        method="DELETE",
         #        endpoint="dsa/components/backup-applications/aws-s3"
         #    )
-        #else:
+        # else:
         #    logger.info(f"bar: Reconfiguring with {len(s3_configurations_to_keep)} remaining S3 configurations")
         #    response = dsa_client._make_request(
         #       method="POST",
@@ -806,13 +780,10 @@ def remove_AWS_S3_backup_configuration(aws_acct_name: str) -> str:
         #        data=request_data
         #    )
 
-
-
         # Build the request data and delete the specific configuration that is already found to be existing
         # Use the correct endpoint with account name and trailing slash (matching successful Swagger call)
         response = dsa_client._make_request(
-                method="DELETE",
-                endpoint=f"dsa/components/backup-applications/aws-s3/{aws_acct_name}/"
+            method="DELETE", endpoint=f"dsa/components/backup-applications/aws-s3/{aws_acct_name}/"
         )
 
         logger.debug(f"bar: DSA API response: {response}")
@@ -824,8 +795,8 @@ def remove_AWS_S3_backup_configuration(aws_acct_name: str) -> str:
         results.append(f"📊 Remaining S3 Configurations: {len(s3_configurations_to_keep)}")
         results.append("")
 
-        success_statuses = ['CONFIG_AWS_APP_SUCCESSFUL', 'LIST_AWS_APP_SUCCESSFUL', 'DELETE_COMPONENT_SUCCESSFUL']
-        if response.get('status') in success_statuses:
+        success_statuses = ["CONFIG_AWS_APP_SUCCESSFUL", "LIST_AWS_APP_SUCCESSFUL", "DELETE_COMPONENT_SUCCESSFUL"]
+        if response.get("status") in success_statuses:
             results.append("✅ AWS S3 configuration removed successfully")
             results.append(f"📊 Status: {response.get('status')}")
             results.append(f"✔️ Valid: {response.get('valid', False)}")
@@ -834,8 +805,8 @@ def remove_AWS_S3_backup_configuration(aws_acct_name: str) -> str:
                 results.append("")
                 results.append("📋 Remaining S3 configurations:")
                 for s3 in s3_configurations_to_keep:
-                    config_aws_rest = s3.get('configAwsRest', {})
-                    acct_name = config_aws_rest.get('acctName', 'N/A')
+                    config_aws_rest = s3.get("configAwsRest", {})
+                    acct_name = config_aws_rest.get("acctName", "N/A")
                     results.append(f"   • {acct_name}")
             else:
                 results.append("")
@@ -847,19 +818,19 @@ def remove_AWS_S3_backup_configuration(aws_acct_name: str) -> str:
             results.append(f"✔️ Valid: {response.get('valid', False)}")
 
             # Show validation errors if any
-            if response.get('validationlist'):
-                validation = response['validationlist']
+            if response.get("validationlist"):
+                validation = response["validationlist"]
                 results.append("")
                 results.append("🔍 Validation Details:")
 
-                if validation.get('serverValidationList'):
-                    for error in validation['serverValidationList']:
+                if validation.get("serverValidationList"):
+                    for error in validation["serverValidationList"]:
                         results.append(f"❌ Server Error: {error.get('message', 'Unknown error')}")
                         results.append(f"   Code: {error.get('code', 'N/A')}")
                         results.append(f"   Status: {error.get('valStatus', 'N/A')}")
 
-                if validation.get('clientValidationList'):
-                    for error in validation['clientValidationList']:
+                if validation.get("clientValidationList"):
+                    for error in validation["clientValidationList"]:
                         results.append(f"❌ Client Error: {error.get('message', 'Unknown error')}")
 
         results.append("")
@@ -881,7 +852,7 @@ def manage_AWS_S3_backup_configurations(
     bucketName: str | None = None,
     prefixName: str | None = "dsa-backup",
     storageDevices: int | None = 4,
-    acctName: str | None = None
+    acctName: str | None = None,
 ) -> str:
     """Unified DSA AWS S3 Backup Configuration Management Tool
 
@@ -915,7 +886,7 @@ def manage_AWS_S3_backup_configurations(
         if operation == "list":
             return list_aws_s3_backup_configurations()
         # Config operation
-       # Config operation
+        # Config operation
         elif operation == "config":
             if not accessId:
                 return "❌ Error: accessId is required for config operation"
@@ -936,7 +907,6 @@ def manage_AWS_S3_backup_configurations(
             # Transform bucketsByRegion to match API expectations
             formatted_buckets_by_region = []
 
-
             # Debug information
             debug_msg = f"Original bucketsByRegion: type={type(bucketsByRegion)}, value={bucketsByRegion}"
 
@@ -945,17 +915,19 @@ def manage_AWS_S3_backup_configurations(
                 if bucketsByRegion and isinstance(bucketsByRegion[0], str):
                     # Convert simple region string to proper structure
                     region_name = bucketsByRegion[0]
-                    formatted_buckets_by_region = [{
-                        "region": region_name,
-                        "buckets": [{
-                            "bucketName": bucketName,
-                            "prefixList": [{
-                                "prefixName": prefixName,
-                                "storageDevices": storageDevices,
-                                "prefixId": 0
-                            }]
-                        }]
-                    }]
+                    formatted_buckets_by_region = [
+                        {
+                            "region": region_name,
+                            "buckets": [
+                                {
+                                    "bucketName": bucketName,
+                                    "prefixList": [
+                                        {"prefixName": prefixName, "storageDevices": storageDevices, "prefixId": 0}
+                                    ],
+                                }
+                            ],
+                        }
+                    ]
                     debug_msg += f" | Converted to: {formatted_buckets_by_region}"
                 else:
                     # Assume it's already properly formatted
@@ -976,7 +948,7 @@ def manage_AWS_S3_backup_configurations(
                     "bucketsByRegion": formatted_buckets_by_region,
                     "acctName": acctName,
                     "viewpoint": True,
-                    "viewpointBucketRegion": True
+                    "viewpointBucketRegion": True,
                 }
             }
 
@@ -985,9 +957,7 @@ def manage_AWS_S3_backup_configurations(
 
             try:
                 response = dsa_client._make_request(
-                    method="POST",
-                    endpoint="dsa/components/backup-applications/aws-s3",
-                    data=request_data
+                    method="POST", endpoint="dsa/components/backup-applications/aws-s3", data=request_data
                 )
                 return f"✅ AWS backup solution configuration operation completed\nResponse: {response}\n\n{debug_info}"
             except Exception as e:
@@ -1002,16 +972,15 @@ def manage_AWS_S3_backup_configurations(
                 return "❌ Error: acctName is required for remove operation"
             return remove_AWS_S3_backup_configuration(acctName)
         else:
-            available_operations = [
-                "list", "config", "delete_all", "remove"
-            ]
+            available_operations = ["list", "config", "delete_all", "remove"]
             return f"❌ Error: Unknown operation '{operation}'. Available operations: {', '.join(available_operations)}"
     except Exception as e:
         logger.error(f"bar: DSA AWS S3 Configuration Management error - Operation: {operation}, Error: {str(e)}")
         return f"❌ Error during {operation}: {str(e)}"
 
 
-#------------------ Media Server Operations ------------------#
+# ------------------ Media Server Operations ------------------#
+
 
 def manage_dsa_media_servers(
     operation: str,
@@ -1019,7 +988,7 @@ def manage_dsa_media_servers(
     port: int | None = None,
     ip_addresses: str | None = None,
     pool_shared_pipes: int | None = 50,
-    virtual: bool | None = False
+    virtual: bool | None = False,
 ) -> str:
     """Unified media server management for all media server operations
 
@@ -1027,10 +996,7 @@ def manage_dsa_media_servers(
     including listing, getting details, adding, deleting, and managing consumers.
     """
     # Validate operation
-    valid_operations = [
-        "list", "get", "add", "delete",
-        "list_consumers", "list_consumers_by_server"
-    ]
+    valid_operations = ["list", "get", "add", "delete", "list_consumers", "list_consumers_by_server"]
 
     if operation not in valid_operations:
         return f"❌ Invalid operation '{operation}'. Valid operations: {', '.join(valid_operations)}"
@@ -1055,10 +1021,11 @@ def manage_dsa_media_servers(
 
             try:
                 import json
+
                 ip_list = json.loads(ip_addresses)
                 return _add_media_server(server_name, port, ip_list, pool_shared_pipes or 50)
             except json.JSONDecodeError as e:
-                return f"❌ Invalid IP addresses format: {str(e)}\nExpected JSON format: '[{{\"ipAddress\": \"IP\", \"netmask\": \"MASK\"}}]'"
+                return f'❌ Invalid IP addresses format: {str(e)}\nExpected JSON format: \'[{{"ipAddress": "IP", "netmask": "MASK"}}]\''
 
         elif operation == "delete":
             if not server_name:
@@ -1072,6 +1039,8 @@ def manage_dsa_media_servers(
             if not server_name:
                 return "❌ server_name is required for 'list_consumers_by_server' operation"
             return _list_media_server_consumers_by_name(server_name)
+
+        return f"❌ Unhandled operation '{operation}'"
 
     except Exception as e:
         logger.error(f"bar: Failed to execute media server operation '{operation}': {str(e)}")
@@ -1137,19 +1106,14 @@ def _get_media_server(server_name: str) -> str:
         return f"❌ Error getting media server '{server_name}': {str(e)}"
 
 
-def _add_media_server(
-    server_name: str,
-    port: int,
-    ip_list: list[dict[str, str]],
-    pool_shared_pipes: int = 50
-) -> str:
+def _add_media_server(server_name: str, port: int, ip_list: list[dict[str, str]], pool_shared_pipes: int = 50) -> str:
     """Add a new media server to the DSA system"""
     try:
         # Validate inputs
         if not server_name or not server_name.strip():
             return "❌ Server name is required and cannot be empty"
 
-        if not (1 <= port <= MAX_PORT ):
+        if not (1 <= port <= MAX_PORT):
             return "❌ Port must be between 1 and 65535"
 
         if not ip_list or not isinstance(ip_list, list):
@@ -1157,22 +1121,18 @@ def _add_media_server(
 
         # Validate IP addresses format
         for ip_info in ip_list:
-            if not isinstance(ip_info, dict) or 'ipAddress' not in ip_info or 'netmask' not in ip_info:
+            if not isinstance(ip_info, dict) or "ipAddress" not in ip_info or "netmask" not in ip_info:
                 return "❌ Each IP address must be a dictionary with 'ipAddress' and 'netmask' keys"
 
         # Prepare request payload
-        payload = {
-            "serverName": server_name.strip(),
-            "port": port,
-            "ipInfo": ip_list
-        }
+        payload = {"serverName": server_name.strip(), "port": port, "ipInfo": ip_list}
 
         # Make request to add media server
         response = dsa_client._make_request(
             "POST",
             "dsa/components/mediaservers",
             data=payload,
-            headers={"Content-Type": "application/json", "Accept": "*/*"}
+            headers={"Content-Type": "application/json", "Accept": "*/*"},
         )
 
         if not response.get("valid", False):
@@ -1291,7 +1251,9 @@ def _list_media_server_consumers_by_name(server_name: str) -> str:
         logger.error(f"bar: Failed to list consumers for media server '{server_name}': {str(e)}")
         return f"❌ Error listing consumers for media server '{server_name}': {str(e)}"
 
-#------------------ Teradata System Management Operations ------------------#
+
+# ------------------ Teradata System Management Operations ------------------#
+
 
 def manage_dsa_systems(
     operation: str,
@@ -1299,8 +1261,8 @@ def manage_dsa_systems(
     tdp_id: str | None = None,
     username: str | None = None,
     password: str | None = None,
-    ir_support: bool | None = True,
-    component_name: str | None = None
+    ir_support: str | None = None,
+    component_name: str | None = None,
 ) -> str:
     """Unified Teradata system management for all system operations
 
@@ -1309,8 +1271,13 @@ def manage_dsa_systems(
     """
     # Validate operation
     valid_operations = [
-        "list_systems", "get_system", "config_system",
-        "enable_system", "delete_system", "list_consumers", "get_consumer"
+        "list_systems",
+        "get_system",
+        "config_system",
+        "enable_system",
+        "delete_system",
+        "list_consumers",
+        "get_consumer",
     ]
 
     if operation not in valid_operations:
@@ -1329,6 +1296,7 @@ def manage_dsa_systems(
         elif operation == "config_system":
             if not all([system_name, tdp_id, username, password]):
                 return "❌ system_name, tdp_id, username, and password are required for 'config_system' operation"
+            assert system_name is not None and tdp_id is not None and username is not None and password is not None
             return _config_teradata_system(system_name, tdp_id, username, password, ir_support)
 
         elif operation == "enable_system":
@@ -1349,6 +1317,8 @@ def manage_dsa_systems(
                 return "❌ component_name is required for 'get_consumer' operation"
             return _get_system_consumer(component_name)
 
+        return f"❌ Unhandled operation '{operation}'"
+
     except Exception as e:
         logger.error(f"bar: Failed to execute Teradata system operation '{operation}': {str(e)}")
         return f"❌ Error executing Teradata system operation '{operation}': {str(e)}"
@@ -1358,10 +1328,7 @@ def _list_teradata_systems() -> str:
     """List all configured Teradata database systems in DSA"""
     try:
         # Make API call to list Teradata systems
-        response = dsa_client._make_request(
-            method='GET',
-            endpoint='dsa/components/systems/teradata'
-        )
+        response = dsa_client._make_request(method="GET", endpoint="dsa/components/systems/teradata")
 
         # Return the full response for complete transparency
         return json.dumps(response, indent=2)
@@ -1380,10 +1347,7 @@ def _get_teradata_system(system_name: str) -> str:
         system_name = system_name.strip()
 
         # Make API call to get specific Teradata system
-        response = dsa_client._make_request(
-            method='GET',
-            endpoint=f'dsa/components/systems/teradata/{system_name}'
-        )
+        response = dsa_client._make_request(method="GET", endpoint=f"dsa/components/systems/teradata/{system_name}")
 
         # Return the full response for complete transparency
         return json.dumps(response, indent=2)
@@ -1394,11 +1358,7 @@ def _get_teradata_system(system_name: str) -> str:
 
 
 def _config_teradata_system(
-    system_name: str,
-    tdp_id: str,
-    username: str,
-    password: str,
-    ir_support: str | None = None
+    system_name: str, tdp_id: str, username: str, password: str, ir_support: str | None = None
 ) -> str:
     """Configure a new Teradata database system in DSA"""
     try:
@@ -1418,15 +1378,11 @@ def _config_teradata_system(
             "dslJsonLogging": True,
             "ajseSupport": "true",
             "softLimit": 10,
-            "hardLimit": 10
+            "hardLimit": 10,
         }
 
         # Make API call to configure Teradata system
-        response = dsa_client._make_request(
-            method='POST',
-            endpoint='dsa/components/systems/teradata',
-            data=config_data
-        )
+        response = dsa_client._make_request(method="POST", endpoint="dsa/components/systems/teradata", data=config_data)
 
         # Return the full response for complete transparency
         return json.dumps(response, indent=2)
@@ -1446,9 +1402,7 @@ def _enable_teradata_system(system_name: str) -> str:
 
         # Make API call to enable Teradata system
         response = dsa_client._make_request(
-            method='PATCH',
-            endpoint=f'dsa/components/systems/enabling/{system_name}/',
-            data={"enabled": True}
+            method="PATCH", endpoint=f"dsa/components/systems/enabling/{system_name}/", data={"enabled": True}
         )
 
         # Return the full response for complete transparency
@@ -1468,10 +1422,7 @@ def _delete_teradata_system(system_name: str) -> str:
         system_name = system_name.strip()
 
         # Make API call to delete Teradata system
-        response = dsa_client._make_request(
-            method='DELETE',
-            endpoint=f'dsa/components/systems/teradata/{system_name}'
-        )
+        response = dsa_client._make_request(method="DELETE", endpoint=f"dsa/components/systems/teradata/{system_name}")
 
         # Return the full response for complete transparency
         return json.dumps(response, indent=2)
@@ -1485,10 +1436,7 @@ def _list_system_consumers() -> str:
     """List all system consumers in DSA"""
     try:
         # Make API call to list system consumers
-        response = dsa_client._make_request(
-            method='GET',
-            endpoint='dsa/components/systems/listconsumers'
-        )
+        response = dsa_client._make_request(method="GET", endpoint="dsa/components/systems/listconsumers")
 
         # Return the full response for complete transparency
         return json.dumps(response, indent=2)
@@ -1508,8 +1456,7 @@ def _get_system_consumer(component_name: str) -> str:
 
         # Make API call to get specific system consumer
         response = dsa_client._make_request(
-            method='GET',
-            endpoint=f'dsa/components/systems/listconsumers/{component_name}'
+            method="GET", endpoint=f"dsa/components/systems/listconsumers/{component_name}"
         )
 
         # Return complete DSA response for transparency
@@ -1519,14 +1466,16 @@ def _get_system_consumer(component_name: str) -> str:
         logger.error(f"bar: Failed to get system consumer '{component_name}': {str(e)}")
         return f"❌ Error getting system consumer '{component_name}': {str(e)}"
 
-#------------------ Disk File Target Group Operations ------------------#
+
+# ------------------ Disk File Target Group Operations ------------------#
+
 
 def _list_disk_file_target_groups(replication: bool = False) -> str:
     """List all disk file target groups"""
     try:
         response = dsa_client._make_request(
             method="GET",
-            endpoint=f"dsa/components/target-groups/disk-file-system?replication={str(replication).lower()}"
+            endpoint=f"dsa/components/target-groups/disk-file-system?replication={str(replication).lower()}",
         )
         return json.dumps(response, indent=2)
     except Exception as e:
@@ -1539,7 +1488,7 @@ def _get_disk_file_target_group(target_group_name: str, replication: bool = Fals
     try:
         response = dsa_client._make_request(
             method="GET",
-            endpoint=f"dsa/components/target-groups/disk-file-system/{target_group_name}/?replication={str(replication).lower()}"
+            endpoint=f"dsa/components/target-groups/disk-file-system/{target_group_name}/?replication={str(replication).lower()}",
         )
         return json.dumps(response, indent=2)
     except Exception as e:
@@ -1551,9 +1500,10 @@ def _create_disk_file_target_group(target_group_config: str, replication: bool =
     """Create a new disk file target group using JSON configuration"""
     try:
         import json
+
         try:
             config_data = json.loads(target_group_config)
-            target_group_name = config_data.get('targetGroupName', 'Unknown')
+            target_group_name = config_data.get("targetGroupName", "Unknown")
         except json.JSONDecodeError as e:
             return f"❌ Error: Invalid JSON in target_group_config: {str(e)}"
 
@@ -1562,7 +1512,7 @@ def _create_disk_file_target_group(target_group_config: str, replication: bool =
         response = dsa_client._make_request(
             method="POST",
             endpoint=f"dsa/components/target-groups/disk-file-system?replication={str(replication).lower()}",
-            data=config_data
+            data=config_data,
         )
         return json.dumps(response, indent=2)
     except Exception as e:
@@ -1574,8 +1524,7 @@ def _enable_disk_file_target_group(target_group_name: str) -> str:
     """Enable a disk file target group"""
     try:
         response = dsa_client._make_request(
-            method="PATCH",
-            endpoint=f"dsa/components/target-groups/disk-file-system/enabling/{target_group_name}/"
+            method="PATCH", endpoint=f"dsa/components/target-groups/disk-file-system/enabling/{target_group_name}/"
         )
         return json.dumps(response, indent=2)
     except Exception as e:
@@ -1587,8 +1536,7 @@ def _disable_disk_file_target_group(target_group_name: str) -> str:
     """Disable a disk file target group"""
     try:
         response = dsa_client._make_request(
-            method="PATCH",
-            endpoint=f"dsa/components/target-groups/disk-file-system/disabling/{target_group_name}/"
+            method="PATCH", endpoint=f"dsa/components/target-groups/disk-file-system/disabling/{target_group_name}/"
         )
         return json.dumps(response, indent=2)
     except Exception as e:
@@ -1597,15 +1545,13 @@ def _disable_disk_file_target_group(target_group_name: str) -> str:
 
 
 def _delete_disk_file_target_group(
-    target_group_name: str,
-    replication: bool = False,
-    delete_all_data: bool = False
+    target_group_name: str, replication: bool = False, delete_all_data: bool = False
 ) -> str:
     """Delete a disk file target group"""
     try:
         response = dsa_client._make_request(
             method="DELETE",
-            endpoint=f"dsa/components/target-groups/disk-file-system/{target_group_name}/?replication={str(replication).lower()}&deleteAllData={str(delete_all_data).lower()}"
+            endpoint=f"dsa/components/target-groups/disk-file-system/{target_group_name}/?replication={str(replication).lower()}&deleteAllData={str(delete_all_data).lower()}",
         )
         return json.dumps(response, indent=2)
     except Exception as e:
@@ -1618,7 +1564,7 @@ def manage_dsa_disk_file_target_groups(
     target_group_name: str | None = None,
     target_group_config: str | None = None,
     replication: bool = False,
-    delete_all_data: bool = False
+    delete_all_data: bool = False,
 ) -> str:
     """Manage DSA disk file target groups
 
@@ -1647,57 +1593,72 @@ def manage_dsa_disk_file_target_groups(
 
         elif operation == "get":
             if not target_group_name:
-                return json.dumps({"status": "error", "data": "❌ target_group_name is required for get operation"}, indent=2)
+                return json.dumps(
+                    {"status": "error", "data": "❌ target_group_name is required for get operation"}, indent=2
+                )
             return _get_disk_file_target_group(target_group_name, replication)
 
         elif operation == "create":
             if not target_group_config:
-                return json.dumps({"status": "error", "data": "❌ target_group_config is required for create operation"}, indent=2)
+                return json.dumps(
+                    {"status": "error", "data": "❌ target_group_config is required for create operation"}, indent=2
+                )
             return _create_disk_file_target_group(target_group_config, replication)
 
         elif operation == "enable":
             if not target_group_name:
-                return json.dumps({"status": "error", "data": "❌ target_group_name is required for enable operation"}, indent=2)
+                return json.dumps(
+                    {"status": "error", "data": "❌ target_group_name is required for enable operation"}, indent=2
+                )
             return _enable_disk_file_target_group(target_group_name)
 
         elif operation == "disable":
             if not target_group_name:
-                return json.dumps({"status": "error", "data": "❌ target_group_name is required for disable operation"}, indent=2)
+                return json.dumps(
+                    {"status": "error", "data": "❌ target_group_name is required for disable operation"}, indent=2
+                )
             return _disable_disk_file_target_group(target_group_name)
 
         elif operation == "delete":
             if not target_group_name:
-                return json.dumps({"status": "error", "data": "❌ target_group_name is required for delete operation"}, indent=2)
+                return json.dumps(
+                    {"status": "error", "data": "❌ target_group_name is required for delete operation"}, indent=2
+                )
             return _delete_disk_file_target_group(target_group_name, replication, delete_all_data)
 
         else:
-            return json.dumps({
-                "status": "error",
-                "data": f"❌ Unknown operation: {operation}. Supported operations: list, get, create, enable, disable, delete"
-            }, indent=2)
+            return json.dumps(
+                {
+                    "status": "error",
+                    "data": f"❌ Unknown operation: {operation}. Supported operations: list, get, create, enable, disable, delete",
+                },
+                indent=2,
+            )
 
     except Exception as e:
         logger.error(f"bar: Error in manage_dsa_disk_file_target_groups: {e}")
-        return json.dumps({
-            "status": "error",
-            "data": f"❌ Error in disk file target group operation: {str(e)}"
-        }, indent=2)
+        return json.dumps(
+            {"status": "error", "data": f"❌ Error in disk file target group operation: {str(e)}"}, indent=2
+        )
 
-#------------------ DSA Job Management Operation------------------#
 
-def _list_jobs(bucket_size: int = 100, bucket: int = 1, job_type: str = "*%",
-               is_retired: bool = False, status: str = "*%") -> str:
+# ------------------ DSA Job Management Operation------------------#
+
+
+def _list_jobs(
+    bucket_size: int = 100, bucket: int = 1, job_type: str = "*%", is_retired: bool = False, status: str = "*%"
+) -> str:
     """List all DSA jobs with filtering options"""
     try:
         params = {
-            'bucketSize': bucket_size,
-            'bucket': bucket,
-            'jobType': job_type,
-            'isRetired': str(is_retired).lower(),
-            'status': status
+            "bucketSize": bucket_size,
+            "bucket": bucket,
+            "jobType": job_type,
+            "isRetired": str(is_retired).lower(),
+            "status": status,
         }
 
-        response = dsa_client._make_request('GET', 'dsa/jobs', params=params)
+        response = dsa_client._make_request("GET", "dsa/jobs", params=params)
         return json.dumps(response, indent=2)
 
     except Exception as e:
@@ -1708,10 +1669,7 @@ def _list_jobs(bucket_size: int = 100, bucket: int = 1, job_type: str = "*%",
 def _get_job(job_name: str) -> str:
     """Get job definition by name"""
     try:
-        response = dsa_client._make_request(
-            method="GET",
-            endpoint=f"dsa/jobs/{job_name}"
-        )
+        response = dsa_client._make_request(method="GET", endpoint=f"dsa/jobs/{job_name}")
         return json.dumps(response, indent=2)
 
     except Exception as e:
@@ -1722,11 +1680,7 @@ def _get_job(job_name: str) -> str:
 def _create_job(job_config: dict) -> str:
     """Create a new job"""
     try:
-        response = dsa_client._make_request(
-            method="POST",
-            endpoint="dsa/jobs",
-            data=job_config
-        )
+        response = dsa_client._make_request(method="POST", endpoint="dsa/jobs", data=job_config)
         return json.dumps(response, indent=2)
 
     except Exception as e:
@@ -1737,11 +1691,7 @@ def _create_job(job_config: dict) -> str:
 def _update_job(job_config: dict) -> str:
     """Update an existing job"""
     try:
-        response = dsa_client._make_request(
-            method="PUT",
-            endpoint="dsa/jobs",
-            data=job_config
-        )
+        response = dsa_client._make_request(method="PUT", endpoint="dsa/jobs", data=job_config)
         return json.dumps(response, indent=2)
 
     except Exception as e:
@@ -1752,11 +1702,7 @@ def _update_job(job_config: dict) -> str:
 def _run_job(job_config: dict) -> str:
     """Run/execute a job"""
     try:
-        response = dsa_client._make_request(
-            method="POST",
-            endpoint="dsa/jobs/running",
-            data=job_config
-        )
+        response = dsa_client._make_request(method="POST", endpoint="dsa/jobs/running", data=job_config)
         return json.dumps(response, indent=2)
 
     except Exception as e:
@@ -1767,10 +1713,7 @@ def _run_job(job_config: dict) -> str:
 def _get_job_status(job_name: str) -> str:
     """Get job status"""
     try:
-        response = dsa_client._make_request(
-            method="GET",
-            endpoint=f"dsa/jobs/{job_name}/status"
-        )
+        response = dsa_client._make_request(method="GET", endpoint=f"dsa/jobs/{job_name}/status")
         return json.dumps(response, indent=2)
 
     except Exception as e:
@@ -1782,8 +1725,7 @@ def _retire_job(job_name: str, retired: bool = True) -> str:
     """Retire or unretire a job"""
     try:
         response = dsa_client._make_request(
-            method="PATCH",
-            endpoint=f"dsa/jobs/{job_name}?retired={str(retired).lower()}"
+            method="PATCH", endpoint=f"dsa/jobs/{job_name}?retired={str(retired).lower()}"
         )
         return json.dumps(response, indent=2)
 
@@ -1796,10 +1738,7 @@ def _retire_job(job_name: str, retired: bool = True) -> str:
 def _delete_job(job_name: str) -> str:
     """Delete a job"""
     try:
-        response = dsa_client._make_request(
-            method="DELETE",
-            endpoint=f"dsa/jobs/{job_name}"
-        )
+        response = dsa_client._make_request(method="DELETE", endpoint=f"dsa/jobs/{job_name}")
         return json.dumps(response, indent=2)
 
     except Exception as e:
@@ -1807,7 +1746,7 @@ def _delete_job(job_name: str) -> str:
         return f"❌ Error deleting job '{job_name}': {str(e)}"
 
 
-def manage_job_operations(operation: str, job_name: str = None, job_config: str = None) -> str:
+def manage_job_operations(operation: str, job_name: str | None = None, job_config: str | None = None) -> str:
     """DSA Job Management Operations
 
     Handles all job operations including list, get, create, update, run, status, retire, unretire, delete
@@ -1890,17 +1829,16 @@ def manage_job_operations(operation: str, job_name: str = None, job_config: str 
         return f"❌ Error executing job operation '{operation}': {str(e)}"
 
 
+# ------------------ Tool Handler for MCP ------------------#
 
-
-#------------------ Tool Handler for MCP ------------------#
 
 def handle_bar_manageDsaDiskFileSystem(
-    conn: any,  # Not used for DSA operations, but required by MCP framework
+    conn: Any,  # Not used for DSA operations, but required by MCP framework
     operation: str,
-    file_system_path: str = None,
-    max_files: int = None,
+    file_system_path: str | None = None,
+    max_files: int | None = None,
     *args,
-    **kwargs
+    **kwargs,
 ):
     """
     Handle DSA disk file system operations for the MCP server
@@ -1921,14 +1859,14 @@ def handle_bar_manageDsaDiskFileSystem(
     Returns:
         ResponseType: formatted response with operation results + metadata
     """
-    logger.debug(f"bar: Tool: handle_bar_manageDsaDiskFileSystem: Args: operation: {operation}, file_system_path: {file_system_path}, max_files: {max_files}")
+    logger.debug(
+        f"bar: Tool: handle_bar_manageDsaDiskFileSystem: Args: operation: {operation}, file_system_path: {file_system_path}, max_files: {max_files}"
+    )
 
     try:
         # Run the synchronous operation
         result = manage_dsa_disk_file_systems(
-            operation=operation,
-            file_system_path=file_system_path,
-            max_files=max_files
+            operation=operation, file_system_path=file_system_path, max_files=max_files
         )
 
         metadata = {
@@ -1936,7 +1874,7 @@ def handle_bar_manageDsaDiskFileSystem(
             "operation": operation,
             "file_system_path": file_system_path,
             "max_files": max_files,
-            "success": True
+            "success": True,
         }
 
         logger.debug(f"bar: Tool: handle_bar_manageDsaDiskFileSystem: metadata: {metadata}")
@@ -1949,22 +1887,23 @@ def handle_bar_manageDsaDiskFileSystem(
             "tool_name": "bar_manageDsaDiskFileSystem",
             "operation": operation,
             "error": str(e),
-            "success": False
+            "success": False,
         }
         return create_response(error_result, metadata)
 
+
 def handle_bar_manageAWSS3Operations(
-    conn: any,  # Not used for DSA operations, but required by MCP framework
+    conn: Any,  # Not used for DSA operations, but required by MCP framework
     operation: str,
-    accessId: str = None,
-    accessKey: str = None,
-    bucketsByRegion: object = None,
-    bucketName: str = None,
-    prefixName: str = None,
-    storageDevices: int = None,
-    acctName: str = None,
+    accessId: str | None = None,
+    accessKey: str | None = None,
+    bucketsByRegion: object | None = None,
+    bucketName: str | None = None,
+    prefixName: str | None = None,
+    storageDevices: int | None = None,
+    acctName: str | None = None,
     *args,
-    **kwargs
+    **kwargs,
 ):
     """
     Handle DSA AWS S3 backup solution configuration operations for the MCP server
@@ -1990,8 +1929,15 @@ def handle_bar_manageAWSS3Operations(
     Returns:
         ResponseType: formatted response with operation results + metadata
     """
-    logger.info("bar: handle_bar_manageAWSS3Operations called with operation=%s, accessId=%s, acctName=%s", operation, accessId, acctName)
-    logger.debug(f"bar: Tool: handle_bar_manageAWSS3Operations: Args: operation: {operation}, accessId: {accessId}, accessKey: {accessKey}, bucketsByRegion: {bucketsByRegion}, acctName: {acctName}")
+    logger.info(
+        "bar: handle_bar_manageAWSS3Operations called with operation=%s, accessId=%s, acctName=%s",
+        operation,
+        accessId,
+        acctName,
+    )
+    logger.debug(
+        f"bar: Tool: handle_bar_manageAWSS3Operations: Args: operation: {operation}, accessId: {accessId}, accessKey: {accessKey}, bucketsByRegion: {bucketsByRegion}, acctName: {acctName}"
+    )
     logger.debug(f"bar: bucketsByRegion type: {type(bucketsByRegion)} value: {bucketsByRegion}")
     try:
         # Run the synchronous operation
@@ -2003,7 +1949,7 @@ def handle_bar_manageAWSS3Operations(
             bucketName=bucketName,
             prefixName=prefixName,
             storageDevices=storageDevices,
-            acctName=acctName
+            acctName=acctName,
         )
         metadata = {
             "tool_name": "bar_manageAWSS3Operations",
@@ -2015,31 +1961,27 @@ def handle_bar_manageAWSS3Operations(
             "prefixName": prefixName,
             "storageDevices": storageDevices,
             "acctName": acctName,
-            "success": True
+            "success": True,
         }
         logger.debug(f"bar: Tool: handle_bar_manageAWSS3Operations: metadata: {metadata}")
         return create_response(result, metadata)
     except Exception as e:
         logger.error(f"bar: Error in handle_bar_manageAWSS3Operations: {e}")
         error_result = f"❌ Error in DSA AWS S3 operation: {str(e)}"
-        metadata = {
-            "tool_name": "bar_manageAWSS3Operations",
-            "operation": operation,
-            "error": str(e),
-            "success": False
-        }
+        metadata = {"tool_name": "bar_manageAWSS3Operations", "operation": operation, "error": str(e), "success": False}
         return create_response(error_result, metadata)
 
+
 def handle_bar_manageMediaServer(
-    conn: any,  # Not used for DSA operations, but required by MCP framework
+    conn: Any,  # Not used for DSA operations, but required by MCP framework
     operation: str,
-    server_name: str = None,
-    port: int = None,
-    ip_addresses: str = None,
+    server_name: str | None = None,
+    port: int | None = None,
+    ip_addresses: str | None = None,
     pool_shared_pipes: int = 50,
     virtual: bool = False,
     *args,
-    **kwargs
+    **kwargs,
 ):
     """
     Unified media server management tool for all DSA media server operations.
@@ -2069,14 +2011,13 @@ def handle_bar_manageMediaServer(
     Returns:
         ResponseType: formatted response with media server operation results + metadata
     """
-    logger.debug(f"bar: Tool: handle_bar_manageMediaServer: Args: operation: {operation}, server_name: {server_name}, port: {port}")
+    logger.debug(
+        f"bar: Tool: handle_bar_manageMediaServer: Args: operation: {operation}, server_name: {server_name}, port: {port}"
+    )
 
     try:
         # Validate operation
-        valid_operations = [
-            "list", "get", "add", "delete",
-            "list_consumers", "list_consumers_by_server"
-        ]
+        valid_operations = ["list", "get", "add", "delete", "list_consumers", "list_consumers_by_server"]
 
         if operation not in valid_operations:
             error_result = f"❌ Invalid operation '{operation}'. Valid operations: {', '.join(valid_operations)}"
@@ -2084,7 +2025,7 @@ def handle_bar_manageMediaServer(
                 "tool_name": "bar_manageMediaServer",
                 "operation": operation,
                 "error": "Invalid operation",
-                "success": False
+                "success": False,
             }
             return create_response(error_result, metadata)
 
@@ -2095,30 +2036,26 @@ def handle_bar_manageMediaServer(
             port=port,
             ip_addresses=ip_addresses,
             pool_shared_pipes=pool_shared_pipes,
-            virtual=virtual
+            virtual=virtual,
         )
 
         metadata = {
             "tool_name": "bar_manageMediaServer",
             "operation": operation,
             "server_name": server_name,
-            "success": True
+            "success": True,
         }
         logger.debug(f"bar: Tool: handle_bar_manageMediaServer: metadata: {metadata}")
         return create_response(result, metadata)
     except Exception as e:
         logger.error(f"bar: Error in handle_bar_manageMediaServer: {e}")
         error_result = f"❌ Error in DSA media server operation: {str(e)}"
-        metadata = {
-            "tool_name": "bar_manageMediaServer",
-            "operation": operation,
-            "error": str(e),
-            "success": False
-        }
+        metadata = {"tool_name": "bar_manageMediaServer", "operation": operation, "error": str(e), "success": False}
         return create_response(error_result, metadata)
 
+
 def handle_bar_manageTeradataSystem(
-    conn: any,  # Not used for DSA operations, but required by MCP framework
+    conn: Any,  # Not used for DSA operations, but required by MCP framework
     operation: str,
     system_name: str | None = None,
     tdp_id: str | None = None,
@@ -2127,7 +2064,7 @@ def handle_bar_manageTeradataSystem(
     ir_support: str | None = None,
     component_name: str | None = None,
     *args,
-    **kwargs
+    **kwargs,
 ):
     """Unified DSA System Management Tool
 
@@ -2158,12 +2095,19 @@ def handle_bar_manageTeradataSystem(
         Dict containing the result and metadata
     """
     try:
-        logger.debug(f"bar: Tool: handle_bar_manageTeradataSystem: Args: operation: {operation}, system_name: {system_name}")
+        logger.debug(
+            f"bar: Tool: handle_bar_manageTeradataSystem: Args: operation: {operation}, system_name: {system_name}"
+        )
 
         # Validate operation
         valid_operations = [
-            "list_systems", "get_system", "config_system",
-            "enable_system", "delete_system", "list_consumers", "get_consumer"
+            "list_systems",
+            "get_system",
+            "config_system",
+            "enable_system",
+            "delete_system",
+            "list_consumers",
+            "get_consumer",
         ]
 
         if operation not in valid_operations:
@@ -2172,7 +2116,7 @@ def handle_bar_manageTeradataSystem(
                 "tool_name": "bar_manageTeradataSystem",
                 "operation": operation,
                 "error": "Invalid operation",
-                "success": False
+                "success": False,
             }
             return create_response(error_result, metadata)
 
@@ -2184,14 +2128,14 @@ def handle_bar_manageTeradataSystem(
             username=username,
             password=password,
             ir_support=ir_support,
-            component_name=component_name
+            component_name=component_name,
         )
 
         metadata = {
             "tool_name": "bar_manageTeradataSystem",
             "operation": operation,
             "system_name": system_name,
-            "success": True
+            "success": True,
         }
 
         if component_name:
@@ -2203,21 +2147,17 @@ def handle_bar_manageTeradataSystem(
     except Exception as e:
         logger.error(f"bar: Error in handle_bar_manageTeradataSystem: {e}")
         error_result = f"❌ Error in DSA Teradata system operation: {str(e)}"
-        metadata = {
-            "tool_name": "bar_manageTeradataSystem",
-            "operation": operation,
-            "error": str(e),
-            "success": False
-        }
+        metadata = {"tool_name": "bar_manageTeradataSystem", "operation": operation, "error": str(e), "success": False}
         return create_response(error_result, metadata)
 
+
 def handle_bar_manageDiskFileTargetGroup(
-    conn: any,  # Not used for DSA operations, but required by MCP framework
+    conn: Any,  # Not used for DSA operations, but required by MCP framework
     operation: str,
     target_group_name: str | None = None,
     target_group_config: str | None = None,
     replication: bool = False,
-    delete_all_data: bool = False
+    delete_all_data: bool = False,
 ):
     """Handle DSA disk file target group management operations
 
@@ -2294,14 +2234,14 @@ def handle_bar_manageDiskFileTargetGroup(
             target_group_name=target_group_name,
             target_group_config=target_group_config,
             replication=replication,
-            delete_all_data=delete_all_data
+            delete_all_data=delete_all_data,
         )
 
         metadata = {
             "tool_name": "bar_manageDiskFileTargetGroup",
             "operation": operation,
             "target_group_name": target_group_name,
-            "success": True
+            "success": True,
         }
 
         if target_group_config:
@@ -2321,15 +2261,16 @@ def handle_bar_manageDiskFileTargetGroup(
             "tool_name": "bar_manageDiskFileTargetGroup",
             "operation": operation,
             "error": str(e),
-            "success": False
+            "success": False,
         }
         return create_response(error_result, metadata)
 
+
 def handle_bar_manageJob(
-    conn: any,  # Not used for DSA operations, but required by MCP framework
+    conn: Any,  # Not used for DSA operations, but required by MCP framework
     operation: str,
-    job_name: str = None,
-    job_config: str = None
+    job_name: str | None = None,
+    job_config: str | None = None,
 ):
     """Comprehensive DSA Job Management Tool
 
@@ -2769,10 +2710,7 @@ def handle_bar_manageJob(
         logger.debug(f"bar: Tool: bar_manageJob: Args: operation: {operation}, job_name: {job_name}")
 
         # Validate operation
-        valid_operations = [
-            "list", "get", "create", "update", "run",
-            "status", "retire", "unretire", "delete"
-        ]
+        valid_operations = ["list", "get", "create", "update", "run", "status", "retire", "unretire", "delete"]
 
         if operation not in valid_operations:
             error_result = f"❌ Invalid operation '{operation}'. Valid operations: {', '.join(valid_operations)}"
@@ -2780,23 +2718,14 @@ def handle_bar_manageJob(
                 "tool_name": "bar_manageJob",
                 "operation": operation,
                 "error": "Invalid operation",
-                "success": False
+                "success": False,
             }
             return create_response(error_result, metadata)
 
         # Execute the job management operation
-        result = manage_job_operations(
-            operation=operation,
-            job_name=job_name,
-            job_config=job_config
-        )
+        result = manage_job_operations(operation=operation, job_name=job_name, job_config=job_config)
 
-        metadata = {
-            "tool_name": "bar_manageJob",
-            "operation": operation,
-            "job_name": job_name,
-            "success": True
-        }
+        metadata = {"tool_name": "bar_manageJob", "operation": operation, "job_name": job_name, "success": True}
 
         if job_config:
             metadata["job_config"] = job_config
@@ -2807,11 +2736,5 @@ def handle_bar_manageJob(
     except Exception as e:
         logger.error(f"bar: Error in bar_manageJob: {e}")
         error_result = f"❌ Error in DSA job management operation: {str(e)}"
-        metadata = {
-            "tool_name": "bar_manageJob",
-            "operation": operation,
-            "error": str(e),
-            "success": False
-        }
+        metadata = {"tool_name": "bar_manageJob", "operation": operation, "error": str(e), "success": False}
         return create_response(error_result, metadata)
-

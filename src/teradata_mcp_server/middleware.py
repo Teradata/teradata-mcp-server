@@ -16,7 +16,7 @@ import os
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 from uuid import uuid4
 
 from fastmcp.server.dependencies import get_http_headers
@@ -44,7 +44,7 @@ class RequestContextMiddleware(Middleware):
         self,
         logger,
         auth_cache,
-        tdconn_supplier: Callable[[], object],
+        tdconn_supplier: Callable[[], Any],
         auth_mode: str = "none",
         transport: str | None = None,
     ) -> None:
@@ -61,7 +61,9 @@ class RequestContextMiddleware(Middleware):
                 rc = RequestContext(
                     headers={},
                     request_id=uuid4().hex,
-                    session_id=(getattr(context.fastmcp_context, "session_id", None) if context.fastmcp_context else uuid4().hex),
+                    session_id=(
+                        getattr(context.fastmcp_context, "session_id", None) if context.fastmcp_context else uuid4().hex
+                    ),
                 )
                 if context.fastmcp_context:
                     context.fastmcp_context.set_state("request_context", rc)
@@ -154,6 +156,7 @@ class RequestContextMiddleware(Middleware):
                         InvalidUsernameError,
                         RateLimitExceededError,
                     )
+
                     if isinstance(e, RateLimitExceededError):
                         self.logger.warning(f"Rate limit exceeded for auth attempt: {e}")
                         raise PermissionError("Too many authentication attempts. Please try again later.") from e
@@ -166,9 +169,7 @@ class RequestContextMiddleware(Middleware):
                 if not validated_user:
                     raise PermissionError("Invalid credentials")
                 assume_user = validated_user
-                self.logger.info(
-                    f"AUTH_MODE=basic: Validated identity of user {assume_user} from database."
-                )
+                self.logger.info(f"AUTH_MODE=basic: Validated identity of user {assume_user} from database.")
                 self.auth_cache.set(session_id, validated_user, auth_token_sha256)
 
         # Build and set RequestContext in FastMCP state
@@ -195,4 +196,3 @@ class RequestContextMiddleware(Middleware):
             self.logger.debug(f"Error creating RequestContext: {e}")
 
         return await call_next(context)
-

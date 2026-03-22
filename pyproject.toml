@@ -115,6 +115,8 @@ ignore = [
     "PLR0915", # Too many statements (common in setup functions)
     "PLW0603", # Use of globals statements
     "PLC0415", # Import statements outside the module top level scope
+    "PLR0911", # Too many return statements (dispatch-style functions)
+    "N811",    # Constant imported as non-constant (readability aliases)
 ]
 
 [tool.ruff.lint.per-file-ignores]

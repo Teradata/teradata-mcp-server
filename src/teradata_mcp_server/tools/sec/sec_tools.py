@@ -6,7 +6,8 @@ from teradata_mcp_server.tools.utils import create_response, rows_to_json
 
 logger = logging.getLogger("teradata_mcp_server")
 
-#------------------ Tool  ------------------#
+
+# ------------------ Tool  ------------------#
 # get user permissions tool
 def handle_sec_userDbPermissions(conn: TeradataConnection, user_name: str, *args, **kwargs):
     """
@@ -38,16 +39,12 @@ def handle_sec_userDbPermissions(conn: TeradataConnection, user_name: str, *args
                 WHERE UserName = '{user_name}'
                 ORDER BY DatabaseName, TableName, AccessRight;""")
             data = rows_to_json(cur.description, rows.fetchall())
-        metadata = {
-            "tool_name": "sec_userDbPermissions",
-            "argument": user_name,
-            "num_permissions": len(data)
-        }
+        metadata = {"tool_name": "sec_userDbPermissions", "argument": user_name, "num_permissions": len(data)}
         logger.debug(f"Tool: handle_sec_userDbPermissions: metadata: {metadata}")
         return create_response(data, metadata)
 
 
-#------------------ Tool  ------------------#
+# ------------------ Tool  ------------------#
 # get role permissions tool
 def handle_sec_rolePermissions(conn: TeradataConnection, role_name: str, *args, **kwargs):
     """
@@ -139,16 +136,12 @@ def handle_sec_rolePermissions(conn: TeradataConnection, role_name: str, *args, 
                 GROUP BY 1, 2, 3, 4
                 ORDER BY 1, 2, 3, 4;""")
             data = rows_to_json(cur.description, rows.fetchall())
-        metadata = {
-            "tool_name": "sec_rolePermissions",
-            "argument": role_name,
-            "num_permissions": len(data)
-        }
+        metadata = {"tool_name": "sec_rolePermissions", "argument": role_name, "num_permissions": len(data)}
         logger.debug(f"Tool: handle_sec_rolePermissions: metadata: {metadata}")
         return create_response(data, metadata)
 
 
-#------------------ Tool  ------------------#
+# ------------------ Tool  ------------------#
 # get roles that a user belongs to tool
 def handle_sec_userRoles(conn: TeradataConnection, user_name: str, *args, **kwargs):
     """
@@ -182,11 +175,6 @@ def handle_sec_userRoles(conn: TeradataConnection, user_name: str, *args, **kwar
                 ON r.RoleName = Rm.RoleName
                 WHERE r.RoleName LIKE  '%{user_name}%' (NOT CASESPECIFIC);""")
             data = rows_to_json(cur.description, rows.fetchall())
-        metadata = {
-            "tool_name": "sec_userRoles",
-            "argument": user_name,
-            "num_roles": len(data)
-        }
+        metadata = {"tool_name": "sec_userRoles", "argument": user_name, "num_roles": len(data)}
         logger.debug(f"Tool: handle_sec_userRoles: metadata: {metadata}")
         return create_response(data, metadata)
-

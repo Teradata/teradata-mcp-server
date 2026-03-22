@@ -22,33 +22,22 @@ def serialize_teradata_types(obj: Any) -> Any:
         return float(obj)
     return str(obj)
 
+
 def rows_to_json(cursor_description: Any, rows: list[Any]) -> list[dict[str, Any]]:
     """Convert database rows to JSON objects using column names as keys"""
     if not cursor_description or not rows:
         return []
 
     columns = [col[0] for col in cursor_description]
-    return [
-        {
-            col: serialize_teradata_types(value)
-            for col, value in zip(columns, row)
-        }
-        for row in rows
-    ]
+    return [{col: serialize_teradata_types(value) for col, value in zip(columns, row)} for row in rows]
+
 
 def create_response(data: Any, metadata: dict[str, Any] | None = None) -> str:
     """Create a standardized JSON response structure"""
     if metadata:
-        response = {
-            "status": "success",
-            "metadata": metadata,
-            "results": data
-        }
+        response = {"status": "success", "metadata": metadata, "results": data}
     else:
-        response = {
-            "status": "success",
-            "results": data
-        }
+        response = {"status": "success", "results": data}
 
     return json.dumps(response, default=serialize_teradata_types)
 
@@ -56,37 +45,28 @@ def create_response(data: Any, metadata: dict[str, Any] | None = None) -> str:
 def get_default_sql_clustering_config():
     """Default SQL clustering configuration as fallback"""
     return {
-        'version': 'ivsm',
-        'databases': {
-            'feature_db': 'feature_ext_db',
-            'model_db': 'feature_ext_db'
+        "version": "ivsm",
+        "databases": {"feature_db": "feature_ext_db", "model_db": "feature_ext_db"},
+        "tables": {
+            "sql_query_log_main": "sql_query_log_main",
+            "sql_log_tokenized_for_embeddings": "sql_log_tokenized_for_embeddings",
+            "sql_log_embeddings": "sql_log_embeddings",
+            "sql_log_embeddings_store": "sql_log_embeddings_store",
+            "sql_query_clusters_temp": "sql_query_clusters_temp",
+            "sql_query_clusters": "sql_query_clusters",
+            "query_cluster_stats": "query_cluster_stats",
+            "embedding_models": "embedding_models",
+            "embedding_tokenizers": "embedding_tokenizers",
         },
-        'tables': {
-            'sql_query_log_main': 'sql_query_log_main',
-            'sql_log_tokenized_for_embeddings': 'sql_log_tokenized_for_embeddings',
-            'sql_log_embeddings': 'sql_log_embeddings',
-            'sql_log_embeddings_store': 'sql_log_embeddings_store',
-            'sql_query_clusters_temp': 'sql_query_clusters_temp',
-            'sql_query_clusters': 'sql_query_clusters',
-            'query_cluster_stats': 'query_cluster_stats',
-            'embedding_models': 'embedding_models',
-            'embedding_tokenizers': 'embedding_tokenizers'
+        "model": {"model_id": "bge-small-en-v1.5"},
+        "clustering": {
+            "optimal_k": 14,
+            "max_queries": 10000,
+            "seed": 10,
+            "stop_threshold": 0.0395,
+            "max_iterations": 100,
         },
-        'model': {
-            'model_id': 'bge-small-en-v1.5'
-        },
-        'clustering': {
-            'optimal_k': 14,
-            'max_queries': 10000,
-            'seed': 10,
-            'stop_threshold': 0.0395,
-            'max_iterations': 100
-        },
-        'embedding': {
-            'vector_length': 384,
-            'max_length': 1024,
-            'pad_to_max_length': 'False'
-        }
+        "embedding": {"vector_length": 384, "max_length": 1024, "pad_to_max_length": "False"},
     }
 
 
@@ -106,10 +86,7 @@ def load_sql_clustering_config():
         from teradata_mcp_server import config_loader
 
         # Load configuration (uses global config directory)
-        config = config_loader.load_config(
-            "sql_opt_config.yml",
-            defaults=get_default_sql_clustering_config()
-        )
+        config = config_loader.load_config("sql_opt_config.yml", defaults=get_default_sql_clustering_config())
 
         logger.info("SQL clustering configuration loaded successfully")
         return config
@@ -122,83 +99,77 @@ def load_sql_clustering_config():
 # Load config
 SQL_CLUSTERING_CONFIG = load_sql_clustering_config()
 
-def handle_sql_Execute_Full_Pipeline(
-    conn,
-    optimal_k: int = None,
-    max_queries: int = None,
-    *args,
-    **kwargs
-):
+
+def handle_sql_Execute_Full_Pipeline(conn, optimal_k: int | None = None, max_queries: int | None = None, *args, **kwargs):
     """
-        **COMPLETE SQL QUERY CLUSTERING PIPELINE FOR HIGH-USAGE QUERY OPTIMIZATION**
+    **COMPLETE SQL QUERY CLUSTERING PIPELINE FOR HIGH-USAGE QUERY OPTIMIZATION**
 
-        This tool executes the entire SQL query clustering workflow to identify and analyze high CPU usage queries for optimization opportunities. It's designed for database performance analysts and DBAs who need to systematically identify query optimization candidates.
+    This tool executes the entire SQL query clustering workflow to identify and analyze high CPU usage queries for optimization opportunities. It's designed for database performance analysts and DBAs who need to systematically identify query optimization candidates.
 
-        **FULL PIPELINE WORKFLOW:**
-        1. **Query Log Extraction**: Extracts SQL queries from DBC.DBQLSqlTbl with comprehensive performance metrics
-        2. **Performance Metrics Calculation**: Computes CPU skew, I/O skew, PJI (Physical to Logical I/O ratio), UII (Unit I/O Intensity)
-        3. **Query Tokenization**: Tokenizes SQL text using {sql_clustering_config.get('model', {}).get('model_id', 'bge-small-en-v1.5')} tokenizer via ivsm.tokenizer_encode
-        4. **Embedding Generation**: Creates semantic embeddings using ivsm.IVSM_score with ONNX models
-        5. **Vector Store Creation**: Converts embeddings to vector columns via ivsm.vector_to_columns
-        6. **K-Means Clustering**: Groups similar queries using TD_KMeans with optimal K from configuration
-        7. **Silhouette Analysis**: Calculates clustering quality scores using TD_Silhouette
-        8. **Statistics Generation**: Creates comprehensive cluster statistics with performance aggregations
+    **FULL PIPELINE WORKFLOW:**
+    1. **Query Log Extraction**: Extracts SQL queries from DBC.DBQLSqlTbl with comprehensive performance metrics
+    2. **Performance Metrics Calculation**: Computes CPU skew, I/O skew, PJI (Physical to Logical I/O ratio), UII (Unit I/O Intensity)
+    3. **Query Tokenization**: Tokenizes SQL text using {sql_clustering_config.get('model', {}).get('model_id', 'bge-small-en-v1.5')} tokenizer via ivsm.tokenizer_encode
+    4. **Embedding Generation**: Creates semantic embeddings using ivsm.IVSM_score with ONNX models
+    5. **Vector Store Creation**: Converts embeddings to vector columns via ivsm.vector_to_columns
+    6. **K-Means Clustering**: Groups similar queries using TD_KMeans with optimal K from configuration
+    7. **Silhouette Analysis**: Calculates clustering quality scores using TD_Silhouette
+    8. **Statistics Generation**: Creates comprehensive cluster statistics with performance aggregations
 
-        **PERFORMANCE METRICS EXPLAINED:**
-        - **AMPCPUTIME**: Total CPU seconds across all AMPs (primary optimization target)
-        - **CPUSKW/IOSKW**: CPU/I/O skew ratios (>2.0 indicates distribution problems)
-        - **PJI**: Physical-to-Logical I/O ratio (higher = more CPU-intensive)
-        - **UII**: Unit I/O Intensity (higher = more I/O-intensive relative to CPU)
-        - **LogicalIO**: Total logical I/O operations (indicates scan intensity)
-        - **NumSteps**: Query plan complexity (higher = more complex plans)
+    **PERFORMANCE METRICS EXPLAINED:**
+    - **AMPCPUTIME**: Total CPU seconds across all AMPs (primary optimization target)
+    - **CPUSKW/IOSKW**: CPU/I/O skew ratios (>2.0 indicates distribution problems)
+    - **PJI**: Physical-to-Logical I/O ratio (higher = more CPU-intensive)
+    - **UII**: Unit I/O Intensity (higher = more I/O-intensive relative to CPU)
+    - **LogicalIO**: Total logical I/O operations (indicates scan intensity)
+    - **NumSteps**: Query plan complexity (higher = more complex plans)
 
-        **CONFIGURATION (from sql_opt_config.yml):**
-        - Uses top {default_max_queries} queries by CPU time (configurable)
-        - Creates {default_optimal_k} clusters by default (configurable via optimal_k parameter)
-        - Embedding model: {sql_clustering_config.get('model', {}).get('model_id', 'bge-small-en-v1.5')}
-        - Vector dimensions: {sql_clustering_config.get('embedding', {}).get('vector_length', 384)}
-        - All database and table names are configurable
+    **CONFIGURATION (from sql_opt_config.yml):**
+    - Uses top {default_max_queries} queries by CPU time (configurable)
+    - Creates {default_optimal_k} clusters by default (configurable via optimal_k parameter)
+    - Embedding model: {sql_clustering_config.get('model', {}).get('model_id', 'bge-small-en-v1.5')}
+    - Vector dimensions: {sql_clustering_config.get('embedding', {}).get('vector_length', 384)}
+    - All database and table names are configurable
 
-        **OPTIMIZATION WORKFLOW:**
-        After running this tool, use:
-        1. sql_Analyze_Cluster_Stats to identify problematic clusters
-        2. sql_Retrieve_Cluster_Queries to get actual SQL from target clusters
-        3. LLM analysis to identify patterns and propose specific optimizations
+    **OPTIMIZATION WORKFLOW:**
+    After running this tool, use:
+    1. sql_Analyze_Cluster_Stats to identify problematic clusters
+    2. sql_Retrieve_Cluster_Queries to get actual SQL from target clusters
+    3. LLM analysis to identify patterns and propose specific optimizations
 
-        **USE CASES:**
-        - Identify query families consuming the most system resources
-        - Find queries with similar patterns but different performance
-        - Discover optimization opportunities through clustering analysis
-        - Prioritize DBA effort on highest-impact query improvements
-        - Understand workload composition and resource distribution
+    **USE CASES:**
+    - Identify query families consuming the most system resources
+    - Find queries with similar patterns but different performance
+    - Discover optimization opportunities through clustering analysis
+    - Prioritize DBA effort on highest-impact query improvements
+    - Understand workload composition and resource distribution
 
-        **PREREQUISITES:**
-        - DBC.DBQLSqlTbl and DBC.DBQLOgTbl must be accessible
-        - Embedding models and tokenizers must be installed in feature_ext_db
-        - Sufficient space in feature_ext_db for intermediate and final tables
-        """
+    **PREREQUISITES:**
+    - DBC.DBQLSqlTbl and DBC.DBQLOgTbl must be accessible
+    - Embedding models and tokenizers must be installed in feature_ext_db
+    - Sufficient space in feature_ext_db for intermediate and final tables
+    """
 
     config = SQL_CLUSTERING_CONFIG
 
     # Use config defaults if not provided
     if optimal_k is None:
-        optimal_k = config['clustering']['optimal_k']
+        optimal_k = config["clustering"]["optimal_k"]
     if max_queries is None:
-        max_queries = config['clustering']['max_queries']
+        max_queries = config["clustering"]["max_queries"]
 
     logger.debug(f"handle_sql_Execute_Full_Pipeline: optimal_k={optimal_k}, max_queries={max_queries}")
 
     # Extract config values
-    feature_db = config['databases']['feature_db']
-    model_db = config['databases']['model_db']
-    model_id = config['model']['model_id']
+    feature_db = config["databases"]["feature_db"]
+    model_db = config["databases"]["model_db"]
+    model_id = config["model"]["model_id"]
 
-    tables = config['tables']
-    embedding_config = config['embedding']
-    clustering_config = config['clustering']
+    tables = config["tables"]
+    embedding_config = config["embedding"]
+    clustering_config = config["clustering"]
 
     with conn.cursor() as cur:
-
         # Create main SQL query log table
         logger.debug(f"Step 1: Creating main query log table {feature_db}.{tables['sql_query_log_main']}")
 
@@ -209,7 +180,7 @@ def handle_sql_Execute_Full_Pipeline(
             logger.debug(f"DROP failed or table not found: {e}")
 
         main_query_sql = f"""
-        CREATE TABLE {feature_db}.{tables['sql_query_log_main']} AS (
+        CREATE TABLE {feature_db}.{tables["sql_query_log_main"]} AS (
             SELECT
                 CAST(a.QueryID AS BIGINT) AS id,
                 a.SQLTextInfo AS txt,
@@ -262,21 +233,21 @@ def handle_sql_Execute_Full_Pipeline(
             logger.debug(f"DROP failed or table not found: {e}")
 
         tokenize_sql = f"""
-        CREATE TABLE {feature_db}.{tables['sql_log_tokenized_for_embeddings']} AS (
+        CREATE TABLE {feature_db}.{tables["sql_log_tokenized_for_embeddings"]} AS (
             SELECT
                 id,
                 txt,
                 IDS AS input_ids,
                 attention_mask
             FROM ivsm.tokenizer_encode(
-                ON (SELECT * FROM {feature_db}.{tables['sql_query_log_main']})
-                ON (SELECT model AS tokenizer FROM {model_db}.{tables['embedding_tokenizers']}
+                ON (SELECT * FROM {feature_db}.{tables["sql_query_log_main"]})
+                ON (SELECT model AS tokenizer FROM {model_db}.{tables["embedding_tokenizers"]}
                     WHERE model_id = '{model_id}') DIMENSION
                 USING
                     ColumnsToPreserve('id', 'txt')
                     OutputFields('IDS', 'ATTENTION_MASK')
-                    MaxLength({embedding_config['max_length']})
-                    PadToMaxLength('{embedding_config['pad_to_max_length']}')
+                    MaxLength({embedding_config["max_length"]})
+                    PadToMaxLength('{embedding_config["pad_to_max_length"]}')
                     TokenDataType('INT64')
             ) AS dt
         ) WITH DATA
@@ -294,11 +265,11 @@ def handle_sql_Execute_Full_Pipeline(
             logger.debug(f"DROP failed or table not found: {e}")
 
         embeddings_sql = f"""
-        CREATE TABLE {feature_db}.{tables['sql_log_embeddings']} AS (
+        CREATE TABLE {feature_db}.{tables["sql_log_embeddings"]} AS (
             SELECT *
             FROM ivsm.IVSM_score(
-                ON {feature_db}.{tables['sql_log_tokenized_for_embeddings']}
-                ON (SELECT * FROM {model_db}.{tables['embedding_models']}
+                ON {feature_db}.{tables["sql_log_tokenized_for_embeddings"]}
+                ON (SELECT * FROM {model_db}.{tables["embedding_models"]}
                     WHERE model_id = '{model_id}') DIMENSION
                 USING
                     ColumnsToPreserve('id', 'txt')
@@ -322,14 +293,14 @@ def handle_sql_Execute_Full_Pipeline(
             logger.debug(f"DROP failed or table not found: {e}")
 
         embeddings_store_sql = f"""
-        CREATE TABLE {feature_db}.{tables['sql_log_embeddings_store']} AS (
+        CREATE TABLE {feature_db}.{tables["sql_log_embeddings_store"]} AS (
             SELECT *
             FROM ivsm.vector_to_columns(
-                ON {feature_db}.{tables['sql_log_embeddings']}
+                ON {feature_db}.{tables["sql_log_embeddings"]}
                 USING
                     ColumnsToPreserve('id', 'txt')
                     VectorDataType('FLOAT32')
-                    VectorLength({embedding_config['vector_length']})
+                    VectorLength({embedding_config["vector_length"]})
                     OutputColumnPrefix('emb_')
                     InputColumnName('sentence_embedding')
             ) a
@@ -348,20 +319,20 @@ def handle_sql_Execute_Full_Pipeline(
             logger.debug(f"DROP failed or table not found: {e}")
 
         kmeans_sql = f"""
-        CREATE TABLE {feature_db}.{tables['sql_query_clusters_temp']} AS (
+        CREATE TABLE {feature_db}.{tables["sql_query_clusters_temp"]} AS (
             SELECT td_clusterid_kmeans, a.*
             FROM TD_KMeans (
-                ON {feature_db}.{tables['sql_log_embeddings_store']} AS InputTable
+                ON {feature_db}.{tables["sql_log_embeddings_store"]} AS InputTable
                 USING
                     IdColumn('id')
                     TargetColumns('[2:385]')
                     NumClusters({optimal_k})
-                    Seed({clustering_config['seed']})
-                    StopThreshold({clustering_config['stop_threshold']})
+                    Seed({clustering_config["seed"]})
+                    StopThreshold({clustering_config["stop_threshold"]})
                     OutputClusterAssignment('true')
-                    MaxIterNum({clustering_config['max_iterations']})
+                    MaxIterNum({clustering_config["max_iterations"]})
             ) AS dt
-            JOIN {feature_db}.{tables['sql_query_log_main']} a ON a.id = dt.id
+            JOIN {feature_db}.{tables["sql_query_log_main"]} a ON a.id = dt.id
         ) WITH DATA
         """
 
@@ -377,13 +348,13 @@ def handle_sql_Execute_Full_Pipeline(
             logger.debug(f"DROP failed or table not found: {e}")
 
         final_clusters_sql = f"""
-        CREATE TABLE {feature_db}.{tables['sql_query_clusters']} AS (
+        CREATE TABLE {feature_db}.{tables["sql_query_clusters"]} AS (
             SELECT a.*, b.silhouette_score
-            FROM {feature_db}.{tables['sql_query_clusters_temp']} a
+            FROM {feature_db}.{tables["sql_query_clusters_temp"]} a
             JOIN (SELECT * FROM TD_Silhouette(
                 ON (SELECT td_clusterid_kmeans, b.*
-                    FROM {feature_db}.{tables['sql_query_clusters_temp']} a
-                    JOIN {feature_db}.{tables['sql_log_embeddings_store']} b
+                    FROM {feature_db}.{tables["sql_query_clusters_temp"]} a
+                    JOIN {feature_db}.{tables["sql_log_embeddings_store"]} b
                     ON a.id = b.id) AS InputTable
                 USING
                     IdColumn('id')
@@ -407,7 +378,7 @@ def handle_sql_Execute_Full_Pipeline(
             logger.debug(f"DROP failed or table not found: {e}")
 
         cluster_stats_sql = f"""
-        CREATE TABLE {feature_db}.{tables['query_cluster_stats']} AS (
+        CREATE TABLE {feature_db}.{tables["query_cluster_stats"]} AS (
             SELECT a.td_clusterid_kmeans,
                 AVG(a.numsteps) AS avg_numsteps,
                 VAR_SAMP(a.numsteps) AS var_numsteps,
@@ -429,33 +400,33 @@ def handle_sql_Execute_Full_Pipeline(
                 MAX(s1.silhouette_score) AS overall_silhouette_score,
                 MAX(s2.silhouette_score) AS cluster_silhouette_score,
                 COUNT(*) AS queries
-            FROM {feature_db}.{tables['sql_query_clusters']} a
+            FROM {feature_db}.{tables["sql_query_clusters"]} a
             JOIN (
                 SELECT td_clusterid_kmeans,
                        username AS top_UserName
-                FROM {feature_db}.{tables['sql_query_clusters']}
+                FROM {feature_db}.{tables["sql_query_clusters"]}
                 GROUP BY td_clusterid_kmeans, username
                 QUALIFY ROW_NUMBER() OVER (PARTITION BY td_clusterid_kmeans ORDER BY COUNT(*) DESC) = 1
             ) un ON a.td_clusterid_kmeans = un.td_clusterid_kmeans
             JOIN (
                 SELECT td_clusterid_kmeans,
                        wdname AS top_wdname
-                FROM {feature_db}.{tables['sql_query_clusters']}
+                FROM {feature_db}.{tables["sql_query_clusters"]}
                 GROUP BY td_clusterid_kmeans, wdname
                 QUALIFY ROW_NUMBER() OVER (PARTITION BY td_clusterid_kmeans ORDER BY COUNT(*) DESC) = 1
             ) wd ON un.td_clusterid_kmeans = wd.td_clusterid_kmeans
             JOIN (
                 SELECT td_clusterid_kmeans,
                        appid AS top_AppId
-                FROM {feature_db}.{tables['sql_query_clusters']}
+                FROM {feature_db}.{tables["sql_query_clusters"]}
                 GROUP BY td_clusterid_kmeans, appid
                 QUALIFY ROW_NUMBER() OVER (PARTITION BY td_clusterid_kmeans ORDER BY COUNT(*) DESC) = 1
             ) ap ON un.td_clusterid_kmeans = ap.td_clusterid_kmeans
             CROSS JOIN (
                 SELECT * FROM TD_Silhouette(
                     ON (SELECT td_clusterid_kmeans, b.*
-                        FROM {feature_db}.{tables['sql_query_clusters']} a
-                        JOIN {feature_db}.{tables['sql_log_embeddings_store']} b
+                        FROM {feature_db}.{tables["sql_query_clusters"]} a
+                        JOIN {feature_db}.{tables["sql_log_embeddings_store"]} b
                         ON a.id = b.id) AS InputTable
                     USING
                         IdColumn('id')
@@ -467,8 +438,8 @@ def handle_sql_Execute_Full_Pipeline(
             JOIN (
                 SELECT * FROM TD_Silhouette(
                     ON (SELECT td_clusterid_kmeans, b.*
-                        FROM {feature_db}.{tables['sql_query_clusters']} a
-                        JOIN {feature_db}.{tables['sql_log_embeddings_store']} b
+                        FROM {feature_db}.{tables["sql_query_clusters"]} a
+                        JOIN {feature_db}.{tables["sql_log_embeddings_store"]} b
                         ON a.id = b.id) AS InputTable
                     USING
                         IdColumn('id')
@@ -498,21 +469,25 @@ def handle_sql_Execute_Full_Pipeline(
     metadata = {
         "tool_name": "sql_Execute_Full_Pipeline",
         "workflow_steps": [
-            "query_log_extracted", "queries_tokenized", "embeddings_generated",
-            "embeddings_stored", "kmeans_clustering_completed", "silhouette_scores_calculated",
-            "cluster_statistics_generated"
+            "query_log_extracted",
+            "queries_tokenized",
+            "embeddings_generated",
+            "embeddings_stored",
+            "kmeans_clustering_completed",
+            "silhouette_scores_calculated",
+            "cluster_statistics_generated",
         ],
         "configuration": {
             "optimal_k": optimal_k,
             "max_queries_processed": max_queries,
             "model_id": model_id,
             "clustering_parameters": clustering_config,
-            "embedding_parameters": embedding_config
+            "embedding_parameters": embedding_config,
         },
         "results": {
             "total_queries_clustered": total_queries,
             "total_clusters_created": total_clusters,
-            "average_silhouette_score": float(avg_silhouette) if avg_silhouette else None
+            "average_silhouette_score": float(avg_silhouette) if avg_silhouette else None,
         },
         "tables_created": [
             f"{feature_db}.{tables['sql_query_log_main']}",
@@ -520,93 +495,93 @@ def handle_sql_Execute_Full_Pipeline(
             f"{feature_db}.{tables['sql_log_embeddings']}",
             f"{feature_db}.{tables['sql_log_embeddings_store']}",
             f"{feature_db}.{tables['sql_query_clusters']}",
-            f"{feature_db}.{tables['query_cluster_stats']}"
+            f"{feature_db}.{tables['query_cluster_stats']}",
         ],
-        "description": "Complete SQL query clustering pipeline executed: extracted SQL logs → tokenized → embedded → clustered → analyzed"
+        "description": "Complete SQL query clustering pipeline executed: extracted SQL logs → tokenized → embedded → clustered → analyzed",
     }
 
     return create_response({"status": "success", "pipeline_completed": True}, metadata)
 
 
-def handle_sql_Analyze_Cluster_Stats(
-    conn,
-    sort_by_metric: str = "avg_cpu",
-    limit_results: int = None,
-    *args,
-    **kwargs
-):
+def handle_sql_Analyze_Cluster_Stats(conn, sort_by_metric: str = "avg_cpu", limit_results: int | None = None, *args, **kwargs):
     """
-        **ANALYZE SQL QUERY CLUSTER PERFORMANCE STATISTICS**
+    **ANALYZE SQL QUERY CLUSTER PERFORMANCE STATISTICS**
 
-        This tool analyzes pre-computed cluster statistics to identify optimization opportunities without re-running the clustering pipeline. Perfect for iterative analysis and decision-making on which query clusters to focus optimization efforts.
+    This tool analyzes pre-computed cluster statistics to identify optimization opportunities without re-running the clustering pipeline. Perfect for iterative analysis and decision-making on which query clusters to focus optimization efforts.
 
-        **ANALYSIS CAPABILITIES:**
-        - **Performance Ranking**: Sort clusters by any performance metric to identify top resource consumers
-        - **Resource Impact Assessment**: Compare clusters by CPU usage, I/O volume, and execution complexity
-        - **Skew Problem Detection**: Identify clusters with CPU or I/O distribution issues
-        - **Workload Characterization**: Understand query patterns by user, application, and workload type
-        - **Optimization Prioritization**: Focus on clusters with highest impact potential
+    **ANALYSIS CAPABILITIES:**
+    - **Performance Ranking**: Sort clusters by any performance metric to identify top resource consumers
+    - **Resource Impact Assessment**: Compare clusters by CPU usage, I/O volume, and execution complexity
+    - **Skew Problem Detection**: Identify clusters with CPU or I/O distribution issues
+    - **Workload Characterization**: Understand query patterns by user, application, and workload type
+    - **Optimization Prioritization**: Focus on clusters with highest impact potential
 
-        **AVAILABLE SORTING METRICS:**
-        - **avg_cpu**: Average CPU seconds per cluster (primary optimization target)
-        - **avg_io**: Average logical I/O operations (scan intensity indicator)
-        - **avg_cpuskw**: Average CPU skew (distribution problem indicator)
-        - **avg_ioskw**: Average I/O skew (hot spot indicator)
-        - **avg_pji**: Average Physical-to-Logical I/O ratio (compute intensity)
-        - **avg_uii**: Average Unit I/O Intensity (I/O efficiency)
-        - **avg_numsteps**: Average query plan complexity
-        - **queries**: Number of queries in cluster (frequency indicator)
-        - **cluster_silhouette_score**: Clustering quality measure
+    **AVAILABLE SORTING METRICS:**
+    - **avg_cpu**: Average CPU seconds per cluster (primary optimization target)
+    - **avg_io**: Average logical I/O operations (scan intensity indicator)
+    - **avg_cpuskw**: Average CPU skew (distribution problem indicator)
+    - **avg_ioskw**: Average I/O skew (hot spot indicator)
+    - **avg_pji**: Average Physical-to-Logical I/O ratio (compute intensity)
+    - **avg_uii**: Average Unit I/O Intensity (I/O efficiency)
+    - **avg_numsteps**: Average query plan complexity
+    - **queries**: Number of queries in cluster (frequency indicator)
+    - **cluster_silhouette_score**: Clustering quality measure
 
-        **PERFORMANCE CATEGORIZATION:**
-        Automatically categorizes clusters using configurable thresholds (from sql_opt_config.yml):
-        - **HIGH_CPU_USAGE**: Average CPU > config.performance_thresholds.cpu.high
-        - **HIGH_IO_USAGE**: Average I/O > config.performance_thresholds.io.high
-        - **HIGH_CPU_SKEW**: CPU skew > config.performance_thresholds.skew.high
-        - **HIGH_IO_SKEW**: I/O skew > config.performance_thresholds.skew.high
-        - **NORMAL**: Clusters within configured normal performance ranges
+    **PERFORMANCE CATEGORIZATION:**
+    Automatically categorizes clusters using configurable thresholds (from sql_opt_config.yml):
+    - **HIGH_CPU_USAGE**: Average CPU > config.performance_thresholds.cpu.high
+    - **HIGH_IO_USAGE**: Average I/O > config.performance_thresholds.io.high
+    - **HIGH_CPU_SKEW**: CPU skew > config.performance_thresholds.skew.high
+    - **HIGH_IO_SKEW**: I/O skew > config.performance_thresholds.skew.high
+    - **NORMAL**: Clusters within configured normal performance ranges
 
-        **TYPICAL ANALYSIS WORKFLOW:**
-        1. Sort by 'avg_cpu' or 'avg_io' to find highest resource consumers
-        2. Sort by 'avg_cpuskw' or 'avg_ioskw' to find distribution problems
-        4. Use limit_results to focus on top problematic clusters
+    **TYPICAL ANALYSIS WORKFLOW:**
+    1. Sort by 'avg_cpu' or 'avg_io' to find highest resource consumers
+    2. Sort by 'avg_cpuskw' or 'avg_ioskw' to find distribution problems
+    4. Use limit_results to focus on top problematic clusters
 
-        **OPTIMIZATION DECISION FRAMEWORK:**
-        - **High CPU + High Query Count**: Maximum impact optimization candidates
-        - **High Skew + Moderate CPU**: Distribution/statistics problems
-        - **High I/O + Low PJI**: Potential indexing opportunities
-        - **High NumSteps**: Complex query rewriting candidates
+    **OPTIMIZATION DECISION FRAMEWORK:**
+    - **High CPU + High Query Count**: Maximum impact optimization candidates
+    - **High Skew + Moderate CPU**: Distribution/statistics problems
+    - **High I/O + Low PJI**: Potential indexing opportunities
+    - **High NumSteps**: Complex query rewriting candidates
 
-        **OUTPUT FORMAT:**
-        Returns detailed cluster statistics with performance rankings, categories, and metadata for LLM analysis and optimization recommendations.
-        """
+    **OUTPUT FORMAT:**
+    Returns detailed cluster statistics with performance rankings, categories, and metadata for LLM analysis and optimization recommendations.
+    """
 
     config = SQL_CLUSTERING_CONFIG
 
     logger.debug(f"handle_sql_Analyze_Cluster_Stats: sort_by={sort_by_metric}, limit={limit_results}")
 
-    feature_db = config['databases']['feature_db']
-    stats_table = config['tables']['query_cluster_stats']
+    feature_db = config["databases"]["feature_db"]
+    stats_table = config["tables"]["query_cluster_stats"]
 
     # Validate sort metric
     valid_metrics = [
-        'avg_cpu', 'avg_io', 'avg_cpuskw', 'avg_ioskw', 'avg_pji', 'avg_uii',
-        'avg_numsteps', 'queries', 'cluster_silhouette_score'
+        "avg_cpu",
+        "avg_io",
+        "avg_cpuskw",
+        "avg_ioskw",
+        "avg_pji",
+        "avg_uii",
+        "avg_numsteps",
+        "queries",
+        "cluster_silhouette_score",
     ]
 
     if sort_by_metric not in valid_metrics:
-        sort_by_metric = 'avg_cpu'  # Default fallback
+        sort_by_metric = "avg_cpu"  # Default fallback
 
     with conn.cursor() as cur:
-
         # Build the query with optional limit
         limit_clause = f"TOP {limit_results}" if limit_results else ""
 
         # Get thresholds from config
-        thresholds = config.get('performance_thresholds', {})
-        cpu_high = thresholds.get('cpu', {}).get('high', 100)
-        skew_high = thresholds.get('skew', {}).get('high', 3.0)
-        io_high = thresholds.get('io', {}).get('high', 1000000)
+        thresholds = config.get("performance_thresholds", {})
+        cpu_high = thresholds.get("cpu", {}).get("high", 100)
+        skew_high = thresholds.get("skew", {}).get("high", 3.0)
+        io_high = thresholds.get("io", {}).get("high", 1000000)
 
         stats_query = f"""
         SELECT {limit_clause}
@@ -669,111 +644,114 @@ def handle_sql_Analyze_Cluster_Stats(
         "analysis_parameters": {
             "sort_by_metric": sort_by_metric,
             "limit_results": limit_results,
-            "valid_metrics": valid_metrics
+            "valid_metrics": valid_metrics,
         },
         "summary_statistics": summary_stats,
         "clusters_analyzed": len(data),
         "table_source": f"{feature_db}.{stats_table}",
-        "description": f"Cluster statistics analysis sorted by {sort_by_metric} - ready for LLM optimization recommendations"
+        "description": f"Cluster statistics analysis sorted by {sort_by_metric} - ready for LLM optimization recommendations",
     }
 
     return create_response(data, metadata)
 
 
 def handle_sql_Retrieve_Cluster_Queries(
-    conn,
-    cluster_ids: list[int],
-    metric: str = "ampcputime",
-    limit_per_cluster: int = 250,
-    *args,
-    **kwargs
+    conn, cluster_ids: list[int], metric: str = "ampcputime", limit_per_cluster: int = 250, *args, **kwargs
 ):
     """
-        **RETRIEVE ACTUAL SQL QUERIES FROM SPECIFIC CLUSTERS FOR PATTERN ANALYSIS**
+    **RETRIEVE ACTUAL SQL QUERIES FROM SPECIFIC CLUSTERS FOR PATTERN ANALYSIS**
 
-        This tool extracts the actual SQL query text and performance metrics from selected clusters, enabling detailed pattern analysis and specific optimization recommendations. Essential for moving from cluster-level analysis to actual query optimization.
+    This tool extracts the actual SQL query text and performance metrics from selected clusters, enabling detailed pattern analysis and specific optimization recommendations. Essential for moving from cluster-level analysis to actual query optimization.
 
-        **DETAILED ANALYSIS CAPABILITIES:**
-        - **SQL Pattern Recognition**: Analyze actual query structures, joins, predicates, and functions
-        - **Performance Correlation**: Connect query patterns to specific performance characteristics
-        - **Optimization Identification**: Identify common anti-patterns, missing indexes, inefficient joins
-        - **Code Quality Assessment**: Evaluate query construction, complexity, and best practices
-        - **Workload Understanding**: See actual business logic and data access patterns
+    **DETAILED ANALYSIS CAPABILITIES:**
+    - **SQL Pattern Recognition**: Analyze actual query structures, joins, predicates, and functions
+    - **Performance Correlation**: Connect query patterns to specific performance characteristics
+    - **Optimization Identification**: Identify common anti-patterns, missing indexes, inefficient joins
+    - **Code Quality Assessment**: Evaluate query construction, complexity, and best practices
+    - **Workload Understanding**: See actual business logic and data access patterns
 
-        **QUERY SELECTION STRATEGIES:**
-        - **By CPU Impact**: Sort by 'ampcputime' to focus on highest CPU consumers
-        - **By I/O Volume**: Sort by 'logicalio' to find scan-intensive queries
-        - **By Skew Problems**: Sort by 'cpuskw' or 'ioskw' for distribution issues
-        - **By Complexity**: Sort by 'numsteps' for complex execution plans
-        - **By Response Time**: Sort by 'response_secs' for user experience impact
+    **QUERY SELECTION STRATEGIES:**
+    - **By CPU Impact**: Sort by 'ampcputime' to focus on highest CPU consumers
+    - **By I/O Volume**: Sort by 'logicalio' to find scan-intensive queries
+    - **By Skew Problems**: Sort by 'cpuskw' or 'ioskw' for distribution issues
+    - **By Complexity**: Sort by 'numsteps' for complex execution plans
+    - **By Response Time**: Sort by 'response_secs' for user experience impact
 
-        **AVAILABLE METRICS FOR SORTING:**
-        - **ampcputime**: Total CPU seconds (primary optimization target)
-        - **logicalio**: Total logical I/O operations (scan indicator)
-        - **cpuskw**: CPU skew ratio (distribution problems)
-        - **ioskw**: I/O skew ratio (hot spot indicators)
-        - **pji**: Physical-to-Logical I/O ratio (compute intensity)
-        - **uii**: Unit I/O Intensity (I/O efficiency)
-        - **numsteps**: Query execution plan steps (complexity)
-        - **response_secs**: Wall-clock execution time (user impact)
-        - **delaytime**: Time spent in queue (concurrency issues)
+    **AVAILABLE METRICS FOR SORTING:**
+    - **ampcputime**: Total CPU seconds (primary optimization target)
+    - **logicalio**: Total logical I/O operations (scan indicator)
+    - **cpuskw**: CPU skew ratio (distribution problems)
+    - **ioskw**: I/O skew ratio (hot spot indicators)
+    - **pji**: Physical-to-Logical I/O ratio (compute intensity)
+    - **uii**: Unit I/O Intensity (I/O efficiency)
+    - **numsteps**: Query execution plan steps (complexity)
+    - **response_secs**: Wall-clock execution time (user impact)
+    - **delaytime**: Time spent in queue (concurrency issues)
 
-        **AUTOMATIC PERFORMANCE CATEGORIZATION:**
-        Each query is categorized using configurable thresholds (from sql_opt_config.yml):
-        - **CPU Categories**: VERY_HIGH_CPU (>config.very_high), HIGH_CPU (>config.high), MEDIUM_CPU (>10s), LOW_CPU
-        - **CPU Skew**: SEVERE_CPU_SKEW (>config.severe), HIGH_CPU_SKEW (>config.high), MODERATE_CPU_SKEW (>config.moderate), NORMAL
-        - **I/O Skew**: SEVERE_IO_SKEW (>config.severe), HIGH_IO_SKEW (>config.high), MODERATE_IO_SKEW (>config.moderate), NORMAL
+    **AUTOMATIC PERFORMANCE CATEGORIZATION:**
+    Each query is categorized using configurable thresholds (from sql_opt_config.yml):
+    - **CPU Categories**: VERY_HIGH_CPU (>config.very_high), HIGH_CPU (>config.high), MEDIUM_CPU (>10s), LOW_CPU
+    - **CPU Skew**: SEVERE_CPU_SKEW (>config.severe), HIGH_CPU_SKEW (>config.high), MODERATE_CPU_SKEW (>config.moderate), NORMAL
+    - **I/O Skew**: SEVERE_IO_SKEW (>config.severe), HIGH_IO_SKEW (>config.high), MODERATE_IO_SKEW (>config.moderate), NORMAL
 
-        Use thresholds set in config file for, CPU - high, very_high, Skew moderate, high, severe
+    Use thresholds set in config file for, CPU - high, very_high, Skew moderate, high, severe
 
-        **TYPICAL OPTIMIZATION WORKFLOW:**
-        1. Start with clusters identified from sql_Analyze_Cluster_Stats
-        2. Retrieve top queries by impact metric (usually 'ampcputime')
-        3. Analyze SQL patterns for common issues:
-           - Missing WHERE clauses or inefficient predicates
-           - Cartesian products or missing JOIN conditions
-           - Inefficient GROUP BY or ORDER BY operations
-           - Suboptimal table access patterns
-           - Missing or outdated statistics
-        4. Develop specific optimization recommendations
+    **TYPICAL OPTIMIZATION WORKFLOW:**
+    1. Start with clusters identified from sql_Analyze_Cluster_Stats
+    2. Retrieve top queries by impact metric (usually 'ampcputime')
+    3. Analyze SQL patterns for common issues:
+       - Missing WHERE clauses or inefficient predicates
+       - Cartesian products or missing JOIN conditions
+       - Inefficient GROUP BY or ORDER BY operations
+       - Suboptimal table access patterns
+       - Missing or outdated statistics
+    4. Develop specific optimization recommendations
 
-        **QUERY LIMIT STRATEGY:**
-        - Use the query limit set in config file for  pattern recognition and analysis, unless user specifies a different limit
+    **QUERY LIMIT STRATEGY:**
+    - Use the query limit set in config file for  pattern recognition and analysis, unless user specifies a different limit
 
-        **OUTPUT INCLUDES:**
-        - Complete SQL query text for each query
-        - All performance metrics, user, application, and workload context, cluster membership and rankings
-        - Performance categories for quick filtering
-        """
+    **OUTPUT INCLUDES:**
+    - Complete SQL query text for each query
+    - All performance metrics, user, application, and workload context, cluster membership and rankings
+    - Performance categories for quick filtering
+    """
 
     config = SQL_CLUSTERING_CONFIG
 
-    logger.debug(f"handle_sql_Retrieve_Cluster_Queries: clusters={cluster_ids}, metric={metric}, limit={limit_per_cluster}")
+    logger.debug(
+        f"handle_sql_Retrieve_Cluster_Queries: clusters={cluster_ids}, metric={metric}, limit={limit_per_cluster}"
+    )
 
-    feature_db = config['databases']['feature_db']
-    clusters_table = config['tables']['sql_query_clusters']
+    feature_db = config["databases"]["feature_db"]
+    clusters_table = config["tables"]["sql_query_clusters"]
 
     # Validate metric
     valid_metrics = [
-        'ampcputime', 'logicalio', 'cpuskw', 'ioskw', 'pji', 'uii',
-        'numsteps', 'response_secs', 'delaytime'
+        "ampcputime",
+        "logicalio",
+        "cpuskw",
+        "ioskw",
+        "pji",
+        "uii",
+        "numsteps",
+        "response_secs",
+        "delaytime",
     ]
 
     if metric not in valid_metrics:
-        metric = 'ampcputime'  # Default fallback
+        metric = "ampcputime"  # Default fallback
 
     # Convert cluster_ids list to comma-separated string for SQL IN clause
-    cluster_ids_str = ','.join(map(str, cluster_ids))
+    cluster_ids_str = ",".join(map(str, cluster_ids))
 
     with conn.cursor() as cur:
-
         # Get thresholds from config
-        thresholds = config.get('performance_thresholds', {})
-        cpu_high = thresholds.get('cpu', {}).get('high', 100)
-        cpu_very_high = thresholds.get('cpu', {}).get('very_high', 1000)
-        skew_moderate = thresholds.get('skew', {}).get('moderate', 2.0)
-        skew_high = thresholds.get('skew', {}).get('high', 3.0)
-        skew_severe = thresholds.get('skew', {}).get('severe', 5.0)
+        thresholds = config.get("performance_thresholds", {})
+        cpu_high = thresholds.get("cpu", {}).get("high", 100)
+        cpu_very_high = thresholds.get("cpu", {}).get("very_high", 1000)
+        skew_moderate = thresholds.get("skew", {}).get("moderate", 2.0)
+        skew_high = thresholds.get("skew", {}).get("high", 3.0)
+        skew_severe = thresholds.get("skew", {}).get("severe", 5.0)
 
         retrieve_queries_sql = f"""
         SELECT
@@ -851,19 +829,13 @@ def handle_sql_Retrieve_Cluster_Queries(
             "cluster_ids": cluster_ids,
             "sort_metric": metric,
             "limit_per_cluster": limit_per_cluster,
-            "valid_metrics": valid_metrics
+            "valid_metrics": valid_metrics,
         },
         "cluster_summary": cluster_summary,
         "queries_retrieved": len(data),
         "table_source": f"{feature_db}.{clusters_table}",
         "analysis_ready": True,
-        "description": f"Retrieved top {limit_per_cluster} queries per cluster sorted by {metric} - ready for pattern analysis and optimization recommendations"
+        "description": f"Retrieved top {limit_per_cluster} queries per cluster sorted by {metric} - ready for pattern analysis and optimization recommendations",
     }
 
     return create_response(data, metadata)
-
-
-
-
-
-

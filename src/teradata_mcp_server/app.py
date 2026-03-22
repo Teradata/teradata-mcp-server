@@ -53,6 +53,7 @@ def create_mcp_app(settings: Settings):
     from pathlib import Path
 
     from teradata_mcp_server import config_loader
+
     config_dir = Path(settings.config_dir).resolve() if settings.config_dir else Path.cwd()
     config_loader.set_global_config_dir(config_dir)
     logger.info(f"Configuration directory set to: {config_dir}")
@@ -61,7 +62,7 @@ def create_mcp_app(settings: Settings):
     try:
         from teradata_mcp_server import tools as td
     except ImportError:
-        import tools as td  # dev fallback
+        import tools as td  # type: ignore[no-redef]  # dev fallback
 
     mcp = FastMCP("teradata-mcp-server")
 
@@ -72,22 +73,22 @@ def create_mcp_app(settings: Settings):
     config = config_utils.get_profile_config(profile_name)
 
     # Feature flags from profiles
-    enable_efs = bool(any(re.match(pattern, 'fs_*') for pattern in config.get('tool', [])))
-    enable_tdvs = bool(any(re.match(pattern, 'tdvs_*') for pattern in config.get('tool', [])))
-    enable_bar = bool(any(re.match(pattern, 'bar_*') for pattern in config.get('tool', [])))
-    enable_chat = bool(any(re.match(pattern, 'chat_*') for pattern in config.get('tool', [])))
+    enable_efs = bool(any(re.match(pattern, "fs_*") for pattern in config.get("tool", [])))
+    enable_tdvs = bool(any(re.match(pattern, "tdvs_*") for pattern in config.get("tool", [])))
+    enable_bar = bool(any(re.match(pattern, "bar_*") for pattern in config.get("tool", [])))
+    enable_chat = bool(any(re.match(pattern, "chat_*") for pattern in config.get("tool", [])))
 
     # Initialize TD connection and optional teradataml/EFS context
     # Pass settings object to TDConn instead of just connection_url
     tdconn = td.TDConn(settings=settings)
 
-    enable_analytic_functions = profile_name and profile_name == 'dataScientist'
+    enable_analytic_functions = profile_name and profile_name == "dataScientist"
 
     fs_config = None
     if enable_efs or enable_analytic_functions:
-
         try:
             import teradataml as tdml
+
             tdml.create_context(tdsqlengine=tdconn.engine)
         except (AttributeError, ImportError, ModuleNotFoundError) as e:
             logger.warning(f"teradataml not installed - disabling analytic functions: {e}")
@@ -99,6 +100,7 @@ def create_mcp_app(settings: Settings):
         # Only import FeatureStoreConfig (which depends on tdfs4ds) when EFS tools are enabled
         try:
             from teradata_mcp_server.tools.fs.fs_utils import FeatureStoreConfig
+
             fs_config = FeatureStoreConfig()
             # teradataml is optional; warn if unavailable but keep EFS enabled
             try:
@@ -109,12 +111,12 @@ def create_mcp_app(settings: Settings):
             logger.warning(f"Feature Store module not available - disabling EFS functionality: {e}")
             enable_efs = False
 
-
     # TeradataVectorStore connection (optional)
     tdvs = None
     if len(os.getenv("TD_BASE_URL", "").strip()) > 0:
         try:
             from teradata_mcp_server.tools.tdvs.tdvs_utilies import create_teradataml_context
+
             create_teradataml_context()
             enable_tdvs = True
         except Exception as e:
@@ -125,9 +127,10 @@ def create_mcp_app(settings: Settings):
     if enable_bar:
         try:
             # Check for BAR system availability by importing required modules
-            import requests
+            import requests  # type: ignore[import-untyped]
 
             from teradata_mcp_server.tools.bar.dsa_client import DSAClient
+
             # Verify DSA connection if environment variables are set
             dsa_base_url = os.getenv("DSA_BASE_URL")
             dsa_host = os.getenv("DSA_HOST")
@@ -135,7 +138,9 @@ def create_mcp_app(settings: Settings):
             if dsa_base_url or (dsa_host and dsa_port):
                 logger.info("BAR system configured with DSA connection")
             else:
-                logger.warning("BAR tools enabled but DSA connection not configured (missing DSA_BASE_URL or DSA_HOST/DSA_PORT) - disabling BAR functionality")
+                logger.warning(
+                    "BAR tools enabled but DSA connection not configured (missing DSA_BASE_URL or DSA_HOST/DSA_PORT) - disabling BAR functionality"
+                )
                 enable_bar = False
         except (AttributeError, ImportError, ModuleNotFoundError) as e:
             logger.warning(f"BAR system dependencies not available - disabling BAR functionality: {e}")
@@ -177,7 +182,7 @@ def create_mcp_app(settings: Settings):
                             "Database checks (function existence and permissions) will be skipped in stdio mode - "
                             "they will be validated on first tool use."
                         )
-                    else:
+                    elif tdconn.engine is not None:
                         with tdconn.engine.connect() as conn:
                             from sqlalchemy import text
 
@@ -203,7 +208,9 @@ def create_mcp_app(settings: Settings):
 
                                 # First, get current username
                                 username_result = conn.execute(text("SELECT USER"))
-                                current_user = username_result.fetchone()[0]
+                                username_row = username_result.fetchone()
+                                assert username_row is not None
+                                current_user = username_row[0]
 
                                 check_permission_sql = text(f"""
                                     SELECT 1
@@ -253,6 +260,7 @@ def create_mcp_app(settings: Settings):
 
     # Middleware (auth + request context)
     from teradata_mcp_server.tools.auth_cache import SecureAuthCache
+
     auth_cache = SecureAuthCache(ttl_seconds=settings.auth_cache_ttl)
 
     def get_tdconn(recreate: bool = False):
@@ -262,6 +270,7 @@ def create_mcp_app(settings: Settings):
             if enable_efs:
                 try:
                     import teradataml as tdml
+
                     fs_config = td.FeatureStoreConfig()
                     with contextlib.suppress(Exception):
                         tdml.create_context(tdsqlengine=tdconn.engine)
@@ -280,6 +289,7 @@ def create_mcp_app(settings: Settings):
 
     # Adapters (inlined for simplicity)
     import socket
+
     hostname = socket.gethostname()
     process_id = f"{hostname}:{os.getpid()}"
 
@@ -293,7 +303,7 @@ def create_mcp_app(settings: Settings):
         - Formats return values into FastMCP content and captures exceptions with
           context for easier debugging.
         """
-        tool_name = kwargs.pop('tool_name', getattr(tool, '__name__', 'unknown_tool'))
+        tool_name = kwargs.pop("tool_name", getattr(tool, "__name__", "unknown_tool"))
         tdconn_local = get_tdconn()
 
         if not getattr(tdconn_local, "engine", None):
@@ -308,6 +318,7 @@ def create_mcp_app(settings: Settings):
         try:
             if use_sqla:
                 from sqlalchemy import text
+
                 with tdconn_local.engine.connect() as conn:
                     # Always attempt to set QueryBand when a request context is present
                     ctx = get_context()
@@ -364,7 +375,9 @@ def create_mcp_app(settings: Settings):
                     raw.close()
             return format_text_response(result)
         except Exception as e:
-            logger.error(f"Error in execute_db_tool: {e}", exc_info=True, extra={"session_info": {"tool_name": tool_name}})
+            logger.error(
+                f"Error in execute_db_tool: {e}", exc_info=True, extra={"session_info": {"tool_name": tool_name}}
+            )
             return format_error_response(str(e))
 
     def create_mcp_tool(
@@ -405,8 +418,7 @@ def create_mcp_app(settings: Settings):
         if validate_required:
             # Build list of required parameter names (those without defaults)
             required_params = [
-                name for name, param in signature.parameters.items()
-                if param.default is inspect.Parameter.empty
+                name for name, param in signature.parameters.items() if param.default is inspect.Parameter.empty
             ]
 
             async def _mcp_tool(**kwargs):
@@ -416,6 +428,7 @@ def create_mcp_app(settings: Settings):
                 merged_kwargs = {**inject_kwargs, **kwargs}
                 return await asyncio.to_thread(executor_func, **merged_kwargs)
         else:
+
             async def _mcp_tool(**kwargs):
                 merged_kwargs = {**inject_kwargs, **kwargs}
                 return await asyncio.to_thread(executor_func, **merged_kwargs)
@@ -443,8 +456,10 @@ def create_mcp_app(settings: Settings):
             removable.add("fs_config")
 
         params = [
-            p for name, p in sig.parameters.items()
-            if name not in removable and p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+            p
+            for name, p in sig.parameters.items()
+            if name not in removable
+            and p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
         ]
         new_sig = sig.replace(parameters=params)
 
@@ -468,8 +483,8 @@ def create_mcp_app(settings: Settings):
         for name, func in all_functions.items():
             if not (inspect.isfunction(func) and name.startswith("handle_")):
                 continue
-            tool_name = name[len("handle_"):]
-            if not any(re.match(p, tool_name) for p in config.get('tool', [])):
+            tool_name = name[len("handle_") :]
+            if not any(re.match(p, tool_name) for p in config.get("tool", [])):
                 continue
             # Skip template tools (used for developer reference only)
             if tool_name.startswith("tmpl_"):
@@ -491,12 +506,11 @@ def create_mcp_app(settings: Settings):
         logger.warning("No module loader available, skipping code-defined tool registration")
 
     from teradata_mcp_server.tools.constants import TD_ANALYTIC_FUNCS as funcs
-    if enable_analytic_functions:
 
+    if enable_analytic_functions:
         tdml_processed_funcs = set(tdml.analytics.json_parser.json_store._JsonStore._get_function_list()[0].keys())
 
         for func_name in funcs:
-
             # Before adding the function, check if function is existed or not.
             # Connection is not mandatory for MCP server. If connection is not there, then
             # functions can not be added.
@@ -520,15 +534,15 @@ def create_mcp_app(settings: Settings):
             func_args_str = get_anlytic_function_signature(func_params)
 
             full_func_name = "tdml_" + func_name
+            init_doc = func_obj.__init__.__doc__  # type: ignore[misc]
             func_str = get_dynamic_function_definition().format(
                 analytic_function=full_func_name,
-                doc_string=func_obj.__init__.__doc__,
+                doc_string=init_doc,
                 func_args_str=func_args_str,
-                tables_to_df=json.dumps(inp_data)
+                tables_to_df=json.dumps(inp_data),
             )
 
-            doc_string = convert_tdml_docstring_to_mcp_docstring(
-                func_obj.__init__.__doc__, additional_args_docs)
+            doc_string = convert_tdml_docstring_to_mcp_docstring(init_doc, additional_args_docs)
 
             # Execute the generated function definition in the global scope.
             # Global scope will have all other functions. So reference to other functions will work.
@@ -540,9 +554,11 @@ def create_mcp_app(settings: Settings):
             mcp.tool(name=full_func_name, description=doc_string)(func)
 
     # Load YAML-defined tools/resources/prompts from config directory
-    custom_object_files = [config_dir / file for file in os.listdir(config_dir) if file.endswith("_objects.yml")]
+    custom_object_files: list[Any] = [config_dir / file for file in os.listdir(config_dir) if file.endswith("_objects.yml")]
     if custom_object_files:
-        logger.info(f"Found {len(custom_object_files)} custom object files in config directory: {[f.name for f in custom_object_files]}")
+        logger.info(
+            f"Found {len(custom_object_files)} custom object files in config directory: {[f.name for f in custom_object_files]}"
+        )
     if module_loader and profile_name:
         profile_yml_files = module_loader.get_required_yaml_paths()
         custom_object_files.extend(profile_yml_files)
@@ -554,7 +570,7 @@ def create_mcp_app(settings: Settings):
             for subpkg in tools_pkg_root.iterdir():
                 if subpkg.is_dir():
                     for entry in subpkg.iterdir():
-                        if entry.is_file() and entry.name.endswith('.yml'):
+                        if entry.is_file() and entry.name.endswith(".yml"):
                             tool_yml_resources.append(entry)
         custom_object_files.extend(tool_yml_resources)
         logger.info(f"Loading all YAML files (no specific profile): {len(tool_yml_resources)} files")
@@ -564,11 +580,11 @@ def create_mcp_app(settings: Settings):
     for file in custom_object_files:
         try:
             if hasattr(file, "read_text"):
-                text = file.read_text(encoding='utf-8')
+                file_text = file.read_text(encoding="utf-8")
             else:
-                with open(file, encoding='utf-8', errors='replace') as f:
-                    text = f.read()
-            loaded = yaml.safe_load(text)
+                with open(file, encoding="utf-8", errors="replace") as f:
+                    file_text = f.read()
+            loaded = yaml.safe_load(file_text)
             if loaded:
                 custom_objects.update(loaded)
         except Exception as e:
@@ -577,26 +593,28 @@ def create_mcp_app(settings: Settings):
     # Prompt helpers
     def make_custom_prompt(prompt_name: str, prompt: str, desc: str, parameters: dict | None = None):
         if parameters is None or len(parameters) == 0:
+
             async def _dynamic_prompt():
                 return Message(role="user", content=TextContent(type="text", text=prompt))
+
             _dynamic_prompt.__name__ = prompt_name
             return mcp.prompt(description=desc)(_dynamic_prompt)
         else:
             param_objects: list[inspect.Parameter] = []
             annotations: dict[str, Any] = {}
             for param_name, meta in parameters.items():
-                meta = meta or {}
-                type_hint_raw = meta.get("type_hint", "str")
+                meta_val = meta or {}
+                type_hint_raw = meta_val.get("type_hint", "str")
                 type_hint = resolve_type_hint(type_hint_raw)
-                required = meta.get("required", True)
-                desc_txt = meta.get("description", "")
+                required = meta_val.get("required", True)
+                desc_txt = meta_val.get("description", "")
                 # Get the type name for display
-                type_name = type_hint.__name__ if hasattr(type_hint, '__name__') else str(type_hint_raw)
+                type_name = type_hint.__name__ if hasattr(type_hint, "__name__") else str(type_hint_raw)
                 desc_txt += f" (type: {type_name})"
-                if required and "default" not in meta:
+                if required and "default" not in meta_val:
                     default_value = Field(..., description=desc_txt)
                 else:
-                    default_value = Field(default=meta.get("default", None), description=desc_txt)
+                    default_value = Field(default=meta_val.get("default", None), description=desc_txt)
                 param_objects.append(
                     inspect.Parameter(
                         param_name,
@@ -607,16 +625,22 @@ def create_mcp_app(settings: Settings):
                 )
                 annotations[param_name] = type_hint
             sig = inspect.Signature(param_objects)
-            async def _dynamic_prompt(**kwargs):
-                missing = [name for name, meta in parameters.items() if (meta or {}).get("required", True) and name not in kwargs]
+
+            async def _dynamic_prompt_with_params(**kwargs: Any):  # type: ignore[no-untyped-def]
+                missing = [
+                    name
+                    for name, meta in parameters.items()
+                    if (meta or {}).get("required", True) and name not in kwargs
+                ]
                 if missing:
                     raise ValueError(f"Missing parameters: {missing}")
                 formatted_prompt = prompt.format(**kwargs)
                 return Message(role="user", content=TextContent(type="text", text=formatted_prompt))
-            _dynamic_prompt.__signature__ = sig
-            _dynamic_prompt.__annotations__ = annotations
-            _dynamic_prompt.__name__ = prompt_name
-            return mcp.prompt(description=desc)(_dynamic_prompt)
+
+            _dynamic_prompt_with_params.__signature__ = sig  # type: ignore[attr-defined]
+            _dynamic_prompt_with_params.__annotations__ = annotations
+            _dynamic_prompt_with_params.__name__ = prompt_name
+            return mcp.prompt(description=desc)(_dynamic_prompt_with_params)
 
     def make_custom_query_tool(name, tool):
         description = tool.get("description", "")
@@ -629,16 +653,20 @@ def create_mcp_app(settings: Settings):
             type_hint_raw = p.get("type_hint", "str")
             type_hint = resolve_type_hint(type_hint_raw)  # Convert type string to actual type class
             annotation = Annotated[type_hint, param_description] if param_description else type_hint
-            default = p.get("default", inspect.Parameter.empty)  # inspect.Parameter.empty if p.get("required", True) else p.get("default", None)
+            default = p.get(
+                "default", inspect.Parameter.empty
+            )  # inspect.Parameter.empty if p.get("required", True) else p.get("default", None)
 
             parameters.append(
-                inspect.Parameter(param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=default, annotation=annotation)
+                inspect.Parameter(
+                    param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=default, annotation=annotation
+                )
             )
 
             # Append parameter name and description to function description
             # Disabled as already included in Annotations (consider introducing a way to toggle this if clients can't see annotations)
             if False:
-                type_name = type_hint.__name__ if hasattr(type_hint, '__name__') else str(type_hint_raw)
+                type_name = type_hint.__name__ if hasattr(type_hint, "__name__") else str(type_hint_raw)
                 description += f"\n    * {param_name}"
                 description += f": {param_description}" if param_description else ""
                 description += f" (type: {type_name})"
@@ -659,6 +687,7 @@ def create_mcp_app(settings: Settings):
     """
     Generate a SQL generation function that returns a query string for a given cube definition and tool parameters (grain, measures, filters...).
     """
+
     def generate_cube_query_tool(name, cube):
         """
         Generate a function to create aggregation SQL from a cube definition.
@@ -666,7 +695,10 @@ def create_mcp_app(settings: Settings):
         :param cube: The cube definition
         :return: A SQL query string generator function taking dimensions and measures as comma-separated strings.
         """
-        def _cube_query_tool(dimensions: str, measures: str, dim_filters: str, meas_filters: str, order_by: str, top: int) -> str:
+
+        def _cube_query_tool(
+            dimensions: str, measures: str, dim_filters: str, meas_filters: str, order_by: str, top: int
+        ) -> str:
             """
             Generate a SQL query string for the cube using the specified dimensions and measures.
 
@@ -684,10 +716,9 @@ def create_mcp_app(settings: Settings):
             dim_list_raw = [d.strip() for d in dimensions.split(",") if d.strip()]
             mes_list_raw = [m.strip() for m in measures.split(",") if m.strip()]
             # Get dimension expressions from dictionary
-            dim_list = ",\n  ".join([
-                cube["dimensions"][d]["expression"] if d in cube["dimensions"] else d
-                for d in dim_list_raw
-            ])
+            dim_list = ",\n  ".join(
+                [cube["dimensions"][d]["expression"] if d in cube["dimensions"] else d for d in dim_list_raw]
+            )
             mes_lines = []
             for measure in mes_list_raw:
                 mdef = cube["measures"].get(measure)
@@ -718,12 +749,13 @@ def create_mcp_app(settings: Settings):
                 ";"
             )
             return sql
+
         return _cube_query_tool
 
     def make_custom_cube_tool(name, cube):
         # Build allowed values and examples FIRST so we can use them in annotations
-        dimensions_dict = cube.get('dimensions', {})
-        measures_dict = cube.get('measures', {})
+        dimensions_dict = cube.get("dimensions", {})
+        measures_dict = cube.get("measures", {})
 
         # Build dimension list with descriptions
         dim_list = [f"{n}: {d.get('description', '')}" for n, d in dimensions_dict.items()]
@@ -736,17 +768,19 @@ def create_mcp_app(settings: Settings):
         measures_desc = f"Comma-separated measure names to aggregate. Allowed: {', '.join(meas_names)}"
 
         # Build filter examples
-        dim_examples = [f"{d} {e}" for d, e in zip(dim_names[:2], ["= 'value'", "in ('X', 'Y', 'Z')"])] if dim_names else []
-        dim_example = ' AND '.join(dim_examples) if dim_examples else "dimension_name = 'value'"
+        dim_examples = (
+            [f"{d} {e}" for d, e in zip(dim_names[:2], ["= 'value'", "in ('X', 'Y', 'Z')"])] if dim_names else []
+        )
+        dim_example = " AND ".join(dim_examples) if dim_examples else "dimension_name = 'value'"
         dim_filters_desc = f"Filter expression to apply to dimensions. Valid dimension names: [{', '.join(dim_names)}]. Example: {dim_example}"
 
         meas_examples = [f"{m} {e}" for m, e in zip(meas_names[:2], ["> 1000", "= 100"])] if meas_names else []
-        meas_example = ' AND '.join(meas_examples) if meas_examples else "measure_name > 1000"
+        meas_example = " AND ".join(meas_examples) if meas_examples else "measure_name > 1000"
         meas_filters_desc = f"Filter expression to apply to computed measures. Valid measure names: [{', '.join(meas_names)}]. Example: {meas_example}"
 
         # Build order example
         order_examples = [f"{d} {e}" for d, e in zip(dim_names[:2], ["ASC", "DESC"])] if dim_names else []
-        order_example = ', '.join(order_examples) if order_examples else "dimension_name ASC"
+        order_example = ", ".join(order_examples) if order_examples else "dimension_name ASC"
         order_by_desc = f"Order expression on dimensions and measures. Example: {order_example}"
 
         # Now build custom parameters
@@ -760,7 +794,9 @@ def create_mcp_app(settings: Settings):
             annotation = Annotated[type_hint, param_description] if param_description else type_hint
             default = p.get("default", inspect.Parameter.empty)
             parameters.append(
-                inspect.Parameter(param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=default, annotation=annotation)
+                inspect.Parameter(
+                    param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=default, annotation=annotation
+                )
             )
             # Track required custom params for validation
             if default is inspect.Parameter.empty:
@@ -769,18 +805,36 @@ def create_mcp_app(settings: Settings):
         # Build the combined signature: fixed cube parameters + custom parameters
         # Fixed cube parameters with detailed annotated descriptions
         cube_params = [
-            inspect.Parameter("dimensions", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                            annotation=Annotated[str, dimensions_desc]),
-            inspect.Parameter("measures", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                            annotation=Annotated[str, measures_desc]),
-            inspect.Parameter("dim_filters", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default="",
-                            annotation=Annotated[str, dim_filters_desc]),
-            inspect.Parameter("meas_filters", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default="",
-                            annotation=Annotated[str, meas_filters_desc]),
-            inspect.Parameter("order_by", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default="",
-                            annotation=Annotated[str, order_by_desc]),
-            inspect.Parameter("top", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None,
-                            annotation=Annotated[int, "Limit the number of rows returned (positive integer)"]),
+            inspect.Parameter(
+                "dimensions", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Annotated[str, dimensions_desc]
+            ),
+            inspect.Parameter(
+                "measures", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Annotated[str, measures_desc]
+            ),
+            inspect.Parameter(
+                "dim_filters",
+                kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                default="",
+                annotation=Annotated[str, dim_filters_desc],
+            ),
+            inspect.Parameter(
+                "meas_filters",
+                kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                default="",
+                annotation=Annotated[str, meas_filters_desc],
+            ),
+            inspect.Parameter(
+                "order_by",
+                kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                default="",
+                annotation=Annotated[str, order_by_desc],
+            ),
+            inspect.Parameter(
+                "top",
+                kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                default=None,
+                annotation=Annotated[int, "Limit the number of rows returned (positive integer)"],
+            ),
         ]
 
         # Separate required and optional custom parameters
@@ -812,10 +866,10 @@ def create_mcp_app(settings: Settings):
                     dim_filters=dim_filters,
                     meas_filters=meas_filters,
                     order_by=order_by,
-                    top=top
+                    top=top,
                 ),
                 tool_name=name,
-                **kwargs
+                **kwargs,
             )
 
         # Build detailed dimension and measure lists for docstring
@@ -825,11 +879,11 @@ def create_mcp_app(settings: Settings):
         # Build custom parameters documentation
         custom_param_lines = []
         for param_name, p in param_defs.items():
-            param_desc = p.get('description', '')
-            type_hint_raw = p.get('type_hint', 'str')
+            param_desc = p.get("description", "")
+            type_hint_raw = p.get("type_hint", "str")
             type_hint = resolve_type_hint(type_hint_raw)
-            param_type = type_hint.__name__ if hasattr(type_hint, '__name__') else str(type_hint_raw)
-            is_required = p.get('default', inspect.Parameter.empty) is inspect.Parameter.empty
+            param_type = type_hint.__name__ if hasattr(type_hint, "__name__") else str(type_hint_raw)
+            is_required = p.get("default", inspect.Parameter.empty) is inspect.Parameter.empty
             required_text = " (required)" if is_required else " (optional)"
             custom_param_lines.append(f"    * {param_name} ({param_type}){required_text}: {param_desc}")
 
@@ -839,7 +893,7 @@ def create_mcp_app(settings: Settings):
             custom_params_section = "\n" + chr(10).join(custom_param_lines) + "\n"
 
         doc_string = f"""
-{cube.get('description', '')}
+{cube.get("description", "")}
 This is an OLAP cube tool that presents selected measures at a specified level of aggregation and filtering.
 
 Expected inputs:
@@ -862,7 +916,7 @@ Returns:
             executor_func=executor,
             signature=sig,
             validate_required=False,  # Validation happens inside executor for custom params
-            tool_name='get_cube_' + name,
+            tool_name="get_cube_" + name,
             tool_description=doc_string,
         )
         return mcp.tool(name=name, description=doc_string)(tool_func)
@@ -871,26 +925,28 @@ Returns:
     custom_terms: list[tuple[str, Any, str]] = []
     for name, obj in custom_objects.items():
         obj_type = obj.get("type")
-        if obj_type == "tool" and any(re.match(pattern, name) for pattern in config.get('tool',[])):
+        if obj_type == "tool" and any(re.match(pattern, name) for pattern in config.get("tool", [])):
             fn = make_custom_query_tool(name, obj)
             globals()[name] = fn
             logger.info(f"Created tool: {name}")
-        elif obj_type == "prompt"  and any(re.match(pattern, name) for pattern in config.get('prompt',[])):
+        elif obj_type == "prompt" and any(re.match(pattern, name) for pattern in config.get("prompt", [])):
             fn = make_custom_prompt(name, obj["prompt"], obj.get("description", ""), obj.get("parameters", {}))
             globals()[name] = fn
             logger.info(f"Created prompt: {name}")
-        elif obj_type == "cube"  and any(re.match(pattern, name) for pattern in config.get('tool',[])):
+        elif obj_type == "cube" and any(re.match(pattern, name) for pattern in config.get("tool", [])):
             fn = make_custom_cube_tool(name, obj)
             globals()[name] = fn
             logger.info(f"Created cube: {name}")
-        elif obj_type == "glossary"  and any(re.match(pattern, name) for pattern in config.get('resource',[])):
+        elif obj_type == "glossary" and any(re.match(pattern, name) for pattern in config.get("resource", [])):
             custom_glossary = {k: v for k, v in obj.items() if k != "type"}
             logger.info(f"Added custom glossary entries for: {name}.")
         else:
-            logger.info(f"Type {obj_type if obj_type else ''} for custom object {name} is {'unknown' if obj_type else 'undefined'}.")
+            logger.info(
+                f"Type {obj_type if obj_type else ''} for custom object {name} is {'unknown' if obj_type else 'undefined'}."
+            )
 
         for section in ("measures", "dimensions"):
-            if section in obj and  any(re.match(pattern, name) for pattern in config.get('tool',[])):
+            if section in obj and any(re.match(pattern, name) for pattern in config.get("tool", [])):
                 custom_terms.extend((term, details, name) for term, details in obj[section].items())
 
     # Enrich glossary
@@ -905,17 +961,18 @@ Returns:
                 custom_glossary[term_key]["tools"].append(tool_name)
 
     if custom_glossary:
+
         @mcp.resource("glossary://all")
-        def get_glossary() -> dict:
+        def get_glossary() -> dict[str, Any]:
             return custom_glossary
 
         @mcp.resource("glossary://definitions")
-        def get_glossary_definitions() -> dict:
+        def get_glossary_definitions() -> dict[str, Any]:
             return {term: details["definition"] for term, details in custom_glossary.items()}
 
         @mcp.resource("glossary://term/{term_name}")
-        def get_glossary_term(term_name: str)  -> dict:
-            term = custom_glossary.get(term_name)
+        def get_glossary_term(term_name: str) -> dict[str, Any]:
+            term: dict[str, Any] | None = custom_glossary.get(term_name)
             if term:
                 return term
             else:

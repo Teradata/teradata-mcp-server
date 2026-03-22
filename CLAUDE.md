@@ -1,0 +1,101 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+Teradata MCP Server — a Model Context Protocol server for interacting with Teradata databases. Built on FastMCP, distributed on PyPI as `teradata-mcp-server`. Python 3.11+.
+
+## Build & Development Commands
+
+```bash
+# Install dependencies
+uv sync
+
+# Install with optional modules
+uv sync --extra fs       # Feature Store (teradataml)
+uv sync --extra tdvs     # Vector Store (teradatagenai)
+uv sync --extra bar      # Backup & Restore
+uv sync --extra dev      # Dev tools (ruff, mypy)
+
+# Run the server locally (stdio mode)
+uv run teradata-mcp-server --database_uri "teradata://user:pass@host:1025/db"
+
+# Run with specific profile and transport
+uv run teradata-mcp-server --profile dba --mcp_transport streamable-http --mcp_port 8001
+
+# Lint
+uv run ruff check src/
+uv run ruff format --check src/
+
+# Type check
+uv run mypy src/
+
+# Run tests (requires a live Teradata connection)
+export DATABASE_URI="teradata://user:pass@host:1025/database"
+uv run python tests/run_mcp_tests.py "uv run teradata-mcp-server"
+
+# Docker
+docker compose up teradata-mcp-server
+```
+
+## Architecture
+
+### Request Flow
+
+1. **`server.py`** — CLI argument parsing, calls `create_mcp_app()`
+2. **`app.py`** — FastMCP app factory. Creates the MCP instance, registers tools/prompts/resources based on profile, configures middleware
+3. **`middleware.py`** — `RequestContextMiddleware` extracts per-request headers, auth, and session info. Sets Teradata QueryBand for tracing
+4. **Tool handlers** — Plain sync functions (`handle_*`) in `tools/` subdirectories. Wrapped to async via `asyncio.to_thread`
+
+### Profile-Based Module Loading
+
+Tools are organized into domain modules under `src/teradata_mcp_server/tools/`:
+- **base/** — Core queries (readQuery, tableList, columnDescription, etc.)
+- **dba/** — Administration & monitoring
+- **sec/** — Security & permissions
+- **rag/** — Retrieval-augmented generation workflows
+- **fs/** — Feature Store (optional, requires teradataml)
+- **tdvs/** — Vector Store operations
+- **bar/** — Backup & restore (optional)
+- **chat/** — Chat completion
+- **qlty/** — Data quality / EDA
+- **plot/** — Visualization (charts)
+- **sql_opt/** — SQL optimization
+- **tmpl/** — Template tools
+
+Profiles (defined in `config/profiles.yml`) control which modules load. The `module_loader.py` uses regex pattern matching against tool name prefixes to determine which modules to import. Available profiles: `all`, `dba`, `dataScientist`, `eda`, `bar`, `llmUser`, `tester`.
+
+### Configuration System
+
+Layered config loading (`config_loader.py`):
+1. Packaged defaults from `src/teradata_mcp_server/config/*.yml`
+2. User overrides from working directory or `CONFIG_DIR` env var
+
+Settings dataclass in `config/__init__.py` merges CLI args, environment variables, and defaults.
+
+### Database Connectivity
+
+`TDConn` class in `tools/td_connect.py` manages SQLAlchemy engine creation for Teradata. Supports connection pooling (`TD_POOL_SIZE`, `TD_MAX_OVERFLOW`, `TD_POOL_TIMEOUT`), auth modes (TD2, LDAP via `LOGMECH`), and rate-limited authentication.
+
+Tool handlers receive either a SQLAlchemy `Connection` or raw `TeradataConnection` as their first parameter — the wrapper in `app.py` handles injection.
+
+### Transport Modes
+
+Set via `MCP_TRANSPORT` env var or `--mcp_transport` flag:
+- **stdio** (default) — for Claude Desktop and CLI clients
+- **streamable-http** — HTTP with streaming on configurable host/port
+- **sse** — Server-Sent Events, this will be merged into streamable-http as the MCP standard is depricating SSE as a separate transport
+
+For stdio transport, logs go to file only (to avoid polluting MCP stdout). Log locations: macOS `~/Library/Logs/TeradataMCP/`, Linux `~/.local/state/teradata_mcp_server/logs/`.
+
+### Testing
+
+Tests require a live Teradata database. Test cases are JSON files in `tests/cases/` (e.g., `core_test_cases.json`). The test runner (`tests/run_mcp_tests.py`) dynamically discovers available tools and only runs matching test cases. Results are saved as timestamped JSON in `var/test-reports/`.
+
+## Code Conventions
+
+- **Ruff** for linting/formatting: line length 120, target py311, rules: E, W, F, I, N, B, UP, C4, SIM, PIE, PL
+- Tool handler functions are named `handle_<tool_name>` and stay synchronous
+- Tool names are prefixed by module: `base_*`, `dba_*`, `sec_*`, `rag_*`, etc.
+- Structured JSON logging via `CustomJSONFormatter` in `utils.py`

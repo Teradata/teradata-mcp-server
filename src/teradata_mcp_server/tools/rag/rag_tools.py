@@ -10,39 +10,31 @@ from teradatasql import TeradataConnection
 
 logger = logging.getLogger("teradata_mcp_server")
 
+
 def get_default_rag_config():
     """Default RAG configuration as fallback"""
     return {
-        'version': 'ivsm',
-        'databases': {
-            'query_db': 'demo_db',
-            'model_db': 'demo_db',
-            'vector_db': 'demo_db'
+        "version": "ivsm",
+        "databases": {"query_db": "demo_db", "model_db": "demo_db", "vector_db": "demo_db"},
+        "tables": {
+            "query_table": "user_query",
+            "query_embedding_store": "user_query_embeddings",
+            "vector_table": "icici_fr_embeddings_store",
+            "model_table": "embeddings_models",
+            "tokenizer_table": "embeddings_tokenizers",
         },
-        'tables': {
-            'query_table': 'user_query',
-            'query_embedding_store': 'user_query_embeddings',
-            'vector_table': 'icici_fr_embeddings_store',
-            'model_table': 'embeddings_models',
-            'tokenizer_table': 'embeddings_tokenizers'
+        "model": {"model_id": "bge-small-en-v1.5"},
+        "retrieval": {"default_k": 10, "max_k": 50},
+        "vector_store_schema": {
+            "required_fields": ["txt"],
+            "metadata_fields_in_vector_store": ["chunk_num", "section_title", "doc_name"],
         },
-        'model': {
-            'model_id': 'bge-small-en-v1.5'
+        "embedding": {
+            "vector_length": 384,
+            "vector_column_prefix": "emb_",
+            "distance_measure": "cosine",
+            "feature_columns": "[emb_0:emb_383]",
         },
-        'retrieval': {
-            'default_k': 10,
-            'max_k': 50
-        },
-        'vector_store_schema': {
-            'required_fields': ['txt'],
-            'metadata_fields_in_vector_store': ['chunk_num', 'section_title', 'doc_name']
-        },
-        'embedding': {
-            'vector_length': 384,
-            'vector_column_prefix': 'emb_',
-            'distance_measure': 'cosine',
-            'feature_columns': '[emb_0:emb_383]'
-        }
     }
 
 
@@ -62,10 +54,7 @@ def load_rag_config():
         from teradata_mcp_server import config_loader
 
         # Load configuration (uses global config directory)
-        config = config_loader.load_config(
-            "rag_config.yml",
-            defaults=get_default_rag_config()
-        )
+        config = config_loader.load_config("rag_config.yml", defaults=get_default_rag_config())
 
         logger.info("RAG configuration loaded successfully")
         return config
@@ -78,18 +67,19 @@ def load_rag_config():
 # Load config at module level
 RAG_CONFIG = load_rag_config()
 
+
 def build_search_query(vector_db, dst_table, chunk_embed_table, k, config):
     """Build dynamic search query based on available metadata fields in vector store"""
     # Get metadata fields from config
-    metadata_fields = config['vector_store_schema']['metadata_fields_in_vector_store'] or []
-    feature_columns = config['embedding']['feature_columns']
+    metadata_fields = config["vector_store_schema"]["metadata_fields_in_vector_store"] or []
+    feature_columns = config["embedding"]["feature_columns"]
 
     # Build SELECT clause dynamically - txt is always required
     select_fields = ["e_ref.txt AS reference_txt"]
 
     # Add all metadata fields from vector store
     for field in metadata_fields:
-        if field != 'txt':
+        if field != "txt":
             select_fields.append(f"e_ref.{field} AS {field}")
 
     # Add similarity
@@ -116,6 +106,7 @@ def build_search_query(vector_db, dst_table, chunk_embed_table, k, config):
         ORDER BY similarity DESC;
         """
 
+
 def serialize_teradata_types(obj: Any) -> Any:
     """Convert Teradata-specific types to JSON serializable formats"""
     if isinstance(obj, date | datetime):
@@ -124,35 +115,25 @@ def serialize_teradata_types(obj: Any) -> Any:
         return float(obj)
     return str(obj)
 
+
 def rows_to_json(cursor_description: Any, rows: list[Any]) -> list[dict[str, Any]]:
     """Convert database rows to JSON objects using column names as keys"""
     if not cursor_description or not rows:
         return []
 
     columns = [col[0] for col in cursor_description]
-    return [
-        {
-            col: serialize_teradata_types(value)
-            for col, value in zip(columns, row)
-        }
-        for row in rows
-    ]
+    return [{col: serialize_teradata_types(value) for col, value in zip(columns, row)} for row in rows]
+
 
 def create_response(data: Any, metadata: dict[str, Any] | None = None) -> str:
     """Create a standardized JSON response structure"""
     if metadata:
-        response = {
-            "status": "success",
-            "metadata": metadata,
-            "results": data
-        }
+        response = {"status": "success", "metadata": metadata, "results": data}
     else:
-        response = {
-            "status": "success",
-            "results": data
-        }
+        response = {"status": "success", "results": data}
 
     return json.dumps(response, default=serialize_teradata_types)
+
 
 def handle_rag_Execute_Workflow(
     conn: TeradataConnection,
@@ -221,11 +202,11 @@ def handle_rag_Execute_Workflow(
     config = RAG_CONFIG
 
     # Check version and delegate to appropriate implementation
-    version = config.get('version', 'ivsm').lower()
+    version = config.get("version", "ivsm").lower()
 
-    if version == 'ivsm':
+    if version == "ivsm":
         return _execute_rag_workflow_ivsm(conn, question, k, config, *args, **kwargs)
-    elif version == 'byom':
+    elif version == "byom":
         return _execute_rag_workflow_byom(conn, question, k, config, *args, **kwargs)
     else:
         raise ValueError(f"Unsupported RAG version: {version}. Supported versions: 'byom', 'ivsm'")
@@ -236,10 +217,10 @@ def _execute_rag_workflow_byom(conn: TeradataConnection, question: str, k: int |
 
     # Use config default if k not provided
     if k is None:
-        k = config['retrieval']['default_k']
+        k = config["retrieval"]["default_k"]
 
     # Optional: Enforce max limit
-    max_k = config['retrieval'].get('max_k', 50)
+    max_k = config["retrieval"].get("max_k", 50)
     if k > max_k:
         logger.warning(f"Requested k={k} exceeds max_k={max_k}, using max_k")
         k = max_k
@@ -247,15 +228,15 @@ def _execute_rag_workflow_byom(conn: TeradataConnection, question: str, k: int |
     logger.debug(f"handle_rag_executeWorkflow (BYOM): question={question[:60]}..., k={k}")
 
     # Extract config values
-    database_name = config['databases']['query_db']
-    table_name = config['tables']['query_table']
-    dst_table = config['tables']['query_embedding_store']
-    model_id = config['model']['model_id']
-    model_db = config['databases']['model_db']
-    model_table = config['tables']['model_table']
-    tokenizer_table = config['tables']['tokenizer_table']
-    vector_db = config['databases']['vector_db']
-    chunk_embed_table = config['tables']['vector_table']
+    database_name = config["databases"]["query_db"]
+    table_name = config["tables"]["query_table"]
+    dst_table = config["tables"]["query_embedding_store"]
+    model_id = config["model"]["model_id"]
+    model_db = config["databases"]["model_db"]
+    model_table = config["tables"]["model_table"]
+    tokenizer_table = config["tables"]["tokenizer_table"]
+    vector_db = config["databases"]["vector_db"]
+    chunk_embed_table = config["tables"]["vector_table"]
 
     with conn.cursor() as cur:
         # Store user query
@@ -356,9 +337,9 @@ def _execute_rag_workflow_byom(conn: TeradataConnection, question: str, k: int |
         "model_id": model_id,
         "chunks_retrieved": len(data),
         "topk_requested": k,
-        "topk_configured_default": config['retrieval']['default_k'],
-        "metadata_fields": config['vector_store_schema']['metadata_fields_in_vector_store'],
-        "description": "Complete RAG workflow executed using BYOM: config - store query - generate embeddings - semantic search"
+        "topk_configured_default": config["retrieval"]["default_k"],
+        "metadata_fields": config["vector_store_schema"]["metadata_fields_in_vector_store"],
+        "description": "Complete RAG workflow executed using BYOM: config - store query - generate embeddings - semantic search",
     }
     logger.debug(f"Tool: handle_rag_executeWorkflow (BYOM): metadata: {metadata}")
     return create_response(data, metadata)
@@ -369,10 +350,10 @@ def _execute_rag_workflow_ivsm(conn: TeradataConnection, question: str, k: int |
 
     # Use config default if k not provided
     if k is None:
-        k = config['retrieval']['default_k']
+        k = config["retrieval"]["default_k"]
 
     # Optional: Enforce max limit
-    max_k = config['retrieval'].get('max_k', 50)
+    max_k = config["retrieval"].get("max_k", 50)
     if k > max_k:
         logger.warning(f"Requested k={k} exceeds max_k={max_k}, using max_k")
         k = max_k
@@ -380,15 +361,15 @@ def _execute_rag_workflow_ivsm(conn: TeradataConnection, question: str, k: int |
     logger.debug(f"handle_rag_executeWorkflow (IVSM): question={question[:60]}..., k={k}")
 
     # Extract config values
-    database_name = config['databases']['query_db']
-    table_name = config['tables']['query_table']
-    dst_table = config['tables']['query_embedding_store']
-    model_id = config['model']['model_id']
-    model_db = config['databases']['model_db']
-    model_table = config['tables']['model_table']
-    tokenizer_table = config['tables']['tokenizer_table']
-    vector_db = config['databases']['vector_db']
-    chunk_embed_table = config['tables']['vector_table']
+    database_name = config["databases"]["query_db"]
+    table_name = config["tables"]["query_table"]
+    dst_table = config["tables"]["query_embedding_store"]
+    model_id = config["model"]["model_id"]
+    model_db = config["databases"]["model_db"]
+    model_table = config["tables"]["model_table"]
+    tokenizer_table = config["tables"]["tokenizer_table"]
+    vector_db = config["databases"]["vector_db"]
+    chunk_embed_table = config["tables"]["vector_table"]
 
     with conn.cursor() as cur:
         # Store user query
@@ -513,8 +494,8 @@ def _execute_rag_workflow_ivsm(conn: TeradataConnection, question: str, k: int |
                 USING
                     ColumnsToPreserve('id', 'txt')
                     VectorDataType('FLOAT32')
-                    VectorLength({config['embedding']['vector_length']})
-                    OutputColumnPrefix('{config['embedding']['vector_column_prefix']}')
+                    VectorLength({config["embedding"]["vector_length"]})
+                    OutputColumnPrefix('{config["embedding"]["vector_column_prefix"]}')
                     InputColumnName('sentence_embedding')
             ) a
         ) WITH DATA
@@ -537,7 +518,14 @@ def _execute_rag_workflow_ivsm(conn: TeradataConnection, question: str, k: int |
     metadata = {
         "tool_name": "rag_executeWorkflow",
         "workflow_type": "IVSM",
-        "workflow_steps": ["config_set", "query_stored", "query_tokenized", "embedding_view_created", "embedding_table_created", "semantic_search_completed"],
+        "workflow_steps": [
+            "config_set",
+            "query_stored",
+            "query_tokenized",
+            "embedding_view_created",
+            "embedding_table_created",
+            "semantic_search_completed",
+        ],
         "query_id": new_id,
         "cleaned_question": cleaned_txt,
         "database": database_name,
@@ -547,10 +535,10 @@ def _execute_rag_workflow_ivsm(conn: TeradataConnection, question: str, k: int |
         "model_id": model_id,
         "chunks_retrieved": len(data),
         "topk_requested": k,
-        "topk_configured_default": config['retrieval']['default_k'],
+        "topk_configured_default": config["retrieval"]["default_k"],
         "views_created": ["v_topics_tokenized", "v_topics_embeddings"],
-        "metadata_fields": config['vector_store_schema']['metadata_fields_in_vector_store'],
-        "description": "Complete RAG workflow executed using IVSM functions: config - store query - tokenize - create embedding view - create embedding table - semantic search"
+        "metadata_fields": config["vector_store_schema"]["metadata_fields_in_vector_store"],
+        "description": "Complete RAG workflow executed using IVSM functions: config - store query - tokenize - create embedding view - create embedding table - semantic search",
     }
     logger.debug(f"Tool: handle_rag_executeWorkflow (IVSM): metadata: {metadata}")
     return create_response(data, metadata)

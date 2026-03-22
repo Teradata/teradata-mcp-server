@@ -48,4 +48,3 @@ def build_queryband(
             add("PROXYUSER", assume_user)
 
     return "".join(parts)
-

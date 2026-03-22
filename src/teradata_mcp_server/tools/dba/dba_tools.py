@@ -6,9 +6,10 @@ from teradata_mcp_server.tools.utils import create_response, rows_to_json
 
 logger = logging.getLogger("teradata_mcp_server")
 
-#------------------ Tool  ------------------#
+
+# ------------------ Tool  ------------------#
 # Get table SQL tool
-def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: str | int | None = 7,  *args, **kwargs):
+def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: str | int | None = 7, *args, **kwargs):
     """
     Get a list of SQL run against a table in the last number of days.
 
@@ -39,14 +40,17 @@ def handle_dba_tableSqlList(conn: TeradataConnection, table_name: str, no_days: 
             "tool_name": "dba_tableSqlList",
             "table_name": table_name,
             "no_days": no_days,
-            "total_queries": len(data)
+            "total_queries": len(data),
         }
         logger.debug(f"Tool: handle_dba_tableSqlList: metadata: {metadata}")
         return create_response(data, metadata)
 
-#------------------ Tool  ------------------#
+
+# ------------------ Tool  ------------------#
 # Get user SQL tool
-def handle_dba_userSqlList(conn: TeradataConnection, user_name: str = "", no_days: str | int | None = 7,  *args, **kwargs):
+def handle_dba_userSqlList(
+    conn: TeradataConnection, user_name: str = "", no_days: str | int | None = 7, *args, **kwargs
+):
     """
     Get a list of SQL run by a user in the last number of days if a user name is provided, otherwise get list of all SQL in the last number of days.
 
@@ -86,15 +90,23 @@ def handle_dba_userSqlList(conn: TeradataConnection, user_name: str = "", no_day
             "tool_name": "dba_userSqlList",
             "user_name": user_name,
             "no_days": no_days,
-            "total_queries": len(data)
+            "total_queries": len(data),
         }
         logger.debug(f"Tool: handle_dba_userSqlList: metadata: {metadata}")
         return create_response(data, metadata)
 
 
-#------------------ Tool  ------------------#
+# ------------------ Tool  ------------------#
 # Get table space tool
-def handle_dba_tableSpace(conn: TeradataConnection, database_name: str | None = None, table_name: str | None = None, top_n: int | None = None, exclude_system: bool | None = None, *args, **kwargs):
+def handle_dba_tableSpace(
+    conn: TeradataConnection,
+    database_name: str | None = None,
+    table_name: str | None = None,
+    top_n: int | None = None,
+    exclude_system: bool | None = None,
+    *args,
+    **kwargs,
+):
     """
     Get table space used for a table if table name is provided or get table space for all tables in a database if a database name is provided."
 
@@ -107,10 +119,12 @@ def handle_dba_tableSpace(conn: TeradataConnection, database_name: str | None = 
     Returns:
       ResponseType: formatted response with query results + metadata
     """
-    logger.debug(f"Tool: handle_dba_tableSpace: Args: database_name: {database_name}, table_name: {table_name}, top_n: {top_n}, exclude_system: {exclude_system}")
+    logger.debug(
+        f"Tool: handle_dba_tableSpace: Args: database_name: {database_name}, table_name: {table_name}, top_n: {top_n}, exclude_system: {exclude_system}"
+    )
 
     # System databases to exclude (same list as base_databaseList)
-    _SYSTEM_DBS = (
+    _system_dbs = (
         "'DBC','SYSLIB','SystemFe','SYSUDTLIB','SYSJDBC','SYSSPATIAL',"
         "'TD_SYSFNLIB','TDQCD','TDStats','TDPUSER','dbcmngr','Crashdumps',"
         "'LockLogShredder','SYSBAR','SysAdmin','Sys_Calendar','EXTUSER',"
@@ -133,7 +147,7 @@ def handle_dba_tableSpace(conn: TeradataConnection, database_name: str | None = 
                     FROM DBC.AllSpaceV a
                     INNER JOIN DBC.TablesV t ON a.DatabaseName = t.DatabaseName AND a.TableName = t.TableName
                     WHERE t.TableKind = 'T'
-                    AND a.DatabaseName NOT IN ({_SYSTEM_DBS})
+                    AND a.DatabaseName NOT IN ({_system_dbs})
                     AND a.DatabaseName NOT LIKE 'TDaaS%'
                     AND a.TableName <> 'All'
                     AND a.TableName NOT LIKE 'hist_%'
@@ -142,7 +156,7 @@ def handle_dba_tableSpace(conn: TeradataConnection, database_name: str | None = 
                     ORDER BY CurrentPerm1 desc;""")
             else:
                 logger.debug("No database or table name provided, returning all tables and space information.")
-                rows = cur.execute(f"""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm
+                rows = cur.execute("""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm
                 ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
                 FROM DBC.AllSpaceV
                 GROUP BY DatabaseName, TableName
@@ -156,7 +170,9 @@ def handle_dba_tableSpace(conn: TeradataConnection, database_name: str | None = 
             GROUP BY DatabaseName, TableName
             ORDER BY CurrentPerm1 desc;""")
         elif not table_name:
-            logger.debug(f"No table name provided, returning all tables and space information for database: {database_name}.")
+            logger.debug(
+                f"No table name provided, returning all tables and space information for database: {database_name}."
+            )
             rows = cur.execute(f"""SELECT TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm
             ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
             FROM DBC.AllSpaceV
@@ -164,7 +180,9 @@ def handle_dba_tableSpace(conn: TeradataConnection, database_name: str | None = 
             GROUP BY TableName
             ORDER BY CurrentPerm1 desc;""")
         else:
-            logger.debug(f"Database name: {database_name}, Table name: {table_name}, returning space information for this table.")
+            logger.debug(
+                f"Database name: {database_name}, Table name: {table_name}, returning space information for this table."
+            )
             rows = cur.execute(f"""SELECT DatabaseName, TableName, SUM(CurrentPerm) AS CurrentPerm1, SUM(PeakPerm) as PeakPerm
             ,CAST((100-(AVG(CURRENTPERM)/MAX(NULLIFZERO(CURRENTPERM))*100)) AS DECIMAL(5,2)) as SkewPct
             FROM DBC.AllSpaceV
@@ -175,19 +193,19 @@ def handle_dba_tableSpace(conn: TeradataConnection, database_name: str | None = 
         data = rows_to_json(cur.description, rows.fetchall())
         # Apply top_n limit after sorting (results already ordered by CurrentPerm1 desc)
         if top_n and len(data) > int(top_n):
-            data = data[:int(top_n)]
+            data = data[: int(top_n)]
         metadata = {
             "tool_name": "dba_tableSpace",
             "database_name": database_name,
             "table_name": table_name,
             "top_n": top_n,
-            "total_tables": len(data)
+            "total_tables": len(data),
         }
         logger.debug(f"Tool: handle_dba_tableSpace: metadata: {metadata}")
         return create_response(data, metadata)
 
 
-#------------------ Tool  ------------------#
+# ------------------ Tool  ------------------#
 # Get database space tool
 def handle_dba_databaseSpace(conn: TeradataConnection, database_name: str | None = None, *args, **kwargs):
     """
@@ -238,28 +256,27 @@ def handle_dba_databaseSpace(conn: TeradataConnection, database_name: str | None
             """)
 
         data = rows_to_json(cur.description, rows.fetchall())
-        metadata = {
-            "tool_name": "dba_databaseSpace",
-            "database_name": database_name,
-            "total_databases": len(data)
-        }
+        metadata = {"tool_name": "dba_databaseSpace", "database_name": database_name, "total_databases": len(data)}
         logger.debug(f"Tool: handle_dba_databaseSpace: metadata: {metadata}")
         return create_response(data, metadata)
 
-#------------------ Tool  ------------------#
-# Resource usage summary tool
-def handle_dba_resusageSummary(conn: TeradataConnection,
-                                 dimensions: list[str] | None = None,
-                                 user_name: str | None = None,
-                                 date:  str | None = None,
-                                 no_days: str | int | None = 30,
-                                 dayOfWeek:  str | None = None,
-                                 hourOfDay:  str | None = None,
-                                 workloadType: str | None = None,
-                                 workloadComplexity: str | None = None,
-                                 AppId: str | None = None,
-                                 *args, **kwargs):
 
+# ------------------ Tool  ------------------#
+# Resource usage summary tool
+def handle_dba_resusageSummary(
+    conn: TeradataConnection,
+    dimensions: list[str] | None = None,
+    user_name: str | None = None,
+    date: str | None = None,
+    no_days: str | int | None = 30,
+    dayOfWeek: str | None = None,
+    hourOfDay: str | None = None,
+    workloadType: str | None = None,
+    workloadComplexity: str | None = None,
+    AppId: str | None = None,
+    *args,
+    **kwargs,
+):
     """
     Get the Teradata system usage summary metrics by weekday and hour for each workload type and query complexity bucket.
 
@@ -292,28 +309,37 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
             logger.debug(f"Tool: handle_dba_resusageSummary: Ignoring date={date} because no_days={no_days} is set")
             date = None
 
-    comment="Total system resource usage summary."
+    comment = "Total system resource usage summary."
 
     # If dimensions is not None or empty, filter in the allowed dimensions
-    allowed_dimensions = ["LogDate", "hourOfDay", "dayOfWeek", "workloadType", "workloadComplexity","UserName","AppId"]
+    allowed_dimensions = [
+        "LogDate",
+        "hourOfDay",
+        "dayOfWeek",
+        "workloadType",
+        "workloadComplexity",
+        "UserName",
+        "AppId",
+    ]
     unsupported_dimensions = []
     if dimensions is not None:
         unsupported_dimensions = [dim for dim in dimensions if dim not in allowed_dimensions]
         dimensions = [dim for dim in dimensions if dim in allowed_dimensions]
     else:
-        dimensions=[]
-
+        dimensions = []
 
     # Update comment string based on dimensions used and supported.
     if dimensions:
-        comment+="Metrics aggregated by " + ", ".join(dimensions) + "."
+        comment += "Metrics aggregated by " + ", ".join(dimensions) + "."
     if unsupported_dimensions:
-        comment+="The following dimensions are not supported and will be ignored: " + ", ".join(unsupported_dimensions) + "."
+        comment += (
+            "The following dimensions are not supported and will be ignored: " + ", ".join(unsupported_dimensions) + "."
+        )
 
     # Dynamically construct the SELECT and GROUP BY clauses based on dimensions
     dim_string = ", ".join(dimensions)
-    group_by_clause = ("GROUP BY " if dimensions else "")+dim_string
-    dim_string += ("," if dimensions else "")
+    group_by_clause = ("GROUP BY " if dimensions else "") + dim_string
+    dim_string += "," if dimensions else ""
 
     filter_clause = ""
     filter_clause += f"AND UserName = '{user_name}' " if user_name else ""
@@ -393,19 +419,16 @@ def handle_dba_resusageSummary(conn: TeradataConnection,
         rows = cur.execute(query)
 
         data = rows_to_json(cur.description, rows.fetchall())
-        metadata = {
-            "tool_name": "dba_resusageSummary",
-            "total_rows": len(data) ,
-            "comment": comment,
-            "rows": len(data)
-        }
+        metadata = {"tool_name": "dba_resusageSummary", "total_rows": len(data), "comment": comment, "rows": len(data)}
         logger.debug(f"Tool: handle_dba_resusageSummary: metadata: {metadata}")
         return create_response(data, metadata)
 
 
-#------------------ Tool  ------------------#
+# ------------------ Tool  ------------------#
 # Get table usage impact tool
-def handle_dba_tableUsageImpact(conn: TeradataConnection, database_name: str | None = None, user_name: str | None = None, *args, **kwargs):
+def handle_dba_tableUsageImpact(
+    conn: TeradataConnection, database_name: str | None = None, user_name: str | None = None, *args, **kwargs
+):
     """
     Measure the usage of a table and views by users, this is helpful to understand what user and tables are driving most resource usage at any point in time.
 
@@ -424,7 +447,7 @@ def handle_dba_tableUsageImpact(conn: TeradataConnection, database_name: str | N
 
     database_name_filter = f"AND objectdatabasename = '{database_name}'" if database_name else ""
     user_name_filter = f"AND username = '{user_name}'" if user_name else ""
-    table_usage_sql="""
+    table_usage_sql = """
     LOCKING ROW for ACCESS
     sel
     DatabaseName
@@ -476,18 +499,22 @@ def handle_dba_tableUsageImpact(conn: TeradataConnection, database_name: str | N
     logger.debug(f"Tool: handle_dba_tableUsageImpact: table_usage_sql: {table_usage_sql}")
     with conn.cursor() as cur:
         logger.debug("Database version information requested.")
-        rows = cur.execute(table_usage_sql.format(database_name_filter=database_name_filter, user_name_filter=user_name_filter))
+        rows = cur.execute(
+            table_usage_sql.format(database_name_filter=database_name_filter, user_name_filter=user_name_filter)
+        )
         data = rows_to_json(cur.description, rows.fetchall())
     if len(data):
-        info=f'This data contains the list of tables most frequently queried objects in database schema {database_name}'
+        info = (
+            f"This data contains the list of tables most frequently queried objects in database schema {database_name}"
+        )
     else:
-        info=f'No tables have recently been queried in the database schema {database_name}.'
+        info = f"No tables have recently been queried in the database schema {database_name}."
     metadata = {
         "tool_name": "handle_dba_tableUsageImpact",
         "database": database_name,
         "table_count": len(data),
         "comment": info,
-        "rows": len(data)
+        "rows": len(data),
     }
     logger.debug(f"Tool: handle_dba_tableUsageImpact: metadata: {metadata}")
     return create_response(data, metadata)

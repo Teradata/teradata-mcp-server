@@ -19,18 +19,18 @@ class ModuleLoader:
 
     # Map tool prefixes to their corresponding module paths
     MODULE_MAP = {
-        'bar': 'teradata_mcp_server.tools.bar',
-        'base': 'teradata_mcp_server.tools.base',
-        'chat': 'teradata_mcp_server.tools.chat',
-        'dba': 'teradata_mcp_server.tools.dba',
-        'fs': 'teradata_mcp_server.tools.fs',
-        'qlty': 'teradata_mcp_server.tools.qlty',
-        'rag': 'teradata_mcp_server.tools.rag',
-        'sql_opt': 'teradata_mcp_server.tools.sql_opt',
-        'sec': 'teradata_mcp_server.tools.sec',
-        'tmpl': 'teradata_mcp_server.tools.tmpl',
-        'plot': 'teradata_mcp_server.tools.plot',
-        'tdvs': 'teradata_mcp_server.tools.tdvs'
+        "bar": "teradata_mcp_server.tools.bar",
+        "base": "teradata_mcp_server.tools.base",
+        "chat": "teradata_mcp_server.tools.chat",
+        "dba": "teradata_mcp_server.tools.dba",
+        "fs": "teradata_mcp_server.tools.fs",
+        "qlty": "teradata_mcp_server.tools.qlty",
+        "rag": "teradata_mcp_server.tools.rag",
+        "sql_opt": "teradata_mcp_server.tools.sql_opt",
+        "sec": "teradata_mcp_server.tools.sec",
+        "tmpl": "teradata_mcp_server.tools.tmpl",
+        "plot": "teradata_mcp_server.tools.plot",
+        "tdvs": "teradata_mcp_server.tools.tdvs",
     }
 
     def __init__(self):
@@ -48,12 +48,12 @@ class ModuleLoader:
         Returns:
             List of module names that need to be loaded
         """
-        tool_patterns = config.get('tool', [])
+        tool_patterns = config.get("tool", [])
         required_modules = set()
 
         # Always load base modules for shared utilities
-        required_modules.add('td_connect')
-        required_modules.add('base')  # Always load base tools for custom queries
+        required_modules.add("td_connect")
+        required_modules.add("base")  # Always load base tools for custom queries
 
         # Check each tool pattern against module prefixes
         for pattern in tool_patterns:
@@ -91,10 +91,10 @@ class ModuleLoader:
                 self._loaded_modules[module_name] = module
                 logger.info(f"Loaded module: {module_path}")
                 return module
-            elif module_name == 'td_connect':
+            elif module_name == "td_connect":
                 # Use absolute import to avoid circular dependency
-                td_connect = importlib.import_module('teradata_mcp_server.tools.td_connect')
-                self._loaded_modules['td_connect'] = td_connect
+                td_connect = importlib.import_module("teradata_mcp_server.tools.td_connect")
+                self._loaded_modules["td_connect"] = td_connect
                 logger.info("Loaded td_connect module")
                 return td_connect
             else:
@@ -107,11 +107,15 @@ class ModuleLoader:
 
             # Provide specific warnings for optional modules
             error_msg = str(e).lower()
-            if module_name == 'fs':
-                if any(pkg in error_msg for pkg in ['teradataml', 'tdfs4ds']):
-                    logger.warning("Feature Store module not available - required packages not installed. Install with: uv sync --extra fs or pip install -e .[fs]")
+            if module_name == "fs":
+                if any(pkg in error_msg for pkg in ["teradataml", "tdfs4ds"]):
+                    logger.warning(
+                        "Feature Store module not available - required packages not installed. Install with: uv sync --extra fs or pip install -e .[fs]"
+                    )
                 else:
-                    logger.warning("Feature Store module not available - module missing or packages not installed. Install with: uv sync --extra fs or pip install -e .[fs]")
+                    logger.warning(
+                        "Feature Store module not available - module missing or packages not installed. Install with: uv sync --extra fs or pip install -e .[fs]"
+                    )
             else:
                 logger.error(f"Failed to load module {module_name}: {e}")
             return None
@@ -123,7 +127,7 @@ class ModuleLoader:
         Returns:
             Dictionary mapping function names to function objects
         """
-        all_functions = {}
+        all_functions: dict[str, Any] = {}
 
         # Load required modules
         for module_name in self._required_modules:
@@ -158,10 +162,11 @@ class ModuleLoader:
                         module_dir = tools_pkg_root.joinpath(module_name)
                         if module_dir.is_dir():
                             for entry in module_dir.iterdir():
-                                if entry.is_file() and entry.name.endswith('.yml'):
+                                if entry.is_file() and entry.name.endswith(".yml"):
                                     yaml_paths.append(entry)
         except Exception as e:
             import logging
+
             logger = logging.getLogger("teradata_mcp_server")
             logger.error(f"Failed to load packaged YAML files: {e}")
 
