@@ -18,18 +18,23 @@ def parse_args_to_settings() -> Settings:
         description="Teradata MCP Server",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument('-v', '--version', action='version', version=f'%(prog)s {__version__}')
-    parser.add_argument('--profile', type=str, required=False, help='Profile name to load from profiles.yml')
-    parser.add_argument('--config_dir', type=str, required=False, help='Directory for user configuration files (default: current working directory)')
-    parser.add_argument('--mcp_transport', type=str, choices=['stdio', 'streamable-http', 'sse'], required=False)
-    parser.add_argument('--mcp_host', type=str, required=False)
-    parser.add_argument('--mcp_port', type=int, required=False)
-    parser.add_argument('--mcp_path', type=str, required=False)
-    parser.add_argument('--database_uri', type=str, required=False, help='Override DATABASE_URI connection string')
-    parser.add_argument('--logmech', type=str, required=False)
-    parser.add_argument('--auth_mode', type=str, required=False)
-    parser.add_argument('--auth_cache_ttl', type=int, required=False)
-    parser.add_argument('--logging_level', type=str, required=False)
+    parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {__version__}")
+    parser.add_argument("--profile", type=str, required=False, help="Profile name to load from profiles.yml")
+    parser.add_argument(
+        "--config_dir",
+        type=str,
+        required=False,
+        help="Directory for user configuration files (default: current working directory)",
+    )
+    parser.add_argument("--mcp_transport", type=str, choices=["stdio", "streamable-http", "sse"], required=False)
+    parser.add_argument("--mcp_host", type=str, required=False)
+    parser.add_argument("--mcp_port", type=int, required=False)
+    parser.add_argument("--mcp_path", type=str, required=False)
+    parser.add_argument("--database_uri", type=str, required=False, help="Override DATABASE_URI connection string")
+    parser.add_argument("--logmech", type=str, required=False)
+    parser.add_argument("--auth_mode", type=str, required=False)
+    parser.add_argument("--auth_cache_ttl", type=int, required=False)
+    parser.add_argument("--logging_level", type=str, required=False)
 
     args, _ = parser.parse_known_args()
 
@@ -64,11 +69,13 @@ async def main():
         logger.warning("Signal handling not supported on this platform")
 
     # Run transport
-    if settings.mcp_transport in ['sse', 'streamable-http']:
-        await mcp.run_http_async(transport=settings.mcp_transport, host=settings.mcp_host, port=settings.mcp_port, path=settings.mcp_path)
+    if settings.mcp_transport in ["sse", "streamable-http"]:
+        await mcp.run_http_async(
+            transport=settings.mcp_transport, host=settings.mcp_host, port=settings.mcp_port, path=settings.mcp_path
+        )
     else:
         await mcp.run_stdio_async()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())

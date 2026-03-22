@@ -21,7 +21,7 @@ def load_yaml(file_path: Path) -> dict[str, Any]:
     """Load YAML file, return empty dict if not found or invalid."""
     try:
         if file_path.exists():
-            with open(file_path, encoding='utf-8') as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
                 return data if isinstance(data, dict) else {}
     except Exception as e:
@@ -30,9 +30,7 @@ def load_yaml(file_path: Path) -> dict[str, Any]:
 
 
 def load_config(
-    config_name: str,
-    config_dir: Path | None = None,
-    defaults: dict[str, Any] | None = None
+    config_name: str, config_dir: Path | None = None, defaults: dict[str, Any] | None = None
 ) -> dict[str, Any]:
     """Load config: start with defaults, then packaged config, then override with custom config.
 
@@ -54,7 +52,7 @@ def load_config(
     try:
         pkg_config = pkg_files("teradata_mcp_server.config") / config_name
         if pkg_config.is_file():
-            data = yaml.safe_load(pkg_config.read_text(encoding='utf-8'))
+            data = yaml.safe_load(pkg_config.read_text(encoding="utf-8"))
             if isinstance(data, dict):
                 config.update(data)
                 logger.debug(f"Loaded packaged config: {config_name}")

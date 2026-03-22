@@ -35,9 +35,28 @@ class CustomJSONFormatter(logging.Formatter):
             "message": record.getMessage(),
         }
         reserved = {
-            'name','msg','args','levelname','levelno','pathname','filename','module','lineno',
-            'funcName','created','msecs','relativeCreated','thread','threadName','processName',
-            'process','exc_info','exc_text','stack_info','getMessage','message'
+            "name",
+            "msg",
+            "args",
+            "levelname",
+            "levelno",
+            "pathname",
+            "filename",
+            "module",
+            "lineno",
+            "funcName",
+            "created",
+            "msecs",
+            "relativeCreated",
+            "thread",
+            "threadName",
+            "processName",
+            "process",
+            "exc_info",
+            "exc_text",
+            "stack_info",
+            "getMessage",
+            "message",
         }
         for k, v in record.__dict__.items():
             if k not in reserved:
@@ -170,13 +189,13 @@ def resolve_type_hint(type_hint):
     if isinstance(type_hint, str):
         # Use eval with a restricted namespace for safety
         namespace = {
-            'str': str,
-            'int': int,
-            'float': float,
-            'bool': bool,
-            'list': list,
-            'dict': dict,
-            'Any': Any,
+            "str": str,
+            "int": int,
+            "float": float,
+            "bool": bool,
+            "list": list,
+            "dict": dict,
+            "Any": Any,
         }
         try:
             return eval(type_hint, {"__builtins__": {}}, namespace)
@@ -233,7 +252,7 @@ def load_all_objects(working_dir: Path | None = None) -> dict[str, Any]:
     config_dir = config_loader.get_global_config_dir()
 
     objects = {}
-    allowed_types = {'tool', 'cube', 'prompt', 'glossary'}
+    allowed_types = {"tool", "cube", "prompt", "glossary"}
 
     # Load packaged YAML files from src/tools/*/*.yml
     try:
@@ -242,12 +261,15 @@ def load_all_objects(working_dir: Path | None = None) -> dict[str, Any]:
             for subdir in tools_pkg_root.iterdir():
                 if subdir.is_dir():
                     for yml_file in subdir.iterdir():
-                        if yml_file.is_file() and yml_file.name.endswith('.yml'):
+                        if yml_file.is_file() and yml_file.name.endswith(".yml"):
                             try:
-                                loaded = yaml.safe_load(yml_file.read_text(encoding='utf-8')) or {}
+                                loaded = yaml.safe_load(yml_file.read_text(encoding="utf-8")) or {}
                                 # Filter by allowed object types
-                                filtered = {k: v for k, v in loaded.items()
-                                          if isinstance(v, dict) and v.get('type') in allowed_types}
+                                filtered = {
+                                    k: v
+                                    for k, v in loaded.items()
+                                    if isinstance(v, dict) and v.get("type") in allowed_types
+                                }
                                 objects.update(filtered)
                             except Exception as e:
                                 logger.error(f"Failed to load {yml_file}: {e}")
@@ -256,17 +278,16 @@ def load_all_objects(working_dir: Path | None = None) -> dict[str, Any]:
 
     # Load user config directory *.yml files (overrides packaged)
     # Skip special config files like profiles.yml, chat_config.yml, etc.
-    skip_files = {'profiles.yml', 'chat_config.yml', 'rag_config.yml', 'sql_opt_config.yml'}
+    skip_files = {"profiles.yml", "chat_config.yml", "rag_config.yml", "sql_opt_config.yml"}
 
     for yml_file in config_dir.glob("*.yml"):
         if yml_file.name in skip_files:
             continue
         try:
-            with open(yml_file, encoding='utf-8') as f:
+            with open(yml_file, encoding="utf-8") as f:
                 loaded = yaml.safe_load(f) or {}
                 # Filter by allowed object types
-                filtered = {k: v for k, v in loaded.items()
-                          if isinstance(v, dict) and v.get('type') in allowed_types}
+                filtered = {k: v for k, v in loaded.items() if isinstance(v, dict) and v.get("type") in allowed_types}
                 if filtered:
                     objects.update(filtered)
                     logger.info(f"Loaded {len(filtered)} objects from user config: {yml_file.name}")
@@ -280,7 +301,7 @@ def load_all_objects(working_dir: Path | None = None) -> dict[str, Any]:
 def get_profile_config(profile_name: str | None = None) -> dict[str, Any]:
     """Get profile configuration or return all if no profile specified."""
     if not profile_name:
-        return {'tool': ['.*'], 'prompt': ['.*'], 'resource': ['.*']}
+        return {"tool": [".*"], "prompt": [".*"], "resource": [".*"]}
 
     profiles = load_profiles()
     if profile_name not in profiles:
@@ -300,13 +321,14 @@ def get_profile_run_config(profile_name: str | None = None) -> dict[str, Any]:
         return {}
 
     profile = profiles[profile_name]
-    run_config = profile.get('run', {})
+    run_config = profile.get("run", {})
 
     # Expand environment variables in run config values
     expanded_config = {}
     for key, value in run_config.items():
         if isinstance(value, str):
             import os
+
             expanded_config[key] = os.path.expandvars(value)
         else:
             expanded_config[key] = value
@@ -327,12 +349,12 @@ def apply_profile_defaults_to_env(profile_name: str | None = None) -> None:
 
     # Map profile run keys to environment variable names
     key_mapping = {
-        'database_uri': 'DATABASE_URI',
-        'mcp_transport': 'MCP_TRANSPORT',
-        'mcp_host': 'MCP_HOST',
-        'mcp_port': 'MCP_PORT',
-        'mcp_path': 'MCP_PATH',
-        'logmech': 'LOGMECH',
+        "database_uri": "DATABASE_URI",
+        "mcp_transport": "MCP_TRANSPORT",
+        "mcp_host": "MCP_HOST",
+        "mcp_port": "MCP_PORT",
+        "mcp_path": "MCP_PATH",
+        "logmech": "LOGMECH",
     }
 
     for run_key, run_value in profile_run_config.items():

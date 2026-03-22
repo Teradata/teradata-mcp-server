@@ -12,11 +12,12 @@ from typing import Optional
 
 BASE_URL_PARTS = 3
 
+
 class AuthValidator:
     """Input validation for authentication parameters."""
 
     # Username pattern: alphanumeric + underscore, 1-30 chars (Teradata standard)
-    USERNAME_PATTERN = re.compile(r'^[A-Za-z0-9_]{1,30}$')
+    USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_]{1,30}$")
 
     @classmethod
     def validate_username(cls, username: str) -> bool:
@@ -28,7 +29,7 @@ class AuthValidator:
         """Basic JWT format validation (three base64url parts)."""
         if not token:
             return False
-        parts = token.split('.')
+        parts = token.split(".")
         return len(parts) == BASE_URL_PARTS and all(part for part in parts)
 
     @classmethod
@@ -38,10 +39,11 @@ class AuthValidator:
             return False
         try:
             import base64
+
             decoded = base64.b64decode(b64_token)
             # Should be valid UTF-8 and contain a colon
-            decoded_str = decoded.decode('utf-8')
-            return ':' in decoded_str
+            decoded_str = decoded.decode("utf-8")
+            return ":" in decoded_str
         except Exception:
             return False
 
@@ -128,7 +130,7 @@ def generate_client_id(auth_header: str, forwarded_for: str | None = None) -> st
 
     if forwarded_for:
         # Use first IP in X-Forwarded-For chain
-        client_ip = forwarded_for.split(',')[0].strip()
+        client_ip = forwarded_for.split(",")[0].strip()
         identifier_parts.append(client_ip)
 
     if not identifier_parts:
@@ -152,6 +154,7 @@ class InvalidTokenFormatError(AuthValidationError):
 
 class RateLimitExceededError(AuthValidationError):
     """Rate limit exceeded."""
+
     def __init__(self, retry_after_seconds: int):
         self.retry_after_seconds = retry_after_seconds
         super().__init__(f"Rate limit exceeded. Try again in {retry_after_seconds} seconds.")
@@ -159,6 +162,7 @@ class RateLimitExceededError(AuthValidationError):
 
 def rate_limited_auth(rate_limiter: RateLimiter):
     """Decorator to apply rate limiting to authentication functions."""
+
     def decorator(func):
         @wraps(func)
         def wrapper(self, auth_header: str, *args, **kwargs):
@@ -184,4 +188,5 @@ def rate_limited_auth(rate_limiter: RateLimiter):
                 raise
 
         return wrapper
+
     return decorator

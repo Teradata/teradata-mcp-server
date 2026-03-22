@@ -9,15 +9,10 @@ from teradata_mcp_server.tools.utils import create_response, rows_to_json
 
 logger = logging.getLogger("teradata_mcp_server")
 
-#------------------ Tool  ------------------#
+
+# ------------------ Tool  ------------------#
 # Read query tool
-def handle_base_readQuery(
-    conn: Connection,
-    sql: str | None = None,
-    tool_name: str | None = None,
-    *args,
-    **kwargs
-):
+def handle_base_readQuery(conn: Connection, sql: str | None = None, tool_name: str | None = None, *args, **kwargs):
     """
     Execute a SQL query via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
@@ -40,42 +35,31 @@ def handle_base_readQuery(
     raw_rows = cursor.fetchall() or []
 
     # 4. Check if this is a SHOW command (DDL extraction)
-    is_show_command = sql and sql.strip().upper().startswith('SHOW ')
+    is_show_command = sql and sql.strip().upper().startswith("SHOW ")
 
     if is_show_command and raw_rows and len(raw_rows[0]) == 1:
         # This is a SHOW command - concatenate all rows into single DDL
         ddl_parts = [row[0] for row in raw_rows if row and row[0]]
-        ddl_complete = ''.join(ddl_parts)
-        
-        data = [{
-            "RequestText": ddl_complete,
-            "DDL_Size_Chars": len(ddl_complete),
-            "Original_Row_Count": len(raw_rows)
-        }]
-        
+        ddl_complete = "".join(ddl_parts)
+
+        data = [{"RequestText": ddl_complete, "DDL_Size_Chars": len(ddl_complete), "Original_Row_Count": len(raw_rows)}]
+
         columns = [
             {"name": "RequestText", "type": "str"},
             {"name": "DDL_Size_Chars", "type": "int"},
-            {"name": "Original_Row_Count", "type": "int"}
+            {"name": "Original_Row_Count", "type": "int"},
         ]
         logger.info(f"SHOW command detected: concatenated {len(raw_rows)} rows into {len(ddl_complete)} chars")
-    else:    
+    else:
         data = rows_to_json(cursor.description, raw_rows)
         columns = [
-            {
-                "name": col[0],
-                "type": getattr(col[1], "__name__", str(col[1]))
-            }
-            for col in (cursor.description or [])
+            {"name": col[0], "type": getattr(col[1], "__name__", str(col[1]))} for col in (cursor.description or [])
         ]
 
     # 5. Compile the statement with literal binds for “final SQL”
     #    Fallback to DefaultDialect if conn has no `.dialect`
     dialect = getattr(conn, "dialect", default.DefaultDialect())
-    compiled = stmt.compile(
-        dialect=dialect,
-        compile_kwargs={"literal_binds": True}
-    )
+    compiled = stmt.compile(dialect=dialect, compile_kwargs={"literal_binds": True})
     final_sql = str(compiled)
 
     # 5. Build metadata using the rendered SQL
@@ -86,15 +70,15 @@ def handle_base_readQuery(
         "row_count": len(data),
     }
 
-    if is_show_command and 'ddl_complete' in locals():
+    if is_show_command and "ddl_complete" in locals():
         metadata["ddl_size"] = len(ddl_complete)
         metadata["rows_concatenated"] = len(raw_rows)
-    
+
     logger.debug(f"Tool: handle_base_readQuery: metadata: {metadata}")
     return create_response(data, metadata)
 
 
-#------------------ Tool  ------------------#
+# ------------------ Tool  ------------------#
 # List databases tool
 def handle_base_databaseList(conn: TeradataConnection, scope: str | None = None, *args, **kwargs):
     """
@@ -134,16 +118,18 @@ def handle_base_databaseList(conn: TeradataConnection, scope: str | None = None,
             "scope": scope,
             "sql": sql,
             "columns": [
-                {"name": col[0], "type": col[1].__name__ if hasattr(col[1], '__name__') else str(col[1])}
+                {"name": col[0], "type": col[1].__name__ if hasattr(col[1], "__name__") else str(col[1])}
                 for col in cur.description
-            ] if cur.description else [],
-            "row_count": len(data)
+            ]
+            if cur.description
+            else [],
+            "row_count": len(data),
         }
         logger.debug(f"Tool: handle_base_databaseList: metadata: {metadata}")
         return create_response(data, metadata)
 
 
-#------------------ Tool  ------------------#
+# ------------------ Tool  ------------------#
 # List tables tool
 def handle_base_tableList(conn: TeradataConnection, database_name: str | None = None, *args, **kwargs):
     """
@@ -175,16 +161,18 @@ def handle_base_tableList(conn: TeradataConnection, database_name: str | None = 
             "tool_name": "base_tableList",
             "sql": sql.replace("?", f"'{database_name}'"),
             "columns": [
-                {"name": col[0], "type": col[1].__name__ if hasattr(col[1], '__name__') else str(col[1])}
+                {"name": col[0], "type": col[1].__name__ if hasattr(col[1], "__name__") else str(col[1])}
                 for col in cur.description
-            ] if cur.description else [],
-            "row_count": len(data)
+            ]
+            if cur.description
+            else [],
+            "row_count": len(data),
         }
         logger.debug(f"Tool: handle_base_tableList: metadata: {metadata}")
         return create_response(data, metadata)
 
 
-#------------------ Tool  ------------------#
+# ------------------ Tool  ------------------#
 # get DDL tool
 def handle_base_tableDDL(conn: TeradataConnection, database_name: str | None, table_name: str, *args, **kwargs):
     """
@@ -204,16 +192,12 @@ def handle_base_tableDDL(conn: TeradataConnection, database_name: str | None, ta
     with conn.cursor() as cur:
         rows = cur.execute(f"show table {table_name}")
         data = rows_to_json(cur.description, rows.fetchall())
-        metadata = {
-            "tool_name": "base_tableDDL",
-            "database": database_name,
-            "table": table_name,
-            "rows": len(data)
-        }
+        metadata = {"tool_name": "base_tableDDL", "database": database_name, "table": table_name, "rows": len(data)}
         logger.debug(f"Tool: handle_base_tableDDL: metadata: {metadata}")
         return create_response(data, metadata)
 
-#------------------ Tool  ------------------#
+
+# ------------------ Tool  ------------------#
 # Read column description tool
 def handle_base_columnDescription(conn: TeradataConnection, database_name: str | None, obj_name: str, *args, **kwargs):
     """
@@ -288,15 +272,17 @@ def handle_base_columnDescription(conn: TeradataConnection, database_name: str |
             "tool_name": "base_columnDescription",
             "database": database_name,
             "object": obj_name,
-            "column_count": len(data)
+            "column_count": len(data),
         }
         logger.debug(f"Tool: handle_base_columnDescription: metadata: {metadata}")
         return create_response(data, metadata)
 
 
-#------------------ Tool  ------------------#
+# ------------------ Tool  ------------------#
 # Read table preview tool
-def handle_base_tablePreview(conn: TeradataConnection, table_name: str, database_name: str | None = None, *args, **kwargs):
+def handle_base_tablePreview(
+    conn: TeradataConnection, table_name: str, database_name: str | None = None, *args, **kwargs
+):
     """
     This function returns data sample and inferred structure from a database table or view via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
@@ -312,7 +298,7 @@ def handle_base_tablePreview(conn: TeradataConnection, table_name: str, database
     if database_name is not None:
         table_name = f"{database_name}.{table_name}"
     with conn.cursor() as cur:
-        cur.execute(f'select top 5 * from {table_name}')
+        cur.execute(f"select top 5 * from {table_name}")
         columns = cur.description
         sample = rows_to_json(cur.description, cur.fetchall())
 
@@ -321,19 +307,16 @@ def handle_base_tablePreview(conn: TeradataConnection, table_name: str, database
             "database": database_name,
             "table_name": table_name,
             "columns": [
-                {
-                    "name": c[0],
-                    "type": c[1].__name__ if hasattr(c[1], '__name__') else str(c[1]),
-                    "length": c[3]
-                }
+                {"name": c[0], "type": c[1].__name__ if hasattr(c[1], "__name__") else str(c[1]), "length": c[3]}
                 for c in columns
             ],
-            "sample_size": len(sample)
+            "sample_size": len(sample),
         }
         logger.debug(f"Tool: handle_base_tablePreview: metadata: {metadata}")
         return create_response(sample, metadata)
 
-#------------------ Tool  ------------------#
+
+# ------------------ Tool  ------------------#
 # Read table affinity tool
 def handle_base_tableAffinity(conn: TeradataConnection, database_name: str, obj_name: str, *args, **kwargs):
     """
@@ -347,7 +330,7 @@ def handle_base_tableAffinity(conn: TeradataConnection, database_name: str, obj_
       ResponseType: formatted response with query results + metadata
     """
     logger.debug(f"Tool: handle_base_tableAffinity: Args: database_name: {database_name}, obj_name: {obj_name}")
-    table_affiity_sql="""
+    table_affiity_sql = """
     LOCKING ROW for ACCESS
     SELECT   TRIM(QTU2.DatabaseName)  AS "DatabaseName"
             , TRIM(QTU2.TableName)  AS "TableName"
@@ -396,21 +379,23 @@ def handle_base_tableAffinity(conn: TeradataConnection, database_name: str, obj_
         rows = cur.execute(table_affiity_sql.format(table_name=obj_name, database_name=database_name))
         data = rows_to_json(cur.description, rows.fetchall())
     if len(data):
-        affinity_info=f'This data contains the list of tables most commonly queried alongside object {database_name}.{obj_name}'
+        affinity_info = (
+            f"This data contains the list of tables most commonly queried alongside object {database_name}.{obj_name}"
+        )
     else:
-        affinity_info=f'Object {database_name}.{obj_name} is not often queried with any other table or queried at all, try other ways to infer its relationships.'
+        affinity_info = f"Object {database_name}.{obj_name} is not often queried with any other table or queried at all, try other ways to infer its relationships."
     metadata = {
         "tool_name": "handle_base_tableAffinity",
         "database": database_name,
         "object": obj_name,
         "table_count": len(data),
-        "comment": affinity_info
+        "comment": affinity_info,
     }
     logger.debug(f"Tool: handle_base_tableAffinity: metadata: {metadata}")
     return create_response(data, metadata)
 
 
-#------------------ Tool  ------------------#
+# ------------------ Tool  ------------------#
 # Read table usage tool
 def handle_base_tableUsage(conn: TeradataConnection, database_name: str | None = None, *args, **kwargs):
     """
@@ -431,7 +416,7 @@ def handle_base_tableUsage(conn: TeradataConnection, database_name: str | None =
 
     database_name_filter = f"AND objectdatabasename = '{database_name}'" if database_name else ""
 
-    table_usage_sql="""
+    table_usage_sql = """
     LOCKING ROW for ACCESS
     sel
     DatabaseName
@@ -478,24 +463,26 @@ def handle_base_tableUsage(conn: TeradataConnection, database_name: str | None =
 
     """
 
-
     with conn.cursor() as cur:
         rows = cur.execute(table_usage_sql.format(database_name_filter=database_name_filter))
         data = rows_to_json(cur.description, rows.fetchall())
     if len(data):
-        info=f'This data contains the list of tables most frequently queried objects in database schema {database_name}'
+        info = (
+            f"This data contains the list of tables most frequently queried objects in database schema {database_name}"
+        )
     else:
-        info=f'No tables have recently been queried in the database schema {database_name}.'
+        info = f"No tables have recently been queried in the database schema {database_name}."
     metadata = {
         "tool_name": "handle_base_tableUsage",
         "database": database_name,
         "table_count": len(data),
-        "comment": info
+        "comment": info,
     }
     logger.debug(f"Tool: handle_base_tableUsage: metadata: {metadata}")
     return create_response(data, metadata)
 
-#------------------ Tool  ------------------#
+
+# ------------------ Tool  ------------------#
 # Dynamic SQL execution tool
 def util_base_dynamicQuery(conn: TeradataConnection, sql_generator: callable, *args, **kwargs):
     """
@@ -520,18 +507,18 @@ def util_base_dynamicQuery(conn: TeradataConnection, sql_generator: callable, *a
             "tool_name": sql_generator.__name__,
             "sql": sql,
             "columns": [
-                {"name": col[0], "type": col[1].__name__ if hasattr(col[1], '__name__') else str(col[1])}
+                {"name": col[0], "type": col[1].__name__ if hasattr(col[1], "__name__") else str(col[1])}
                 for col in cur.description
-            ] if cur.description else [],
-            "row_count": len(data)
+            ]
+            if cur.description
+            else [],
+            "row_count": len(data),
         }
         logger.debug(f"Tool: util_base_dynamicQuery: metadata: {metadata}")
         return create_response(data, metadata)
 
 
-
-
-#------------------ Tool  ------------------#
+# ------------------ Tool  ------------------#
 # Extract and save DDL tool
 def handle_base_saveDDL(
     conn: TeradataConnection,
@@ -540,91 +527,85 @@ def handle_base_saveDDL(
     object_type: str = "PROCEDURE",
     output_dir: str = "./ddls_extracted",
     *args,
-    **kwargs
+    **kwargs,
 ):
     """
     Extracts the complete DDL of a Teradata object and saves it to a .sql file.
-    
+
     This tool solves the token limit problem by executing the extraction and file save
     operation directly on the server side, without needing to pass large DDL content
     through the response.
-    
+
     Arguments:
       database_name - Database name (e.g., 'MKTG_USR')
       object_name - Object name (e.g., 'SP_LOAD_VARIABLES_ARGUMENTARIO_IAG_FICHA_CLIENTE')
       object_type - Type of object: 'PROCEDURE', 'TABLE', 'VIEW' (default: 'PROCEDURE')
       output_dir - Directory where to save the DDL file (default: './ddls_extracted')
-    
+
     Returns:
       ResponseType: formatted response with file path, size, and metadata
     """
     import os
     from datetime import datetime
     from pathlib import Path
-    
+
     logger.debug(
         f"Tool: handle_base_saveDDL: Args: database_name={database_name}, "
         f"object_name={object_name}, object_type={object_type}, output_dir={output_dir}"
     )
-    
+
     # Validate object type
     valid_types = ["PROCEDURE", "TABLE", "VIEW", "MACRO", "FUNCTION"]
     object_type_upper = object_type.upper()
     if object_type_upper not in valid_types:
         error_msg = f"Invalid object_type '{object_type}'. Must be one of: {', '.join(valid_types)}"
         logger.error(error_msg)
-        return create_response(
-            [{"error": error_msg}],
-            {"tool_name": "base_saveDDL", "status": "error"}
-        )
-    
+        return create_response([{"error": error_msg}], {"tool_name": "base_saveDDL", "status": "error"})
+
     # Build the SHOW command
     show_commands = {
         "PROCEDURE": f"SHOW PROCEDURE {database_name}.{object_name}",
         "TABLE": f"SHOW TABLE {database_name}.{object_name}",
         "VIEW": f"SHOW VIEW {database_name}.{object_name}",
         "MACRO": f"SHOW MACRO {database_name}.{object_name}",
-        "FUNCTION": f"SHOW FUNCTION {database_name}.{object_name}"
+        "FUNCTION": f"SHOW FUNCTION {database_name}.{object_name}",
     }
-    
+
     sql = show_commands[object_type_upper]
     logger.info(f"Executing: {sql}")
-    
+
     try:
         # Execute the SHOW command
         with conn.cursor() as cur:
             rows = cur.execute(sql)
             raw_rows = rows.fetchall()
-            
+
             if not raw_rows:
                 error_msg = f"No DDL found for {object_type} {database_name}.{object_name}"
                 logger.warning(error_msg)
-                return create_response(
-                    [{"error": error_msg}],
-                    {"tool_name": "base_saveDDL", "status": "not_found"}
-                )
-            
+                return create_response([{"error": error_msg}], {"tool_name": "base_saveDDL", "status": "not_found"})
+
             # Concatenate all rows to get complete DDL
             ddl_parts = [row[0] for row in raw_rows if row and row[0]]
-            ddl_raw = ''.join(ddl_parts)
-            
+            ddl_raw = "".join(ddl_parts)
+
             # Format DDL: Replace \r with newlines and \t with spaces
             # This fixes the single-line output issue
-            ddl_complete = ddl_raw.replace('\r', '\n').replace('\t', '    ')
-            
+            ddl_complete = ddl_raw.replace("\r", "\n").replace("\t", "    ")
+
             ddl_size = len(ddl_complete)
-            
+
             logger.info(f"DDL extracted: {ddl_size} chars from {len(raw_rows)} rows (formatted)")
-            
+
             # Create output directory if it doesn't exist
             output_path = Path(output_dir)
             output_path.mkdir(parents=True, exist_ok=True)
-            
+
             # Generate filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"{object_name}_DDL.sql"
             filepath = output_path / filename
-            
+
             # Prepare file header with metadata
             header = f"""/*
  * File: {filename}
@@ -636,43 +617,45 @@ def handle_base_saveDDL(
  */
 
 """
-            
+
             # Write DDL to file
-            with open(filepath, 'w', encoding='utf-8') as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 f.write(header)
                 f.write(ddl_complete)
-            
+
             file_size_bytes = filepath.stat().st_size
-            
+
             logger.info(f"DDL saved successfully to: {filepath} ({file_size_bytes} bytes)")
-            
+
             # Return success response
-            data = [{
-                "status": "success",
-                "filepath": str(filepath.absolute()),
-                "filename": filename,
-                "ddl_size_chars": ddl_size,
-                "file_size_bytes": file_size_bytes,
-                "rows_concatenated": len(raw_rows),
-                "object_type": object_type_upper,
-                "database": database_name,
-                "object": object_name
-            }]
-            
+            data = [
+                {
+                    "status": "success",
+                    "filepath": str(filepath.absolute()),
+                    "filename": filename,
+                    "ddl_size_chars": ddl_size,
+                    "file_size_bytes": file_size_bytes,
+                    "rows_concatenated": len(raw_rows),
+                    "object_type": object_type_upper,
+                    "database": database_name,
+                    "object": object_name,
+                }
+            ]
+
             metadata = {
                 "tool_name": "base_saveDDL",
                 "sql": sql,
                 "output_dir": str(output_path.absolute()),
                 "timestamp": timestamp,
-                "success": True
+                "success": True,
             }
-            
+
             return create_response(data, metadata)
-            
+
     except Exception as e:
         error_msg = f"Error extracting/saving DDL: {str(e)}"
         logger.error(error_msg, exc_info=True)
         return create_response(
             [{"error": error_msg, "exception_type": type(e).__name__}],
-            {"tool_name": "base_saveDDL", "status": "error", "sql": sql}
+            {"tool_name": "base_saveDDL", "status": "error", "sql": sql},
         )

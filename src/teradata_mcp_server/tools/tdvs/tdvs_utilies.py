@@ -16,6 +16,7 @@ log_level = logging._nameToLevel[LOG_LEVEL]
 logger = logging.getLogger(__name__)
 logger.setLevel(log_level)
 
+
 # --------------- VS Service Utilies -----------------------------#
 @lru_cache(maxsize=1)
 def create_teradataml_context():
@@ -28,9 +29,7 @@ def create_teradataml_context():
 
     conn_url = urlparse(DATABASE_URI)
     if get_context() is None:
-        create_context(host=conn_url.hostname,
-                       username=conn_url.username,
-                       password=conn_url.password)
+        create_context(host=conn_url.hostname, username=conn_url.username, password=conn_url.password)
         logger.info("teradataml context ready.")
     else:
         logger.info("teradataml context already exists.")
@@ -40,23 +39,15 @@ def create_teradataml_context():
 
     logger.info(f"Vector Store base URL: {TD_VS_BASE_URL}")
     if TD_PAT_TOKEN is not None and TD_PEM_FILE is not None:
-        set_auth_token(
-            base_url=TD_VS_BASE_URL,
-            pat_token=TD_PAT_TOKEN,
-            pem_file=TD_PEM_FILE
-        )
+        set_auth_token(base_url=TD_VS_BASE_URL, pat_token=TD_PAT_TOKEN, pem_file=TD_PEM_FILE)
     else:
-        set_auth_token(
-            base_url=TD_VS_BASE_URL,
-            username=conn_url.username,
-            password=conn_url.password
-        )
+        set_auth_token(base_url=TD_VS_BASE_URL, username=conn_url.username, password=conn_url.password)
 
 
 # -------------------------------------------------------------
 #  Reconnect logic: clear cache + disconnect session → auto-reconnect
 # -------------------------------------------------------------
 def refresh_vectorstore_session():
-    VSManager.disconnect()                             # Release the previous Vector Store session
-    create_teradataml_context.cache_clear()            # Clear the LRU cache
-    return create_teradataml_context()                 # Re-establish and return the new session
+    VSManager.disconnect()  # Release the previous Vector Store session
+    create_teradataml_context.cache_clear()  # Clear the LRU cache
+    return create_teradataml_context()  # Re-establish and return the new session

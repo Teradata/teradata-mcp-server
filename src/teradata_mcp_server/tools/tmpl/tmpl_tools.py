@@ -12,10 +12,10 @@ from teradata_mcp_server.tools.utils import create_response, rows_to_json
 logger = logging.getLogger("teradata_mcp_server")
 
 
-#------------------ Do not make changes above  ------------------#
+# ------------------ Do not make changes above  ------------------#
 
 
-#------------------ Tool  ------------------#
+# ------------------ Tool  ------------------#
 # <Name of Tool> tool
 def handle_tmpl_nameOfTool(conn: TeradataConnection, argument: str | None, *args, **kwargs):
     """
@@ -37,10 +37,6 @@ def handle_tmpl_nameOfTool(conn: TeradataConnection, argument: str | None, *args
             logger.debug(f"Argument provided: {argument}")
             rows = cur.execute(f"Teradata query goes here with argument {argument};")
         data = rows_to_json(cur.description, rows.fetchall())
-        metadata = {
-            "tool_name": "tmpl_nameOfTool",
-            "argument": argument,
-            "rows": len(data)
-        }
+        metadata = {"tool_name": "tmpl_nameOfTool", "argument": argument, "rows": len(data)}
         logger.debug(f"Tool: handle_tmpl_nameOfTool: metadata: {metadata}")
         return create_response(data, metadata)

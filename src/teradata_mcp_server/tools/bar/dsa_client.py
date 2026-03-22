@@ -13,6 +13,7 @@ logger = logging.getLogger("teradata_mcp_server")
 RETURN_400 = 400
 RETURN_401 = 401
 
+
 class DSAClientError(Exception):
     """Base exception for DSA client errors"""
 
@@ -38,7 +39,7 @@ class DSAClient:
         username: str | None = None,
         password: str | None = None,
         verify_ssl: bool | None = None,
-        timeout: float | None = None
+        timeout: float | None = None,
     ):
         """Initialize DSA client
 
@@ -65,12 +66,16 @@ class DSAClient:
 
         self.username = username or os.getenv("DSA_USERNAME", "admin")
         self.password = password or os.getenv("DSA_PASSWORD", "admin")
-        self.verify_ssl = verify_ssl if verify_ssl is not None else os.getenv("DSA_VERIFY_SSL", "true").lower() in ["true", "1", "yes"]
+        self.verify_ssl = (
+            verify_ssl
+            if verify_ssl is not None
+            else os.getenv("DSA_VERIFY_SSL", "true").lower() in ["true", "1", "yes"]
+        )
         self.timeout = timeout or float(os.getenv("DSA_CONNECTION_TIMEOUT", "30"))
 
         # Ensure base URL ends with /
-        if not self.base_url.endswith('/'):
-            self.base_url += '/'
+        if not self.base_url.endswith("/"):
+            self.base_url += "/"
 
         logger.info(f"bar: Initialized DSA client for {self.base_url}")
 
@@ -86,7 +91,7 @@ class DSAClient:
         endpoint: str,
         params: dict[str, Any] | None = None,
         data: dict[str, Any] | None = None,
-        headers: dict[str, str] | None = None
+        headers: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Make an HTTP request to the DSA API
 
@@ -109,9 +114,9 @@ class DSAClient:
 
         # Prepare headers
         request_headers = {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'User-Agent': 'Teradata-MCP-Server-BAR/1.0.0'
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "Teradata-MCP-Server-BAR/1.0.0",
         }
         if headers:
             request_headers.update(headers)
@@ -130,7 +135,7 @@ class DSAClient:
                 headers=request_headers,
                 auth=auth,
                 verify=self.verify_ssl,
-                timeout=self.timeout
+                timeout=self.timeout,
             )
             logger.debug(f"bar: Response status: {response.status_code}")
             # Handle authentication errors
@@ -168,34 +173,23 @@ class DSAClient:
         """
         try:
             # Try to make a simple API call to test connectivity
-            response = self._make_request(
-                'GET',
-                'dsa/components/backup-applications/disk-file-system'
-            )
+            response = self._make_request("GET", "dsa/components/backup-applications/disk-file-system")
 
             return {
                 "status": "healthy",
                 "dsa_status": response.get("status", "unknown"),
-                "message": "Successfully connected to DSA system"
+                "message": "Successfully connected to DSA system",
             }
         except DSAAuthenticationError:
             return {
                 "status": "unhealthy",
                 "error": "authentication_failed",
-                "message": "Authentication failed - check credentials"
+                "message": "Authentication failed - check credentials",
             }
         except DSAConnectionError as e:
-            return {
-                "status": "unhealthy",
-                "error": "connection_failed",
-                "message": str(e)
-            }
+            return {"status": "unhealthy", "error": "connection_failed", "message": str(e)}
         except Exception as e:
-            return {
-                "status": "unhealthy",
-                "error": "unknown_error",
-                "message": str(e)
-            }
+            return {"status": "unhealthy", "error": "unknown_error", "message": str(e)}
 
 
 # Global DSA client instance

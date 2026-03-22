@@ -127,7 +127,7 @@ def execute_analytic_function(function_name: str, tables_to_df=None, **kwargs):
     # Hence remove 'headers' from print.
     if tables_to_df is None:
         tables_to_df = []
-    func_params = {k: v for k, v in kwargs.items() if k != 'headers'}
+    func_params = {k: v for k, v in kwargs.items() if k != "headers"}
 
     # Analytic functions are called with 'tdml_' prefix. Remove it.
     function_name = function_name[5:]
@@ -140,27 +140,30 @@ def execute_analytic_function(function_name: str, tables_to_df=None, **kwargs):
     import teradataml as tdml
     from teradataml import DataFrame, copy_to_sql, in_schema
     from teradataml.common.utils import UtilFuncs
+
     # Teradataml accepts DataFrame as input, so we need to convert the table_name
     # and object to DataFrame. Some of the functions accepts object also. If object
     # is provided, we convert it to DataFrame as well.
-    db_name = kwargs.get('database_name')
+    db_name = kwargs.get("database_name")
     for arg_name in tables_to_df:
-
         table_name = kwargs.get(arg_name)
 
         # Create DataFrame only if table_name is provided.
         if table_name:
-
             # Table name can be provided with or without schema name. First, extract the schema name and table name.
-            db_name_extracted, table_name = (UtilFuncs._extract_db_name(table_name),
-                                             UtilFuncs._extract_table_name(table_name))
+            db_name_extracted, table_name = (
+                UtilFuncs._extract_db_name(table_name),
+                UtilFuncs._extract_table_name(table_name),
+            )
 
             # In some rare cases, input is received with db_name and also table name with schema.
             # If they are different, raise a ValueError.
             if db_name and db_name_extracted and (db_name != db_name_extracted):
-                raise ValueError(f"Database name provided in 'database_name' argument: {db_name} is different "
-                                 f"from the database name provided in table name: {db_name_extracted}. "
-                                 f"Provide same values. Or, provide database name in table name only.")
+                raise ValueError(
+                    f"Database name provided in 'database_name' argument: {db_name} is different "
+                    f"from the database name provided in table name: {db_name_extracted}. "
+                    f"Provide same values. Or, provide database name in table name only."
+                )
 
             db_name = db_name or db_name_extracted
 
@@ -169,19 +172,17 @@ def execute_analytic_function(function_name: str, tables_to_df=None, **kwargs):
     # Execute the function with the provided keyword arguments
     result = getattr(tdml, function_name)(**kwargs)
 
-    result_to_store = result.result if getattr(result, 'result', None) else result.output
+    result_to_store = result.result if getattr(result, "result", None) else result.output
 
     metadata = {
         "tool_name": function_name,
-        "database_name": kwargs.get('database_name'),
-        "output_table_name": kwargs.get('output_table_name')
+        "database_name": kwargs.get("database_name"),
+        "output_table_name": kwargs.get("output_table_name"),
     }
 
     # If output_table_name is provided, copy the result to the specified table.
-    if kwargs.get('output_table_name') is not None:
-        copy_to_sql(result_to_store,
-                    table_name=kwargs['output_table_name'],
-                    if_exists='fail')
+    if kwargs.get("output_table_name") is not None:
+        copy_to_sql(result_to_store, table_name=kwargs["output_table_name"], if_exists="fail")
 
         return create_response(result, metadata)
 
@@ -257,10 +258,9 @@ def get_anlytic_function_signature(params):
     RAISES:
         None
     """
-    function_params = OrderedDict((k, v)
-                                  for k, v in params.items())
-    function_params['output_table_name'] = None
-    function_params['database_name'] = None
+    function_params = OrderedDict((k, v) for k, v in params.items())
+    function_params["output_table_name"] = None
+    function_params["database_name"] = None
 
     # Generate function argument string.
     func_args_str = ", ".join(
