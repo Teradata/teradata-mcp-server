@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (Ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: uv sync --frozen --extra dev
+      - run: uv run ruff check src/
+      - run: uv run ruff format --check src/
+
+  typecheck:
+    name: Type Check (Mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: uv sync --frozen --extra dev
+      - run: uv run mypy src/
+
+  test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: uv sync --frozen
+      - name: Run integration tests
+        if: ${{ env.DATABASE_URI != '' }}
+        env:
+          DATABASE_URI: ${{ secrets.DATABASE_URI }}
+        run: uv run python tests/run_mcp_tests.py "uv run teradata-mcp-server"
+      - name: Warn if DATABASE_URI not configured
+        if: ${{ env.DATABASE_URI == '' }}
+        env:
+          DATABASE_URI: ${{ secrets.DATABASE_URI }}
+        run: echo "::warning::DATABASE_URI secret is not configured — integration tests were skipped. See .github/README.md for setup instructions."

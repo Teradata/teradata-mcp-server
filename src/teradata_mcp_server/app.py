@@ -554,7 +554,9 @@ def create_mcp_app(settings: Settings):
             mcp.tool(name=full_func_name, description=doc_string)(func)
 
     # Load YAML-defined tools/resources/prompts from config directory
-    custom_object_files: list[Any] = [config_dir / file for file in os.listdir(config_dir) if file.endswith("_objects.yml")]
+    custom_object_files: list[Any] = [
+        config_dir / file for file in os.listdir(config_dir) if file.endswith("_objects.yml")
+    ]
     if custom_object_files:
         logger.info(
             f"Found {len(custom_object_files)} custom object files in config directory: {[f.name for f in custom_object_files]}"
