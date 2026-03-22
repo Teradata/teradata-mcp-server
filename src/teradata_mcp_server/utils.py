@@ -308,7 +308,8 @@ def get_profile_config(profile_name: str | None = None) -> dict[str, Any]:
         available = list(profiles.keys())
         raise ValueError(f"Profile '{profile_name}' not found. Available: {available}")
 
-    return profiles[profile_name]
+    result: dict[str, Any] = profiles[profile_name]
+    return result
 
 
 def get_profile_run_config(profile_name: str | None = None) -> dict[str, Any]:

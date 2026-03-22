@@ -6,6 +6,7 @@ BAR (Backup and Restore) Tools for Teradata DSA MCP Server
 import json
 import logging
 import os
+from typing import Any
 
 from teradata_mcp_server.tools.utils import create_response
 
@@ -1039,6 +1040,8 @@ def manage_dsa_media_servers(
                 return "❌ server_name is required for 'list_consumers_by_server' operation"
             return _list_media_server_consumers_by_name(server_name)
 
+        return f"❌ Unhandled operation '{operation}'"
+
     except Exception as e:
         logger.error(f"bar: Failed to execute media server operation '{operation}': {str(e)}")
         return f"❌ Error executing media server operation '{operation}': {str(e)}"
@@ -1258,7 +1261,7 @@ def manage_dsa_systems(
     tdp_id: str | None = None,
     username: str | None = None,
     password: str | None = None,
-    ir_support: bool | None = True,
+    ir_support: str | None = None,
     component_name: str | None = None,
 ) -> str:
     """Unified Teradata system management for all system operations
@@ -1293,6 +1296,7 @@ def manage_dsa_systems(
         elif operation == "config_system":
             if not all([system_name, tdp_id, username, password]):
                 return "❌ system_name, tdp_id, username, and password are required for 'config_system' operation"
+            assert system_name is not None and tdp_id is not None and username is not None and password is not None
             return _config_teradata_system(system_name, tdp_id, username, password, ir_support)
 
         elif operation == "enable_system":
@@ -1312,6 +1316,8 @@ def manage_dsa_systems(
             if not component_name:
                 return "❌ component_name is required for 'get_consumer' operation"
             return _get_system_consumer(component_name)
+
+        return f"❌ Unhandled operation '{operation}'"
 
     except Exception as e:
         logger.error(f"bar: Failed to execute Teradata system operation '{operation}': {str(e)}")
@@ -1740,7 +1746,7 @@ def _delete_job(job_name: str) -> str:
         return f"❌ Error deleting job '{job_name}': {str(e)}"
 
 
-def manage_job_operations(operation: str, job_name: str = None, job_config: str = None) -> str:
+def manage_job_operations(operation: str, job_name: str | None = None, job_config: str | None = None) -> str:
     """DSA Job Management Operations
 
     Handles all job operations including list, get, create, update, run, status, retire, unretire, delete
@@ -1827,10 +1833,10 @@ def manage_job_operations(operation: str, job_name: str = None, job_config: str 
 
 
 def handle_bar_manageDsaDiskFileSystem(
-    conn: any,  # Not used for DSA operations, but required by MCP framework
+    conn: Any,  # Not used for DSA operations, but required by MCP framework
     operation: str,
-    file_system_path: str = None,
-    max_files: int = None,
+    file_system_path: str | None = None,
+    max_files: int | None = None,
     *args,
     **kwargs,
 ):
@@ -1887,15 +1893,15 @@ def handle_bar_manageDsaDiskFileSystem(
 
 
 def handle_bar_manageAWSS3Operations(
-    conn: any,  # Not used for DSA operations, but required by MCP framework
+    conn: Any,  # Not used for DSA operations, but required by MCP framework
     operation: str,
-    accessId: str = None,
-    accessKey: str = None,
-    bucketsByRegion: object = None,
-    bucketName: str = None,
-    prefixName: str = None,
-    storageDevices: int = None,
-    acctName: str = None,
+    accessId: str | None = None,
+    accessKey: str | None = None,
+    bucketsByRegion: object | None = None,
+    bucketName: str | None = None,
+    prefixName: str | None = None,
+    storageDevices: int | None = None,
+    acctName: str | None = None,
     *args,
     **kwargs,
 ):
@@ -1967,11 +1973,11 @@ def handle_bar_manageAWSS3Operations(
 
 
 def handle_bar_manageMediaServer(
-    conn: any,  # Not used for DSA operations, but required by MCP framework
+    conn: Any,  # Not used for DSA operations, but required by MCP framework
     operation: str,
-    server_name: str = None,
-    port: int = None,
-    ip_addresses: str = None,
+    server_name: str | None = None,
+    port: int | None = None,
+    ip_addresses: str | None = None,
     pool_shared_pipes: int = 50,
     virtual: bool = False,
     *args,
@@ -2049,7 +2055,7 @@ def handle_bar_manageMediaServer(
 
 
 def handle_bar_manageTeradataSystem(
-    conn: any,  # Not used for DSA operations, but required by MCP framework
+    conn: Any,  # Not used for DSA operations, but required by MCP framework
     operation: str,
     system_name: str | None = None,
     tdp_id: str | None = None,
@@ -2146,7 +2152,7 @@ def handle_bar_manageTeradataSystem(
 
 
 def handle_bar_manageDiskFileTargetGroup(
-    conn: any,  # Not used for DSA operations, but required by MCP framework
+    conn: Any,  # Not used for DSA operations, but required by MCP framework
     operation: str,
     target_group_name: str | None = None,
     target_group_config: str | None = None,
@@ -2261,10 +2267,10 @@ def handle_bar_manageDiskFileTargetGroup(
 
 
 def handle_bar_manageJob(
-    conn: any,  # Not used for DSA operations, but required by MCP framework
+    conn: Any,  # Not used for DSA operations, but required by MCP framework
     operation: str,
-    job_name: str = None,
-    job_config: str = None,
+    job_name: str | None = None,
+    job_config: str | None = None,
 ):
     """Comprehensive DSA Job Management Tool
 

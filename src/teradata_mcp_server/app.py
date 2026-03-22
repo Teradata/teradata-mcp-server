@@ -62,7 +62,7 @@ def create_mcp_app(settings: Settings):
     try:
         from teradata_mcp_server import tools as td
     except ImportError:
-        import tools as td  # dev fallback
+        import tools as td  # type: ignore[no-redef]  # dev fallback
 
     mcp = FastMCP("teradata-mcp-server")
 
@@ -127,7 +127,7 @@ def create_mcp_app(settings: Settings):
     if enable_bar:
         try:
             # Check for BAR system availability by importing required modules
-            import requests
+            import requests  # type: ignore[import-untyped]
 
             from teradata_mcp_server.tools.bar.dsa_client import DSAClient
 
@@ -182,7 +182,7 @@ def create_mcp_app(settings: Settings):
                             "Database checks (function existence and permissions) will be skipped in stdio mode - "
                             "they will be validated on first tool use."
                         )
-                    else:
+                    elif tdconn.engine is not None:
                         with tdconn.engine.connect() as conn:
                             from sqlalchemy import text
 
@@ -208,7 +208,9 @@ def create_mcp_app(settings: Settings):
 
                                 # First, get current username
                                 username_result = conn.execute(text("SELECT USER"))
-                                current_user = username_result.fetchone()[0]
+                                username_row = username_result.fetchone()
+                                assert username_row is not None
+                                current_user = username_row[0]
 
                                 check_permission_sql = text(f"""
                                     SELECT 1
@@ -532,14 +534,15 @@ def create_mcp_app(settings: Settings):
             func_args_str = get_anlytic_function_signature(func_params)
 
             full_func_name = "tdml_" + func_name
+            init_doc = func_obj.__init__.__doc__  # type: ignore[misc]
             func_str = get_dynamic_function_definition().format(
                 analytic_function=full_func_name,
-                doc_string=func_obj.__init__.__doc__,
+                doc_string=init_doc,
                 func_args_str=func_args_str,
                 tables_to_df=json.dumps(inp_data),
             )
 
-            doc_string = convert_tdml_docstring_to_mcp_docstring(func_obj.__init__.__doc__, additional_args_docs)
+            doc_string = convert_tdml_docstring_to_mcp_docstring(init_doc, additional_args_docs)
 
             # Execute the generated function definition in the global scope.
             # Global scope will have all other functions. So reference to other functions will work.
@@ -551,7 +554,7 @@ def create_mcp_app(settings: Settings):
             mcp.tool(name=full_func_name, description=doc_string)(func)
 
     # Load YAML-defined tools/resources/prompts from config directory
-    custom_object_files = [config_dir / file for file in os.listdir(config_dir) if file.endswith("_objects.yml")]
+    custom_object_files: list[Any] = [config_dir / file for file in os.listdir(config_dir) if file.endswith("_objects.yml")]
     if custom_object_files:
         logger.info(
             f"Found {len(custom_object_files)} custom object files in config directory: {[f.name for f in custom_object_files]}"
@@ -577,11 +580,11 @@ def create_mcp_app(settings: Settings):
     for file in custom_object_files:
         try:
             if hasattr(file, "read_text"):
-                text = file.read_text(encoding="utf-8")
+                file_text = file.read_text(encoding="utf-8")
             else:
                 with open(file, encoding="utf-8", errors="replace") as f:
-                    text = f.read()
-            loaded = yaml.safe_load(text)
+                    file_text = f.read()
+            loaded = yaml.safe_load(file_text)
             if loaded:
                 custom_objects.update(loaded)
         except Exception as e:
@@ -623,7 +626,7 @@ def create_mcp_app(settings: Settings):
                 annotations[param_name] = type_hint
             sig = inspect.Signature(param_objects)
 
-            async def _dynamic_prompt(**kwargs):
+            async def _dynamic_prompt_with_params(**kwargs: Any):  # type: ignore[no-untyped-def]
                 missing = [
                     name
                     for name, meta in parameters.items()
@@ -634,10 +637,10 @@ def create_mcp_app(settings: Settings):
                 formatted_prompt = prompt.format(**kwargs)
                 return Message(role="user", content=TextContent(type="text", text=formatted_prompt))
 
-            _dynamic_prompt.__signature__ = sig
-            _dynamic_prompt.__annotations__ = annotations
-            _dynamic_prompt.__name__ = prompt_name
-            return mcp.prompt(description=desc)(_dynamic_prompt)
+            _dynamic_prompt_with_params.__signature__ = sig  # type: ignore[attr-defined]
+            _dynamic_prompt_with_params.__annotations__ = annotations
+            _dynamic_prompt_with_params.__name__ = prompt_name
+            return mcp.prompt(description=desc)(_dynamic_prompt_with_params)
 
     def make_custom_query_tool(name, tool):
         description = tool.get("description", "")
@@ -960,16 +963,16 @@ Returns:
     if custom_glossary:
 
         @mcp.resource("glossary://all")
-        def get_glossary() -> dict:
+        def get_glossary() -> dict[str, Any]:
             return custom_glossary
 
         @mcp.resource("glossary://definitions")
-        def get_glossary_definitions() -> dict:
+        def get_glossary_definitions() -> dict[str, Any]:
             return {term: details["definition"] for term, details in custom_glossary.items()}
 
         @mcp.resource("glossary://term/{term_name}")
-        def get_glossary_term(term_name: str) -> dict:
-            term = custom_glossary.get(term_name)
+        def get_glossary_term(term_name: str) -> dict[str, Any]:
+            term: dict[str, Any] | None = custom_glossary.get(term_name)
             if term:
                 return term
             else:

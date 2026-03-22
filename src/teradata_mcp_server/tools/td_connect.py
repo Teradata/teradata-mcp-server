@@ -217,7 +217,9 @@ class TDConn:
             with engine.connect() as conn:
                 # Get the authenticated database username
                 result = conn.exec_driver_sql("SELECT USER")
-                username = result.fetchone()[0]
+                row = result.fetchone()
+                assert row is not None
+                username: str = row[0]
             engine.dispose()
             return username
         except Exception as e:

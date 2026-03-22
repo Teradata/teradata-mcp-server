@@ -127,7 +127,7 @@ class ModuleLoader:
         Returns:
             Dictionary mapping function names to function objects
         """
-        all_functions = {}
+        all_functions: dict[str, Any] = {}
 
         # Load required modules
         for module_name in self._required_modules:

@@ -1,5 +1,6 @@
 import logging
 import re
+from collections.abc import Callable
 
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, default
@@ -25,6 +26,8 @@ def handle_base_readQuery(conn: Connection, sql: str | None = None, tool_name: s
     logger.debug(f"Tool: handle_base_readQuery: Args: sql: {sql}, args={args!r}, kwargs={kwargs!r}")
 
     # 1. Build a textual SQL statement
+    if not sql:
+        return create_response([], {"tool_name": tool_name or "base_readQuery", "error": "No SQL provided"})
     stmt = text(sql)
 
     # 2. Execute with bind parameters if provided
@@ -51,7 +54,7 @@ def handle_base_readQuery(conn: Connection, sql: str | None = None, tool_name: s
         ]
         logger.info(f"SHOW command detected: concatenated {len(raw_rows)} rows into {len(ddl_complete)} chars")
     else:
-        data = rows_to_json(cursor.description, raw_rows)
+        data = rows_to_json(cursor.description, list(raw_rows))
         columns = [
             {"name": col[0], "type": getattr(col[1], "__name__", str(col[1]))} for col in (cursor.description or [])
         ]
@@ -212,7 +215,7 @@ def handle_base_columnDescription(conn: TeradataConnection, database_name: str |
     """
     logger.debug(f"Tool: handle_base_columnDescription: Args: database_name: {database_name}, obj_name: {obj_name}")
 
-    if len(database_name) == 0:
+    if not database_name:
         database_name = "%"
     if len(obj_name) == 0:
         obj_name = "%"
@@ -484,7 +487,7 @@ def handle_base_tableUsage(conn: TeradataConnection, database_name: str | None =
 
 # ------------------ Tool  ------------------#
 # Dynamic SQL execution tool
-def util_base_dynamicQuery(conn: TeradataConnection, sql_generator: callable, *args, **kwargs):
+def util_base_dynamicQuery(conn: TeradataConnection, sql_generator: Callable[..., str], *args, **kwargs):
     """
     This tool is used to execute dynamic SQL queries that are generated at runtime by a generator function.
 

@@ -63,11 +63,11 @@ class VectorStoreCreate(BaseModel):
     object_names: str = Field(
         ..., description="Specifies the table name(s)/teradataml DataFrame(s) to be indexed for vector store."
     )
-    key_columns: list[str] = Field(
-        None, description="Optional Specifies the name(s) of the key column(s) to be used for indexing."
+    key_columns: list[str] | None = Field(
+        default=None, description="Optional Specifies the name(s) of the key column(s) to be used for indexing."
     )
-    data_columns: list[str] = Field(
-        None,
+    data_columns: list[str] | None = Field(
+        default=None,
         description="Optional Specifies the name(s) of the data column(s) to be used for embedding generation(vectorization).",
     )
     vector_column: str | None = Field(
@@ -86,8 +86,8 @@ class VectorStoreCreate(BaseModel):
     footer_height: int | None = Field(
         None, description="Optional Specifies the height of the footer in the document file."
     )
-    embeddings_model: str = Field(
-        None, description="Optional Specifies the embedding model to be used for vectorization."
+    embeddings_model: str | None = Field(
+        default=None, description="Optional Specifies the embedding model to be used for vectorization."
     )
     embeddings_dims: int | None = Field(
         None, description="Optional Specifies the number of dimensions for the embeddings."
@@ -223,8 +223,8 @@ class VectorStoreUpdate(BaseModel):
     update_style: Literal["MINOR", "MAJOR"] | None = Field(
         None, description="Optional Specifies the update style to be used for the VectorStore."
     )
-    embeddings_model: str = Field(
-        None, description="Optional Specifies the embedding model to be used for vectorization."
+    embeddings_model: str | None = Field(
+        default=None, description="Optional Specifies the embedding model to be used for vectorization."
     )
     embeddings_dims: int | None = Field(
         None, description="Optional Specifies the number of dimensions for the embeddings."

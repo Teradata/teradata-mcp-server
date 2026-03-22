@@ -20,7 +20,7 @@ import os
 from typing import Union
 
 import pandas as pd
-import requests
+import requests  # type: ignore[import-untyped]
 import yaml
 from teradatagenai import VectorStore, VSManager
 from teradataml import remove_context

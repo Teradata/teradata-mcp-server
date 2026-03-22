@@ -16,7 +16,7 @@ import os
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 from uuid import uuid4
 
 from fastmcp.server.dependencies import get_http_headers
@@ -44,7 +44,7 @@ class RequestContextMiddleware(Middleware):
         self,
         logger,
         auth_cache,
-        tdconn_supplier: Callable[[], object],
+        tdconn_supplier: Callable[[], Any],
         auth_mode: str = "none",
         transport: str | None = None,
     ) -> None:

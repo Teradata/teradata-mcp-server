@@ -6,7 +6,7 @@ import os
 from typing import Any
 from urllib.parse import urljoin
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -148,7 +148,8 @@ class DSAClient:
                 raise DSAAPIError(error_msg)
             # Parse JSON response
             try:
-                return response.json()
+                result: dict[str, Any] = response.json()
+                return result
             except json.JSONDecodeError as e:
                 logger.error(f"bar: Failed to parse JSON response: {e}")
                 raise DSAAPIError(f"Invalid JSON response from DSA API: {e}") from e
