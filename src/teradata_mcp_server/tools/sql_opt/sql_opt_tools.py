@@ -100,7 +100,9 @@ def load_sql_clustering_config():
 SQL_CLUSTERING_CONFIG = load_sql_clustering_config()
 
 
-def handle_sql_Execute_Full_Pipeline(conn, optimal_k: int | None = None, max_queries: int | None = None, *args, **kwargs):
+def handle_sql_Execute_Full_Pipeline(
+    conn, optimal_k: int | None = None, max_queries: int | None = None, *args, **kwargs
+):
     """
     **COMPLETE SQL QUERY CLUSTERING PIPELINE FOR HIGH-USAGE QUERY OPTIMIZATION**
 
@@ -503,7 +505,9 @@ def handle_sql_Execute_Full_Pipeline(conn, optimal_k: int | None = None, max_que
     return create_response({"status": "success", "pipeline_completed": True}, metadata)
 
 
-def handle_sql_Analyze_Cluster_Stats(conn, sort_by_metric: str = "avg_cpu", limit_results: int | None = None, *args, **kwargs):
+def handle_sql_Analyze_Cluster_Stats(
+    conn, sort_by_metric: str = "avg_cpu", limit_results: int | None = None, *args, **kwargs
+):
     """
     **ANALYZE SQL QUERY CLUSTER PERFORMANCE STATISTICS**
 
