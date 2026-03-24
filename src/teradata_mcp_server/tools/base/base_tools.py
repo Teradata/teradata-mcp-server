@@ -69,28 +69,28 @@ def handle_base_readQuery(
     raw_rows = cursor.fetchall() or []
 
     # 4. Check if this is a SHOW command (DDL extraction)
-    is_show_command = sql and sql.strip().upper().startswith(“SHOW “)
+    is_show_command = sql and sql.strip().upper().startswith("SHOW ")
 
     if is_show_command and raw_rows and len(raw_rows[0]) == 1:
         # This is a SHOW command - concatenate all rows into single DDL
         ddl_parts = [row[0] for row in raw_rows if row and row[0]]
-        ddl_complete = “”.join(ddl_parts)
+        ddl_complete = "".join(ddl_parts)
 
-        data = [{“RequestText”: ddl_complete, “DDL_Size_Chars”: len(ddl_complete), “Original_Row_Count”: len(raw_rows)}]
+        data = [{"RequestText": ddl_complete, "DDL_Size_Chars": len(ddl_complete), "Original_Row_Count": len(raw_rows)}]
 
         columns = [
-            {“name”: “RequestText”, “type”: “str”},
-            {“name”: “DDL_Size_Chars”, “type”: “int”},
-            {“name”: “Original_Row_Count”, “type”: “int”},
+            {"name": "RequestText", "type": "str"},
+            {"name": "DDL_Size_Chars", "type": "int"},
+            {"name": "Original_Row_Count", "type": "int"},
         ]
-        logger.info(f”SHOW command detected: concatenated {len(raw_rows)} rows into {len(ddl_complete)} chars”)
+        logger.info(f"SHOW command detected: concatenated {len(raw_rows)} rows into {len(ddl_complete)} chars")
     else:
         data = rows_to_json(cursor.description, list(raw_rows))
         columns = [
-            {“name”: col[0], “type”: getattr(col[1], “__name__”, str(col[1]))} for col in (cursor.description or [])
+            {"name": col[0], "type": getattr(col[1], "__name__", str(col[1]))} for col in (cursor.description or [])
         ]
 
-    # 5. Compile the statement with literal binds for “final SQL”
+    # 5. Compile the statement with literal binds for "final SQL"
     #    Fallback to DefaultDialect if conn has no `.dialect`
     dialect = getattr(conn, "dialect", default.DefaultDialect())
     compiled = stmt.compile(dialect=dialect, compile_kwargs={"literal_binds": True})

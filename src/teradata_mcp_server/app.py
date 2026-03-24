@@ -466,7 +466,7 @@ def create_mcp_app(settings: Settings):
             """
             try:
                 results = context_catalog.search_tools(query, limit)
-                return format_text_response(results)
+                return format_text_response(json.dumps({"status": "success", "results": results}, default=str))
             except Exception as e:
                 logger.error(f"Error in search_tool: {e}", exc_info=True)
                 return format_error_response(str(e))
