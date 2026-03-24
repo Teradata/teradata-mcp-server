@@ -8,10 +8,12 @@ working/
 *.egg-info/
 **/.ipynb_checkpoints/
 /env
-CLAUDE.md
+docker-compose.dev.yml
 var/
 /# Only ignore root-level overrides
 /profiles.yml
 /*_objects.yml
 examples/app-flowise/.*
 test_*.py
+.planning/
+.ruff_cache/

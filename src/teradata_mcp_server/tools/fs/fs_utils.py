@@ -14,6 +14,7 @@ with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
 
 logger = logging.getLogger("teradata_mcp_server")
 
+
 class FeatureStoreConfig(BaseModel):
     """
     Configuration class for the feature store. This model defines the metadata and catalog sources
@@ -22,25 +23,22 @@ class FeatureStoreConfig(BaseModel):
 
     data_domain: str | None = Field(
         default=None,
-        description="The data domain associated with the feature store, grouping features within the same namespace."
+        description="The data domain associated with the feature store, grouping features within the same namespace.",
     )
 
     entity: str | None = Field(
-        default=None,
-        description="The list of entities, comma separated and in alphabetical order, upper case."
+        default=None, description="The list of entities, comma separated and in alphabetical order, upper case."
     )
 
     database_name: str | None = Field(
-        default=None,
-        description="Name of the database where the feature store is hosted."
+        default=None, description="Name of the database where the feature store is hosted."
     )
 
     feature_catalog: str | None = Field(
         default=None,
         description=(
-            "Name of the feature catalog table. "
-            "This table contains detailed metadata about features and entities."
-        )
+            "Name of the feature catalog table. This table contains detailed metadata about features and entities."
+        ),
     )
 
     process_catalog: str | None = Field(
@@ -48,15 +46,14 @@ class FeatureStoreConfig(BaseModel):
         description=(
             "Name of the process catalog table. "
             "Used to retrieve information about feature generation processes, features, and associated entities."
-        )
+        ),
     )
 
     dataset_catalog: str | None = Field(
         default=None,
         description=(
-            "Name of the dataset catalog table. "
-            "Used to list and manage available datasets within the feature store."
-        )
+            "Name of the dataset catalog table. Used to list and manage available datasets within the feature store."
+        ),
     )
 
     def fs_setFeatureStoreConfig(
@@ -66,7 +63,6 @@ class FeatureStoreConfig(BaseModel):
         data_domain: str | None = None,
         entity: str | None = None,
     ) -> "FeatureStoreConfig":
-
         if database_name and tdfs4ds.connect(database=database_name):
             logger.info(f"connected to the feature store of the {database_name} database")
             # Reset data_domain if DB name changes
@@ -82,12 +78,8 @@ class FeatureStoreConfig(BaseModel):
             self.dataset_catalog = f"{database_name}.FS_V_FS_DATASET_CATALOG"  # <- fixed line
             logger.info(f"dataset catalog {self.dataset_catalog}")
 
-
         if self.database_name is not None and data_domain is not None:
-            stmt = text(
-                f"SELECT COUNT(*) AS N FROM {self.feature_catalog} "
-                "WHERE UPPER(data_domain)=:domain"
-            )
+            stmt = text(f"SELECT COUNT(*) AS N FROM {self.feature_catalog} WHERE UPPER(data_domain)=:domain")
             result = conn.execute(stmt, {"domain": data_domain.upper()})
             count = result.scalar_one_or_none() or 0
             logger.info("Found %d matching data_domain rows", count)

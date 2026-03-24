@@ -5,8 +5,8 @@ Follows the tmpl package pattern for semantic layer tools.
 
 import logging
 import os
-from pathlib import Path
 import re
+from pathlib import Path
 
 import yaml
 from teradatasql import TeradataConnection
@@ -14,6 +14,8 @@ from teradatasql import TeradataConnection
 from teradata_mcp_server.tools.utils import create_response, rows_to_json
 
 logger = logging.getLogger("teradata_mcp_server")
+
+SYSTEM_MESSAGE_MAX_LENGTH = 100  # Max length for system message in Teradata string literal
 
 
 def get_default_chat_config():
@@ -56,11 +58,7 @@ def _validate_chat_config(config: dict) -> bool:
 
     base_url = config.get("base_url")
     model = config.get("model")
-    function_db = (
-        config.get("databases", {}).get("function_db")
-        if isinstance(config.get("databases"), dict)
-        else None
-    )
+    function_db = config.get("databases", {}).get("function_db") if isinstance(config.get("databases"), dict) else None
 
     missing = []
     if not base_url:
@@ -72,8 +70,7 @@ def _validate_chat_config(config: dict) -> bool:
 
     if missing:
         logger.error(
-            "Chat completion config missing mandatory parameter(s): %s. "
-            "Tool will not be loaded.",
+            "Chat completion config missing mandatory parameter(s): %s. Tool will not be loaded.",
             ", ".join(missing),
         )
         return False
@@ -97,10 +94,7 @@ def load_chat_config():
         from teradata_mcp_server import config_loader
 
         # Load configuration (uses global config directory)
-        config = config_loader.load_config(
-            "chat_config.yml",
-            defaults=get_default_chat_config()
-        )
+        config = config_loader.load_config("chat_config.yml", defaults=get_default_chat_config())
 
         logger.info("Chat completion configuration loaded successfully")
         return config
@@ -108,6 +102,7 @@ def load_chat_config():
     except Exception as e:
         logger.error(f"Error loading chat completion config: {e}", exc_info=True)
         return get_default_chat_config()
+
 
 # Initialize global config once at import time
 CHAT_CONFIG = load_chat_config()
@@ -126,7 +121,7 @@ def _prepare_sql_inputs(sql: str, system_message: str) -> tuple[str, str]:
     normalized_sql = re.sub(r"\s+", " ", sql or "").strip()
 
     # 2) Remove trailing semicolon if present
-    if normalized_sql.endswith(';'):
+    if normalized_sql.endswith(";"):
         normalized_sql = normalized_sql[:-1].strip()
 
     # 3) Normalize whitespace in system_message
@@ -138,24 +133,20 @@ def _prepare_sql_inputs(sql: str, system_message: str) -> tuple[str, str]:
     return normalized_sql, escaped_system_message
 
 
-def build_complete_chat_sql(
-    input_sql: str,
-    system_message: str,
-    config: dict
-) -> str:
+def build_complete_chat_sql(input_sql: str, system_message: str, config: dict) -> str:
     """
     Build SQL query for CompleteChat table operator.
-    
+
     Args:
         input_sql: SQL query returning table with 'txt' column
         system_message: System instruction for the assistant
         config: Configuration dictionary
-    
+
     Returns:
         Complete SQL query string
     """
     # Validate required config
-    base_url = config.get('base_url')
+    base_url = config.get("base_url")
     if not base_url or base_url == "":
         raise ValueError(
             "BaseURL is required but not configured in chat_config.yml. "
@@ -163,7 +154,7 @@ def build_complete_chat_sql(
             "(e.g., 'http://localhost:11434' or 'https://api.openai.com')"
         )
 
-    model = config.get('model')
+    model = config.get("model")
     if not model or model == "":
         raise ValueError(
             "Model is required but not configured in chat_config.yml. "
@@ -172,92 +163,86 @@ def build_complete_chat_sql(
         )
 
     # Get API key from environment variable
-    api_key = os.environ.get('CHAT_API_KEY')
-    
+    api_key = os.environ.get("CHAT_API_KEY")
+
     # Get database name
-    database_name = config.get('databases', {}).get('function_db', 'openai_client')
-    
+    database_name = config.get("databases", {}).get("function_db", "openai_client")
+
     # Get other configuration values with defaults
-    ignore_https = config.get('IgnoreHTTPSVerification', False)
-    custom_headers = config.get('CustomHeaders', [])
-    body_params = config.get('BodyParameters', [])
-    delays = config.get('Delays', '500')
-    retries = config.get('RetriesNumber', 0)
-    throw_on_rate_limit = config.get('ThrowErrorOnRateLimit', False)
-    output_text_length = config.get('OutputTextLength', 16000)
-    remove_deepseek = config.get('RemoveDeepSeekThinking', False)
-    include_diagnostics = config.get('output', {}).get('include_diagnostics', True)
-    include_tachyon = config.get('output', {}).get('include_tachyon_headers', True)
-    
+    ignore_https = config.get("IgnoreHTTPSVerification", False)
+    custom_headers = config.get("CustomHeaders", [])
+    body_params = config.get("BodyParameters", [])
+    delays = config.get("Delays", "500")
+    retries = config.get("RetriesNumber", 0)
+    throw_on_rate_limit = config.get("ThrowErrorOnRateLimit", False)
+    output_text_length = config.get("OutputTextLength", 16000)
+    remove_deepseek = config.get("RemoveDeepSeekThinking", False)
+    include_diagnostics = config.get("output", {}).get("include_diagnostics", True)
+    include_tachyon = config.get("output", {}).get("include_tachyon_headers", True)
+
     # Build USING clause parameters
     using_params = []
     using_params.append(f"        BaseURL('{base_url}')")
     using_params.append(f"        SystemMessage('{system_message}')")
     using_params.append(f"        Model('{model}')")
-    
+
     # Add optional API key from environment
     if api_key:
         using_params.append(f"        ApiKey('{api_key}')")
         logger.debug("Using API key from CHAT_API_KEY environment variable")
     else:
         logger.debug("No API key found in CHAT_API_KEY environment variable")
-    
+
     # Add custom headers
     if custom_headers:
         headers_list = [f"{h['key']}: {h['value']}" for h in custom_headers]
         headers_str = "', '".join(headers_list)
         using_params.append(f"        CustomHeaders('{headers_str}')")
-    
+
     # Add body parameters
     if body_params:
         params_list = []
         for param in body_params:
-            key = param['key']
-            value = param['value']
+            key = param["key"]
+            value = param["value"]
             params_list.append(f"{key}:{value}")
         params_str = "', '".join(params_list)
         using_params.append(f"        BodyParameters('{params_str}')")
-    
+
     # Add rate limiting config
     using_params.append(f"        Delays('{delays}')")
     using_params.append(f"        RetriesNumber({retries})")
     using_params.append(f"        ThrowErrorOnRateLimit('{str(throw_on_rate_limit).upper()}')")
-    
+
     # Add output config
     using_params.append(f"        OutputTextLength({output_text_length})")
     using_params.append(f"        RemoveDeepSeekThinking('{str(remove_deepseek).upper()}')")
-    
+
     # Add diagnostic options
     if include_diagnostics:
         using_params.append("        OutputProcessingDetails('TRUE')")
-    
+
     if include_tachyon:
         using_params.append("        TachyonCallLevelHeaders('TRUE')")
-    
+
     # Add HTTPS verification override
     if ignore_https:
         using_params.append("        IgnoreHTTPSVerification('TRUE')")
-    
+
     # Build complete query
     using_clause = "\n".join(using_params)
-    
+
     complete_sql_query = f"""SELECT *
 FROM {database_name}.CompleteChat(
     ON ({input_sql}) AS InputTable
     USING
 {using_clause}
 ) AS dt"""
-    
+
     return complete_sql_query
 
 
-def handle_chat_completeChat(
-    conn: TeradataConnection,
-    sql: str,
-    system_message: str,
-    *args,
-    **kwargs
-):
+def handle_chat_completeChat(conn: TeradataConnection, sql: str, system_message: str, *args, **kwargs):
     """
     Execute chat completion using OpenAI-compatible LLM inference server.
 
@@ -302,12 +287,10 @@ def handle_chat_completeChat(
     try:
         # Prepare inputs: remove trailing semicolon and escape quotes, normalize whitespace
         cleaned_sql, escaped_system_message = _prepare_sql_inputs(sql, system_message)
-        
+
         # Build the base CompleteChat SQL query
         complete_sql_query = build_complete_chat_sql(
-            input_sql=cleaned_sql,
-            system_message=escaped_system_message,
-            config=config
+            input_sql=cleaned_sql, system_message=escaped_system_message, config=config
         )
 
         # Add CAST for response_txt using output_text_length from config
@@ -320,9 +303,9 @@ FROM (
 {complete_sql_query}
 ) AS t
 """
-        
+
         logger.debug(f"Executing CompleteChat SQL (with CAST):\n{wrapped_sql}")
-        
+
         # Execute query
         with conn.cursor() as cur:
             rows = cur.execute(wrapped_sql)
@@ -333,9 +316,11 @@ FROM (
                 "tool_name": "chat_completeChat",
                 "base_url": config.get("base_url"),
                 "model": config.get("model"),
-                "system_message": system_message[:100] + "..." if len(system_message) > 100 else system_message,
+                "system_message": system_message[:100] + "..."
+                if len(system_message) > SYSTEM_MESSAGE_MAX_LENGTH
+                else system_message,
                 "database_name": config.get("databases", {}).get("function_db"),
-                "rows_processed": len(data)
+                "rows_processed": len(data),
             }
 
             logger.debug(f"Tool: handle_chat_completeChat: Metadata: {metadata}")
@@ -347,33 +332,18 @@ FROM (
         logger.error(f"Configuration error: {error_msg}", exc_info=True)
         return create_response(
             {"error": error_msg},
-            {
-                "tool_name": "chat_completeChat",
-                "status": "error",
-                "error_type": "configuration_error"
-            }
+            {"tool_name": "chat_completeChat", "status": "error", "error_type": "configuration_error"},
         )
     except Exception as e:
         # Execution errors
         error_msg = str(e)
         logger.error(f"Execution error: {error_msg}", exc_info=True)
         return create_response(
-            {"error": error_msg},
-            {
-                "tool_name": "chat_completeChat",
-                "status": "error",
-                "error_type": "execution_error"
-            }
+            {"error": error_msg}, {"tool_name": "chat_completeChat", "status": "error", "error_type": "execution_error"}
         )
 
 
-def handle_chat_aggregatedCompleteChat(
-    conn: TeradataConnection,
-    sql: str,
-    system_message: str,
-    *args,
-    **kwargs
-):
+def handle_chat_aggregatedCompleteChat(conn: TeradataConnection, sql: str, system_message: str, *args, **kwargs):
     """
     Execute chat completion and return aggregated response statistics.
 
@@ -415,72 +385,70 @@ def handle_chat_aggregatedCompleteChat(
 
     # Load config
     config = CHAT_CONFIG
-    
+
     try:
         # Prepare inputs: remove trailing semicolon and escape quotes, normalize whitespace
         cleaned_sql, escaped_system_message = _prepare_sql_inputs(sql, system_message)
-        
+
         # Build the base CompleteChat SQL query
         complete_chat_sql = build_complete_chat_sql(
-            input_sql=cleaned_sql,
-            system_message=escaped_system_message,
-            config=config
+            input_sql=cleaned_sql, system_message=escaped_system_message, config=config
         )
 
-        output_len = int(config.get('OutputTextLength', 16000) or 16000)
-        
+        output_len = int(config.get("OutputTextLength", 16000) or 16000)
+
         # Wrap with aggregation query, casting response_txt
         aggregated_sql = f"""
-SELECT 
+SELECT
     CAST(response_txt AS VARCHAR({output_len}) CHARACTER SET UNICODE) AS response_txt,
     COUNT(*) AS response_count
 FROM (
     {complete_chat_sql}
 ) AS chat_results
-WHERE response_txt IS NOT NULL 
+WHERE response_txt IS NOT NULL
   AND response_txt <> ''
 GROUP BY 1
 """
 
         logger.debug(f"Executing Aggregated CompleteChat SQL:\n{aggregated_sql}")
-        
+
         # Execute query
         with conn.cursor() as cur:
             rows = cur.execute(aggregated_sql)
             data = rows_to_json(cur.description, rows.fetchall())
-            
+
             # Calculate statistics - handle both int and string types
             total_responses = 0
             for row in data:
-                count_value = row.get('response_count', 0)
-                if isinstance(count_value, str):
-                    total_responses += int(count_value)
-                elif isinstance(count_value, (int, float)):
+                count_value = row.get("response_count", 0)
+                if isinstance(count_value, str | int | float):
                     total_responses += int(count_value)
                 else:
                     total_responses += 0
-                    
+
             unique_responses = len(data)
-            
+
             # Build metadata
-            api_key_configured = bool(os.environ.get('CHAT_API_KEY'))
+            api_key_configured = bool(os.environ.get("CHAT_API_KEY"))
 
             metadata = {
                 "tool_name": "chat_aggregatedCompleteChat",
                 "operation": "aggregated_chat_completion",
-                "base_url": config.get('base_url'),
-                "model": config.get('model'),
-                "system_message": system_message[:100] + "..." if len(system_message) > 100 else system_message,
-                "database_name": config.get('databases', {}).get('function_db'),
+                "base_url": config.get("base_url"),
+                "model": config.get("model"),
+                "system_message": system_message[:100] + "..."
+                if len(system_message) > SYSTEM_MESSAGE_MAX_LENGTH
+                else system_message,
+                "database_name": config.get("databases", {}).get("function_db"),
                 "api_key_configured": api_key_configured,
                 "total_responses": total_responses,
                 "unique_responses": unique_responses,
                 "aggregation_applied": {
                     "filter": "response_txt IS NOT NULL AND response_txt <> ''",
                     "group_by": "column 1 (response_txt)",
-                    "order_by": "response_count DESC, response_txt"
+                    "order_by": "response_count DESC, response_txt",
                 },
-                "description": "Aggregated chat completion results showing unique responses and their counts"
+                "description": "Aggregated chat completion results showing unique responses and their counts",
             }
 
             logger.debug(f"Tool: handle_chat_aggregatedCompleteChat: Metadata: {metadata}")
@@ -491,22 +459,14 @@ GROUP BY 1
         logger.error(f"Configuration error: {error_msg}", exc_info=True)
         return create_response(
             {"error": error_msg},
-            {
-                "tool_name": "chat_aggregatedCompleteChat",
-                "status": "error",
-                "error_type": "configuration_error"
-            }
+            {"tool_name": "chat_aggregatedCompleteChat", "status": "error", "error_type": "configuration_error"},
         )
     except Exception as e:
         error_msg = str(e)
         logger.error(f"Execution error: {error_msg}", exc_info=True)
         return create_response(
             {"error": error_msg},
-            {
-                "tool_name": "chat_aggregatedCompleteChat",
-                "status": "error",
-                "error_type": "execution_error"
-            }
+            {"tool_name": "chat_aggregatedCompleteChat", "status": "error", "error_type": "execution_error"},
         )
 
 
@@ -516,10 +476,10 @@ def _update_docstrings_with_config():
     config = CHAT_CONFIG
 
     # Get config values
-    base_url = config.get('base_url', 'not configured')
-    model = config.get('model', 'not configured')
-    include_diagnostics = config.get('output', {}).get('include_diagnostics', True)
-    include_tachyon = config.get('output', {}).get('include_tachyon_headers', True)
+    base_url = config.get("base_url", "not configured")
+    model = config.get("model", "not configured")
+    include_diagnostics = config.get("output", {}).get("include_diagnostics", True)
+    include_tachyon = config.get("output", {}).get("include_tachyon_headers", True)
 
     # Build additional output fields list
     additional_outputs = []

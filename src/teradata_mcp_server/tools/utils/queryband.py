@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 def sanitize_qb_value(val: str | None) -> str:
     if val is None:
         return ""
@@ -47,4 +48,3 @@ def build_queryband(
             add("PROXYUSER", assume_user)
 
     return "".join(parts)
-

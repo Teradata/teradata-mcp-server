@@ -11,7 +11,7 @@
 #      - Supported authentication types                                          #
 #      - Default timeouts and error messages                                     #
 #                                                                                #
-#  ⚠️ WARNING:                                                                   #                      
+#  ⚠️ WARNING:                                                                   #
 #    DO NOT expose or commit credentials/secrets in version control.             #
 #                                                                                #
 #  Customize by replacing `{{app_name}}` with the appropriate  name.             #
@@ -27,7 +27,9 @@
 # TD_FEATURE_X_ENABLED = True                                                    #
 # -------------------------------------------------------------------------------#
 import os
+
 from dotenv import load_dotenv
+
 load_dotenv()
 
 TD_VS_BASE_URL = os.getenv("TD_BASE_URL", None)

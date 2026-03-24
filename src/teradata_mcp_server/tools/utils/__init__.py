@@ -22,7 +22,7 @@ from .queryband import build_queryband, sanitize_qb_value  # noqa: F401
 # -------------------- Serialization & response helpers -------------------- #
 def serialize_teradata_types(obj: Any) -> Any:
     """Convert Teradata-specific types to JSON serializable formats."""
-    if isinstance(obj, (date, datetime)):
+    if isinstance(obj, date | datetime):
         return obj.isoformat()
     if isinstance(obj, Decimal):
         return float(obj)
@@ -54,7 +54,7 @@ def create_response(data: Any, metadata: dict[str, Any] | None = None, error: di
 
 
 # ------------------------------ Auth helpers ------------------------------ #
-def parse_auth_header(auth_header: Optional[str]) -> tuple[str, str]:
+def parse_auth_header(auth_header: str | None) -> tuple[str, str]:
     """Parse an HTTP Authorization header into (scheme, value).
 
     Returns ("", "") if header is missing or malformed. Scheme is lowercased
@@ -69,7 +69,7 @@ def parse_auth_header(auth_header: Optional[str]) -> tuple[str, str]:
         return "", ""
 
 
-def compute_auth_token_sha256(auth_header: Optional[str]) -> Optional[str]:
+def compute_auth_token_sha256(auth_header: str | None) -> str | None:
     """Return a hex SHA-256 over the value portion of Authorization header."""
     scheme, value = parse_auth_header(auth_header)
     if not value:
@@ -82,7 +82,7 @@ def compute_auth_token_sha256(auth_header: Optional[str]) -> Optional[str]:
         return None
 
 
-def parse_basic_credentials(b64_value: str) -> tuple[Optional[str], Optional[str]]:
+def parse_basic_credentials(b64_value: str) -> tuple[str | None, str | None]:
     """Decode a Basic credential value into (username, secret)."""
     try:
         raw = base64.b64decode(b64_value).decode("utf-8")
@@ -98,7 +98,7 @@ def parse_basic_credentials(b64_value: str) -> tuple[Optional[str], Optional[str
         return None, None
 
 
-def infer_logmech_from_header(auth_header: Optional[str], default_basic_logmech: str = "LDAP") -> tuple[str, str]:
+def infer_logmech_from_header(auth_header: str | None, default_basic_logmech: str = "LDAP") -> tuple[str, str]:
     """Infer LOGMECH and the credential payload based on the header.
 
     Returns (logmech, payload) where:
@@ -114,7 +114,7 @@ def infer_logmech_from_header(auth_header: Optional[str], default_basic_logmech:
     return "", ""
 
 
-def execute_analytic_function(function_name: str, tables_to_df=[], **kwargs):
+def execute_analytic_function(function_name: str, tables_to_df=None, **kwargs):
     """
     Executes the specified analytic function with the provided keyword arguments.
 
@@ -125,40 +125,45 @@ def execute_analytic_function(function_name: str, tables_to_df=[], **kwargs):
     """
     # Log the received keyword arguments. But make sure not to log sensitive information.
     # Hence remove 'headers' from print.
-    func_params = {k: v for k, v in kwargs.items() if k != 'headers'}
+    if tables_to_df is None:
+        tables_to_df = []
+    func_params = {k: v for k, v in kwargs.items() if k != "headers"}
 
     # Analytic functions are called with 'tdml_' prefix. Remove it.
     function_name = function_name[5:]
 
     logger = logging.getLogger("teradata_mcp_server.utils")
-    logger.info("received kwargs: {} for the function {}".format(func_params, function_name))
+    logger.info(f"received kwargs: {func_params} for the function {function_name}")
 
     # Import the function dynamically based on its name
 
-    from teradataml import DataFrame, in_schema, copy_to_sql
-    from teradataml.common.utils import UtilFuncs
     import teradataml as tdml
+    from teradataml import DataFrame, copy_to_sql, in_schema
+    from teradataml.common.utils import UtilFuncs
+
     # Teradataml accepts DataFrame as input, so we need to convert the table_name
     # and object to DataFrame. Some of the functions accepts object also. If object
     # is provided, we convert it to DataFrame as well.
-    db_name = kwargs.get('database_name', None)
+    db_name = kwargs.get("database_name")
     for arg_name in tables_to_df:
-
         table_name = kwargs.get(arg_name)
 
         # Create DataFrame only if table_name is provided.
         if table_name:
-
             # Table name can be provided with or without schema name. First, extract the schema name and table name.
-            db_name_extracted, table_name = (UtilFuncs._extract_db_name(table_name),
-                                             UtilFuncs._extract_table_name(table_name))
+            db_name_extracted, table_name = (
+                UtilFuncs._extract_db_name(table_name),
+                UtilFuncs._extract_table_name(table_name),
+            )
 
             # In some rare cases, input is received with db_name and also table name with schema.
             # If they are different, raise a ValueError.
             if db_name and db_name_extracted and (db_name != db_name_extracted):
-                raise ValueError(f"Database name provided in 'database_name' argument: {db_name} is different "
-                                 f"from the database name provided in table name: {db_name_extracted}. "
-                                 f"Provide same values. Or, provide database name in table name only.")
+                raise ValueError(
+                    f"Database name provided in 'database_name' argument: {db_name} is different "
+                    f"from the database name provided in table name: {db_name_extracted}. "
+                    f"Provide same values. Or, provide database name in table name only."
+                )
 
             db_name = db_name or db_name_extracted
 
@@ -167,19 +172,17 @@ def execute_analytic_function(function_name: str, tables_to_df=[], **kwargs):
     # Execute the function with the provided keyword arguments
     result = getattr(tdml, function_name)(**kwargs)
 
-    result_to_store = result.result if getattr(result, 'result', None) else result.output
+    result_to_store = result.result if getattr(result, "result", None) else result.output
 
     metadata = {
         "tool_name": function_name,
-        "database_name": kwargs.get('database_name'),
-        "output_table_name": kwargs.get('output_table_name')
+        "database_name": kwargs.get("database_name"),
+        "output_table_name": kwargs.get("output_table_name"),
     }
 
     # If output_table_name is provided, copy the result to the specified table.
-    if kwargs.get('output_table_name') is not None:
-        copy_to_sql(result_to_store,
-                    table_name=kwargs['output_table_name'],
-                    if_exists='fail')
+    if kwargs.get("output_table_name") is not None:
+        copy_to_sql(result_to_store, table_name=kwargs["output_table_name"], if_exists="fail")
 
         return create_response(result, metadata)
 
@@ -255,15 +258,14 @@ def get_anlytic_function_signature(params):
     RAISES:
         None
     """
-    function_params = OrderedDict((k, v)
-                                  for k, v in params.items())
-    function_params['output_table_name'] = None
-    function_params['database_name'] = None
+    function_params = OrderedDict((k, v) for k, v in params.items())
+    function_params["output_table_name"] = None
+    function_params["database_name"] = None
 
     # Generate function argument string.
     func_args_str = ", ".join(
         [
-            "{} = {}".format(param, '"{}"'.format(value) if isinstance(value, str) else value)
+            "{} = {}".format(param, f'"{value}"' if isinstance(value, str) else value)
             for param, value in function_params.items()
         ]
     )
@@ -282,7 +284,7 @@ def {analytic_function}({func_args_str}):
     Most Importantly:
           Never add optional arguments while function calling, unless specified in user query.
           Never include empty list in any of the function arguments.
-          For any argument, user can pass multiple values. 
+          For any argument, user can pass multiple values.
           Do not consider a comma seperated values in such case.
           Generate a list of values in such case and pass it as argument.
     """
