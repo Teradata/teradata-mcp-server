@@ -159,6 +159,28 @@ Your custom `profiles.yml` will be merged with the built-in profiles, allowing y
 - Add new profiles
 - Extend built-in profiles with additional tools
 
+## 🔍 Progressive Disclosure
+
+By default, all tools in the active profile are registered individually and listed by the client at startup. With many tools loaded this can consume a significant portion of the LLM context window.
+
+**Progressive disclosure** reduces this by exposing only three proxy tools to the client — `search_tool`, and `execute_tool`— while keeping the full tool catalog available on demand. The LLM searches for tools by keyword, retrieves full documentation on the ones it needs, then executes them.
+
+```bash
+# Enable via flag
+teradata-mcp-server --progressive_disclosure
+
+# Or via environment variable
+export PROGRESSIVE_DISCLOSURE=true
+teradata-mcp-server
+```
+
+| Mode | Client sees | Context window |
+|------|-------------|----------------|
+| Static (default) | All tools listed at startup | Higher usage |
+| Progressive disclosure | 3 proxy tools | ~99% reduction |
+
+See the [developer guide](../developer_guide/PROGRESSIVE_DISCLOSURE.md) for details on the search algorithm and two-tier discovery workflow.
+
 ## 🚄 Transport Modes
 
 ### stdio (Default)
