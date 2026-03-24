@@ -4,6 +4,7 @@ Tools package with lazy loading support.
 Modules are now loaded on-demand based on profile requirements.
 """
 
+from .context_catalog import ContextCatalog  # explicit export for context catalog
 from .module_loader import ModuleLoader
 from .td_connect import TDConn  # explicit export for DB connection
 

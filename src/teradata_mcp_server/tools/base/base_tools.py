@@ -13,17 +13,39 @@ logger = logging.getLogger("teradata_mcp_server")
 
 # ------------------ Tool  ------------------#
 # Read query tool
-def handle_base_readQuery(conn: Connection, sql: str | None = None, tool_name: str | None = None, *args, **kwargs):
+def handle_base_readQuery(
+    conn: Connection, sql: str | None = None, tool_name: str | None = None, persist: bool = False, *args, **kwargs
+):
     """
     Execute a SQL query via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
     Arguments:
-      sql    - SQL text, with optional bind-parameter placeholders
+      sql     - SQL text, with optional bind-parameter placeholders
+      persist - Set to True to persist the results as a table and reuse it later. Recommended for large result sets.
 
     Returns:
       ResponseType: formatted response with query results + metadata
+                   (includes 'volatile_table' field in metadata if persist=True)
     """
-    logger.debug(f"Tool: handle_base_readQuery: Args: sql: {sql}, args={args!r}, kwargs={kwargs!r}")
+    logger.debug(f"Tool: handle_base_readQuery: Args: sql: {sql}, persist: {persist}, args={args!r}, kwargs={kwargs!r}")
+
+    # Generate volatile table name if persisting
+    volatile_table_name = None
+    if persist:
+        import uuid
+
+        unique_id = str(uuid.uuid4()).replace("-", "_")[:16]
+        volatile_table_name = f"vt_{unique_id}"
+
+        # Strip trailing semicolons from the SQL
+        sql_clean = (sql or "").rstrip().rstrip(";")
+
+        # Remove the final ORDER BY clause if present
+        sql_clean = re.sub(r"ORDER BY [\w\W\s\S]*$", "", sql_clean, flags=re.IGNORECASE).strip()
+
+        # Wrap in CREATE VOLATILE TABLE statement
+        sql = f"CREATE VOLATILE TABLE {volatile_table_name} AS ({sql_clean}) WITH DATA ON COMMIT PRESERVE ROWS"
+        logger.info(f"Persisting query results to volatile table: {volatile_table_name}")
 
     # 1. Build a textual SQL statement
     if not sql:
@@ -34,6 +56,11 @@ def handle_base_readQuery(conn: Connection, sql: str | None = None, tool_name: s
     result = conn.execute(stmt, kwargs) if kwargs else conn.execute(stmt)
 
     # 3. Fetch rows & column metadata
+
+    # If we persisted in a volatile table, we won't get any rows back, we sample the resulting voltile table instead
+    if volatile_table_name:
+        result = conn.execute(text(f"select top 10 * from {volatile_table_name}"))
+
     cursor = result.cursor  # underlying DB-API cursor
     raw_rows = cursor.fetchall() or []
 
@@ -59,7 +86,7 @@ def handle_base_readQuery(conn: Connection, sql: str | None = None, tool_name: s
             {"name": col[0], "type": getattr(col[1], "__name__", str(col[1]))} for col in (cursor.description or [])
         ]
 
-    # 5. Compile the statement with literal binds for “final SQL”
+    # 5. Compile the statement with literal binds for "final SQL"
     #    Fallback to DefaultDialect if conn has no `.dialect`
     dialect = getattr(conn, "dialect", default.DefaultDialect())
     compiled = stmt.compile(dialect=dialect, compile_kwargs={"literal_binds": True})
@@ -72,6 +99,14 @@ def handle_base_readQuery(conn: Connection, sql: str | None = None, tool_name: s
         "columns": columns,
         "row_count": len(data),
     }
+
+    # Add volatile table name if persisted
+    if volatile_table_name:
+        metadata["row_count"] = None
+        metadata["sample_size"] = 10
+        metadata["volatile_table"] = volatile_table_name
+        metadata["persist"] = True
+        logger.info(f"Query results persisted to volatile table: {volatile_table_name}")
 
     if is_show_command and "ddl_complete" in locals():
         metadata["ddl_size"] = len(ddl_complete)

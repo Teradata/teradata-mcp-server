@@ -100,7 +100,8 @@ select = [
     "PL",  # pylint
 ]
 ignore = [
-    "F403",  # Wildcard imports (temporarily ignore for gradual refactoring)
+    "F403",   # Wildcard imports (temporarily ignore for gradual refactoring)
+    "PLR2004", # Magic value comparisons (row index access patterns are self-documenting)
     "F401",  # Unused imports in __init__.py files (common pattern for re-exports)
     "E402",  # Module level import not at top (some tools have conditional imports)
     "E501",  # strings over 120 characters

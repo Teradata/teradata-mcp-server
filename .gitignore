@@ -14,5 +14,6 @@ var/
 /profiles.yml
 /*_objects.yml
 examples/app-flowise/.*
+test_*.py
 .planning/
 .ruff_cache/

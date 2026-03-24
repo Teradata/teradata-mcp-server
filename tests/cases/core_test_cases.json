@@ -18,6 +18,13 @@
         "parameters": {
           "sql": "SELECT InfoKey, InfoData FROM DBC.DBCInfoV WHERE InfoKey = 'VERSION'"
         }
+      },
+      {
+        "name": "persist_result_as_volatile_table",
+        "parameters": {
+          "sql": "SELECT TOP 20 DatabaseName, TableName FROM DBC.TablesV WHERE DatabaseName = 'DBC'",
+          "persist": true
+        }
       }
     ],
     "base_tableList": [
@@ -30,7 +37,7 @@
     ],
     "base_databaseList": [
       {
-        "name": "list_all_databases", 
+        "name": "list_all_databases",
         "parameters": {}
       }
     ],
@@ -97,7 +104,6 @@
       }
     ],
     "dba_tableSpace": [
-
       {
         "name": "tvm_table_space",
         "parameters": {
