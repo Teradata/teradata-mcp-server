@@ -9,7 +9,8 @@ The schema for the database registry must be set to the `registry` key in the pr
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
+
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
@@ -28,54 +29,48 @@ class RegistryLoader:
     # Map Teradata data types to Python types
     TYPE_MAP = {
         # Character types
-        'CV': str,           # VARCHAR
-        'CF': str,           # CHAR
-        'BV': str,           # VARBYTE
-        'BF': str,           # BYTE
-        'CO': str,           # CLOB
-        'BO': str,           # BLOB
-        
+        "CV": str,  # VARCHAR
+        "CF": str,  # CHAR
+        "BV": str,  # VARBYTE
+        "BF": str,  # BYTE
+        "CO": str,  # CLOB
+        "BO": str,  # BLOB
         # Integer types
-        'I': int,            # INTEGER
-        'I1': int,           # BYTEINT
-        'I2': int,           # SMALLINT
-        'I8': int,           # BIGINT
-        
+        "I": int,  # INTEGER
+        "I1": int,  # BYTEINT
+        "I2": int,  # SMALLINT
+        "I8": int,  # BIGINT
         # Floating point types
-        'F': float,          # FLOAT/DOUBLE PRECISION
-        
+        "F": float,  # FLOAT/DOUBLE PRECISION
         # Decimal/Numeric types
-        'D': float,          # DECIMAL
-        'N': float,          # NUMERIC
-        'PD': float,         # DECIMAL (packed)
-        'PZ': float,         # DECIMAL (zoned)
-        
+        "D": float,  # DECIMAL
+        "N": float,  # NUMERIC
+        "PD": float,  # DECIMAL (packed)
+        "PZ": float,  # DECIMAL (zoned)
         # Date/Time types
-        'DA': str,           # DATE (ISO format: YYYY-MM-DD)
-        'AT': str,           # TIME
-        'TS': str,           # TIMESTAMP
-        'TZ': str,           # TIME WITH TIME ZONE
-        'SZ': str,           # TIMESTAMP WITH TIME ZONE
-        'DT': str,           # DATETIME (legacy)
-        
+        "DA": str,  # DATE (ISO format: YYYY-MM-DD)
+        "AT": str,  # TIME
+        "TS": str,  # TIMESTAMP
+        "TZ": str,  # TIME WITH TIME ZONE
+        "SZ": str,  # TIMESTAMP WITH TIME ZONE
+        "DT": str,  # DATETIME (legacy)
         # Interval types
-        'YM': str,           # INTERVAL YEAR TO MONTH
-        'DM': str,           # INTERVAL DAY TO MONTH (legacy)
-        'DS': str,           # INTERVAL DAY TO SECOND
-        'HS': str,           # INTERVAL HOUR TO SECOND
-        'PM': str,           # PERIOD(DATE)
-        'PS': str,           # PERIOD(TIMESTAMP)
-        'PT': str,           # PERIOD(TIME)
-        
+        "YM": str,  # INTERVAL YEAR TO MONTH
+        "DM": str,  # INTERVAL DAY TO MONTH (legacy)
+        "DS": str,  # INTERVAL DAY TO SECOND
+        "HS": str,  # INTERVAL HOUR TO SECOND
+        "PM": str,  # PERIOD(DATE)
+        "PS": str,  # PERIOD(TIMESTAMP)
+        "PT": str,  # PERIOD(TIME)
         # Special types
-        'JN': str,           # JSON
-        'XM': str,           # XML
-        'VA': str,           # VARRAY
-        'UT': str,           # UDT (User Defined Type)
-        '++': str,           # TD_ANYTYPE
+        "JN": str,  # JSON
+        "XM": str,  # XML
+        "VA": str,  # VARRAY
+        "UT": str,  # UDT (User Defined Type)
+        "++": str,  # TD_ANYTYPE
     }
 
-    def __init__(self, tdconn, registry_db: str, last_load_ts: Optional[str] = None):
+    def __init__(self, tdconn, registry_db: str, last_load_ts: str | None = None):
         """
         Initialize the registry loader.
 
@@ -86,10 +81,10 @@ class RegistryLoader:
         """
         self.tdconn = tdconn
         self.registry_db = registry_db
-        self.engine = tdconn.engine if hasattr(tdconn, 'engine') else None
+        self.engine = tdconn.engine if hasattr(tdconn, "engine") else None
         self.last_load_ts = last_load_ts
 
-    def load_tools(self) -> tuple[Dict[str, Dict[str, Any]], Optional[str]]:
+    def load_tools(self) -> tuple[dict[str, dict[str, Any]], str | None]:
         """
         Load tool definitions from the database registry, optionally filtering by timestamp.
 
@@ -124,7 +119,9 @@ class RegistryLoader:
             return {}, None
 
         try:
-            logger.info(f"RegistryLoader: Starting tool load from '{self.registry_db}' (filter timestamp: {self.last_load_ts or 'None - initial load'})")
+            logger.info(
+                f"RegistryLoader: Starting tool load from '{self.registry_db}' (filter timestamp: {self.last_load_ts or 'None - initial load'})"
+            )
 
             with self.engine.connect() as conn:
                 # Load tool metadata (including current timestamp)
@@ -134,7 +131,9 @@ class RegistryLoader:
 
                 if not tools_data:
                     if self.last_load_ts:
-                        logger.info(f"No new tools found in registry database '{self.registry_db}' since {self.last_load_ts}")
+                        logger.info(
+                            f"No new tools found in registry database '{self.registry_db}' since {self.last_load_ts}"
+                        )
                     else:
                         logger.warning(f"No tools found in registry database '{self.registry_db}'")
                     return {}, current_ts
@@ -147,7 +146,9 @@ class RegistryLoader:
                 tool_defs = self._build_tool_definitions(tools_data, params_data)
 
                 if self.last_load_ts:
-                    logger.info(f"Loaded {len(tool_defs)} new/updated tools from registry database '{self.registry_db}' since {self.last_load_ts}")
+                    logger.info(
+                        f"Loaded {len(tool_defs)} new/updated tools from registry database '{self.registry_db}' since {self.last_load_ts}"
+                    )
                 else:
                     logger.info(f"Loaded {len(tool_defs)} tools from registry database '{self.registry_db}'")
                 return tool_defs, current_ts
@@ -156,7 +157,7 @@ class RegistryLoader:
             logger.error(f"Failed to load tools from registry: {e}", exc_info=True)
             return {}, None
 
-    def _query_tools(self, conn: Connection) -> tuple[list, Optional[str]]:
+    def _query_tools(self, conn: Connection) -> tuple[list, str | None]:
         """
         Query the mcp_list_tools view for tool metadata, optionally filtering by timestamp.
 
@@ -192,7 +193,9 @@ class RegistryLoader:
             ORDER BY ToolName
         """
 
-        logger.info(f"RegistryLoader: Executing query on {self.registry_db}.mcp_list_tools with filter: {where_clause or 'NONE'}")
+        logger.info(
+            f"RegistryLoader: Executing query on {self.registry_db}.mcp_list_tools with filter: {where_clause or 'NONE'}"
+        )
 
         query = text(query_sql)
         result = conn.execute(query)
@@ -200,15 +203,17 @@ class RegistryLoader:
         current_ts = None
 
         for row in result:
-            tools.append({
-                'ToolName': row[0],
-                'DataBaseName': row[1],
-                'TableName': row[2],
-                'ToolType': row[3] if len(row) > 3 else 'F',  # Default to Function/UDF
-                'registered_ts': row[4] if len(row) > 4 else None,
-                'docstring': row[5] if len(row) > 5 else '',
-                'Tags': row[6] if len(row) > 6 else '',
-            })
+            tools.append(
+                {
+                    "ToolName": row[0],
+                    "DataBaseName": row[1],
+                    "TableName": row[2],
+                    "ToolType": row[3] if len(row) > 3 else "F",  # Default to Function/UDF
+                    "registered_ts": row[4] if len(row) > 4 else None,
+                    "docstring": row[5] if len(row) > 5 else "",
+                    "Tags": row[6] if len(row) > 6 else "",
+                }
+            )
             # Capture current_timestamp from the first row (all rows have same value)
             if current_ts is None and len(row) > 7:
                 current_ts = str(row[7]) if row[7] else None
@@ -246,20 +251,22 @@ class RegistryLoader:
         params = []
 
         for row in result:
-            params.append({
-                'ToolName': row[0],
-                'ParamName': row[1],
-                'ParamType': row[2],
-                'ParamLength': row[3] if len(row) > 3 else None,
-                'ParamPosition': row[4] if len(row) > 4 else 1,
-                'ParamRequired': row[5] if len(row) > 5 else 'Y',
-                'ParamComment': row[6] if len(row) > 6 else '',
-            })
+            params.append(
+                {
+                    "ToolName": row[0],
+                    "ParamName": row[1],
+                    "ParamType": row[2],
+                    "ParamLength": row[3] if len(row) > 3 else None,
+                    "ParamPosition": row[4] if len(row) > 4 else 1,
+                    "ParamRequired": row[5] if len(row) > 5 else "Y",
+                    "ParamComment": row[6] if len(row) > 6 else "",
+                }
+            )
 
         logger.debug(f"Found {len(params)} parameters across all tools")
         return params
 
-    def _build_tool_definitions(self, tools_data: list, params_data: list) -> Dict[str, Dict[str, Any]]:
+    def _build_tool_definitions(self, tools_data: list, params_data: list) -> dict[str, dict[str, Any]]:
         """
         Build tool definition dictionaries from query results.
 
@@ -273,34 +280,36 @@ class RegistryLoader:
         tool_defs = {}
 
         # Create a lookup map for parameters by tool name
-        params_by_tool = {}
+        params_by_tool: dict[str, list] = {}
         for param in params_data:
-            tool_name = param['ToolName']
+            tool_name = param["ToolName"]
             if tool_name not in params_by_tool:
                 params_by_tool[tool_name] = []
             params_by_tool[tool_name].append(param)
 
         # Build tool definitions
         for tool in tools_data:
-            tool_name = tool['ToolName']
+            tool_name = tool["ToolName"]
             tool_params = params_by_tool.get(tool_name, [])
 
             tool_defs[tool_name] = {
-                'description': tool['docstring'] or f"Execute {tool['DataBaseName']}.{tool['TableName']}",
-                'database_name': tool['DataBaseName'],
-                'table_name': tool['TableName'],
-                'db_object': f"{tool['DataBaseName']}.{tool['TableName']}",
-                'object_type': tool['ToolType'],
-                'tags': tool.get('Tags', ''),
-                'registered_ts': tool.get('registered_ts'),
-                'parameters': self._build_params(tool_params)
+                "description": tool["docstring"] or f"Execute {tool['DataBaseName']}.{tool['TableName']}",
+                "database_name": tool["DataBaseName"],
+                "table_name": tool["TableName"],
+                "db_object": f"{tool['DataBaseName']}.{tool['TableName']}",
+                "object_type": tool["ToolType"],
+                "tags": tool.get("Tags", ""),
+                "registered_ts": tool.get("registered_ts"),
+                "parameters": self._build_params(tool_params),
             }
 
-            logger.debug(f"Built definition for tool '{tool_name}' ({tool['ToolType']}, registered: {tool.get('registered_ts')})")
+            logger.debug(
+                f"Built definition for tool '{tool_name}' ({tool['ToolType']}, registered: {tool.get('registered_ts')})"
+            )
 
         return tool_defs
 
-    def _build_params(self, params_data: list) -> Dict[str, Dict[str, Any]]:
+    def _build_params(self, params_data: list) -> dict[str, dict[str, Any]]:
         """
         Build parameter definitions from query results.
 
@@ -313,28 +322,28 @@ class RegistryLoader:
         params = {}
 
         # Sort by position to maintain correct parameter order
-        sorted_params = sorted(params_data, key=lambda p: p['ParamPosition'])
+        sorted_params = sorted(params_data, key=lambda p: p["ParamPosition"])
 
         for param in sorted_params:
-            param_name = param['ParamName']
+            param_name = param["ParamName"]
             # Strip whitespace from ParamType (database CHAR fields are space-padded)
-            param_type_str = param['ParamType'].strip().upper()
+            param_type_str = param["ParamType"].strip().upper()
 
             # Map Teradata type to Python type
             python_type = self.TYPE_MAP.get(param_type_str, str)
 
             # Build description with type info
-            description = param.get('ParamComment', '')
-            if param.get('ParamLength'):
+            description = param.get("ParamComment", "")
+            if param.get("ParamLength"):
                 description += f" (type: {param_type_str}({param['ParamLength']}))"
             else:
                 description += f" (type: {param_type_str})"
 
             params[param_name] = {
-                'type_hint': python_type,
-                'description': description.strip(),
-                'required': param.get('ParamRequired', 'Y').upper() == 'Y',
-                'position': param['ParamPosition'],
+                "type_hint": python_type,
+                "description": description.strip(),
+                "required": param.get("ParamRequired", "Y").upper() == "Y",
+                "position": param["ParamPosition"],
             }
 
         return params

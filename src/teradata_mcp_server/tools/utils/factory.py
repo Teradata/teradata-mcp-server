@@ -1,5 +1,6 @@
-import inspect
 import asyncio
+import inspect
+
 
 def create_mcp_tool(
     *,
@@ -40,8 +41,7 @@ def create_mcp_tool(
     if validate_required:
         # Build list of required parameter names (those without defaults)
         required_params = [
-            name for name, param in signature.parameters.items()
-            if param.default is inspect.Parameter.empty
+            name for name, param in signature.parameters.items() if param.default is inspect.Parameter.empty
         ]
 
         async def _mcp_tool(**kwargs):
@@ -51,6 +51,7 @@ def create_mcp_tool(
             merged_kwargs = {**inject_kwargs, **kwargs}
             return await asyncio.to_thread(executor_func, **merged_kwargs)
     else:
+
         async def _mcp_tool(**kwargs):
             merged_kwargs = {**inject_kwargs, **kwargs}
             return await asyncio.to_thread(executor_func, **merged_kwargs)

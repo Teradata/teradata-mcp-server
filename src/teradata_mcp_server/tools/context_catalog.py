@@ -9,13 +9,15 @@ It allows:
 
 import inspect
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Set, Tuple, Any, Optional
+from typing import Any
 
 
 @dataclass
 class ParamInfo:
     """Information about a tool parameter."""
+
     type: type
     required: bool
     default: Any
@@ -25,28 +27,29 @@ class ParamInfo:
 @dataclass
 class ToolMetadata:
     """Rich metadata about a tool function."""
-    name: str                           # e.g., "base_readQuery"
-    display_name: str                   # e.g., "Read Query"
-    func: Callable                      # The actual handle_ function
-    description: str                    # Extracted from docstring
-    parameters: Dict[str, ParamInfo]    # Name -> ParamInfo
-    signature: inspect.Signature        # For validation
-    category: str                       # e.g., "base", "fs", "dba"
-    keywords: Set[str]                  # Indexed for search
-    full_doc: str                       # Complete docstring
+
+    name: str  # e.g., "base_readQuery"
+    display_name: str  # e.g., "Read Query"
+    func: Callable  # The actual handle_ function
+    description: str  # Extracted from docstring
+    parameters: dict[str, ParamInfo]  # Name -> ParamInfo
+    signature: inspect.Signature  # For validation
+    category: str  # e.g., "base", "fs", "dba"
+    keywords: set[str]  # Indexed for search
+    full_doc: str  # Complete docstring
 
 
 class ContextCatalog:
     """Central registry for progressive tool disclosure."""
 
     def __init__(self):
-        self._tools: Dict[str, ToolMetadata] = {}  # tool_name -> ToolMetadata
-        self._tools_lower: Dict[str, str] = {}  # lowercase_name -> actual_name (for exact match lookup)
-        self._keyword_index: Dict[str, Set[str]] = {}  # keyword -> set of tool_names
-        self._category_index: Dict[str, Set[str]] = {}  # category -> set of tool_names
-        self.docs: Dict[str, str] = {}  # Collection of documentation snippets
+        self._tools: dict[str, ToolMetadata] = {}  # tool_name -> ToolMetadata
+        self._tools_lower: dict[str, str] = {}  # lowercase_name -> actual_name (for exact match lookup)
+        self._keyword_index: dict[str, set[str]] = {}  # keyword -> set of tool_names
+        self._category_index: dict[str, set[str]] = {}  # category -> set of tool_names
+        self.docs: dict[str, str] = {}  # Collection of documentation snippets
 
-    def register_tool(self, tool_func: Callable, category: str = None):
+    def register_tool(self, tool_func: Callable, category: str | None = None):
         """
         Register a tool function in the context catalog.
 
@@ -73,7 +76,7 @@ class ContextCatalog:
                 self._keyword_index[keyword] = set()
             self._keyword_index[keyword].add(metadata.name)
 
-    def get_tool(self, tool_name: str) -> Optional[ToolMetadata]:
+    def get_tool(self, tool_name: str) -> ToolMetadata | None:
         """
         Retrieve tool metadata by exact name.
 
@@ -85,7 +88,7 @@ class ContextCatalog:
         """
         return self._tools.get(tool_name)
 
-    def get_tool_function(self, tool_name: str) -> Optional[Callable]:
+    def get_tool_function(self, tool_name: str) -> Callable | None:
         """
         Retrieve the actual tool function by name.
 
@@ -98,7 +101,7 @@ class ContextCatalog:
         metadata = self.get_tool(tool_name)
         return metadata.func if metadata else None
 
-    def search_tools(self, query: str = "", limit: int = 10) -> Dict[str, Any]:
+    def search_tools(self, query: str = "", limit: int = 10) -> dict[str, Any]:
         """
         Search for tools by name or keywords, or list all tools.
 
@@ -116,11 +119,7 @@ class ContextCatalog:
         """
         # Mode 1: List all tools (empty query)
         if not query or not query.strip():
-            return {
-                "match_type": "list_all",
-                "total_count": len(self._tools),
-                "tools": sorted(self._tools.keys())
-            }
+            return {"match_type": "list_all", "total_count": len(self._tools), "tools": sorted(self._tools.keys())}
 
         query_stripped = query.strip()
         query_lower = query_stripped.lower()
@@ -139,21 +138,21 @@ class ContextCatalog:
                     "full_documentation": exact_match.full_doc,
                     "parameters": {
                         name: {
-                            "type": param.type.__name__ if hasattr(param.type, '__name__') else str(param.type),
+                            "type": param.type.__name__ if hasattr(param.type, "__name__") else str(param.type),
                             "required": param.required,
                             "default": str(param.default) if param.default is not None else None,
-                            "description": param.description
+                            "description": param.description,
                         }
                         for name, param in exact_match.parameters.items()
-                    }
-                }
+                    },
+                },
             }
 
         # Mode 3: Approximate match (keyword search)
         query_keywords = set(query_lower.split())
         scored_results = []
 
-        for tool_name, metadata in self._tools.items():
+        for _tool_name, metadata in self._tools.items():
             score = 0
 
             # Partial name match
@@ -175,7 +174,7 @@ class ContextCatalog:
                 score += 20
 
             # Parameter name matches
-            for param_name in metadata.parameters.keys():
+            for param_name in metadata.parameters:
                 if query_lower in param_name.lower():
                     score += 15
 
@@ -194,10 +193,10 @@ class ContextCatalog:
                     "name": meta.name,
                     "category": meta.category,
                     "summary": self._extract_short_summary(meta.full_doc),
-                    "score": score
+                    "score": score,
                 }
                 for score, meta in top_results
-            ]
+            ],
         }
 
     def _extract_short_summary(self, docstring: str) -> str:
@@ -213,16 +212,16 @@ class ContextCatalog:
         if not docstring:
             return "No description available"
 
-        lines = docstring.split('\n')
+        lines = docstring.split("\n")
         for line in lines:
             stripped = line.strip()
             # Skip empty lines and common section headers
-            if stripped and not stripped.lower().endswith(':'):
+            if stripped and not stripped.lower().endswith(":"):
                 return stripped
 
         return "No description available"
 
-    def validate_arguments(self, tool_name: str, **kwargs) -> Tuple[bool, str]:
+    def validate_arguments(self, tool_name: str, **kwargs) -> tuple[bool, str]:
         """
         Validate arguments against tool signature.
 
@@ -257,7 +256,7 @@ class ContextCatalog:
 
         return True, ""
 
-    def get_categories(self) -> List[str]:
+    def get_categories(self) -> list[str]:
         """
         Get list of all tool categories.
 
@@ -266,7 +265,7 @@ class ContextCatalog:
         """
         return sorted(self._category_index.keys())
 
-    def list_tools_by_category(self, category: str) -> List[Dict[str, Any]]:
+    def list_tools_by_category(self, category: str) -> list[dict[str, Any]]:
         """
         List all tools in a specific category.
 
@@ -283,16 +282,16 @@ class ContextCatalog:
                 "description": self._tools[name].description,
                 "parameters": {
                     pname: {
-                        "type": pinfo.type.__name__ if hasattr(pinfo.type, '__name__') else str(pinfo.type),
-                        "required": pinfo.required
+                        "type": pinfo.type.__name__ if hasattr(pinfo.type, "__name__") else str(pinfo.type),
+                        "required": pinfo.required,
                     }
                     for pname, pinfo in self._tools[name].parameters.items()
-                }
+                },
             }
             for name in sorted(tool_names)
         ]
 
-    def _extract_metadata(self, func: Callable, category: str = None) -> ToolMetadata:
+    def _extract_metadata(self, func: Callable, category: str | None = None) -> ToolMetadata:
         """
         Extract rich metadata from a handle_ function.
 
@@ -305,18 +304,15 @@ class ContextCatalog:
         """
         # Name extraction
         raw_name = func.__name__
-        if raw_name.startswith("handle_"):
-            tool_name = raw_name[7:]  # Remove 'handle_' prefix
-        else:
-            tool_name = raw_name
+        tool_name = raw_name[7:] if raw_name.startswith("handle_") else raw_name
 
         # Auto-detect category from name if not provided
         if category is None:
-            category = tool_name.split('_')[0] if '_' in tool_name else 'misc'
+            category = tool_name.split("_")[0] if "_" in tool_name else "misc"
 
         # Description from docstring
         full_doc = inspect.getdoc(func) or "No description available"
-        description = full_doc.split('\n')[0].strip()  # First line as summary
+        description = full_doc.split("\n")[0].strip()  # First line as summary
 
         # Parameter extraction
         sig = inspect.signature(func)
@@ -324,7 +320,7 @@ class ContextCatalog:
 
         for param_name, param in sig.parameters.items():
             # Skip internal params
-            if param_name in {'conn', 'tool_name', 'fs_config', 'args', 'kwargs'}:
+            if param_name in {"conn", "tool_name", "fs_config", "args", "kwargs"}:
                 continue
 
             # Handle *args and **kwargs
@@ -339,38 +335,62 @@ class ContextCatalog:
             param_desc = self._extract_param_description(full_doc, param_name)
 
             parameters[param_name] = ParamInfo(
-                type=param_type,
-                required=not has_default,
-                default=default_val,
-                description=param_desc
+                type=param_type, required=not has_default, default=default_val, description=param_desc
             )
 
         # Build keyword index
         keywords = set()
         keywords.add(tool_name.lower())
-        keywords.update(tool_name.lower().split('_'))
+        keywords.update(tool_name.lower().split("_"))
 
         # Add words from description (filter common words)
-        stopwords = {'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from',
-                     'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the',
-                     'to', 'was', 'will', 'with', 'via', 'this', 'or', 'if'}
-        desc_words = re.findall(r'\b\w+\b', description.lower())
-        keywords.update(w for w in desc_words if len(w) > 2 and w not in stopwords)
+        stopwords = {
+            "a",
+            "an",
+            "and",
+            "are",
+            "as",
+            "at",
+            "be",
+            "by",
+            "for",
+            "from",
+            "has",
+            "he",
+            "in",
+            "is",
+            "it",
+            "its",
+            "of",
+            "on",
+            "that",
+            "the",
+            "to",
+            "was",
+            "will",
+            "with",
+            "via",
+            "this",
+            "or",
+            "if",
+        }
+        desc_words = re.findall(r"\b\w+\b", description.lower())
+        keywords.update(w for w in desc_words if len(w) > 2 and w not in stopwords)  # noqa: PLR2004
 
         # Add parameter names
-        keywords.update(param_name.lower() for param_name in parameters.keys())
-        keywords.discard('')  # Remove empty strings
+        keywords.update(param_name.lower() for param_name in parameters)
+        keywords.discard("")  # Remove empty strings
 
         return ToolMetadata(
             name=tool_name,
-            display_name=tool_name.replace('_', ' ').title(),
+            display_name=tool_name.replace("_", " ").title(),
             func=func,
             description=description,
             parameters=parameters,
             signature=sig,
             category=category,
             keywords=keywords,
-            full_doc=full_doc
+            full_doc=full_doc,
         )
 
     def _extract_param_description(self, docstring: str, param_name: str) -> str:
@@ -385,25 +405,25 @@ class ContextCatalog:
             Description string or empty string if not found
         """
         # Look for "Arguments:" section
-        lines = docstring.split('\n')
+        lines = docstring.split("\n")
         in_args_section = False
 
-        for i, line in enumerate(lines):
+        for _i, line in enumerate(lines):
             stripped = line.strip()
 
             # Detect Arguments section
-            if stripped.lower() in ('arguments:', 'args:', 'parameters:', 'params:'):
+            if stripped.lower() in ("arguments:", "args:", "parameters:", "params:"):
                 in_args_section = True
                 continue
 
             # Exit arguments section on next section header or blank line
-            if in_args_section and stripped and stripped.endswith(':') and stripped != f"{param_name}:":
+            if in_args_section and stripped and stripped.endswith(":") and stripped != f"{param_name}:":
                 break
 
             # Look for parameter line
             if in_args_section:
                 # Match patterns like: "param_name - description" or "param_name: description"
-                match = re.match(rf'\s*{re.escape(param_name)}\s*[-:]\s*(.+)', line)
+                match = re.match(rf"\s*{re.escape(param_name)}\s*[-:]\s*(.+)", line)
                 if match:
                     return match.group(1).strip()
 
@@ -421,7 +441,7 @@ class ContextCatalog:
         """
         self.docs[doc_name] = doc_content
 
-    def get_doc(self, doc_name: str) -> Optional[str]:
+    def get_doc(self, doc_name: str) -> str | None:
         """
         Retrieve a documentation snippet by name.
 
@@ -433,7 +453,7 @@ class ContextCatalog:
         """
         return self.docs.get(doc_name)
 
-    def search_docs(self, query: str, limit: int = 10) -> List[Dict[str, str]]:
+    def search_docs(self, query: str, limit: int = 10) -> list[dict[str, str]]:
         """
         Search for documentation snippets matching keywords.
 

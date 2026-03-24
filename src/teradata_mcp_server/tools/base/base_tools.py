@@ -14,12 +14,7 @@ logger = logging.getLogger("teradata_mcp_server")
 # ------------------ Tool  ------------------#
 # Read query tool
 def handle_base_readQuery(
-    conn: Connection,
-    sql: str | None = None,
-    tool_name: str | None = None,
-    persist: bool = False,
-    *args,
-    **kwargs
+    conn: Connection, sql: str | None = None, tool_name: str | None = None, persist: bool = False, *args, **kwargs
 ):
     """
     Execute a SQL query via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
@@ -38,14 +33,15 @@ def handle_base_readQuery(
     volatile_table_name = None
     if persist:
         import uuid
-        unique_id = str(uuid.uuid4()).replace('-', '_')[:16]
+
+        unique_id = str(uuid.uuid4()).replace("-", "_")[:16]
         volatile_table_name = f"vt_{unique_id}"
 
         # Strip trailing semicolons from the SQL
-        sql_clean = sql.rstrip().rstrip(';')
-        
-        #Remove the final ORDER BY clause if present
-        sql_clean = re.sub(r'ORDER BY [\w\W\s\S]*$', '', sql_clean, flags=re.IGNORECASE).strip()
+        sql_clean = (sql or "").rstrip().rstrip(";")
+
+        # Remove the final ORDER BY clause if present
+        sql_clean = re.sub(r"ORDER BY [\w\W\s\S]*$", "", sql_clean, flags=re.IGNORECASE).strip()
 
         # Wrap in CREATE VOLATILE TABLE statement
         sql = f"CREATE VOLATILE TABLE {volatile_table_name} AS ({sql_clean}) WITH DATA ON COMMIT PRESERVE ROWS"
@@ -63,7 +59,7 @@ def handle_base_readQuery(
 
     # If we persisted in a volatile table, we won't get any rows back, we sample the resulting voltile table instead
     if volatile_table_name:
-        result = conn.execute(text(f'select top 10 * from {volatile_table_name}'))
+        result = conn.execute(text(f"select top 10 * from {volatile_table_name}"))
 
     cursor = result.cursor  # underlying DB-API cursor
     raw_rows = cursor.fetchall() or []

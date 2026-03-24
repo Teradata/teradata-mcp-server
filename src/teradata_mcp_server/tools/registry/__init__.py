@@ -7,4 +7,4 @@ allowing dynamic tool discovery and loading at runtime.
 
 from .registry_loader import RegistryLoader
 
-__all__ = ['RegistryLoader']
+__all__ = ["RegistryLoader"]

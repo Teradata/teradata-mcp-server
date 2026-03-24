@@ -22,11 +22,9 @@ import json
 import os
 import re
 from importlib.resources import files as pkg_files
-from typing import Annotated, Any, Dict, Optional
+from typing import Annotated, Any, Optional
 
 import yaml
-import json
-
 from fastmcp import FastMCP
 from fastmcp.prompts.prompt import Message, TextContent
 from fastmcp.server.dependencies import get_context
@@ -96,11 +94,10 @@ def create_mcp_app(settings: Settings):
             if enable_efs:
                 try:
                     import teradataml as tdml
+
                     fs_config = td.FeatureStoreConfig()
-                    try:
+                    with contextlib.suppress(Exception):
                         tdml.create_context(tdsqlengine=tdconn.engine)
-                    except Exception:
-                        pass
                 except Exception:
                     pass
 
@@ -437,7 +434,7 @@ def create_mcp_app(settings: Settings):
         @mcp.tool(name="search_tool")
         def search_tool(
             query: Annotated[str, "Tool name or keywords to search for. Leave empty to list all tools."] = "",
-            limit: Annotated[int, "Maximum number of results for approximate matches"] = 10
+            limit: Annotated[int, "Maximum number of results for approximate matches"] = 10,
         ):
             """Search for available tools - supports three modes based on the query.
 
@@ -475,7 +472,7 @@ def create_mcp_app(settings: Settings):
         @mcp.tool(name="execute_tool")
         def execute_tool(
             tool_name: Annotated[str, "Name of the tool to execute (from search_tool results)"],
-            arguments: Annotated[Dict[str, Any], "Dictionary of arguments to pass to the tool"] = None
+            arguments: Annotated[dict[str, Any] | None, "Dictionary of arguments to pass to the tool"] = None,
         ):
             """Execute a tool by name with provided arguments.
 
@@ -536,7 +533,7 @@ def create_mcp_app(settings: Settings):
             #    - Progressive disclosure: Tools registered in catalog, accessed via search_tool() and execute_tool()
             if settings.progressive_disclosure:
                 # Determine category from tool prefix
-                category = tool_name.split('_')[0] if '_' in tool_name else 'misc'
+                category = tool_name.split("_")[0] if "_" in tool_name else "misc"
                 context_catalog.register_tool(func, category=category)
                 registered_count += 1
                 logger.debug(f"Registered tool in catalog: {tool_name} (category: {category})")
@@ -555,7 +552,7 @@ def create_mcp_app(settings: Settings):
 
         if settings.progressive_disclosure:
             logger.info(f"Progressive disclosure: Registered {registered_count} tools in catalog")
-            logger.info(f"MCP exposes: search_tool, execute_tool, base_readQuery")
+            logger.info("MCP exposes: search_tool, execute_tool, base_readQuery")
         else:
             logger.info(f"Static mode: Registered {registered_count} MCP tools")
     else:
@@ -715,29 +712,31 @@ def create_mcp_app(settings: Settings):
 
         # Build docstring with parameters
         docstring_parts = [description]
-        if param_defs or True:  # Always show Arguments section to include persist
+        if True:  # Always show Arguments section to include persist
             docstring_parts.append("\nArguments:")
             for param_name, p in param_defs.items():
                 param_desc = p.get("description", "")
                 docstring_parts.append(f"  {param_name} - {param_desc}")
             # Add persist parameter documentation
-            docstring_parts.append(f"  persist - If True, materializes result as a volatile table and returns table name")
+            docstring_parts.append(
+                "  persist - If True, materializes result as a volatile table and returns table name"
+            )
 
         # Add required 'conn' parameter at the beginning (for catalog compatibility)
-        parameters.append(
-            inspect.Parameter("conn", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD)
-        )
+        parameters.append(inspect.Parameter("conn", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD))
 
         # Add tool_name parameter (internal, will be filtered out)
-        parameters.append(
-            inspect.Parameter("tool_name", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None)
-        )
+        parameters.append(inspect.Parameter("tool_name", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None))
 
         # Add persist parameter (for materializing results as volatile table)
         persist_description = "If True, materializes result as a volatile table and returns table name"
         parameters.append(
-            inspect.Parameter("persist", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                            default=False, annotation=Annotated[bool, persist_description])
+            inspect.Parameter(
+                "persist",
+                kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                default=False,
+                annotation=Annotated[bool, persist_description],
+            )
         )
 
         # Add custom parameters - separate required and optional
@@ -751,8 +750,9 @@ def create_mcp_app(settings: Settings):
             annotation = Annotated[type_hint, param_description] if param_description else type_hint
             default = p.get("default", inspect.Parameter.empty)
 
-            param = inspect.Parameter(param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                                     default=default, annotation=annotation)
+            param = inspect.Parameter(
+                param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=default, annotation=annotation
+            )
 
             if default is inspect.Parameter.empty:
                 required_params.append(param)
@@ -1024,7 +1024,7 @@ Returns:
             # Register according to mode (same pattern as Python tools)
             if settings.progressive_disclosure:
                 # Determine category from tool prefix
-                category = name.split('_')[0] if '_' in name else 'custom'
+                category = name.split("_")[0] if "_" in name else "custom"
                 context_catalog.register_tool(handler, category=category)
                 logger.info(f"Registered custom YAML tool in catalog: {name} (category: {category})")
             else:
@@ -1069,41 +1069,38 @@ Returns:
         """
         from teradata_mcp_server.tools.registry.registry_tools import build_registry_sql
 
-        description = tool_def.get('description', '')
-        param_defs = tool_def.get('parameters', {})
+        description = tool_def.get("description", "")
+        param_defs = tool_def.get("parameters", {})
 
         # Build docstring with parameters
         docstring_parts = [description]
         if param_defs:
             docstring_parts.append("\nArguments:")
-            for param_name, p in sorted(param_defs.items(), key=lambda x: x[1].get('position', 0)):
+            for param_name, p in sorted(param_defs.items(), key=lambda x: x[1].get("position", 0)):
                 param_desc = p.get("description", "")
                 docstring_parts.append(f"  {param_name} - {param_desc}")
         docstring_parts.append(f"\nRegistry tool: {tool_def['object_type']} {tool_def['db_object']}")
-        docstring_parts.append(f"Note: Registry tools do not support the 'persist' parameter")
+        docstring_parts.append("Note: Registry tools do not support the 'persist' parameter")
 
         # Add required 'conn' parameter at the beginning (for catalog compatibility)
-        parameters = [
-            inspect.Parameter("conn", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD)
-        ]
+        parameters = [inspect.Parameter("conn", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD)]
 
         # Add tool_name parameter (internal, will be filtered out)
-        parameters.append(
-            inspect.Parameter("tool_name", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None)
-        )
+        parameters.append(inspect.Parameter("tool_name", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None))
 
         # Add registry parameters - separate required and optional
         required_params = []
         optional_params = []
 
-        for param_name, p in sorted(param_defs.items(), key=lambda x: x[1].get('position', 0)):
+        for param_name, p in sorted(param_defs.items(), key=lambda x: x[1].get("position", 0)):
             param_description = p.get("description", "")
             type_hint = p.get("type_hint", str)
             annotation = Annotated[type_hint, param_description] if param_description else type_hint
             default = inspect.Parameter.empty if p.get("required", True) else p.get("default", None)
 
-            param = inspect.Parameter(param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                                     default=default, annotation=annotation)
+            param = inspect.Parameter(
+                param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=default, annotation=annotation
+            )
 
             if default is inspect.Parameter.empty:
                 required_params.append(param)
@@ -1116,14 +1113,17 @@ Returns:
         # Create the handler function (like handle_* functions)
         def handler(conn, tool_name=None, **kwargs):
             """Registry-defined database tool handler."""
-            from teradata_mcp_server.tools.registry.registry_tools import cast_parameters, build_registry_sql_with_values
+            from teradata_mcp_server.tools.registry.registry_tools import (
+                build_registry_sql_with_values,
+                cast_parameters,
+            )
 
             logger.info(f"[REGISTRY_HANDLER] Starting handler for tool '{tool_name}'")
             logger.info(f"[REGISTRY_HANDLER] Received kwargs: {kwargs}")
 
             # Extract tool parameters (excluding special params)
             # Note: persist is not supported for registry tools
-            special_params = {'tool_name'}
+            special_params = {"tool_name"}
             tool_params = {k: v for k, v in kwargs.items() if k not in special_params}
             logger.info(f"[REGISTRY_HANDLER] Tool params before casting: {tool_params}")
 
@@ -1144,7 +1144,7 @@ Returns:
                 td.handle_base_readQuery,
                 sql,  # SQL string with values already formatted
                 tool_name=tool_name or tool_name,
-                persist=False  # Registry tools do not support persist
+                persist=False,  # Registry tools do not support persist
                 # No **kwargs here - values are already in the SQL string
             )
 
@@ -1156,9 +1156,9 @@ Returns:
         return handler
 
     # Registry tools: Load tools from database registry incrementally
-    registry_db = config.get('registry')
+    registry_db = config.get("registry")
 
-    def load_registry_tools(last_load_ts: Optional[str] = None) -> Optional[str]:
+    def load_registry_tools(last_load_ts: str | None = None) -> str | None:
         """
         Load registry tools incrementally based on last load timestamp.
 
@@ -1193,10 +1193,14 @@ Returns:
                 # No new tools, but still return current timestamp for next refresh
                 return current_ts
 
-            logger.info(f"Found {len(registry_tools)} {'new/updated ' if last_load_ts else ''}tools in registry, registering...")
+            logger.info(
+                f"Found {len(registry_tools)} {'new/updated ' if last_load_ts else ''}tools in registry, registering..."
+            )
 
             for tool_name, tool_def in registry_tools.items():
-                logger.info(f"[REGISTRY] Processing tool {tool_name} ({tool_def['object_type']} {tool_def['db_object']})")
+                logger.info(
+                    f"[REGISTRY] Processing tool {tool_name} ({tool_def['object_type']} {tool_def['db_object']})"
+                )
 
                 # Create handler function (like handle_* functions)
                 handler = create_registry_handler(tool_name, tool_def)
@@ -1204,14 +1208,18 @@ Returns:
                 # Register according to mode (SAME AS PYTHON/YAML TOOLS)
                 if settings.progressive_disclosure:
                     # Determine category (could enhance registry to include category field)
-                    category = 'registry'
+                    category = "registry"
                     context_catalog.register_tool(handler, category=category)
-                    logger.info(f"[REGISTRY] Registered in catalog: {tool_name} (category: {category}, type: {tool_def['object_type']}, object: {tool_def['db_object']})")
+                    logger.info(
+                        f"[REGISTRY] Registered in catalog: {tool_name} (category: {category}, type: {tool_def['object_type']}, object: {tool_def['db_object']})"
+                    )
                 else:
                     # Static mode: wrap and register as MCP tool
                     wrapped = make_tool_wrapper(handler)
                     mcp.tool(name=tool_name, description=wrapped.__doc__)(wrapped)
-                    logger.info(f"[REGISTRY] Registered as MCP tool: {tool_name} (type: {tool_def['object_type']}, object: {tool_def['db_object']}, registered: {tool_def.get('registered_ts')})")
+                    logger.info(
+                        f"[REGISTRY] Registered as MCP tool: {tool_name} (type: {tool_def['object_type']}, object: {tool_def['db_object']}, registered: {tool_def.get('registered_ts')})"
+                    )
 
             logger.info(f"Successfully registered {len(registry_tools)} registry tools")
 

@@ -6,7 +6,7 @@ in the database registry views.
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger("teradata_mcp_server.registry_tools")
 
@@ -26,11 +26,11 @@ def format_sql_value(value: Any, python_type: type) -> str:
         Formatted SQL literal as a string
     """
     if value is None:
-        return 'NULL'
+        return "NULL"
 
     # Boolean types (check before numeric as bool is subclass of int)
-    if python_type == bool:
-        return '1' if value else '0'
+    if python_type is bool:
+        return "1" if value else "0"
 
     # Numeric types - convert to string without quotes
     if python_type in (int, float):
@@ -82,10 +82,10 @@ def cast_parameter_value(value: Any, target_type: type) -> Any:
 
     try:
         # Boolean type requires special handling
-        if target_type == bool:
+        if target_type is bool:
             # Handle string boolean values
             if isinstance(value, str):
-                return value.lower() in ('true', '1', 'yes', 'y', 't')
+                return value.lower() in ("true", "1", "yes", "y", "t")
             # Convert to bool
             return bool(value)
 
@@ -94,7 +94,7 @@ def cast_parameter_value(value: Any, target_type: type) -> Any:
             return target_type(value)
 
         # String type
-        if target_type == str:
+        if target_type is str:
             return str(value)
 
         # For other types, attempt direct conversion
@@ -102,13 +102,12 @@ def cast_parameter_value(value: Any, target_type: type) -> Any:
 
     except (ValueError, TypeError) as e:
         logger.warning(
-            f"Failed to cast parameter value {value!r} to type {target_type.__name__}: {e}. "
-            f"Returning original value."
+            f"Failed to cast parameter value {value!r} to type {target_type.__name__}: {e}. Returning original value."
         )
         return value
 
 
-def cast_parameters(params: Dict[str, Any], tool_def: Dict[str, Any]) -> Dict[str, Any]:
+def cast_parameters(params: dict[str, Any], tool_def: dict[str, Any]) -> dict[str, Any]:
     """
     Cast all parameter values to their expected types based on tool definition.
 
@@ -132,13 +131,13 @@ def cast_parameters(params: Dict[str, Any], tool_def: Dict[str, Any]) -> Dict[st
         >>> cast_parameters({'customer_id': '123', 'country': 'Spain'}, tool_def)
         {'customer_id': 123, 'country': 'Spain'}
     """
-    params_def = tool_def.get('parameters', {})
+    params_def = tool_def.get("parameters", {})
     cast_params = {}
 
     for param_name, param_value in params.items():
         # Get type hint from tool definition
         param_info = params_def.get(param_name, {})
-        target_type = param_info.get('type_hint', str)
+        target_type = param_info.get("type_hint", str)
 
         # Cast the value
         cast_value = cast_parameter_value(param_value, target_type)
@@ -155,7 +154,7 @@ def cast_parameters(params: Dict[str, Any], tool_def: Dict[str, Any]) -> Dict[st
     return cast_params
 
 
-def build_registry_sql_with_values(tool_def: Dict[str, Any], params: Dict[str, Any]) -> str:
+def build_registry_sql_with_values(tool_def: dict[str, Any], params: dict[str, Any]) -> str:
     """
     Build SQL statement with actual parameter values formatted as literals.
 
@@ -182,38 +181,37 @@ def build_registry_sql_with_values(tool_def: Dict[str, Any], params: Dict[str, A
         >>> build_registry_sql_with_values(tool_def, {'customer_id': 123, 'country': 'Spain'})
         "SELECT mydb.calculate_revenue(123, 'Spain')"
     """
-    db_object = tool_def['db_object']
-    object_type = tool_def['object_type']
-    params_def = tool_def.get('parameters', {})
+    db_object = tool_def["db_object"]
+    object_type = tool_def["object_type"]
+    params_def = tool_def.get("parameters", {})
 
     # Sort parameters by position to maintain correct order
-    sorted_params = sorted(params_def.items(), key=lambda x: x[1].get('position', 0))
+    sorted_params = sorted(params_def.items(), key=lambda x: x[1].get("position", 0))
 
     # Build parameter values as SQL literals
     param_values = []
     for param_name, param_info in sorted_params:
         value = params.get(param_name)
-        python_type = param_info.get('type_hint', str)
+        python_type = param_info.get("type_hint", str)
 
         # Format the value as SQL literal
         formatted_value = format_sql_value(value, python_type)
         param_values.append(formatted_value)
 
-        logger.debug(f"Formatted parameter '{param_name}': {value!r} ({type(value).__name__}) -> {formatted_value} (SQL literal)")
+        logger.debug(
+            f"Formatted parameter '{param_name}': {value!r} ({type(value).__name__}) -> {formatted_value} (SQL literal)"
+        )
 
-    params_str = ', '.join(param_values)
+    params_str = ", ".join(param_values)
 
     # Build SQL based on object type
-    if object_type.upper() == 'M':
-        sql = f"EXEC {db_object}({params_str})"
-    else:  # UDF (F = Function)
-        sql = f"SELECT {db_object}({params_str})"
+    sql = f"EXEC {db_object}({params_str})" if object_type.upper() == "M" else f"SELECT {db_object}({params_str})"
 
     logger.info(f"Built SQL with formatted values for {db_object}: {sql}")
     return sql
 
 
-def build_registry_sql(tool_def: Dict[str, Any]) -> str:
+def build_registry_sql(tool_def: dict[str, Any]) -> str:
     """
     Legacy function for backward compatibility.
     Returns SQL string without typed bindings.
@@ -221,21 +219,18 @@ def build_registry_sql(tool_def: Dict[str, Any]) -> str:
     Note: This is kept for compatibility with tests and YAML tools.
     Registry tools should use build_registry_sql_with_bindings() instead.
     """
-    db_object = tool_def['db_object']
-    object_type = tool_def['object_type']
-    params_def = tool_def.get('parameters', {})
+    db_object = tool_def["db_object"]
+    object_type = tool_def["object_type"]
+    params_def = tool_def.get("parameters", {})
 
     # Sort parameters by position to maintain correct order
-    sorted_params = sorted(params_def.items(), key=lambda x: x[1].get('position', 0))
+    sorted_params = sorted(params_def.items(), key=lambda x: x[1].get("position", 0))
 
     # Build named parameter placeholders
     param_placeholders = [f":{param_name}" for param_name, _ in sorted_params]
-    params_str = ', '.join(param_placeholders)
+    params_str = ", ".join(param_placeholders)
 
     # Build SQL based on object type
-    if object_type.upper() == 'M':
-        sql = f"EXEC {db_object}({params_str})"
-    else:  # UDF (F = Function)
-        sql = f"SELECT {db_object}({params_str})"
+    sql = f"EXEC {db_object}({params_str})" if object_type.upper() == "M" else f"SELECT {db_object}({params_str})"
 
     return sql
