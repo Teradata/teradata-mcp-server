@@ -30,8 +30,16 @@ def handle_base_readQuery(conn: Connection, sql: str | None = None, tool_name: s
         return create_response([], {"tool_name": tool_name or "base_readQuery", "error": "No SQL provided"})
     stmt = text(sql)
 
-    # 2. Execute with bind parameters if provided
-    result = conn.execute(stmt, kwargs) if kwargs else conn.execute(stmt)
+    # 2. Bind parameters to the statement if provided.
+    #    We use bindparams() instead of passing a dict to conn.execute() because
+    #    the teradatasql driver uses qmark paramstyle and SQLAlchemy's parameter
+    #    binding via conn.execute(stmt, dict) does not reliably translate named
+    #    parameters for this dialect. Binding directly to the text object ensures
+    #    correct compilation and also renders correct values in literal_binds metadata.
+    if kwargs:
+        stmt = stmt.bindparams(**kwargs)
+
+    result = conn.execute(stmt)
 
     # 3. Fetch rows & column metadata
     cursor = result.cursor  # underlying DB-API cursor
