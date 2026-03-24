@@ -196,6 +196,43 @@ Each entry in the YAML file is keyed by its name and must specify a `type`. Supp
 The server will automatically load packaged defaults plus your custom configurations from the config directory.
 
 
+## Database Tool Registry
+
+As an alternative to YAML files, you can register tools directly in the Teradata database. This is useful when tool definitions live alongside the database objects they wrap, or when you want to control tool availability through database-level permissions.
+
+The registry reads two views from a designated database schema (`mcp` by default):
+- **`mcp_list_tools`** — one row per tool (name, target object, description)
+- **`mcp_list_toolParams`** — one row per parameter (type, position, required flag)
+
+Supported object types: UDFs (`F`), Macros (`M`), Tables (`T`), Views (`V`).
+
+### Enabling the Registry
+
+Add a `registry` key to your profile in `profiles.yml`:
+
+```yaml
+my-registry-profile:
+  registry: "mcp"   # database schema containing the registry views
+  tool:
+    - "^base_.*"    # code-based tools to load alongside registry tools
+  prompt:
+    - ".*"
+```
+
+Then start the server with that profile:
+
+```bash
+teradata-mcp-server --profile my-registry-profile
+```
+
+Registry tools are loaded on the first database connection. They are always loaded in full — profile `tool` patterns apply only to code-based tools, not registry tools.
+
+### User Filtering
+
+Use `WHERE USER IN (...)` in your `mcp_list_tools` view to expose only the tools relevant to the connecting database user. This enables per-server or per-user tool sets from a shared registry.
+
+See the [registry developer guide](../developer_guide/REGISTRY_IMPLEMENTATION.md) and the [example SQL setup](../../examples/server-customization/registry_setup.sql) for full schema details and worked examples.
+
 ## Best Practices
 
 - **Organize by domain:** Use separate YAML files for each business domain (e.g., `sales_tools.yml`, `finance_metrics.yml`)
