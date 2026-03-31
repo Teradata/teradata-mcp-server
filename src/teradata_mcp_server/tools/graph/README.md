@@ -24,6 +24,123 @@ print(f"Total affected objects: {result['summary']['downstream_nodes']}")
 
 ## Tools
 
+This module provides two complementary tools for dependency analysis:
+
+1. **`graph_queryDependenciesAgent`** - Comprehensive bidirectional dependency analysis
+2. **`graph_findRootObjects`** - Identify starting points for downstream impact analysis
+
+---
+
+### `graph_findRootObjects`
+
+Find root objects (objects with no upstream dependencies) to identify ideal starting points for downstream impact analysis.
+
+#### Description
+
+Identifies objects that have **no upstream dependencies** in the ODEX repository. These "root objects" represent foundational data sources that nothing else depends upon, making them perfect starting points for:
+- Downstream impact analysis
+- Data pipeline understanding
+- Migration planning
+- Dependency mapping
+
+#### Use Cases
+
+| Use Case | Description | Configuration |
+|----------|-------------|---------------|
+| **Find Starting Points** | Identify where to begin impact analysis | `container_pattern="%WBC%,%StGeo%"` |
+| **Source Table Discovery** | Find base tables in data pipelines | `object_types="T"` |
+| **Foundation Objects** | Identify independent foundational objects | `exclude_objects="PRD_%,%.temp_%"` |
+| **Migration Planning** | Prioritise objects by downstream impact | `return_format="detailed"` |
+| **Quick Count** | Fast assessment of root object count | `return_format="summary"` |
+
+#### Parameters
+
+| Parameter | Type | Default | Required | Description |
+|-----------|------|---------|----------|-------------|
+| `container_pattern` | string | - | ✅ | Database/schema pattern(s) (supports % wildcards and CSV)<br>Examples: `%WBC%`, `%WBC%,%StGeo%`, `DEV01_%` |
+| `exclude_objects` | string | `''` | ❌ | **SERVER-SIDE filtering** - Comma-separated FQ patterns<br>Examples: `PRD_%`, `%.temp_%,%.bak_%` |
+| `edge_repository` | string | `DEV_01_ODEX_STD_0_V.ODEXRepository` | ❌ | ODEX repository to query |
+| `object_types` | string | `''` | ❌ | Filter by object type: `T` (tables), `V` (views), `P` (procedures)<br>Examples: `T`, `T,V` |
+| `return_format` | string | `detailed` | ❌ | Output format: `detailed` (full list) or `summary` (statistics only) |
+
+#### Example Queries
+
+**Natural Language (Triggers)**
+
+```
+"Which objects in WBC and StGeo databases should I start analysing?"
+"Find root objects in DEV01 databases"
+"What are the starting points for impact analysis?"
+"Show me base tables with no dependencies"
+```
+
+**Python Code Examples**
+
+```python
+# Find all root objects in WBC and StGeo databases
+result = handle_graph_findRootObjects(
+    conn=connection,
+    container_pattern="%WBC%,%StGeo%"
+)
+
+print(f"Found {len(result['results']['root_objects'])} root objects")
+for obj in result['results']['summary']['top_impact_objects']:
+    print(f"  {obj['name']} → {obj['downstream_count']} dependents")
+
+# Find only root tables (no views/procedures)
+result = handle_graph_findRootObjects(
+    conn=connection,
+    container_pattern="DEV01_%",
+    object_types="T",
+    exclude_objects="PRD_%,%.temp_%"
+)
+
+# Quick summary
+result = handle_graph_findRootObjects(
+    conn=connection,
+    container_pattern="%StGeo%",
+    return_format="summary"
+)
+print(result['results']['summary_text'])
+```
+
+#### Return Format
+
+**Detailed** (default):
+```json
+{
+  "results": {
+    "root_objects": [
+      {
+        "DatabaseName": "DEV01_StGeo_STD_T",
+        "ObjectName": "mortgage_account",
+        "FullyQualifiedName": "DEV01_StGeo_STD_T.mortgage_account",
+        "ObjectType": "T",
+        "DownstreamDependentCount": 15
+      }
+    ],
+    "summary": {
+      "total_root_objects": 42,
+      "object_type_counts": {"T": 35, "V": 7},
+      "top_impact_objects": [...]
+    }
+  }
+}
+```
+
+**Summary**:
+```json
+{
+  "results": {
+    "summary_text": "ROOT OBJECTS ANALYSIS SUMMARY\n...",
+    "statistics": {...},
+    "root_object_names": [...]
+  }
+}
+```
+
+---
+
 ### `graph_queryDependenciesAgent`
 
 The primary tool for comprehensive dependency analysis using recursive graph traversal.
@@ -395,6 +512,40 @@ graph:
 
 ## Integration Patterns
 
+### Workflow: Root Objects → Downstream Impact Analysis
+
+```python
+# Step 1: Find root objects (starting points)
+root_result = handle_graph_findRootObjects(
+    conn=connection,
+    container_pattern="%WBC%,%StGeo%",
+    object_types="T",  # Tables only
+    exclude_objects="PRD_%,%.temp_%"
+)
+
+# Step 2: Prioritise by downstream impact
+high_impact_roots = [
+    obj for obj in root_result['results']['root_objects']
+    if obj['DownstreamDependentCount'] > 10
+]
+
+# Step 3: Analyse downstream impact for each high-impact root
+for root_obj in high_impact_roots:
+    print(f"\n=== Analysing: {root_obj['FullyQualifiedName']} ===")
+    print(f"Downstream dependents: {root_obj['DownstreamDependentCount']}")
+    
+    impact_result = handle_graph_queryDependenciesAgent(
+        conn=connection,
+        object_name=root_obj['FullyQualifiedName'],
+        max_depth_up=0,      # No upstream (it's a root!)
+        max_depth_down=5,    # Deep downstream analysis
+        exclude_objects="PRD_%"
+    )
+    
+    print(f"Total impact: {impact_result['results']['summary']['downstream_nodes']} objects")
+    print(f"Max depth reached: {impact_result['results']['summary']['max_depth_downstream']}")
+```
+
 ### With D3.js/Cytoscape Visualisation
 
 ```python
@@ -494,8 +645,9 @@ generate_lineage_doc(
 
 Planned tools for this module:
 
+- ~~`graph_findRootObjects`~~ - ✅ **IMPLEMENTED** (v1.1) - Find root objects with no upstream dependencies
 - `graph_detectCircularDependencies` - Find circular reference loops
-- `graph_findOrphanedObjects` - Find objects with no dependencies
+- `graph_findOrphanedObjects` - Find objects with no dependencies (neither upstream nor downstream)
 - `graph_calculateMetrics` - Graph metrics (centrality, clustering coefficient)
 - `graph_suggestRefactoring` - Identify refactoring opportunities based on graph structure
 
@@ -503,8 +655,9 @@ Planned tools for this module:
 
 ### Documentation
 
-- [Complete Parameter Documentation](./graph_queryDependenciesAgent_complete_documentation.md)
-- [Fully Commented Source Code](./graph_tools_fully_commented.py)
+- [graph_queryDependenciesAgent Complete Documentation](./graph_queryDependenciesAgent_complete_documentation.md)
+- [graph_findRootObjects Complete Documentation](./graph_findRootObjects_complete_documentation.md)
+- [Fully Commented Source Code](./graph_tools.py)
 
 ### Contact
 
@@ -517,6 +670,16 @@ For issues or questions:
 ---
 
 **Version History**
+
+- **1.1** (2025-03-05): Added `graph_findRootObjects` tool
+  - Find objects with no upstream dependencies (root objects)
+  - Identify starting points for downstream impact analysis
+  - CSV pattern support for multiple container searches
+  - Server-side filtering via `exclude_objects` parameter
+  - Object type filtering (tables, views, procedures, macros)
+  - Two return formats: detailed (full list) and summary (statistics)
+  - Automatically sorts by downstream dependent count
+  - Comprehensive documentation and examples
 
 - **1.0** (2025-03-04): Initial release with `graph_queryDependenciesAgent` tool
   - Server-side filtering via `exclude_objects` parameter

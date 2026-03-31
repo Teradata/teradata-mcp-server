@@ -1,108 +1,67 @@
-# graph_queryDependenciesAgent Tool - Complete Function Documentation
+# graph_findRootObjects Tool - Complete Function Documentation
 
 **Version:** 1.0  
-**Last Updated:** 2025-03-04  
-**Purpose:** Teradata Object Dependency Analysis via ODEX Framework
+**Last Updated:** 2025-03-05  
+**Purpose:** Identify Root Objects for Downstream Impact Analysis
 
 ---
 
 ## Overview
 
-Analyse object dependencies in Teradata using graph traversal via the QueryDependenciesAgent stored procedure.
+Find root objects (objects with no upstream dependencies) in specified Teradata databases or schemas using the ODEX framework.
 
-Finds **upstream dependencies** (what the object depends on) and **downstream dependencies** (what depends on the object). Returns nodes and edges representing the complete dependency graph.
+Root objects represent **foundational data sources** that nothing else depends upon. They are ideal starting points for downstream impact analysis because they sit at the beginning of data flow pipelines.
+
+### What Are Root Objects?
+
+Root objects are database objects that:
+- **Have NO upstream dependencies** - they don't depend on any other objects
+- **Appear only as sources** in the ODEX repository (never as targets)
+- **Represent foundation data** - base tables, landing tables, source feeds
+- **Are ideal starting points** for downstream impact analysis
 
 ### Primary Use Cases
-- **Impact Analysis:** "What breaks if I change/drop this object?"
-- **Lineage Tracing:** "Where does this data come from?"
-- **Dependency Discovery:** "What does this object use?"
-- **Documentation:** Understanding object relationships
-- **Pre-deployment Validation:** Checking impacts before making changes
+- **Finding starting points** for downstream impact analysis
+- **Identifying source tables** and base objects in data pipelines
+- **Discovering independent objects** that can be safely analysed in isolation
+- **Understanding data flow origins** in a schema or database
+- **Planning migration or refactoring** by identifying foundation objects
 
 ---
 
 ## Parameters Reference
 
-### object_name
+### container_pattern
 **Type:** `string`  
 **Required:** `true`  
 
-Fully qualified object name in the format `DatabaseName.ObjectName`.
+Database or schema pattern(s) to search for root objects.
 
 Supports SQL LIKE wildcards (%):
-- `DEV01_StGeo_STD_T.mortgage_account` - Exact match for specific table
-- `DEV01_StGeo_STD_T.%` - All objects in a specific database
-- `%.mortgage_%` - All objects with 'mortgage_' prefix across all databases
+- `DEV01_StGeo_STD_T` - Exact match for specific database
+- `%WBC%` - All databases containing 'WBC'
+- `DEV01_%` - All databases starting with 'DEV01_'
+- `%_STD_T` - All databases ending with '_STD_T'
+
+**CRITICAL: CSV Support**  
+Multiple patterns can be specified as a **comma-separated string** (NOT an array):
+- `%WBC%,%StGeo%` - All WBC and StGeo databases
+- `DEV01_%,DEV02_%` - All DEV01 and DEV02 databases
+- `DEV01_StGeo_STD_T,DEV02_WBC_STD_T` - Specific databases
 
 **Examples:**
 ```
-DBC.TablesV
-DEV01_StGeo_STD_T.mortgage_account
-DEV02_WBC_STD_V.Mortgage_CDE_View
-DEV_01_ODEX_STD_0_P.CheckSQLValidity
+%WBC%
+%StGeo%
+%WBC%,%StGeo%
+DEV01_StGeo_STD_T
+DEV01_%,DEV02_%
 ```
 
-**Note:** Wildcards enable bulk analysis but may return very large result sets.
-
----
-
-### max_depth_up
-**Type:** `integer`  
-**Required:** `false`  
-**Default:** `3`  
-**Range:** `0-10`
-
-Maximum levels to traverse **upstream** (dependencies this object relies on).
-
-**Depth Levels:**
-- `0` = No upstream analysis (downstream only)
-- `1` = Direct dependencies only (immediate parents)
-- `2` = Parents + grandparents
-- `3` = Three levels up (default - good balance)
-- `5` = Deep lineage analysis
-- `10` = Maximum depth (may return very large graphs)
-
-**Performance Impact:**  
-Higher values increase query time exponentially and result size. Use lower values for quick checks, higher values for comprehensive lineage analysis.
-
-**Examples:**
-
-| Value | Use Case |
-|-------|----------|
-| 0 | Downstream impact only |
-| 1 | Find immediate dependencies |
-| 3 | Standard impact analysis (default) |
-| 10 | Complete lineage trace |
-
----
-
-### max_depth_down
-**Type:** `integer`  
-**Required:** `false`  
-**Default:** `3`  
-**Range:** `0-10`
-
-Maximum levels to traverse **downstream** (objects that depend on this one).
-
-**Depth Levels:**
-- `0` = No downstream analysis (upstream only)
-- `1` = Direct dependents only (immediate children)
-- `2` = Children + grandchildren  
-- `3` = Three levels down (default - good balance)
-- `5` = Deep blast radius analysis
-- `10` = Maximum depth (complete impact)
-
-**Critical for Impact Analysis:**  
-Shows the complete blast radius of changes. Higher values reveal full downstream impact but significantly increase processing time.
-
-**Examples:**
-
-| Value | Use Case |
-|-------|----------|
-| 0 | Upstream lineage only |
-| 1 | Find immediate consumers |
-| 3 | Standard blast radius (default) |
-| 10 | Complete impact trace |
+**Whitespace Handling:**  
+Whitespace is automatically trimmed from patterns:
+- `%WBC%,%StGeo%` (recommended - no spaces)
+- `%WBC%, %StGeo%` (also valid - spaces will be trimmed)
 
 ---
 
@@ -125,119 +84,54 @@ Comma-separated list of fully qualified object name patterns to exclude. Support
 Exclude entire database families by matching the database prefix:
 
 ```
--- Single database family
-PRD_%              -- All objects in databases starting with PRD_
+# Single database family
+PRD_%              # All objects in databases starting with PRD_
 
--- Multiple database families  
-PRD_%,TST_%,UAT_%  -- Production, test, and UAT databases
+# Multiple database families  
+PRD_%,TST_%,UAT_%  # Production, test, and UAT databases
 
--- Specific database
-PROD_DB.%          -- All objects in PROD_DB only
+# Specific database
+PROD_DB.%          # All objects in PROD_DB only
 ```
 
 #### Object-Level Exclusions
 Exclude objects by name pattern across all databases:
 
 ```
--- Temporary objects
-%.temp_%           -- All objects with 'temp_' prefix
+# Temporary objects
+%.temp_%           # All objects with 'temp_' prefix
 
--- Backup objects
-%.bak_%,%.backup_% -- Backup and archive objects
+# Backup objects
+%.bak_%,%.backup_% # Backup and archive objects
 
--- System objects
-%._sys_%,%.#%      -- System and temporary objects
+# System objects
+%._sys_%,%.#%      # System and temporary objects
 ```
 
-#### Common Use Cases
+#### Common Exclusion Patterns
 
 **Production Safety:**
 ```
 PRD_%,PROD_%
--- Excludes all production databases
+# Excludes all production databases
 ```
 
-**Multi-Environment Focus:**
+**Multi-Environment Focus (Dev Only):**
 ```
-TST_%,UAT_%,STG_%,PRD_%
--- Focus on DEV only by excluding all other environments
+PRD_%,TST_%,UAT_%,STG_%
+# Focus on DEV by excluding all other environments
 ```
 
 **Cleanup Analysis:**
 ```
 OLD_%,ARCHIVE_%,DEPRECATED_%,LEGACY_%
--- Exclude deprecated and archived databases
+# Exclude deprecated and archived databases
 ```
 
-**Regulatory Compliance:**
+**Personal/Sandbox Exclusion:**
 ```
-COMPLIANCE_%,REG_%,AUDIT_%,PII_%
--- Exclude sensitive/regulated databases
-```
-
-**Session-Specific:**
-```
-C_D02%,DFJ%
--- Exclude specific project or personal schemas
-```
-
-#### Real-World Example
-
-**Scenario:** Analyse DBC.TablesV dependencies, but exclude production, test schemas, and deprecated databases.
-
-```python
-graph_queryDependenciesAgent(
-    object_name="DBC.TablesV",
-    max_depth_down=10,
-    exclude_objects="PRD_%,DFJ%,C_D02%,TST_%,OLD_%"
-)
-```
-
-**Result:** Reduced from 71 edges to 52 edges (19 objects excluded = 27% reduction)
-
----
-
-### include_containers
-**Type:** `string`  
-**Required:** `false`  
-**Default:** `""` (empty - all containers included)
-
-Comma-separated list of schemas/databases to include in analysis. Acts as a **whitelist**.
-
-**When empty (default):** All containers included (subject to exclude_objects filter)  
-**When specified:** ONLY listed containers are analysed
-
-#### Use Cases
-- Focus analysis on specific project databases
-- Limit scope to specific data domains  
-- Isolate particular application schemas
-
-#### Combining with exclude_objects
-Fine-grained control by combining include (whitelist) and exclude (blacklist):
-
-```python
-include_containers="DEV_%"         # Only dev databases
-exclude_objects="DEV_ARCHIVE_%"    # But not archived dev
-```
-
-#### Examples
-
-**Single Project:**
-```
-DEV01_StGeo_STD_T,DEV01_StGeo_STD_V
--- Only StGeo tables and views
-```
-
-**Multiple Business Domains:**
-```
-MORTGAGE_%,LENDING_%,CREDIT_%
--- Multiple related domains
-```
-
-**Environment-Specific:**
-```
-DEV_%
--- All development databases (using wildcard)
+DFJ%,C_D02%,SANDBOX_%
+# Exclude personal and sandbox schemas
 ```
 
 ---
@@ -247,49 +141,56 @@ DEV_%
 **Required:** `false`  
 **Default:** `DEV_01_ODEX_STD_0_V.ODEXRepository`
 
-Edge table containing pre-computed dependency information.
+Edge table containing pre-computed dependency information from the ODEX framework.
 
 #### What is the ODEX Repository?
 
-The ODEX (Object Dependency Exchange) repository stores dependency relationships between database objects, populated by:
-- SQL parsing tools
-- Metadata analysis engines
-- Manual curation for edge cases
-
-#### Repository Structure
-
-Typically includes:
-- **Source object:** Container name + object name
-- **Target object:** Container name + object name  
-- **Relationship type:** "referenced by", "calls", "inserts into", etc.
-- **Edge metadata:** Last updated timestamp, confidence score, etc.
+The ODEX (Object Dependency Exchange) repository stores dependency relationships between database objects.
 
 #### Environment-Specific Repositories
 
 Different repositories exist for different environments:
 
 ```
--- Development
+# Development
 DEV_01_ODEX_STD_0_V.ODEXRepository
 
--- Production  
+# Production  
 PRD_01_ODEX_STD_0_V.ODEXRepository
-
--- Project-specific
-PROJECT_ODEX.DependencyGraph
-MIGRATION_META.EdgeRepository
 ```
 
-#### Performance Considerations
+---
 
-- ✅ **Good:** Repository has indexes on source/target containers
-- ⚠️ **Warning:** Stale repositories return incomplete dependencies
-- 🔄 **Best Practice:** Regular updates ensure accuracy
+### object_types
+**Type:** `string`  
+**Required:** `false`  
+**Default:** `""` (empty - all types included)
 
-**Index Requirements:**
-```sql
-CREATE INDEX idx_src ON ODEXRepository(Src_Container_Name, Src_Object_Name);
-CREATE INDEX idx_tgt ON ODEXRepository(Tgt_Container_Name, Tgt_Object_Name);
+Comma-separated list of object types to include (optional filter).
+
+#### Valid Object Types
+
+| Code | Object Type | Example Use Case |
+|------|-------------|------------------|
+| `T` | Tables | Find base tables only |
+| `V` | Views | Find foundational views |
+| `P` | Stored Procedures | Find independent procedures |
+| `M` | Macros | Find base macros |
+
+#### Examples
+
+```python
+# Tables only
+object_types="T"
+
+# Tables and views
+object_types="T,V"
+
+# Procedures only
+object_types="P"
+
+# Empty (all types)
+object_types=""
 ```
 
 ---
@@ -298,93 +199,169 @@ CREATE INDEX idx_tgt ON ODEXRepository(Tgt_Container_Name, Tgt_Object_Name);
 **Type:** `string`  
 **Required:** `false`  
 **Default:** `detailed`  
-**Valid Values:** `detailed`, `summary`, `edges_only`
+**Valid Values:** `detailed`, `summary`
 
 Output format controlling level of detail in results.
 
 #### Format Comparison
 
-| Format | Nodes | Edges | Stats | Metadata | Use Case |
-|--------|-------|-------|-------|----------|----------|
-| **detailed** | ✅ Full | ✅ Full | ✅ Yes | ✅ Yes | Visualisation, debugging |
-| **summary** | ❌ Count only | ❌ Count only | ✅ Yes | ✅ Yes | Quick impact check |
-| **edges_only** | ❌ No | ✅ Full | ❌ Minimal | ⚠️ Basic | Graph construction |
+| Format | Object List | Statistics | Metadata | Use Case |
+|--------|-------------|------------|----------|----------|
+| **detailed** | ✅ Full | ✅ Yes | ✅ Yes | See complete list |
+| **summary** | ❌ Names only | ✅ Yes | ✅ Yes | Quick overview |
 
 #### detailed (Default)
 Returns complete information:
-- Full node list with all attributes (type, depth, direction)
-- Complete edge list with relationship details
+- Full list of root objects with all attributes
 - Summary statistics
-- Extensive metadata about query execution
+- Database and type breakdowns
+- Top impact objects (by downstream dependent count)
 
 **Best for:**
-- Comprehensive dependency analysis
-- Building visualisations (D3.js, Cytoscape)
-- Debugging dependency issues
-- Documentation generation
+- Comprehensive root object analysis
+- Identifying specific objects to analyse
+- Understanding distribution across databases
+- Planning downstream impact studies
 
 #### summary
 Returns high-level statistics only:
-- Node counts by type and depth
-- Edge counts by direction
-- Aggregate metrics
-- No individual node/edge details
+- Total count of root objects
+- Breakdown by object type
+- Breakdown by database
+- Top 10 objects by downstream impact
+- List of root object names
 
 **Best for:**
-- Quick impact assessment ("How many objects affected?")
-- Performance monitoring
+- Quick counts ("How many root objects?")
 - Executive reporting
-- Change management approvals
+- Initial scoping
+- Performance (less data transferred)
 
-#### edges_only
-Returns only edge relationships:
-- Complete edge list
-- Minimal metadata
-- No node details (can be derived from edges)
+---
 
-**Best for:**
-- Building dependency graphs (nodes derived from edges)
-- Network analysis algorithms
-- Importing into graph databases (Neo4j, etc.)
-- Minimising data transfer size
+## Return Structure
 
-**Performance:**
-- `summary` is **fastest** (least data transferred)
-- `edges_only` is **medium** (nodes can be derived)
-- `detailed` is **slowest** but most complete
+### Detailed Format
+
+```json
+{
+  "results": {
+    "root_objects": [
+      {
+        "DatabaseName": "DEV01_StGeo_STD_T",
+        "ObjectName": "mortgage_account",
+        "FullyQualifiedName": "DEV01_StGeo_STD_T.mortgage_account",
+        "ObjectType": "T",
+        "DownstreamDependentCount": 15
+      },
+      ...
+    ],
+    "summary": {
+      "total_root_objects": 42,
+      "container_pattern": "%WBC%,%StGeo%",
+      "object_type_counts": {
+        "T": 35,
+        "V": 7
+      },
+      "database_counts": {
+        "DEV01_StGeo_STD_T": 20,
+        "DEV02_WBC_STD_T": 22
+      },
+      "total_downstream_dependencies": 387,
+      "average_downstream_per_root": 9.21,
+      "top_impact_objects": [
+        {
+          "name": "DEV01_StGeo_STD_T.mortgage_account",
+          "type": "T",
+          "downstream_count": 15
+        },
+        ...
+      ]
+    }
+  },
+  "metadata": {
+    "tool_name": "graph_findRootObjects",
+    "container_pattern": "%WBC%,%StGeo%",
+    "row_count": 42,
+    "status": "success"
+  }
+}
+```
+
+### Summary Format
+
+```json
+{
+  "results": {
+    "summary_text": "ROOT OBJECTS ANALYSIS SUMMARY\n...",
+    "statistics": {
+      "total_root_objects": 42,
+      "object_type_counts": {...},
+      "database_counts": {...},
+      "top_impact_objects": [...]
+    },
+    "root_object_names": [
+      "DEV01_StGeo_STD_T.mortgage_account",
+      "DEV02_WBC_STD_T.Mortgage",
+      ...
+    ]
+  }
+}
+```
 
 ---
 
 ## Best Practices
 
-### 1. Start Conservative
-Always begin with `max_depth=1` or `max_depth=3` for initial exploration. Incrementally increase depth only if needed.
-
-### 2. Filter Aggressively
-Use `exclude_objects` liberally to reduce noise and improve performance. Common patterns:
+### 1. Use Wildcards Effectively
+Always use wildcards when searching multiple databases:
 ```python
-exclude_objects="PRD_%,OLD_%,temp_%,%.bak_%"
+# ✅ Good - searches all WBC databases
+container_pattern="%WBC%"
+
+# ❌ Bad - searches for exact match "WBC"
+container_pattern="WBC"
 ```
 
-### 3. Cache Results
-Store frequently accessed dependency graphs to avoid repeated expensive queries.
+### 2. Filter Aggressively
+Use `exclude_objects` to reduce noise:
+```python
+exclude_objects="PRD_%,OLD_%,%.temp_%,%.bak_%"
+```
 
-### 4. Validate Repository Currency
-Before critical decisions, ensure the ODEX repository is up to date.
+### 3. Filter by Object Type When Needed
+Focus on specific object types:
+```python
+# Only find root tables
+object_types="T"
 
-### 5. Validate Object Names
-Use `base_tableList` to verify object exists before querying dependencies.
+# Only find root tables and views
+object_types="T,V"
+```
 
-### 6. Choose Right Format
-- Use `detailed` for visualisation and documentation
-- Use `summary` for quick checks and approvals
-- Use `edges_only` for graph databases
+### 4. Choose Right Format
+- Use `detailed` when you need to see the actual objects
+- Use `summary` for quick counts and overviews
 
-### 7. Document Exclusion Patterns
-As exclusion patterns evolve, document them for team consistency.
+### 5. Start Broad, Then Narrow
+Begin with broad patterns, then add filters:
+```python
+# Step 1: Find all root objects
+container_pattern="%WBC%,%StGeo%"
 
-### 8. Test with Depth 1 First
-Before running deep queries, test with `max_depth=1` to estimate result size.
+# Step 2: Refine with exclusions
+exclude_objects="PRD_%,%.temp_%"
+
+# Step 3: Filter by type if needed
+object_types="T"
+```
+
+### 6. Use Results for Downstream Analysis
+Root objects with highest `DownstreamDependentCount` have broadest impact:
+```python
+# Results are automatically sorted by DownstreamDependentCount DESC
+# Top objects in results list have highest downstream impact
+```
 
 ---
 
@@ -392,44 +369,237 @@ Before running deep queries, test with `max_depth=1` to estimate result size.
 
 | Scenario | Parameters |
 |----------|------------|
-| **Impact Analysis** | `max_depth_up=0, max_depth_down=5` |
-| **Data Lineage** | `max_depth_up=10, max_depth_down=0` |
-| **Full Context** | `max_depth_up=5, max_depth_down=5` |
-| **Quick Check** | `max_depth_down=1, return_format="summary"` |
-| **Safe Dev** | `exclude_objects="PRD_%,PROD_%"` |
-| **Project Focus** | `include_containers="PROJECT_%"` |
+| **All Root Objects in WBC/StGeo** | `container_pattern="%WBC%,%StGeo%"` |
+| **Root Tables Only** | `object_types="T"` |
+| **Excluding Production** | `exclude_objects="PRD_%,PROD_%"` |
+| **Quick Count** | `return_format="summary"` |
+| **Dev Environment Only** | `container_pattern="DEV%", exclude_objects="PRD_%,TST_%"` |
 
 ---
 
-## Common Exclusion Patterns
+## Example Queries
+
+### Natural Language (Triggers)
+
+```
+"Which objects in WBC and StGeo databases should I start analysing?"
+"Find root objects in DEV01 databases"
+"What are the starting points for impact analysis in StGeo?"
+"Show me base tables with no upstream dependencies"
+"Which objects have no dependencies in WBC?"
+```
+
+### Python Code Examples
+
+**1. Basic Root Object Search**
 
 ```python
-# Production safety
-"PRD_%,PROD_%"
+# Find all root objects in WBC and StGeo databases
+result = handle_graph_findRootObjects(
+    conn=connection,
+    container_pattern="%WBC%,%StGeo%"
+)
 
-# Multi-environment
-"PRD_%,TST_%,UAT_%,STG_%"
+print(f"Found {len(result['results']['root_objects'])} root objects")
+for obj in result['results']['root_objects'][:10]:
+    print(f"  {obj['FullyQualifiedName']} → {obj['DownstreamDependentCount']} dependents")
+```
 
-# Deprecated/legacy
-"OLD_%,ARCHIVE_%,DEPRECATED_%,LEGACY_%"
+**2. Root Tables Only**
 
-# Temporary/system
-"%.temp_%,%.bak_%,%._sys_%"
+```python
+# Find only root tables (no views, procedures, etc.)
+result = handle_graph_findRootObjects(
+    conn=connection,
+    container_pattern="DEV01_%",
+    object_types="T"
+)
+```
 
-# Personal/sandbox
-"DFJ%,C_D02%,SANDBOX_%"
+**3. Excluding Production and Temporary Objects**
+
+```python
+# Find root objects in dev, excluding production and temp objects
+result = handle_graph_findRootObjects(
+    conn=connection,
+    container_pattern="%WBC%,%StGeo%",
+    exclude_objects="PRD_%,%.temp_%,%.bak_%"
+)
+```
+
+**4. Quick Summary**
+
+```python
+# Get quick overview without full object list
+result = handle_graph_findRootObjects(
+    conn=connection,
+    container_pattern="%StGeo%",
+    return_format="summary"
+)
+
+print(result['results']['summary_text'])
+```
+
+**5. Identifying High-Impact Root Objects**
+
+```python
+# Find root objects and identify those with most downstream impact
+result = handle_graph_findRootObjects(
+    conn=connection,
+    container_pattern="%WBC%,%StGeo%",
+    return_format="detailed"
+)
+
+# Objects are sorted by DownstreamDependentCount DESC
+top_impact = result['results']['summary']['top_impact_objects']
+print("Start downstream analysis with these high-impact roots:")
+for obj in top_impact[:5]:
+    print(f"  {obj['name']} ({obj['type']}) → {obj['downstream_count']} dependents")
 ```
 
 ---
 
-## Performance Targets
+## Performance Guide
 
-| Metric | Target | Action if Exceeded |
-|--------|--------|-------------------|
-| Query Time | < 10s | Reduce depth or add exclusions |
-| Result Nodes | < 500 | Add exclude_objects |
-| Result Edges | < 1000 | Reduce max_depth or scope |
-| Depth Setting | ≤ 5 | Only use 10 for complete traces |
+### Query Time Expectations
+
+| Container Scope | Typical Time | Notes |
+|-----------------|--------------|-------|
+| Single database | 2-5 seconds | Fast |
+| Multiple databases (%WBC%) | 5-15 seconds | Standard |
+| All databases (%) | 20-60+ seconds | Use exclusions |
+
+### Result Size Expectations
+
+| Scope | Typical Root Objects |
+|-------|---------------------|
+| Single small database | 5-20 |
+| Single large database | 20-100 |
+| Multiple databases | 50-500+ |
+
+### Optimisation Strategies
+
+1. **Use specific container patterns**
+   - `DEV01_StGeo_STD_T` faster than `%StGeo%`
+   - `%WBC%,%StGeo%` faster than `%`
+
+2. **Use exclude_objects aggressively**
+   - Can reduce result set by 30-70%
+   - Server-side filtering is very efficient
+
+3. **Filter by object_types**
+   - `object_types="T"` focuses on tables only
+   - Reduces result set significantly
+
+4. **Use return_format wisely**
+   - `summary` for quick checks (smallest transfer)
+   - `detailed` when you need the actual list
+
+---
+
+## Integration Patterns
+
+### With Downstream Impact Analysis
+
+```python
+# Step 1: Find root objects
+root_result = handle_graph_findRootObjects(
+    conn=connection,
+    container_pattern="%WBC%,%StGeo%",
+    object_types="T"  # Tables only
+)
+
+# Step 2: Analyse downstream impact for each root
+for root_obj in root_result['results']['root_objects']:
+    if root_obj['DownstreamDependentCount'] > 10:  # High impact
+        impact_result = handle_graph_queryDependenciesAgent(
+            conn=connection,
+            object_name=root_obj['FullyQualifiedName'],
+            max_depth_up=0,
+            max_depth_down=5
+        )
+        
+        print(f"\nImpact analysis for {root_obj['FullyQualifiedName']}:")
+        print(f"  Downstream objects affected: {impact_result['results']['summary']['downstream_nodes']}")
+```
+
+### With Change Management
+
+```python
+# Find root objects for migration planning
+root_result = handle_graph_findRootObjects(
+    conn=connection,
+    container_pattern="LEGACY_%",
+    exclude_objects="%.temp_%,%.bak_%"
+)
+
+# Prioritise by downstream impact
+roots = root_result['results']['root_objects']
+high_priority = [r for r in roots if r['DownstreamDependentCount'] > 20]
+medium_priority = [r for r in roots if 5 <= r['DownstreamDependentCount'] <= 20]
+low_priority = [r for r in roots if r['DownstreamDependentCount'] < 5]
+
+print(f"Migration planning:")
+print(f"  High priority (>20 dependents): {len(high_priority)} objects")
+print(f"  Medium priority (5-20 dependents): {len(medium_priority)} objects")
+print(f"  Low priority (<5 dependents): {len(low_priority)} objects")
+```
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| **No Results** | Pattern doesn't match any databases | Verify database names with `base_databaseList` |
+| **Too Many Results** | Pattern too broad | Add `exclude_objects` or narrow `container_pattern` |
+| **Unexpected Objects** | Object has hidden dependencies | Check ODEX repository currency |
+| **Query Timeout** | Searching too many containers | Use more specific patterns or add exclusions |
+
+### Debug Steps
+
+1. **Verify databases exist**
+   ```python
+   base_databaseList(scope='user')
+   ```
+
+2. **Test with specific database**
+   ```python
+   result = handle_graph_findRootObjects(
+       container_pattern="DEV01_StGeo_STD_T"  # Specific, not wildcard
+   )
+   ```
+
+3. **Check ODEX repository**
+   ```python
+   base_readQuery(sql=f"""
+       SELECT COUNT(*) as EdgeCount
+       FROM DEV_01_ODEX_STD_0_V.ODEXRepository
+       WHERE Src_Container_Name LIKE '%WBC%'
+   """)
+   ```
+
+---
+
+## Technical Implementation Notes
+
+### SQL Query Strategy
+
+The tool uses a subquery approach to identify root objects:
+
+1. **Main Query**: Find all objects in specified containers
+2. **Subquery**: Find all objects that appear as targets (have upstream dependencies)
+3. **Exclusion**: Remove objects from main query that appear in subquery
+4. **Result**: Objects that are only sources (root objects)
+
+### Why This Approach?
+
+- **Efficient**: Single query with subquery is faster than multiple queries
+- **Accurate**: Guaranteed to find true roots (no upstream dependencies)
+- **Scalable**: Server-side filtering and grouping
+- **Flexible**: Supports wildcards, CSV patterns, and exclusions
 
 ---
 
