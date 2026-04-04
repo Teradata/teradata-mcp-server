@@ -1,13 +1,123 @@
+qlty_missingValues:
+  type: tool
+  description: "Get the column names that have missing values in a table."
+  parameters:
+    database_name:
+      description: "Name of the database (optional, omit if table_name is fully qualified)"
+      type_hint: str
+      default: ''
+    table_name:
+      description: "Table name to analyze"
+      type_hint: str
+  sql: |
+    select ColumnName, NullCount, NullPercentage from TD_ColumnSummary ( on (SELECT * FROM {table_ref}) as InputTable using TargetColumns ('[:]')) as dt ORDER BY NullCount desc
+
+qlty_negativeValues:
+  type: tool
+  description: "Get the column names that have negative values in a table."
+  parameters:
+    database_name:
+      description: "Name of the database (optional, omit if table_name is fully qualified)"
+      type_hint: str
+      default: ''
+    table_name:
+      description: "Table name to analyze"
+      type_hint: str
+  sql: |
+    select ColumnName, NegativeCount from TD_ColumnSummary ( on (SELECT * FROM {table_ref}) as InputTable using TargetColumns ('[:]')) as dt ORDER BY NegativeCount desc
+
+qlty_distinctCategories:
+  type: tool
+  description: "Get the distinct categories from a column in a table."
+  parameters:
+    database_name:
+      description: "Name of the database (optional, omit if table_name is fully qualified)"
+      type_hint: str
+      default: ''
+    table_name:
+      description: "Table name to analyze"
+      type_hint: str
+    column_name:
+      description: "Column name to analyze"
+      type_hint: str
+  sql: |
+    select * from TD_CategoricalSummary ( on (SELECT * FROM {table_ref}) as InputTable using TargetColumns ('{column_name}')) as dt
+
+qlty_standardDeviation:
+  type: tool
+  description: "Get the mean and standard deviation for a column in a table."
+  parameters:
+    database_name:
+      description: "Name of the database (optional, omit if table_name is fully qualified)"
+      type_hint: str
+      default: ''
+    table_name:
+      description: "Table name to analyze"
+      type_hint: str
+    column_name:
+      description: "Column name to analyze"
+      type_hint: str
+  sql: |
+    select * from TD_UnivariateStatistics ( on (SELECT * FROM {table_ref}) as InputTable using TargetColumns ('{column_name}') Stats('MEAN','STD')) as dt ORDER BY 1,2
+
+qlty_columnSummary:
+  type: tool
+  description: "Get column summary statistics for all columns in a table."
+  parameters:
+    database_name:
+      description: "Name of the database (optional, omit if table_name is fully qualified)"
+      type_hint: str
+      default: ''
+    table_name:
+      description: "Table name to analyze"
+      type_hint: str
+  sql: |
+    select * from TD_ColumnSummary ( on (SELECT * FROM {table_ref}) as InputTable using TargetColumns ('[:]')) as dt
+
+qlty_univariateStatistics:
+  type: tool
+  description: "Get full univariate statistics for a column in a table."
+  parameters:
+    database_name:
+      description: "Name of the database (optional, omit if table_name is fully qualified)"
+      type_hint: str
+      default: ''
+    table_name:
+      description: "Table name to analyze"
+      type_hint: str
+    column_name:
+      description: "Column name to analyze"
+      type_hint: str
+  sql: |
+    select * from TD_UnivariateStatistics ( on (SELECT * FROM {table_ref}) as InputTable using TargetColumns ('{column_name}') Stats('ALL')) as dt ORDER BY 1,2
+
+qlty_rowsWithMissingValues:
+  type: tool
+  description: "Get the rows that have missing values in a specific column of a table."
+  parameters:
+    database_name:
+      description: "Name of the database (optional, omit if table_name is fully qualified)"
+      type_hint: str
+      default: ''
+    table_name:
+      description: "Table name to analyze"
+      type_hint: str
+    column_name:
+      description: "Column name to analyze for missing values"
+      type_hint: str
+  sql: |
+    select * from TD_getRowsWithMissingValues ( ON (SELECT * FROM {table_ref}) AS InputTable USING TargetColumns ('[{column_name}]')) AS dt
+
 qlty_databaseQuality:
   type: prompt
   description: "Database data quality assessment. (prompt_type: reporting)"
   prompt: |
     # Name:  Database data quality assessment
 
-    # Description: 
+    # Description:
     You are a Teradata User who is a data quality expert focused on tables and their use for analytics.
 
-    # Process 
+    # Process
     - You will work through all the phases in order
     - You will complete a phase and pass the outcomes to the subsequent phase
     - You will be assessing the {database_name} database and all the tables in it
@@ -20,7 +130,7 @@ qlty_databaseQuality:
     Cycle through the list of tables, for each table do the following steps in order:
     - Step 1 - using the base_tableDDL tool to get the table structure, using the structure generate a business description of the table and all of the columns.
     - Step 2 - using the qlty_columnSummary tool, gather column statistics for the table
-    - Step 3 - using the qlty_univariateStatistics tool to get the univariate statistics for a table 
+    - Step 3 - using the qlty_univariateStatistics tool to get the univariate statistics for a table
     - Step 4 - using the qlty_rowsWithMissingValues tool to get rows with missing values in a table
 
     ## Phase 3 - Present results as a dashboard

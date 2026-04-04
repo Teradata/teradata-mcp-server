@@ -1,3 +1,272 @@
+dba_tableSpace:
+  type: tool
+  description: "Get table space used across all tables, or filtered by database and/or table name."
+  parameters:
+    database_name:
+      description: "Database name filter. Leave empty for all databases."
+      type_hint: str
+      default: ''
+    table_name:
+      description: "Table name filter. Leave empty for all tables."
+      type_hint: str
+      default: ''
+    top_n:
+      description: "Limit results to top N largest tables by space. Set to 0 for no limit (default: 0)."
+      type_hint: int
+      default: 0
+    exclude_system:
+      description: "Exclude system databases and tables. Set to 'Y' to exclude, 'N' to include all (default: 'N')."
+      type_hint: str
+      default: 'N'
+  sql: |
+    SELECT a.DatabaseName, a.TableName,
+        SUM(a.CurrentPerm) AS CurrentPerm1, SUM(a.PeakPerm) AS PeakPerm,
+        CAST((100-(AVG(a.CURRENTPERM)/MAX(NULLIFZERO(a.CURRENTPERM))*100)) AS DECIMAL(5,2)) AS SkewPct
+    FROM DBC.AllSpaceV a
+    LEFT JOIN DBC.TablesV t ON a.DatabaseName = t.DatabaseName AND a.TableName = t.TableName
+    WHERE (:database_name = '' OR a.DatabaseName = :database_name)
+    AND (:table_name = '' OR a.TableName = :table_name)
+    AND (:exclude_system <> 'Y' OR (
+        t.TableKind = 'T'
+        AND a.DatabaseName NOT IN (
+            'DBC','SYSLIB','SystemFe','SYSUDTLIB','SYSJDBC','SYSSPATIAL',
+            'TD_SYSFNLIB','TDQCD','TDStats','TDPUSER','dbcmngr','Crashdumps',
+            'LockLogShredder','SYSBAR','SysAdmin','Sys_Calendar','EXTUSER',
+            'DEFAULT','All','PUBLIC','SQLJ','SYSUIF','TD_ANALYTICS_DB',
+            'TD_SERVER_DB','TD_SYSGPL','TDSYSFLOW','TDMaps','SAS_SYSFNLIB',
+            'TDBCMgmt','External_AP','PDCRAdmin','PDCRSTG','PDCRDATA',
+            'PDCRINFO','PDCRTPCD','PDCRADM','TD_DATASHARING_REPO',
+            'TD_METRIC_SVC','console','tdwm','val'
+        )
+        AND a.DatabaseName NOT LIKE 'TDaaS%'
+        AND a.TableName <> 'All'
+        AND a.TableName NOT LIKE 'hist_%'
+        AND a.TableName NOT LIKE '%.%'
+    ))
+    GROUP BY a.DatabaseName, a.TableName
+    QUALIFY ROW_NUMBER() OVER (ORDER BY CurrentPerm1 DESC) <= COALESCE(NULLIFZERO(:top_n), 2147483647)
+    ORDER BY CurrentPerm1 DESC;
+
+dba_tableSqlList:
+  type: tool
+  description: "Get a list of SQL run against a table in the last number of days."
+  parameters:
+    table_name:
+      description: "Table name to search for"
+      type_hint: str
+    no_days:
+      description: "Number of days to look back"
+      type_hint: int
+      default: 7
+  sql: |
+    SELECT t1.QueryID, t1.ProcID, t1.CollectTimeStamp, t1.SqlTextInfo, t2.UserName
+    FROM DBC.QryLogSqlV t1
+    JOIN DBC.QryLogV t2 ON t1.QueryID = t2.QueryID
+    WHERE CAST(t1.CollectTimeStamp AS DATE) >= CURRENT_DATE - :no_days
+    AND t1.SqlTextInfo LIKE '%' || :table_name || '%'
+    ORDER BY t1.CollectTimeStamp DESC;
+
+dba_userSqlList:
+  type: tool
+  description: "Get SQL run by a user in the last number of days. Leave user_name empty for all users."
+  parameters:
+    user_name:
+      description: "User name filter. Leave empty or omit for all users."
+      type_hint: str
+      default: ''
+    no_days:
+      description: "Number of days to look back"
+      type_hint: int
+      default: 7
+  sql: |
+    SELECT t1.QueryID, t1.ProcID, t1.CollectTimeStamp, t1.SqlTextInfo, t2.UserName
+    FROM DBC.QryLogSqlV t1
+    JOIN DBC.QryLogV t2 ON t1.QueryID = t2.QueryID
+    WHERE CAST(t1.CollectTimeStamp AS DATE) >= CURRENT_DATE - :no_days
+    AND (:user_name = '' OR t2.UserName = :user_name)
+    ORDER BY t1.CollectTimeStamp DESC;
+
+dba_databaseSpace:
+  type: tool
+  description: "Get database space allocation for a specific database or all databases."
+  parameters:
+    database_name:
+      description: "Database name. Leave empty or omit for all databases."
+      type_hint: str
+      default: ''
+  sql: |
+    SELECT
+        DatabaseName,
+        CAST(SUM(MaxPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceAllocated_GB,
+        CAST(SUM(CurrentPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceUsed_GB,
+        CAST((SUM(MaxPerm) - SUM(CurrentPerm))/1024/1024/1024 AS DECIMAL(10,2)) AS FreeSpace_GB,
+        CAST((SUM(CurrentPerm) * 100.0 / NULLIF(SUM(MaxPerm),0)) AS DECIMAL(10,2)) AS PercentUsed
+    FROM DBC.DiskSpaceV
+    WHERE MaxPerm > 0
+    AND (:database_name = '' OR DatabaseName = :database_name)
+    GROUP BY 1
+    ORDER BY 5 DESC;
+
+dba_tableUsageImpact:
+  type: tool
+  description: "Measure the usage of tables and views by users to understand what users and tables are driving most resource usage."
+  parameters:
+    database_name:
+      description: "Database name to analyze. Leave empty for all databases."
+      type_hint: str
+      default: ''
+    user_name:
+      description: "User name to analyze. Leave empty for all users."
+      type_hint: str
+      default: ''
+  sql: |
+    LOCKING ROW FOR ACCESS
+    SELECT
+        DatabaseName, TableName, UserName,
+        Weight AS "QueryCount",
+        100 * "Weight" / SUM("Weight") OVER (PARTITION BY 1) AS PercentTotal,
+        CASE
+            WHEN PercentTotal >= 10 THEN 'High'
+            WHEN PercentTotal >= 5  THEN 'Medium'
+            ELSE 'Low'
+        END (CHAR(6)) AS usage_freq,
+        FirstQueryDaysAgo, LastQueryDaysAgo
+    FROM (
+        SELECT
+            TRIM(QTU1.TableName) AS "TableName",
+            TRIM(QTU1.DatabaseName) AS "DatabaseName",
+            QU.UserName AS "UserName",
+            MAX((CURRENT_TIMESTAMP - CollectTimeStamp) DAY(4)) AS "FirstQueryDaysAgo",
+            MIN((CURRENT_TIMESTAMP - CollectTimeStamp) DAY(4)) AS "LastQueryDaysAgo",
+            COUNT(DISTINCT QTU1.QueryID) AS "Weight"
+        FROM (
+            SELECT objectdatabasename AS DatabaseName, ObjectTableName AS TableName, ob.QueryId
+            FROM DBC.DBQLObjTbl ob
+            WHERE ObjectType IN ('Tab', 'Viw')
+            AND (:database_name = '' OR objectdatabasename = :database_name)
+            AND ObjectTableName IS NOT NULL
+            AND ObjectColumnName IS NULL
+            GROUP BY 1, 2, 3
+        ) AS QTU1
+        INNER JOIN DBC.DBQLogTbl QU ON QTU1.QueryID = QU.QueryID
+            AND (QU.AMPCPUTime + QU.ParserCPUTime) > 0
+            AND (QU.UserName = '' OR QU.UserName = :user_name)
+        GROUP BY 1, 2, 3
+    ) a
+    ORDER BY PercentTotal DESC
+    QUALIFY PercentTotal > 0;
+
+dba_resusageSummary:
+  type: tool
+  description: "Get summary of resource usage (CPU, IO, Memory) for a specified date range, broken down by specified dimensions."
+  parameters:
+    user_name:
+      description: "User name to filter by. Leave empty for all users."
+      type_hint: str
+      default: ''
+    LogDate:
+      description: "Log date to filter by in YYYY-MM-DD format. Leave empty for all dates."
+      type_hint: str
+      default: ''
+    dayOfWeek:
+      description: "Day of week to filter by (1=Sunday, 2=Monday, ..., 7=Saturday). Leave empty for all days."
+      type_hint: str
+      default: ''
+    hourOfDay:
+      description: "Hour of day to filter by (0-23). Leave empty for all hours."
+      type_hint: str
+      default: ''
+    workloadType:
+      description: "Workload type to filter by (e.g., 'Batch', 'Interactive'). Leave empty for all workload types."
+      type_hint: str
+      default: ''
+    workloadComplexity:
+      description: "Workload complexity to filter by (e.g., 'Simple', 'Medium', 'Complex'). Leave empty for all complexity levels."
+      type_hint: str
+      default: ''
+    AppID:
+      description: "Application ID to filter by. Leave empty for all applications."
+      type_hint: str
+      default: ''
+    no_days:
+      description: "Number of days to look back from today (e.g., 7, 30, 90)."
+      type_hint: int
+      default: 7
+  sql: |
+    SELECT
+      LogDate,
+      hourOfDay,
+      dayOfWeek,
+      workloadType,
+      workloadComplexity,
+      UserName,
+      AppId,       
+      COUNT(*) AS "Request Count",
+      SUM(AMPCPUTime) AS "Total AMPCPUTime",
+      SUM(TotalIOCount) AS "Total IOCount",
+      SUM(ReqIOKB) AS "Total ReqIOKB",
+      SUM(ReqPhysIO) AS "Total ReqPhysIO",
+      SUM(ReqPhysIOKB) AS "Total ReqPhysIOKB",
+      SUM(SumLogIO_GB) AS "Total ReqIO GB",
+      SUM(SumPhysIO_GB) AS "Total ReqPhysIOGB",
+      SUM(TotalServerByteCount) AS "Total Server Byte Count"
+    FROM
+      (
+        SELECT
+          CAST(QryLog.Starttime as DATE) AS LogDate,
+          EXTRACT(HOUR FROM StartTime) AS hourOfDay,
+          CASE QryCal.day_of_week
+            WHEN 1 THEN 'Sunday'
+            WHEN 2 THEN 'Monday'
+            WHEN 3 THEN 'Tuesday'
+            WHEN 4 THEN 'Wednesday'
+            WHEN 5 THEN 'Thursday'
+            WHEN 6 THEN 'Friday'
+            WHEN 7 THEN 'Saturday'
+          END AS dayOfWeek,
+          QryLog.UserName,
+          QryLog.AcctString,
+          QryLog.AppID ,
+          CASE
+            WHEN QryLog.AppID LIKE ANY('TPTLOAD%', 'TPTUPD%', 'FASTLOAD%', 'MULTLOAD%', 'EXECUTOR%', 'JDBCL%') THEN 'LOAD'
+            WHEN QryLog.StatementType IN ('Insert', 'Update', 'Delete', 'Create Table', 'Merge Into')
+                AND QryLog.AppID NOT LIKE ANY('TPTLOAD%', 'TPTUPD%', 'FASTLOAD%', 'MULTLOAD%', 'EXECUTOR%', 'JDBCL%') THEN 'ETL/ELT'
+            WHEN QryLog.StatementType = 'Select' AND (AppID IN ('TPTEXP', 'FASTEXP') OR AppID LIKE 'JDBCE%') THEN 'EXPORT'
+            WHEN QryLog.StatementType = 'Select'
+                AND QryLog.AppID NOT LIKE ANY('TPTLOAD%', 'TPTUPD%', 'FASTLOAD%', 'MULTLOAD%', 'EXECUTOR%', 'JDBCL%') THEN 'QUERY'
+            WHEN QryLog.StatementType IN ('Dump Database', 'Unrecognized type', 'Release Lock', 'Collect Statistics') THEN 'ADMIN'
+            ELSE 'OTHER'
+          END AS workloadType,
+          CASE
+            WHEN StatementType = 'Merge Into' THEN 'Ingest & Prep'
+            WHEN StatementType = 'Select' THEN 'Answers'
+            ELSE 'System/Procedural'
+          END AS workloadComplexity,
+          QryLog.AMPCPUTime,
+          QryLog.TotalIOCount,
+          QryLog.ReqIOKB,
+          QryLog.ReqPhysIO,
+          QryLog.ReqPhysIOKB,
+          QryLog.TotalServerByteCount,
+          (QryLog.ReqIOKB / 1024 / 1024) AS SumLogIO_GB,
+          (QryLog.ReqPhysIOKB / 1024 / 1024) AS SumPhysIO_GB
+        FROM
+          DBC.DBQLogTbl QryLog
+          INNER JOIN Sys_Calendar.CALENDAR QryCal
+          ON QryCal.calendar_date = CAST(QryLog.Starttime as DATE)
+        WHERE
+          CAST(QryLog.Starttime as DATE) BETWEEN CURRENT_DATE - {no_days} AND CURRENT_DATE
+          AND StartTime IS NOT NULL
+      ) AS QryDetails
+    WHERE (:LogDate = '' OR CAST(LogDate AS VARCHAR(10)) = :LogDate)
+    AND (:hourOfDay = '' OR hourOfDay = :hourOfDay)
+    AND (:dayOfWeek = '' OR dayOfWeek = :dayOfWeek)
+    AND (:workloadType = '' OR workloadType = :workloadType)
+    AND (:workloadComplexity = '' OR workloadComplexity = :workloadComplexity)
+    AND (:user_name = '' OR UserName = :user_name)
+    AND (:AppID = '' OR AppID = :AppID)
+    GROUP BY 1,2,3,4,5,6,7;
+
 dba_databaseVersion:
   type: tool
   description: " Get Teradata database version information."
@@ -155,7 +424,7 @@ dba_tableArchive:
     You are a Teradata DBA who is an expert in finding opportunities for archiving data.
 
     ## Phase 1 - Get the 10 largest user tables
-    Use dba_tableSpace tool with top_n=10 and exclude_system=true to get the 10 largest user tables.
+    Use dba_tableSpace tool with top_n=10 and exclude_system='Y' to get the 10 largest user tables.
     Save the list of {DatabaseName, TableName} pairs for Phase 2.
 
     ## Phase 2 - Get DDL for each table
@@ -277,7 +546,7 @@ dba_databaseHealthAssessment :
     Use base_databaseList tool with scope='{database_scope}' to get a list of databases.
     Create a list of database names for the phases below.
     Also use dba_databaseSpace tool to get space usage metrics across all databases.
-    Also use dba_tableSpace tool with top_n=10 and exclude_system=true to get the top 10 space-consuming tables.
+    Also use dba_tableSpace tool with top_n=10 and exclude_system='Y' to get the top 10 space-consuming tables.
 
     ## Phase 2 - Resource usage analysis for the last 30 days
     Use dba_resusageSummary tool with no_days=30 to gather CPU, IO, and Memory resource usage patterns.
