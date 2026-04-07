@@ -43,7 +43,7 @@ from teradata_mcp_server.tools.utils import (
 )
 from teradata_mcp_server.tools.utils.queryband import build_queryband
 from teradata_mcp_server.utils import format_error_response, format_text_response, resolve_type_hint, setup_logging
-
+from teradata_mcp_server.tools.graph.graph_edge_contract import GRAPH_EDGE_CONTRACT
 
 def create_mcp_app(settings: Settings):
     """Create and configure the FastMCP app with middleware, tools, prompts, resources."""
@@ -920,6 +920,22 @@ Returns:
                 return term
             else:
                 return {"error": f"Glossary term not found: {term_name}"}
+
+    # ── Graph Edge Contract Resource ──────────────────────────────────────
+    # Always registered (static content, no YAML dependency).
+    # AI agents retrieve this to understand the edge_repository schema
+    # required by all graph_* tools.
+    # ──────────────────────────────────────────────────────────────────────
+    if any(
+        re.match(pattern, "graph_edge_contract")
+        for pattern in config.get('resource', [])
+    ):
+        @mcp.resource("graph://edge-contract")
+        def get_graph_edge_contract() -> str:
+            """Return the Graph Edge Contract schema definition."""
+            return GRAPH_EDGE_CONTRACT
+
+        logger.info("Registered resource: graph_edge_contract")
 
     # Return the configured app and some handles used by the entrypoint if needed
     return mcp, logger

@@ -68,5 +68,5 @@ graph:
   prompt:
     - ^graph_.*
   resource:
-    - .*
+    - ^graph_edge_contract$
 
