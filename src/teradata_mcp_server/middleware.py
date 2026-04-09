@@ -74,7 +74,7 @@ class RequestContextMiddleware(Middleware):
                     ),
                 )
                 if context.fastmcp_context:
-                    context.fastmcp_context.set_state("request_context", rc)
+                    await context.fastmcp_context.set_state("request_context", rc)
                 else:
                     self.logger.warning("No FastMCP context available - RequestContext not stored")
             except Exception as e:
@@ -197,7 +197,7 @@ class RequestContextMiddleware(Middleware):
                 user_id=assume_user,
             )
             if context.fastmcp_context:
-                context.fastmcp_context.set_state("request_context", rc)
+                await context.fastmcp_context.set_state("request_context", rc)
             else:
                 self.logger.warning("No FastMCP context available - RequestContext not stored")
         except Exception as e:

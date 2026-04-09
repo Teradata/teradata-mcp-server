@@ -723,7 +723,10 @@ def create_mcp_app(settings: Settings):
             )
 
         # Add required 'conn' parameter at the beginning (for catalog compatibility)
-        parameters.append(inspect.Parameter("conn", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD))
+        # Connection annotation is required so execute_db_tool injects a SQLAlchemy connection
+        parameters.append(
+            inspect.Parameter("conn", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Connection)
+        )
 
         # Add tool_name parameter (internal, will be filtered out)
         parameters.append(inspect.Parameter("tool_name", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None))
@@ -763,9 +766,26 @@ def create_mcp_app(settings: Settings):
         sig = inspect.Signature([parameters[0]] + required_params + [parameters[1], parameters[2]] + optional_params)
 
         # Create the handler function (like handle_* functions)
-        def handler(conn, tool_name=None, **kwargs):
+        def handler(conn: Connection, tool_name=None, **kwargs):
             """Custom YAML-defined query tool handler."""
-            return execute_db_tool(td.handle_base_readQuery, tool["sql"], tool_name=tool_name or name, **kwargs)
+            sql = tool["sql"]
+            # Support Python format-string style {param} for identifier substitution (e.g. table names,
+            # which cannot be SQLAlchemy bind parameters). When {…} placeholders are detected, format
+            # the SQL template first; otherwise fall through to :param bind-parameter style.
+            if "{" in sql:
+                db_name = kwargs.get("database_name") or ""
+                tbl_name = kwargs.get("table_name") or ""
+                fmt = {k: (v if v is not None else "") for k, v in kwargs.items()}
+                fmt["table_ref"] = f"{db_name}.{tbl_name}" if db_name else tbl_name
+                format_keys = set(re.findall(r"\{(\w+)\}", sql))
+                # table_ref is a synthetic key built from database_name + table_name; exclude both
+                # source params when table_ref was used, so they aren't passed as SQL bind params.
+                if "table_ref" in format_keys:
+                    format_keys.update({"database_name", "table_name"})
+                sql = sql.format_map(fmt)
+                bind_kwargs = {k: v for k, v in kwargs.items() if k not in format_keys}
+                return td.handle_base_readQuery(conn, sql, tool_name=tool_name or name, **bind_kwargs)
+            return td.handle_base_readQuery(conn, sql, tool_name=tool_name or name, **kwargs)
 
         # Set metadata on the handler
         handler.__name__ = f"handle_{name}"
