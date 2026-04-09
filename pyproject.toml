@@ -134,6 +134,7 @@ warn_unused_configs = true
 disallow_untyped_defs = false  # Gradually enable this
 ignore_missing_imports = true
 strict_optional = true
+disable_error_code = ["import-untyped"]
 
 [dependency-groups]
 dev = [

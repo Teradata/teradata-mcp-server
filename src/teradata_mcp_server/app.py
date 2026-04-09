@@ -724,7 +724,9 @@ def create_mcp_app(settings: Settings):
 
         # Add required 'conn' parameter at the beginning (for catalog compatibility)
         # Connection annotation is required so execute_db_tool injects a SQLAlchemy connection
-        parameters.append(inspect.Parameter("conn", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Connection))
+        parameters.append(
+            inspect.Parameter("conn", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Connection)
+        )
 
         # Add tool_name parameter (internal, will be filtered out)
         parameters.append(inspect.Parameter("tool_name", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None))
@@ -775,7 +777,7 @@ def create_mcp_app(settings: Settings):
                 tbl_name = kwargs.get("table_name") or ""
                 fmt = {k: (v if v is not None else "") for k, v in kwargs.items()}
                 fmt["table_ref"] = f"{db_name}.{tbl_name}" if db_name else tbl_name
-                format_keys = set(re.findall(r'\{(\w+)\}', sql))
+                format_keys = set(re.findall(r"\{(\w+)\}", sql))
                 # table_ref is a synthetic key built from database_name + table_name; exclude both
                 # source params when table_ref was used, so they aren't passed as SQL bind params.
                 if "table_ref" in format_keys:
