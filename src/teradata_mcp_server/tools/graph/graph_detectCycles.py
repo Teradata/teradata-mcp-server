@@ -32,6 +32,10 @@ import logging
 from collections import defaultdict
 from teradatasql import TeradataConnection
 from teradata_mcp_server.tools.utils import create_response
+from teradata_mcp_server.tools.graph._graph_utils import (
+    build_like_or,
+    parse_csv_patterns,
+)
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -39,33 +43,7 @@ logger = logging.getLogger("teradata_mcp_server")
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
-
-def _parse_csv_patterns(csv_str: str) -> list[str]:
-    """
-    Split a CSV pattern string into a list of trimmed, non-empty tokens.
-
-    Arguments:
-      csv_str - Comma-separated pattern string (may contain whitespace)
-
-    Returns:
-      List of trimmed pattern strings
-    """
-    return [p.strip() for p in csv_str.split(',') if p.strip()]
-
-
-def _build_like_clauses(patterns: list[str], column: str) -> str:
-    """
-    Build a parenthesised OR-joined set of LIKE predicates for a SQL WHERE clause.
-
-    Arguments:
-      patterns - List of LIKE pattern strings
-      column   - SQL column reference to match against
-
-    Returns:
-      SQL fragment, e.g. "(col LIKE 'A%' OR col LIKE 'B%')"
-    """
-    clauses = [f"{column} LIKE '{p}'" for p in patterns]
-    return '(' + ' OR '.join(clauses) + ')'
+# parse_csv_patterns and build_like_or are imported from _graph_utils.
 
 
 def _build_excl_clauses(patterns: list[str]) -> str:
@@ -306,10 +284,8 @@ def _build_summary_stats(
 def handle_graph_detectCycles(
     conn: TeradataConnection,
     container_pattern: str,
-    excl_patterns: str = '',
-    object_dependency_table: str = '',
-    strategy: str = 'AUTO',
-    max_edges_for_cte: int = 0,
+    exclude_objects: str = '',
+    edge_repository: str = '',
     tool_name: str | None = None,
     *args,
     **kwargs
@@ -321,11 +297,6 @@ def handle_graph_detectCycles(
     SQL SELECT to fetch the scoped edge set, then performs WCC partitioning
     followed by iterative DFS cycle detection entirely in the MCP server process.
 
-    The strategy and max_edges_for_cte parameters are accepted for API
-    compatibility with the former SP-based version.  They are ignored: the
-    Python implementation always uses WCC-partitioned iterative DFS (which is
-    equivalent to the SP's AUTO strategy) regardless of graph size.
-
     Use this tool for:
       - Validating graph integrity (DAG property)
       - Finding objects that form circular references
@@ -334,28 +305,26 @@ def handle_graph_detectCycles(
       - Pre-deployment cycle checks
 
     Arguments:
-      container_pattern       - str: CSV LIKE patterns for container scope.
-                                Supports wildcards (%) and CSV format.
-                                Examples:
-                                  'DFJ%'              — single database family
-                                  '%WBC%,%StGeo%'     — multiple families
-                                  'DEV01_%,DEV02_%'   — multiple prefixes
+      container_pattern - str: CSV LIKE patterns for container scope.
+                          Supports wildcards (%) and CSV format.
+                          Examples:
+                            'DFJ%'              — single database family
+                            '%WBC%,%StGeo%'     — multiple families
+                            'DEV01_%,DEV02_%'   — multiple prefixes
 
-      excl_patterns           - str: CSV LIKE patterns to exclude from the scan.
-                                Matches against container name (or DB.Object if
-                                the pattern contains a dot).
-                                Default: '' (no exclusions)
+      exclude_objects   - str: CSV LIKE patterns to exclude from the scan.
+                          Matches against container name (or DB.Object if
+                          the pattern contains a dot).
+                          Default: '' (no exclusions)
 
-      object_dependency_table - str: Edge repository view/table conforming to the
-                                Required parameter — no default.
-
-      strategy                - str: Accepted for API compatibility; ignored.
-                                The Python implementation always uses
-                                WCC-partitioned iterative DFS.
-                                Default: 'AUTO'
-
-      max_edges_for_cte       - int: Accepted for API compatibility; ignored.
-                                Default: 0
+      edge_repository   - str: Edge repository view/table conforming to the
+                          Graph Edge Contract (Src_Container_Name,
+                          Src_Object_Name, Src_Kind, Tgt_Container_Name,
+                          Tgt_Object_Name, Tgt_Kind columns).
+                          For AI-Native Data Products use:
+                            '{ProductName}_Semantic.lineage_graph'
+                          Call graph_edgeContractDDL to generate a new one.
+                          Required — no default.
 
     Returns:
       ResponseType: formatted response with cycle detection results.
@@ -368,27 +337,25 @@ def handle_graph_detectCycles(
         }
 
       cycle_details row fields:
-        Cycle_Id, Cycle_Pos, Node_FQ, Cycle_Length, Component_Id, Strategy
+        Cycle_Id, Cycle_Pos, Node_FQ, Cycle_Length, Component_Id
 
       cycle_summaries row fields:
-        Cycle_Id, Cycle_Length, Component_Id, Strategy, Cycle_Path
+        Cycle_Id, Cycle_Length, Component_Id, Cycle_Path
 
       summary_stats row fields:
         Cycle_Count, Total_Nodes_In_Cycles, Components_With_Cycles,
-        Edge_Count, Components_Scanned, Strategy_Used, Summary_Message
+        Edge_Count, Components_Scanned, Summary_Message
     """
     logger.debug(
         "Tool: handle_graph_detectCycles: Args: "
-        "container_pattern=%s, excl_patterns=%s, "
-        "object_dependency_table=%s, strategy=%s",
-        container_pattern, excl_patterns,
-        object_dependency_table, strategy
+        "container_pattern=%s, exclude_objects=%s, edge_repository=%s",
+        container_pattern, exclude_objects, edge_repository
     )
 
     # -----------------------------------------------------------------------
     # Parse and validate inputs
     # -----------------------------------------------------------------------
-    container_patterns = _parse_csv_patterns(container_pattern)
+    container_patterns = parse_csv_patterns(container_pattern)
     if not container_patterns:
         return create_response(
             {"error": "container_pattern must not be empty"},
@@ -399,24 +366,28 @@ def handle_graph_detectCycles(
             }
         )
 
-    excl_pattern_list = _parse_csv_patterns(excl_patterns)
+    if not edge_repository:
+        return create_response(
+            {"error": (
+                "edge_repository is required. "
+                "For AI-Native Data Products use '{ProductName}_Semantic.lineage_graph'. "
+                "Call graph_edgeContractDDL to generate a new edge repository."
+            )},
+            {
+                "tool_name": tool_name or "graph_detectCycles",
+                "container_pattern": container_pattern,
+                "status": "error",
+            }
+        )
 
-    # strategy accepted but not used — log for transparency
-    strategy_norm = (strategy or 'AUTO').upper()
-    if strategy_norm not in ('AUTO', 'CTE', 'DFS'):
-        strategy_norm = 'AUTO'
-    logger.debug(
-        "Tool: handle_graph_detectCycles: requested strategy=%s "
-        "(Python implementation always uses WCC-partitioned iterative DFS)",
-        strategy_norm
-    )
+    excl_pattern_list = parse_csv_patterns(exclude_objects)
 
     try:
         with conn.cursor() as cur:
             # -------------------------------------------------------------------
             # Step 1 — Fetch all scoped edges in one SQL SELECT
             # -------------------------------------------------------------------
-            container_where = _build_like_clauses(
+            container_where = build_like_or(
                 container_patterns, 'Src_Container_Name'
             )
             excl_where = _build_excl_clauses(excl_pattern_list)
@@ -426,7 +397,7 @@ LOCKING ROW FOR ACCESS
 SELECT
      TRIM(Src_Container_Name) || '.' || TRIM(Src_Object_Name) AS Src_FQ
     ,TRIM(Tgt_Container_Name) || '.' || TRIM(Tgt_Object_Name) AS Tgt_FQ
-FROM  {object_dependency_table}
+FROM  {edge_repository}
 WHERE {container_where}
   {excl_where}
 """
@@ -462,11 +433,10 @@ WHERE {container_where}
                     "summary_stats":   _build_summary_stats([], 0, 0),
                 },
                 {
-                    "tool_name":              tool_name or "graph_detectCycles",
-                    "container_pattern":      container_pattern,
-                    "excl_patterns":          excl_patterns,
-                    "object_dependency_table": object_dependency_table,
-                    "strategy_requested":     strategy_norm,
+                    "tool_name":         tool_name or "graph_detectCycles",
+                    "container_pattern": container_pattern,
+                    "exclude_objects":   exclude_objects,
+                    "edge_repository":   edge_repository,
                     "result_set_counts": {
                         "cycle_details":   0,
                         "cycle_summaries": 0,
@@ -526,11 +496,10 @@ WHERE {container_where}
         }
 
         metadata = {
-            "tool_name":              tool_name or "graph_detectCycles",
-            "container_pattern":      container_pattern,
-            "excl_patterns":          excl_patterns,
-            "object_dependency_table": object_dependency_table,
-            "strategy_requested":     strategy_norm,
+            "tool_name":         tool_name or "graph_detectCycles",
+            "container_pattern": container_pattern,
+            "exclude_objects":   exclude_objects,
+            "edge_repository":   edge_repository,
             "result_set_counts": {
                 "cycle_details":   len(cycle_details),
                 "cycle_summaries": len(cycle_summaries),
@@ -575,8 +544,8 @@ GRAPH_DETECT_CYCLES_TOOL = {
         "path string. Use to validate graph integrity, find stub-then-replace "
         "patterns, or identify objects that will cause topological sort to hang. "
         "Requires an edge repository conforming to the Graph Edge Contract. "
-        "If you don't have one yet, call graph_edgeContractDDL first to "
-        "generate the CREATE TABLE or CREATE VIEW DDL."
+        "For AI-Native Data Products use '{ProductName}_Semantic.lineage_graph'. "
+        "Call graph_edgeContractDDL to generate a new edge repository."
     ),
     "parameters": {
         "container_pattern": {
@@ -587,7 +556,7 @@ GRAPH_DETECT_CYCLES_TOOL = {
             ),
             "required": True,
         },
-        "excl_patterns": {
+        "exclude_objects": {
             "type": "string",
             "description": (
                 "CSV LIKE patterns to exclude from the scan. "
@@ -596,30 +565,15 @@ GRAPH_DETECT_CYCLES_TOOL = {
             ),
             "default": "",
         },
-        "object_dependency_table": {
+        "edge_repository": {
             "type": "string",
             "description": (
                 "Edge repository table or view conforming to the Graph Edge Contract. "
+                "For AI-Native Data Products use '{ProductName}_Semantic.lineage_graph'. "
                 "Call graph_edgeContractDDL to generate one if needed. "
-                "Required parameter — no default."
+                "Required — no default."
             ),
             "required": True,
-        },
-        "strategy": {
-            "type": "string",
-            "description": (
-                "Accepted for API compatibility; ignored. "
-                "The Python implementation always uses WCC-partitioned iterative DFS. "
-                "Default: 'AUTO'."
-            ),
-            "default": "AUTO",
-        },
-        "max_edges_for_cte": {
-            "type": "integer",
-            "description": (
-                "Accepted for API compatibility; ignored. Default: 0."
-            ),
-            "default": 0,
         },
     },
 }

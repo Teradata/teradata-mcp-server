@@ -1,5 +1,5 @@
 """
-_graph_utils.py — Shared utility functions for ODEX graph analysis tools.
+_graph_utils.py — Shared utility functions for graph analysis tools.
 
 This module is INTERNAL to the graph tool package — it is not registered
 as an MCP tool and is not imported by the server directly. It exists to
@@ -19,6 +19,43 @@ them rather than carrying local copies.
 
 Author:  Paul Dancer — Teradata Global Field Tech
 """
+
+
+def parse_csv_patterns(csv_str: str) -> list[str]:
+    """
+    Split a CSV pattern string into a list of trimmed, non-empty tokens.
+
+    Used by all graph tools to normalise container_pattern, exclude_objects,
+    include_containers, root_node_list, and similar CSV inputs before use.
+
+    Arguments:
+      csv_str - Comma-separated string (may contain whitespace around commas,
+                or be empty / None)
+
+    Returns:
+      List of trimmed non-empty strings; empty list if csv_str is blank or None
+    """
+    return [p.strip() for p in (csv_str or '').split(',') if p.strip()]
+
+
+def build_like_or(patterns: list[str], column: str) -> str:
+    """
+    Build a parenthesised OR-joined LIKE clause for a SQL WHERE predicate.
+
+    Used by graph tools to construct container-scoping predicates against a
+    single SQL column (typically Src_Container_Name or Tgt_Container_Name).
+
+    Arguments:
+      patterns - List of SQL LIKE pattern strings (e.g. ['%SALES%', '%FIN%'])
+      column   - SQL column reference (e.g. 'Src_Container_Name')
+
+    Returns:
+      SQL fragment of the form "(col LIKE 'A%' OR col LIKE 'B%')".
+      Callers must ensure patterns is non-empty before calling — an empty
+      list produces the degenerate string "()" which is invalid SQL.
+    """
+    clauses = [f"{column} LIKE '{p}'" for p in patterns]
+    return '(' + ' OR '.join(clauses) + ')'
 
 
 def bfs_safe_int(value) -> int | None:
@@ -115,8 +152,8 @@ def extract_cycle_candidates(nodes: list) -> list:
 
     A node with direction='BOTH' and abs(upstream_level) != downstream_level
     is a cycle candidate — the asymmetry indicates a back-edge in the graph,
-    which is the hallmark of a circular reference when traversing the ODEX
-    dependency graph.
+    which is the hallmark of a circular reference when traversing the
+    object dependency graph.
 
     Nodes with direction='BOTH' and equal absolute levels are shared
     dependencies (reachable in both directions at the same hop count)

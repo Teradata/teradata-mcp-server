@@ -52,7 +52,7 @@ PACKAGE STRUCTURE
   │   ├── _graph_utils.py                 ← shared helpers (bfs_safe_int,
   │   │                                      create_bfs_summary,
   │   │                                      extract_cycle_candidates)
-  │   ├── graph_queryDependenciesAgent.py ← hybrid: Python CTEs, server-side traversal
+  │   ├── graph_traceLineage.py           ← hybrid: Python CTEs, server-side traversal
   │   ├── graph_findRootObjects.py        ← SQL-only root object discovery
   │   ├── graph_detectCycles.py           ← Python: Union-Find + iterative DFS
   │   ├── graph_connectedComponents.py    ← Python: Union-Find WCC analysis
@@ -97,7 +97,7 @@ to the edge repository view/table.  The implementation strategies are:
     Pure Python — one scoped edge SELECT, then path-compressed
     Union-Find assigns every node to a component in O(α·N) time.
 
-  graph_queryDependenciesAgent
+  graph_traceLineage
     Hybrid — Python constructs Teradata recursive CTEs and executes
     them as plain SELECT statements.  The recursive traversal runs
     entirely in Teradata spool (server-side), returning only the
@@ -121,7 +121,7 @@ import logging
 #   *_TOOL    — the descriptor dict (name, handler ref, description, parameters)
 #
 # Import order matches logical workflow:
-#   findRootObjects → bfsLevels → queryDependenciesAgent → detectCycles → connectedComponents
+#   findRootObjects → bfsLevels → traceLineage → detectCycles → connectedComponents → analyseDatabase
 
 from teradata_mcp_server.tools.graph.graph_findRootObjects import (
     handle_graph_findRootObjects,
@@ -133,9 +133,9 @@ from teradata_mcp_server.tools.graph.graph_bfsLevels import (
     GRAPH_BFS_LEVELS_TOOL,
 )
 
-from teradata_mcp_server.tools.graph.graph_queryDependenciesAgent import (
-    handle_graph_queryDependenciesAgent,
-    GRAPH_QUERY_DEPENDENCIES_TOOL,
+from teradata_mcp_server.tools.graph.graph_traceLineage import (
+    handle_graph_traceLineage,
+    GRAPH_TRACE_LINEAGE_TOOL,
 )
 
 from teradata_mcp_server.tools.graph.graph_detectCycles import (
@@ -146,6 +146,16 @@ from teradata_mcp_server.tools.graph.graph_detectCycles import (
 from teradata_mcp_server.tools.graph.graph_connectedComponents import (
     handle_graph_connectedComponents,
     GRAPH_CONNECTED_COMPONENTS_TOOL,
+)
+
+from teradata_mcp_server.tools.graph.graph_analyseDatabase import (
+    handle_graph_analyseDatabase,
+    GRAPH_ANALYSE_DATABASE_TOOL,
+)
+
+from teradata_mcp_server.tools.graph.graph_edge_contract import (
+    handle_graph_edgeContractDDL,
+    GRAPH_EDGE_CONTRACT_DDL_TOOL,
 )
 
 logger = logging.getLogger("teradata_mcp_server")
@@ -164,11 +174,13 @@ logger = logging.getLogger("teradata_mcp_server")
 # To add a new tool: append its descriptor (see ADDING A NEW TOOL above).
 
 GRAPH_TOOLS = [
+    GRAPH_EDGE_CONTRACT_DDL_TOOL,     # Step 0 — generate edge repository DDL
     GRAPH_FIND_ROOT_OBJECTS_TOOL,     # Step 1 — discover seed objects
     GRAPH_BFS_LEVELS_TOOL,            # Step 2 — wave planning + blast radius
-    GRAPH_QUERY_DEPENDENCIES_TOOL,    # Step 3 — full lineage + impact paths
+    GRAPH_TRACE_LINEAGE_TOOL,         # Step 3 — full lineage + impact paths
     GRAPH_DETECT_CYCLES_TOOL,         # Step 4 — cycle validation
     GRAPH_CONNECTED_COMPONENTS_TOOL,  # Step 5 — graph partitioning
+    GRAPH_ANALYSE_DATABASE_TOOL,      # Step 6 — composite single-fetch analysis
 ]
 
 logger.debug(

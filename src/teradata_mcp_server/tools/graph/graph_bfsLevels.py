@@ -44,6 +44,7 @@ from teradata_mcp_server.tools.graph._graph_utils import (
     bfs_safe_int,
     create_bfs_summary,
     extract_cycle_candidates,
+    parse_csv_patterns,
 )
 
 logger = logging.getLogger("teradata_mcp_server")
@@ -70,7 +71,7 @@ def handle_graph_bfsLevels(
 
     Pure-Python implementation — no stored procedure required.
 
-    WHEN TO USE THIS TOOL vs graph_queryDependenciesAgent:
+    WHEN TO USE THIS TOOL vs graph_traceLineage:
     -------------------------------------------------------
     Use graph_bfsLevels when asked to:
       - Sequence objects for deployment or migration (ORDER BY downstream_level
@@ -86,7 +87,7 @@ def handle_graph_bfsLevels(
 
     Do NOT use graph_bfsLevels for general lineage tracing, impact path
     analysis, or questions about which specific objects depend on which.
-    Use graph_queryDependenciesAgent for those — it returns the full edge
+    Use graph_traceLineage for those — it returns the full edge
     set with relationship detail. graph_bfsLevels returns distances and
     wave groupings, not dependency paths or edge detail.
 
@@ -108,7 +109,7 @@ def handle_graph_bfsLevels(
 
                           CRITICAL: Exact FQ names, no wildcards.
                           Use graph_findRootObjects or
-                          graph_queryDependenciesAgent first to discover names.
+                          graph_traceLineage first to discover names.
 
       max_depth_up      - int: Maximum upstream hops to traverse.
                           0 = skip upstream analysis entirely.
@@ -213,12 +214,21 @@ def handle_graph_bfsLevels(
         from the edge set and stored in a node registry during the fetch phase.
     """
     logger.debug(
-        f"Tool: handle_graph_bfsLevels: Args: root_node_list={root_node_list}, "
-        f"max_depth_up={max_depth_up}, max_depth_down={max_depth_down}, "
-        f"exclude_objects={exclude_objects}, "
-        f"include_containers={include_containers}, "
-        f"edge_repository={edge_repository}"
+        "Tool: handle_graph_bfsLevels: Args: root_node_list=%s, "
+        "max_depth_up=%s, max_depth_down=%s, exclude_objects=%s, "
+        "include_containers=%s, edge_repository=%s",
+        root_node_list, max_depth_up, max_depth_down,
+        exclude_objects, include_containers, edge_repository
     )
+
+    if not edge_repository:
+        return create_response(
+            {"error": "edge_repository is required. Call graph_edgeContractDDL to generate one."},
+            {
+                "tool_name": tool_name or "graph_bfsLevels",
+                "status": "error",
+            }
+        )
 
     # Clamp depth parameters to safe range
     max_depth_up   = max(0, min(10, int(max_depth_up)))
@@ -230,7 +240,7 @@ def handle_graph_bfsLevels(
         # ------------------------------------------------------------------
         # Step 1 — Parse root node list
         # ------------------------------------------------------------------
-        roots: list[str] = _parse_csv(root_node_list)
+        roots: list[str] = parse_csv_patterns(root_node_list)
 
         if not roots:
             raise ValueError(
@@ -246,8 +256,8 @@ def handle_graph_bfsLevels(
         # ------------------------------------------------------------------
         # Step 2 — Parse filter patterns for Python-side matching
         # ------------------------------------------------------------------
-        excl_patterns = _parse_csv(exclude_objects)   # may be empty
-        incl_patterns = _parse_csv(include_containers)  # may be empty
+        excl_patterns = parse_csv_patterns(exclude_objects)   # may be empty
+        incl_patterns = parse_csv_patterns(include_containers)  # may be empty
 
         # ------------------------------------------------------------------
         # Step 3 — Fetch edge set from Teradata (one round-trip)
@@ -592,22 +602,7 @@ def handle_graph_bfsLevels(
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
-
-def _parse_csv(value: str) -> list[str]:
-    """
-    Parse a comma-separated string into a list of stripped, non-empty tokens.
-
-    Mirrors the STRTOK_SPLIT_TO_TABLE + TRIM logic used by the SP.
-
-    Arguments:
-      value - Raw CSV string (may be None or empty)
-
-    Returns:
-      List of stripped, non-empty token strings
-    """
-    if not value:
-        return []
-    return [t.strip() for t in value.split(',') if t.strip()]
+# parse_csv_patterns is imported from _graph_utils.
 
 
 def _matches_any(fq_name: str, patterns: list[str]) -> bool:
@@ -839,7 +834,7 @@ GRAPH_BFS_LEVELS_TOOL = {
         "(ROOT/U/D/BOTH), and is_root flag. Output schema is identical to the "
         "SP-based graph_bfsLevels tool. "
         ""
-        "USE THIS TOOL — not graph_queryDependenciesAgent — when asked to: "
+        "USE THIS TOOL — not graph_traceLineage — when asked to: "
         "sequence objects for deployment or migration (ORDER BY downstream_level "
         "gives correct topological deployment order for objects downstream of "
         "root tables); group objects into migration waves (nearest_root groups "
@@ -852,7 +847,7 @@ GRAPH_BFS_LEVELS_TOOL = {
         ""
         "Do NOT use this tool for general lineage tracing, impact path analysis, "
         "or questions about which specific objects depend on which — use "
-        "graph_queryDependenciesAgent for those. graph_bfsLevels returns "
+        "graph_traceLineage for those. graph_bfsLevels returns "
         "distances and wave groupings, not dependency paths or edge detail. "
         ""
         "Requires an edge repository conforming to the Graph Edge Contract. "

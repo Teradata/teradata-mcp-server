@@ -10,20 +10,29 @@
 #      2. handle_graph_edgeContractDDL() — MCP Tool that generates ready-to-run   #
 #         Teradata DDL for a contract-conforming edge table or view.              #
 #                                                                                 #
-#    The graph analysis tools (findRootObjects, queryDependenciesAgent,           #
+#    The graph analysis tools (findRootObjects, traceLineage,           #
 #    connectedComponents, detectCycles, bfsLevels, analyseDatabase) all           #
 #    require an edge repository — a table or view conforming to this contract.    #
 #    Users supply its fully-qualified name via the edge_repository parameter.     #
 #                                                                                 #
 #    Column names are deliberately platform-agnostic:                             #
-#      SrcContainer / TgtContainer  (not DatabaseName)                            #
-#      SrcObject    / TgtObject     (not ObjectName)                              #
-#      SrcKind      / TgtKind       (not Object_Kind)                             #
+#      Src_Container_Name / Tgt_Container_Name  (not DatabaseName)                #
+#      Src_Object_Name    / Tgt_Object_Name     (not ObjectName)                  #
+#      Src_Kind           / Tgt_Kind            (not Object_Kind)                 #
+#                                                                                 #
+#    Optional enrichment columns (present in lineage_graph; ignored by tools      #
+#    that don't use them — safe to omit from custom edge repositories):           #
+#      Edge_Relationship   — nature of the edge (e.g. ETL_INPUT, ETL_OUTPUT)     #
+#      Transformation_Type — process type (e.g. ETL, FEATURE_ENG, AGGREGATION)   #
 #                                                                                 #
 #    "Container" generalises across platforms: a Teradata database, a script      #
 #    directory, an Informatica workflow folder, a dbt project, etc.               #
 #                                                                                 #
-#    Contract Version: 1.0                                                        #
+#    AI-Native Data Product shortcut:                                             #
+#    {ProductName}_Semantic.lineage_graph (Observability Module v1.5) already     #
+#    conforms to this contract and can be used directly as edge_repository.       #
+#                                                                                 #
+#    Contract Version: 1.1                                                        #
 # ------------------------------------------------------------------------------- #
 
 import logging
@@ -44,7 +53,7 @@ GRAPH_EDGE_CONTRACT = """
 Graph Edge Contract — Teradata MCP Server (Community Edition)
 =============================================================
 
-Version:  1.0
+Version:  1.1
 Status:   Stable
 Applies:  All graph_* tools in the Teradata MCP Server
 
@@ -59,32 +68,32 @@ parameter on each graph tool.
 
 REQUIRED COLUMNS
 ----------------
-  Column Name    Type            Nullable   Description
-  ────────────   ──────────────  ────────   ──────────────────────────────────
-  SrcContainer   VARCHAR(128)    No         Container of the source (upstream)
-                                            object. Platform-agnostic: a
-                                            Teradata database, a script
-                                            directory, an ETL workflow folder,
-                                            a dbt project, etc.
+  Column Name          Type            Nullable   Description
+  ──────────────────   ──────────────  ────────   ──────────────────────────────────
+  Src_Container_Name   VARCHAR(128)    No         Container of the source (upstream)
+                                                  object. Platform-agnostic: a
+                                                  Teradata database, a script
+                                                  directory, an ETL workflow folder,
+                                                  a dbt project, etc.
 
-  SrcObject      VARCHAR(128)    No         Name of the source object.
+  Src_Object_Name      VARCHAR(128)    No         Name of the source object.
 
-  SrcKind        VARCHAR(30)     No         Object type of the source.
-                                            Recommended: T=Table, V=View,
-                                            P=Procedure, M=Macro, J=JoinIndex,
-                                            H=HashIndex, G=Trigger,
-                                            A=AggregateUDF, F=UDF, S=Script,
-                                            E=ETL Mapping.
-                                            Custom values permitted.
+  Src_Kind             VARCHAR(30)     No         Object type of the source.
+                                                  Recommended: T=Table, V=View,
+                                                  P=Procedure, M=Macro, J=JoinIndex,
+                                                  H=HashIndex, G=Trigger,
+                                                  A=AggregateUDF, F=UDF, S=Script,
+                                                  E=ETL Mapping.
+                                                  Custom values permitted.
 
-  TgtContainer   VARCHAR(128)    No         Container of the target
-                                            (downstream) object. Same
-                                            semantics as SrcContainer.
+  Tgt_Container_Name   VARCHAR(128)    No         Container of the target
+                                                  (downstream) object. Same
+                                                  semantics as Src_Container_Name.
 
-  TgtObject      VARCHAR(128)    No         Name of the target object.
+  Tgt_Object_Name      VARCHAR(128)    No         Name of the target object.
 
-  TgtKind        VARCHAR(30)     No         Object type of the target.
-                                            Same value domain as SrcKind.
+  Tgt_Kind             VARCHAR(30)     No         Object type of the target.
+                                                  Same value domain as Src_Kind.
 
 
 EDGE SEMANTICS
@@ -98,10 +107,50 @@ The TARGET object depends on the SOURCE object.
   - TARGET is downstream: a consumer, a dependent view or mapping.
 
 Example:
-  SrcContainer='PROD_STD_T'  SrcObject='CUSTOMER'    SrcKind='T'
-  TgtContainer='PROD_STD_V'  TgtObject='CUST_ACTIVE' TgtKind='V'
+  Src_Container_Name='PROD_STD_T'  Src_Object_Name='CUSTOMER'    Src_Kind='Table'
+  Tgt_Container_Name='PROD_STD_V'  Tgt_Object_Name='CUST_ACTIVE' Tgt_Kind='View'
+  Edge_Relationship='DIRECT'        Transformation_Type='ETL'
 
-  Meaning: View PROD_STD_V.CUST_ACTIVE depends on table PROD_STD_T.CUSTOMER.
+  Meaning: View PROD_STD_V.CUST_ACTIVE depends on table PROD_STD_T.CUSTOMER
+           via an ETL transformation.
+
+
+OPTIONAL COLUMNS
+----------------
+The following columns are recognised by the contract but not required by the
+graph analysis tools. They are ignored by tools that do not use them, so
+omitting them from a custom edge repository does not break conformance.
+
+  Column Name           Type           Nullable   Description
+  ─────────────────────  ─────────────  ────────   ──────────────────────────────────
+  Edge_Relationship      VARCHAR(50)    Yes        Nature of the dependency edge.
+                                                   Recommended values:
+                                                     DIRECT       — object-to-object
+                                                                    dependency
+                                                     ETL_INPUT    — source table to
+                                                                    ETL job
+                                                     ETL_OUTPUT   — ETL job to target
+                                                                    table
+                                                     JOIN         — join dependency
+                                                     TRANSFORM    — general
+                                                                    transformation
+                                                   Custom values permitted.
+                                                   Produced by lineage_graph view.
+
+  Transformation_Type    VARCHAR(50)    Yes        Process or transformation category.
+                                                   Recommended values:
+                                                     ETL            FEATURE_ENG
+                                                     AGGREGATION    JOIN
+                                                     EMBEDDING_GEN  FILTER
+                                                     PIVOT
+                                                   Custom values permitted.
+                                                   Sourced from data_lineage table.
+
+These columns are present in the {ProductName}_Semantic.lineage_graph view
+(Observability Module v1.5) and can be used by graph visualisation tools for
+edge labelling and filtering. The graph_* analysis tools (findRootObjects,
+bfsLevels, traceLineage, detectCycles, connectedComponents, analyseDatabase)
+do not read these columns — they operate on node identity only.
 
 
 NODE IDENTITY
@@ -109,8 +158,8 @@ NODE IDENTITY
 Nodes are identified by fully-qualified name: Container.Object
 
 The graph tools construct this internally as:
-  SrcContainer || '.' || SrcObject   (source node)
-  TgtContainer || '.' || TgtObject   (target node)
+  Src_Container_Name || '.' || Src_Object_Name   (source node)
+  Tgt_Container_Name || '.' || Tgt_Object_Name   (target node)
 
 
 WHY "CONTAINER" NOT "DATABASE"
@@ -135,14 +184,15 @@ Tableau dashboard — all in one graph.
 
 ADDITIONAL COLUMNS
 ------------------
-The edge repository may contain additional columns beyond the six required
-columns. They will be ignored by the graph tools.
+The edge repository may contain additional columns beyond the required and
+optional columns defined in this contract. They will be ignored by the graph
+tools.
 
 
 CONTAINER SCOPING
 -----------------
 All graph tools accept container_pattern or include_containers parameters
-that filter edges using SQL LIKE against SrcContainer and TgtContainer.
+that filter edges using SQL LIKE against Src_Container_Name and Tgt_Container_Name.
 The edge repository should contain edges across ALL relevant containers —
 cross-container dependencies are the primary use case for graph analysis.
 
@@ -184,17 +234,38 @@ def handle_graph_edgeContractDDL(
     accepted for ModuleLoader calling convention compatibility but is
     not used.
 
-    Args:
-        conn:            TeradataConnection (unused — accepted for
-                         ModuleLoader compatibility).
-        target_database: Database in which to create the edge repository.
-                         Example: 'MY_PROJECT_STD_0_V'
-        object_name:     Name for the edge table/view.
-                         Default: 'EdgeRepository'
-        output_type:     'TABLE' or 'VIEW'.
-                         TABLE: generates CREATE TABLE DDL + separate sample DML.
-                         VIEW:  generates a CREATE VIEW template.
-                         Default: 'TABLE'
+    Required columns in the generated schema (6):
+      Src_Container_Name, Src_Object_Name, Src_Kind,
+      Tgt_Container_Name, Tgt_Object_Name, Tgt_Kind
+
+    Optional enrichment columns (2):
+      Edge_Relationship   — nature of the edge (ETL_INPUT, ETL_OUTPUT, DIRECT…)
+      Transformation_Type — process category (ETL, FEATURE_ENG, AGGREGATION…)
+      These are ignored by graph analysis tools but useful for visualisation.
+
+    AI-Native Data Product shortcut:
+      If you are working within an AI-Native Data Product, the view
+      {ProductName}_Semantic.lineage_graph (Observability Module v1.5)
+      already conforms to this contract. You do not need to generate DDL
+      — pass that view's fully-qualified name directly as edge_repository
+      on any graph_* tool. Example:
+        edge_repository='StGeoMortgage_Semantic.lineage_graph'
+
+    Arguments:
+      conn:            TeradataConnection (unused — accepted for
+                       ModuleLoader compatibility).
+      target_database: Database in which to create the edge repository.
+                       For AI-Native Data Products this is typically
+                       {ProductName}_Semantic.
+                       Example: 'StGeoMortgage_Semantic'
+      object_name:     Name for the edge table/view.
+                       Default: 'EdgeRepository'
+      output_type:     'TABLE' or 'VIEW'.
+                       TABLE: generates CREATE TABLE DDL + separate sample DML.
+                              Includes all 6 required + 2 optional columns.
+                       VIEW:  generates a CREATE VIEW template for mapping an
+                              existing lineage source to all 8 contract columns.
+                       Default: 'TABLE'
 
     Returns:
         list[dict]: Response payload containing:
@@ -205,17 +276,17 @@ def handle_graph_edgeContractDDL(
             - contract_version: Contract version string
     """
     logger.debug(
-        f"Tool: handle_graph_edgeContractDDL: "
-        f"Args: target_database={target_database}, "
-        f"object_name={object_name}, output_type={output_type}"
+        "Tool: handle_graph_edgeContractDDL: "
+        "Args: target_database=%s, object_name=%s, output_type=%s",
+        target_database, object_name, output_type
     )
 
     # ── Validate output_type ──────────────────────────────────────────────────
     output_type = output_type.upper().strip()
     if output_type not in ("TABLE", "VIEW"):
         logger.warning(
-            f"Tool: handle_graph_edgeContractDDL: "
-            f"Invalid output_type '{output_type}'"
+            "Tool: handle_graph_edgeContractDDL: Invalid output_type '%s'",
+            output_type
         )
         return [{"error": f"Invalid output_type '{output_type}'. Must be 'TABLE' or 'VIEW'."}]
 
@@ -228,14 +299,14 @@ def handle_graph_edgeContractDDL(
         sample_dml = None
 
     logger.info(
-        f"Tool: handle_graph_edgeContractDDL: "
-        f"Generated {output_type} DDL for {target_database}.{object_name}"
+        "Tool: handle_graph_edgeContractDDL: Generated %s DDL for %s.%s",
+        output_type, target_database, object_name
     )
 
     result = {
         "ddl": ddl,
         "output_type": output_type,
-        "contract_version": "1.0",
+        "contract_version": "1.1",
     }
     if sample_dml is not None:
         result["sample_dml"] = sample_dml
@@ -265,7 +336,7 @@ def _generate_table_ddl(db: str, name: str) -> str:
     return f"""-- ================================================================
 -- Graph Edge Contract — Edge Repository
 -- Generated by: Teradata MCP Server (Community Edition)
--- Contract Version: 1.0
+-- Contract Version: 1.1
 -- ================================================================
 
 CREATE SET TABLE {db}.{name}
@@ -275,53 +346,76 @@ CREATE SET TABLE {db}.{name}
     ,CHECKSUM = DEFAULT
     ,DEFAULT MERGEBLOCKRATIO
 (
-    SrcContainer    VARCHAR(128) CHARACTER SET UNICODE NOT CASESPECIFIC NOT NULL
-    ,SrcObject      VARCHAR(128) CHARACTER SET UNICODE NOT CASESPECIFIC NOT NULL
-    ,SrcKind        VARCHAR(30)  CHARACTER SET UNICODE NOT CASESPECIFIC NOT NULL COMPRESS ('T','V','P','M','J','H','G','A','F','S','E','R')
-    ,TgtContainer   VARCHAR(128) CHARACTER SET UNICODE NOT CASESPECIFIC NOT NULL
-    ,TgtObject      VARCHAR(128) CHARACTER SET UNICODE NOT CASESPECIFIC NOT NULL
-    ,TgtKind        VARCHAR(30)  CHARACTER SET UNICODE NOT CASESPECIFIC NOT NULL COMPRESS ('T','V','P','M','J','H','G','A','F','S','E','R')
+    -- ── Required columns (6) ─────────────────────────────────────
+    Src_Container_Name  VARCHAR(128) CHARACTER SET UNICODE NOT CASESPECIFIC NOT NULL
+    ,Src_Object_Name    VARCHAR(128) CHARACTER SET UNICODE NOT CASESPECIFIC NOT NULL
+    ,Src_Kind           VARCHAR(30)  CHARACTER SET UNICODE NOT CASESPECIFIC NOT NULL
+                        COMPRESS ('T','V','P','M','J','H','G','A','F','S','E','R',
+                                  'Table','View','Procedure','Macro','Job','Script')
+    ,Tgt_Container_Name VARCHAR(128) CHARACTER SET UNICODE NOT CASESPECIFIC NOT NULL
+    ,Tgt_Object_Name    VARCHAR(128) CHARACTER SET UNICODE NOT CASESPECIFIC NOT NULL
+    ,Tgt_Kind           VARCHAR(30)  CHARACTER SET UNICODE NOT CASESPECIFIC NOT NULL
+                        COMPRESS ('T','V','P','M','J','H','G','A','F','S','E','R',
+                                  'Table','View','Procedure','Macro','Job','Script')
+    -- ── Optional enrichment columns (2) ──────────────────────────
+    -- Ignored by graph analysis tools; used by visualisation clients.
+    ,Edge_Relationship  VARCHAR(50)  CHARACTER SET UNICODE NOT CASESPECIFIC
+                        COMPRESS ('DIRECT','ETL_INPUT','ETL_OUTPUT',
+                                  'JOIN','TRANSFORM','FILTER')
+    ,Transformation_Type VARCHAR(50) CHARACTER SET UNICODE NOT CASESPECIFIC
+                        COMPRESS ('ETL','FEATURE_ENG','AGGREGATION','JOIN',
+                                  'EMBEDDING_GEN','FILTER','PIVOT')
 )
-UNIQUE PRIMARY INDEX (SrcContainer, SrcObject, TgtContainer, TgtObject)
+UNIQUE PRIMARY INDEX (Src_Container_Name, Src_Object_Name, Tgt_Container_Name, Tgt_Object_Name)
 ;
 
 -- ================================================================
--- NOTE: Multi-Value Compression (MVC) on SrcKind / TgtKind
+-- NOTE: Multi-Value Compression (MVC) on kind and optional columns
 -- ================================================================
--- The COMPRESS lists above use the standard single-letter kind codes
--- (T, V, P, M, J, H, G, A, F, S, E, R). If you store full names
--- instead (e.g. 'Table', 'View', 'Procedure'), amend the COMPRESS
--- lists to match your actual values, otherwise those rows will not
--- benefit from compression. Non-compressed values still store
--- correctly — they just consume full column storage per row.
+-- Src_Kind / Tgt_Kind COMPRESS lists cover both single-letter codes
+-- (legacy: T, V, P…) and full-word values (Table, View, Procedure…)
+-- used by the lineage_graph view. Remove unused values for optimal
+-- compression. Non-listed values store correctly but uncompressed.
+--
+-- Edge_Relationship and Transformation_Type COMPRESS lists cover the
+-- standard values from the Observability Module. Extend as needed for
+-- custom edge types in your edge repository.
 -- ================================================================
 
 COMMENT ON TABLE {db}.{name}
-    AS 'Graph Edge Contract v1.0 - edge repository for Teradata MCP Server graph tools. Each row is a directed dependency: Target depends on Source.'
+    AS 'Graph Edge Contract v1.1 - edge repository for Teradata MCP Server graph tools. Each row is a directed dependency: Target depends on Source. Required: 6 columns. Optional enrichment: Edge_Relationship, Transformation_Type.'
 ;
 
-COMMENT ON COLUMN {db}.{name}.SrcContainer
+COMMENT ON COLUMN {db}.{name}.Src_Container_Name
     AS 'Source (upstream) container. Platform-agnostic: Teradata database, script directory, ETL workflow folder, etc.'
 ;
 
-COMMENT ON COLUMN {db}.{name}.SrcObject
+COMMENT ON COLUMN {db}.{name}.Src_Object_Name
     AS 'Source (upstream) object name.'
 ;
 
-COMMENT ON COLUMN {db}.{name}.SrcKind
-    AS 'Source object type. Standard values: T=Table, V=View, P=Procedure, M=Macro, J=JoinIndex, H=HashIndex, G=Trigger, S=Script, E=ETL Mapping. Custom values permitted.'
+COMMENT ON COLUMN {db}.{name}.Src_Kind
+    AS 'Source object type. Single-letter codes (T=Table, V=View, P=Procedure, M=Macro, J=JoinIndex, H=HashIndex, G=Trigger, S=Script, E=ETL Mapping) or full words (Table, View, Job). Custom values permitted.'
 ;
 
-COMMENT ON COLUMN {db}.{name}.TgtContainer
-    AS 'Target (downstream) container. Same semantics as SrcContainer.'
+COMMENT ON COLUMN {db}.{name}.Tgt_Container_Name
+    AS 'Target (downstream) container. Same semantics as Src_Container_Name.'
 ;
 
-COMMENT ON COLUMN {db}.{name}.TgtObject
+COMMENT ON COLUMN {db}.{name}.Tgt_Object_Name
     AS 'Target (downstream) object name.'
 ;
 
-COMMENT ON COLUMN {db}.{name}.TgtKind
-    AS 'Target object type. Same value domain as SrcKind.'
+COMMENT ON COLUMN {db}.{name}.Tgt_Kind
+    AS 'Target object type. Same value domain as Src_Kind.'
+;
+
+COMMENT ON COLUMN {db}.{name}.Edge_Relationship
+    AS 'Optional. Nature of the dependency edge. Standard values: DIRECT (object dependency), ETL_INPUT (source to job), ETL_OUTPUT (job to target), JOIN, TRANSFORM, FILTER. Custom values permitted. Ignored by graph analysis tools.'
+;
+
+COMMENT ON COLUMN {db}.{name}.Transformation_Type
+    AS 'Optional. Process or transformation category. Standard values: ETL, FEATURE_ENG, AGGREGATION, JOIN, EMBEDDING_GEN, FILTER, PIVOT. Sourced from data_lineage.transformation_type. Ignored by graph analysis tools.'
 ;"""
 
 
@@ -343,47 +437,66 @@ def _generate_sample_dml(db: str, name: str) -> str:
     return f"""-- ================================================================
 -- Sample data — two edges forming a simple dependency chain:
 --   CUSTOMER (table) <- CUSTOMER_ACTIVE (view) <- CUSTOMER_REPORT (view)
+-- Optional columns omitted — they are not required for conformance.
 -- ================================================================
 
 INSERT INTO {db}.{name}
-(SrcContainer, SrcObject, SrcKind, TgtContainer, TgtObject, TgtKind)
-VALUES ('MY_DB_STD_T', 'CUSTOMER', 'T', 'MY_DB_STD_V', 'CUSTOMER_ACTIVE', 'V')
+( Src_Container_Name, Src_Object_Name, Src_Kind
+ ,Tgt_Container_Name, Tgt_Object_Name, Tgt_Kind)
+VALUES
+( 'MY_DB_STD_T', 'CUSTOMER',        'Table'
+ ,'MY_DB_STD_V', 'CUSTOMER_ACTIVE', 'View')
 ;
 
 INSERT INTO {db}.{name}
-(SrcContainer, SrcObject, SrcKind, TgtContainer, TgtObject, TgtKind)
-VALUES ('MY_DB_STD_V', 'CUSTOMER_ACTIVE', 'V', 'MY_DB_STD_V', 'CUSTOMER_REPORT', 'V')
+( Src_Container_Name, Src_Object_Name, Src_Kind
+ ,Tgt_Container_Name, Tgt_Object_Name, Tgt_Kind)
+VALUES
+( 'MY_DB_STD_V', 'CUSTOMER_ACTIVE', 'View'
+ ,'MY_DB_STD_V', 'CUSTOMER_REPORT', 'View')
 ;
 
 -- ================================================================
--- Cross-platform example — Teradata table consumed by an
--- Informatica mapping that feeds a Tableau workbook.
+-- Cross-platform example with optional enrichment columns populated.
+-- An ETL job is surfaced as a first-class node (matching lineage_graph):
+--   CUSTOMER (table) -> ETL_LOAD (job) -> CUSTOMER_FEATURES (table)
 -- ================================================================
 
 INSERT INTO {db}.{name}
-(SrcContainer, SrcObject, SrcKind, TgtContainer, TgtObject, TgtKind)
-VALUES ('MY_DB_STD_T', 'CUSTOMER', 'T', 'INF_PROD/Workflows', 'wf_Customer_Load', 'E')
+( Src_Container_Name, Src_Object_Name, Src_Kind
+ ,Tgt_Container_Name, Tgt_Object_Name, Tgt_Kind
+ ,Edge_Relationship,  Transformation_Type)
+VALUES
+( 'MY_DB_STD_T', 'CUSTOMER',         'Table'
+ ,'',             'ETL_LOAD',         'Job'
+ ,'ETL_INPUT',    'ETL')
 ;
 
 INSERT INTO {db}.{name}
-(SrcContainer, SrcObject, SrcKind, TgtContainer, TgtObject, TgtKind)
-VALUES ('INF_PROD/Workflows', 'wf_Customer_Load', 'E', 'Tableau/Sales', 'Customer_Dashboard', 'R')
+( Src_Container_Name, Src_Object_Name, Src_Kind
+ ,Tgt_Container_Name, Tgt_Object_Name, Tgt_Kind
+ ,Edge_Relationship,  Transformation_Type)
+VALUES
+( '',                  'ETL_LOAD',          'Job'
+ ,'MY_PRED_STD_T',    'CUSTOMER_FEATURES', 'Table'
+ ,'ETL_OUTPUT',       'FEATURE_ENG')
 ;
 
 -- ================================================================
 -- Validation — confirm the edge repository meets the contract.
--- All six columns must be NOT NULL. Expected result: 0 violations.
+-- Only the six required columns must be NOT NULL.
+-- Expected result: 0 violations.
 -- ================================================================
 
 SELECT 'NULL_CHECK' AS Validation
     ,COUNT(*) AS Violations
 FROM {db}.{name}
-WHERE SrcContainer IS NULL
-   OR SrcObject    IS NULL
-   OR SrcKind      IS NULL
-   OR TgtContainer IS NULL
-   OR TgtObject    IS NULL
-   OR TgtKind      IS NULL
+WHERE Src_Container_Name IS NULL
+   OR Src_Object_Name    IS NULL
+   OR Src_Kind           IS NULL
+   OR Tgt_Container_Name IS NULL
+   OR Tgt_Object_Name    IS NULL
+   OR Tgt_Kind           IS NULL
 ;"""
 
 
@@ -404,30 +517,43 @@ def _generate_view_ddl(db: str, name: str) -> str:
     return f"""-- ================================================================
 -- Graph Edge Contract — Edge Repository (VIEW)
 -- Generated by: Teradata MCP Server (Community Edition)
--- Contract Version: 1.0
+-- Contract Version: 1.1
 --
 -- Customise the SELECT below to map your lineage source to the
--- six required contract columns.
+-- six required columns. The two optional enrichment columns
+-- (Edge_Relationship, Transformation_Type) are included as
+-- placeholders — map them or return NULL if not available.
 -- ================================================================
 
 REPLACE VIEW {db}.{name}
-( 
-    SrcContainer
-    ,SrcObject
-    ,SrcKind
-    ,TgtContainer
-    ,TgtObject
-    ,TgtKind
+(
+     Src_Container_Name
+    ,Src_Object_Name
+    ,Src_Kind
+    ,Tgt_Container_Name
+    ,Tgt_Object_Name
+    ,Tgt_Kind
+    -- Optional enrichment columns (NULL if not available in your source)
+    ,Edge_Relationship
+    ,Transformation_Type
 )
 AS
 LOCKING ROW FOR ACCESS
 SELECT
-    src.ContainerName   AS SrcContainer
-    ,src.ObjectName     AS SrcObject
-    ,src.ObjectKind     AS SrcKind
-    ,tgt.ContainerName  AS TgtContainer
-    ,tgt.ObjectName     AS TgtObject
-    ,tgt.ObjectKind     AS TgtKind
+     src.ContainerName      AS Src_Container_Name
+    ,src.ObjectName         AS Src_Object_Name
+    ,src.ObjectKind         AS Src_Kind
+    ,tgt.ContainerName      AS Tgt_Container_Name
+    ,tgt.ObjectName         AS Tgt_Object_Name
+    ,tgt.ObjectKind         AS Tgt_Kind
+    -- ============================================================
+    -- Map these to your actual columns, or use NULL if not available.
+    -- Examples:
+    --   src.RelationshipType  AS Edge_Relationship
+    --   src.ProcessCategory   AS Transformation_Type
+    -- ============================================================
+    ,CAST(NULL AS VARCHAR(50))  AS Edge_Relationship
+    ,CAST(NULL AS VARCHAR(50))  AS Transformation_Type
 FROM
     -- ============================================================
     -- Replace this with your actual lineage source.
@@ -435,11 +561,65 @@ FROM
     --   Your_DB.Your_Lineage_Table
     --   A join across metadata tables
     --   A UNION ALL of multiple lineage sources
+    --   {'{ProductName}'}_Observability.data_lineage (AI-Native Data Product)
     -- ============================================================
     YOUR_DATABASE.YOUR_LINEAGE_TABLE AS src
     -- Map your source columns to the contract column aliases above.
 ;
 
 COMMENT ON VIEW {db}.{name}
-    AS 'Graph Edge Contract v1.0 - edge repository view for Teradata MCP Server graph tools. Customise the source query to map your lineage data.'
+    AS 'Graph Edge Contract v1.1 - edge repository view for Teradata MCP Server graph tools. 6 required columns + 2 optional enrichment columns (Edge_Relationship, Transformation_Type). Customise the source query to map your lineage data.'
 ;"""
+
+
+# ──────────────────────────────────────────────────────────────────────────────── #
+#  Tool registration descriptor                                                   #
+# ──────────────────────────────────────────────────────────────────────────────── #
+
+GRAPH_EDGE_CONTRACT_DDL_TOOL = {
+    "name": "graph_edgeContractDDL",
+    "handler": handle_graph_edgeContractDDL,
+    "description": (
+        "Generate Teradata DDL for a Graph Edge Contract-conforming edge "
+        "repository table or view. Call this FIRST if you don't yet have an "
+        "edge repository — all other graph_* tools require one. "
+        "No database connection is used; DDL is returned as text ready to run. "
+        "TABLE output includes separate sample DML. "
+        "VIEW output generates a customisable template covering all 8 contract "
+        "columns: 6 required (Src_Container_Name, Src_Object_Name, Src_Kind, "
+        "Tgt_Container_Name, Tgt_Object_Name, Tgt_Kind) and 2 optional "
+        "enrichment columns (Edge_Relationship, Transformation_Type) for use "
+        "by graph visualisation tools. "
+        "AI-Native Data Product shortcut: if you have an Observability Module "
+        "(v1.5+), pass {ProductName}_Semantic.lineage_graph directly as "
+        "edge_repository — it already conforms to this contract. "
+        "Contract Version: 1.1."
+    ),
+    "parameters": {
+        "target_database": {
+            "type": "string",
+            "description": (
+                "Database in which to create the edge repository. "
+                "For AI-Native Data Products this is typically "
+                "{ProductName}_Semantic. "
+                "Example: 'StGeoMortgage_Semantic'."
+            ),
+            "required": True,
+        },
+        "object_name": {
+            "type": "string",
+            "description": (
+                "Name for the edge table or view. Default: 'EdgeRepository'."
+            ),
+            "default": "EdgeRepository",
+        },
+        "output_type": {
+            "type": "string",
+            "description": (
+                "'TABLE' (default): CREATE TABLE DDL + separate sample DML. "
+                "'VIEW': CREATE VIEW template for mapping an existing lineage source."
+            ),
+            "default": "TABLE",
+        },
+    },
+}

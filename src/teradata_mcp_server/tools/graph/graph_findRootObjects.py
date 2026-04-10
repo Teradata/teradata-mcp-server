@@ -12,6 +12,7 @@ import logging
 import time
 from teradatasql import TeradataConnection
 from teradata_mcp_server.tools.utils import create_response, rows_to_json
+from teradata_mcp_server.tools.graph._graph_utils import parse_csv_patterns
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -143,10 +144,21 @@ def handle_graph_findRootObjects(
       - Returns list of root objects suitable for downstream impact analysis
     """
     logger.debug(
-        f"Tool: handle_graph_findRootObjects: Args: container_pattern={container_pattern}, "
-        f"exclude_objects={exclude_objects}, edge_repository={edge_repository}, "
-        f"object_types={object_types}, return_format={return_format}"
+        "Tool: handle_graph_findRootObjects: Args: "
+        "container_pattern=%s, exclude_objects=%s, edge_repository=%s, "
+        "object_types=%s, return_format=%s",
+        container_pattern, exclude_objects, edge_repository,
+        object_types, return_format
     )
+
+    if not edge_repository:
+        return create_response(
+            {"error": "edge_repository is required. Call graph_edgeContractDDL to generate one."},
+            {
+                "tool_name": tool_name or "graph_findRootObjects",
+                "status": "error",
+            }
+        )
 
     try:
         with conn.cursor() as cur:
@@ -155,8 +167,7 @@ def handle_graph_findRootObjects(
             # (i.e., they have no upstream dependencies)
 
             # Parse container patterns (CSV support)
-            container_patterns = [
-                p.strip() for p in container_pattern.split(',') if p.strip()]
+            container_patterns = parse_csv_patterns(container_pattern)
 
             # Build LIKE clauses for container patterns - used in main WHERE and NOT EXISTS
             container_conditions = []
@@ -169,8 +180,7 @@ def handle_graph_findRootObjects(
             # Build exclusion conditions if provided
             exclusion_where = ""
             if exclude_objects:
-                exclude_patterns = [p.strip()
-                                    for p in exclude_objects.split(',') if p.strip()]
+                exclude_patterns = parse_csv_patterns(exclude_objects)
                 exclusion_conditions = []
                 for pattern in exclude_patterns:
                     # Check if pattern contains a dot (fully qualified) or just database pattern
@@ -232,28 +242,34 @@ ORDER BY
             """
 
             logger.debug(
-                f"Tool: handle_graph_findRootObjects: Executing SQL:\n{sql}")
+                "Tool: handle_graph_findRootObjects: Executing SQL:\n%s", sql)
 
             # Execute query
             cur.execute(sql)
 
             query_time = time.time() - start_time
-            print(f"Query execution took {query_time:.2f} seconds")
+            logger.debug(
+                "Tool: handle_graph_findRootObjects: Query execution took %.2fs",
+                query_time)
 
             # Fetch all results and convert to list of dictionaries
             # NOTE: rows_to_json takes (description, rows) - description FIRST!
             root_objects = rows_to_json(cur.description, cur.fetchall())
 
             logger.debug(
-                f"Tool: handle_graph_findRootObjects: Found {len(root_objects)} root objects")
-            if root_objects and len(root_objects) > 0:
+                "Tool: handle_graph_findRootObjects: Found %d root objects",
+                len(root_objects))
+            if root_objects:
                 logger.debug(
-                    f"Tool: handle_graph_findRootObjects: First object: {root_objects[0]}")
+                    "Tool: handle_graph_findRootObjects: First object: %s",
+                    root_objects[0])
 
             # Safety check: ensure root_objects is a list of dicts, not a string
             if not isinstance(root_objects, list):
                 logger.error(
-                    f"Tool: handle_graph_findRootObjects: root_objects is not a list! Type: {type(root_objects)}")
+                    "Tool: handle_graph_findRootObjects: "
+                    "root_objects is not a list — type: %s",
+                    type(root_objects))
                 root_objects = []
 
             # Format results based on return_format
@@ -283,12 +299,12 @@ ORDER BY
             }
 
             logger.debug(
-                f"Tool: handle_graph_findRootObjects: metadata: {metadata}")
+                "Tool: handle_graph_findRootObjects: metadata: %s", metadata)
             return create_response(formatted_data, metadata)
 
     except Exception as e:
         logger.error(
-            f"Tool: handle_graph_findRootObjects: Error: {e}", exc_info=True)
+            "Tool: handle_graph_findRootObjects: Error: %s", e, exc_info=True)
         return create_response(
             {"error": str(e)},
             {

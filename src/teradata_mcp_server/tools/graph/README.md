@@ -1,48 +1,132 @@
 # Graph Dependency Analysis Tools
 
-**Version:** 2.0  
-**Last Updated:** 2026-03-31  
-**Purpose:** Teradata object dependency analysis via ODEX framework
+**Version:** 3.0  
+**Last Updated:** 2026-04-10  
+**Purpose:** Directed dependency graph analysis for Teradata object lineage
 
-This module provides tools for analysing object dependencies in Teradata using graph traversal through the ODEX (Object Dependency Exchange) framework.
+This package provides seven complementary tools for analysing object dependencies
+in Teradata. All tools are stored-procedure-free — the only Teradata privilege
+required is `SELECT` on an edge repository conforming to the
+[Graph Edge Contract](#graph-edge-contract).
+
+---
 
 ## Quick Start
 
 ```python
+# Step 0 — Generate an edge repository (once, if you don't have one)
+#           For AI-Native Data Products, skip this — use lineage_graph directly:
+#             edge_repository="{ProductName}_Semantic.lineage_graph"
+ddl = handle_graph_edgeContractDDL(
+    conn=connection,
+    target_database="MY_PROJECT_Semantic",
+    object_name="EdgeRepository",
+    output_type="TABLE"
+)
+
 # Step 1 — Find root objects (seed points for analysis)
 roots = handle_graph_findRootObjects(
     conn=connection,
-    container_pattern="%WBC%,%StGeo%",
-    object_types="Table"
+    container_pattern="%MY_PROJECT%",
+    object_types="Table",
+    edge_repository="MY_PROJECT_Semantic.EdgeRepository"
 )
 
 # Step 2 — Compute BFS hop distances and group into migration waves
-waves = handle_graph_bfsLevelsPy(
+waves = handle_graph_bfsLevels(
     conn=connection,
-    root_node_list="DEV02_WBC_RPT_T.mortgage_portfolio_summary,"
-                   "DEV01_StGeo_RPT_T.monthly_portfolio_risk_summary",
-    include_containers="DEV01_StGeo%,DEV02_WBC%,POWERBI%,TABLEAU%"
+    root_node_list="MY_DB_STD_T.source_table_a,MY_DB_STD_T.source_table_b",
+    include_containers="MY_DB%",
+    edge_repository="MY_PROJECT_Semantic.EdgeRepository"
 )
 
-# Objects grouped by nearest_root = migration wave grouping
+# Objects grouped by nearest_root  = migration wave grouping
 # Objects ordered by downstream_level = deployment sequence within each wave
+
+# Step 3 — Trace lineage and impact paths for a specific object
+lineage = handle_graph_traceLineage(
+    conn=connection,
+    object_name="MY_DB_STD_T.source_table_a",
+    max_depth_down=5,
+    edge_repository="MY_PROJECT_Semantic.EdgeRepository"
+)
 ```
 
 ---
 
 ## Tools
 
-This module provides five complementary tools for dependency analysis:
+Seven complementary tools covering the full graph analysis workflow:
 
-| # | Tool | Type | Purpose |
-|---|------|------|---------|
-| 1 | [`graph_findRootObjects`](#graph_findrootobjects) | SQL | Discover objects with no upstream dependencies — migration seed points |
-| 2 | [`graph_bfsLevels`](#graph_bfslevels) | Python BFS | Wave planning, blast-radius sizing, deployment sequencing |
-| 3 | [`graph_queryDependenciesAgent`](#graph_querydependenciesagent) | SP | Full lineage tracing, impact path analysis, edge detail |
-| 4 | [`graph_detectCycles`](#graph_detectcycles) | SP | Circular reference detection, DAG validation |
-| 5 | [`graph_connectedComponents`](#graph_connectedcomponents) | SP | Graph partitioning, isolated sub-graph identification |
+| Step | Tool | Implementation | Purpose |
+|------|------|---------------|---------|
+| 0 | [`graph_edgeContractDDL`](#graph_edgecontractddl) | Template | Generate edge repository DDL — start here |
+| 1 | [`graph_findRootObjects`](#graph_findrootobjects) | SQL | Discover objects with no upstream dependencies |
+| 2 | [`graph_bfsLevels`](#graph_bfslevels) | Python BFS | Wave planning, deployment sequencing, blast-radius sizing |
+| 3 | [`graph_traceLineage`](#graph_tracelineage) | Python + recursive CTE | Full lineage tracing, impact path analysis, edge detail |
+| 4 | [`graph_detectCycles`](#graph_detectcycles) | Python DFS | Circular reference detection, DAG validation |
+| 5 | [`graph_connectedComponents`](#graph_connectedcomponents) | Python Union-Find | Graph partitioning, isolated sub-graph identification |
+| 6 | [`graph_analyseDatabase`](#graph_analysedatabase) | Composite | All four analyses in one call, one shared edge fetch |
 
-**Typical workflow:** `findRootObjects` → `bfsLevels` → `queryDependenciesAgent` → `detectCycles`
+**Typical workflow:** `edgeContractDDL` → `findRootObjects` → `bfsLevels` → `traceLineage` → `detectCycles`
+
+**When to use `graph_analyseDatabase`:** if you need three or more of the individual analyses, use this instead — it fetches the edge set once and shares it across all four analyses in a single MCP response.
+
+---
+
+## Graph Edge Contract
+
+All tools require an **edge repository** — a Teradata table or view conforming to the Graph Edge Contract. The contract defines six required columns and two optional enrichment columns:
+
+### Required Columns
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `Src_Container_Name` | `VARCHAR(128) NOT NULL` | Source (upstream) container — Teradata database name, ETL workflow folder, dbt project, etc. |
+| `Src_Object_Name` | `VARCHAR(128) NOT NULL` | Source object name |
+| `Src_Kind` | `VARCHAR(30) NOT NULL` | Source object type (e.g. `Table`, `View`, `Job`) |
+| `Tgt_Container_Name` | `VARCHAR(128) NOT NULL` | Target (downstream) container |
+| `Tgt_Object_Name` | `VARCHAR(128) NOT NULL` | Target object name |
+| `Tgt_Kind` | `VARCHAR(30) NOT NULL` | Target object type |
+
+### Optional Enrichment Columns
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `Edge_Relationship` | `VARCHAR(50)` | Nature of the edge: `DIRECT`, `ETL_INPUT`, `ETL_OUTPUT`, `JOIN`, `TRANSFORM` |
+| `Transformation_Type` | `VARCHAR(50)` | Process category: `ETL`, `FEATURE_ENG`, `AGGREGATION`, `EMBEDDING_GEN` |
+
+Optional columns are ignored by graph analysis tools but surfaced to graph visualisation clients for edge labelling.
+
+### Edge Semantics
+
+All edges share a single consistent direction — Src is always upstream, Tgt is always downstream. The `Edge_Relationship` optional column carries the semantic label for visualisation clients; the graph analysis tools traverse all edges identically regardless of label.
+
+The same Src→Tgt direction is read differently depending on edge type:
+
+| Edge type | How to read it | Example |
+|---|---|---|
+| Object dependency | Src *is referenced by* Tgt | `CUSTOMER_TABLE` → `CUSTOMER_VIEW` |
+| ETL input | Src *is read by* Tgt | `CUSTOMER_TABLE` → `ETL_LOAD_JOB` |
+| ETL output | Src *writes to* Tgt | `ETL_LOAD_JOB` → `CUSTOMER_FEATURES` |
+
+In all three cases: Src is the prerequisite, Tgt is the consumer. A single edge repository can hold both object dependency edges and data lineage edges and be traversed uniformly by the graph tools.
+
+The `lineage_graph` view (Observability Module v1.5) surfaces ETL jobs as first-class nodes, producing two edges per declared flow:
+- **Leg 1:** `source_table` →*(is read by)*→ `job_name` (`Edge_Relationship = ETL_INPUT`)
+- **Leg 2:** `job_name` →*(writes to)*→ `target_table` (`Edge_Relationship = ETL_OUTPUT`)
+
+This enables end-to-end lineage traversal through jobs, not just between tables.
+
+### AI-Native Data Product Shortcut
+
+If you have a data product built on the [AI-Native Data Product standard](https://github.com/Teradata/ai-native-data-product), the `{ProductName}_Semantic.lineage_graph` view (Observability Module v1.5) already conforms to this contract. Use it directly:
+
+```python
+edge_repository="{ProductName}_Semantic.lineage_graph"
+```
+
+No DDL generation required.
 
 ---
 
@@ -50,103 +134,108 @@ This module provides five complementary tools for dependency analysis:
 
 ```
 teradata_mcp_server/tools/
-├── graph_tools.py                     # Registration hub (imports + GRAPH_TOOLS list only)
+├── graph_tools.py                  # Registration hub (imports + GRAPH_TOOLS list only)
 ├── graph/
-│   ├── __init__.py
-│   ├── _graph_utils.py                # Shared BFS helpers (internal)
-│   ├── graph_findRootObjects.py       # Tool: SQL-based root object discovery
-│   ├── graph_bfsLevelsPy.py          # Tool: Python BFS (no SP dependency)
-│   ├── graph_queryDependenciesAgent.py # Tool: SP-based lineage analysis
-│   ├── graph_detectCycles.py          # Tool: SP-based cycle detection
-│   └── graph_connectedComponents.py   # Tool: SP-based WCC analysis
-└── utils.py                           # Shared MCP utilities
+│   ├── __init__.py                 # Re-exports all handle_* for ModuleLoader
+│   ├── _graph_utils.py             # Shared utilities (internal — not an MCP tool)
+│   ├── graph_edge_contract.py      # Tool: DDL generator + Graph Edge Contract text
+│   ├── graph_findRootObjects.py    # Tool: SQL-based root object discovery
+│   ├── graph_bfsLevels.py          # Tool: Pure-Python BFS
+│   ├── graph_traceLineage.py       # Tool: Python + recursive CTE lineage analysis
+│   ├── graph_detectCycles.py       # Tool: Python Union-Find + iterative DFS
+│   ├── graph_connectedComponents.py # Tool: Python Union-Find WCC analysis
+│   └── graph_analyseDatabase.py    # Tool: Composite single-fetch analysis
+└── utils.py                        # Shared MCP utilities
 ```
 
 `graph_tools.py` is intentionally thin — it contains no logic, only imports and the `GRAPH_TOOLS` registration list. See the comments in that file for the rationale.
+
+`_graph_utils.py` is an internal module. It is not registered as an MCP tool. It exports:
+- `parse_csv_patterns` — normalise CSV input strings
+- `build_like_or` — build single-column LIKE clauses for SQL WHERE
+- `bfs_safe_int` — safe int conversion for nullable level columns
+- `create_bfs_summary` — BFS result statistics
+- `extract_cycle_candidates` — identify direction=BOTH nodes
 
 ---
 
 ## Tool Reference
 
-### `graph_findRootObjects`
+### `graph_edgeContractDDL`
 
-Find objects with no upstream dependencies in specified containers.
+Generate Teradata DDL for a Graph Edge Contract-conforming edge repository.
 
-#### Description
-
-Root objects are foundational data sources that nothing else feeds into. They are the natural starting points for downstream impact analysis and migration wave planning — use `graph_bfsLevels` after this tool to compute hop distances from the identified roots.
-
-#### Use Cases
-
-| Use Case | Description | Configuration |
-|----------|-------------|---------------|
-| **Migration seed discovery** | Find root tables to anchor migration waves | `container_pattern="%WBC%,%StGeo%"` |
-| **Source table discovery** | Find base tables in data pipelines | `object_types="Table"` |
-| **Foundation objects** | Identify independent foundational objects | `exclude_objects="PRD_%,%.temp_%"` |
-| **Migration planning** | Prioritise by downstream impact count | `return_format="detailed"` |
-| **Quick count** | Fast assessment of root object count | `return_format="summary"` |
+Call this first if you don't yet have an edge repository. No database connection is used — DDL is returned as text ready to run.
 
 #### Parameters
 
 | Parameter | Type | Default | Required | Description |
 |-----------|------|---------|----------|-------------|
-| `container_pattern` | string | — | ✅ | Database/schema pattern(s). Supports `%` wildcards and CSV.<br>Examples: `%WBC%`, `%WBC%,%StGeo%`, `DEV01_%` |
-| `exclude_objects` | string | `''` | ❌ | SQL LIKE patterns to exclude. Matches `DatabaseName.ObjectName`.<br>Examples: `PRD_%`, `%.temp_%,%.bak_%` |
-| `edge_repository` | string | `DEV_01_ODEX_STD_0_V.ODEXRepository` | ❌ | ODEX repository view to query |
-| `object_types` | string | `''` | ❌ | Filter by object type: `Table`, `View`, `Procedure`, `Macro`.<br>CSV supported: `Table,View`. Empty = all types. |
-| `return_format` | string | `detailed` | ❌ | `detailed` (full list with metadata) or `summary` (statistics only) |
+| `target_database` | string | — | ✅ | Database in which to create the edge repository.<br>For AI-Native Data Products: `{ProductName}_Semantic` |
+| `object_name` | string | `EdgeRepository` | ❌ | Name for the edge table or view |
+| `output_type` | string | `TABLE` | ❌ | `TABLE`: CREATE TABLE DDL + sample DML<br>`VIEW`: customisable template for mapping an existing lineage source |
 
-#### Example Calls
+#### Example
 
 ```python
-# Find all root objects in WBC and StGeo databases
+# Generate a CREATE TABLE with sample DML
+result = handle_graph_edgeContractDDL(
+    conn=connection,
+    target_database="MY_PROJECT_Semantic",
+    object_name="EdgeRepository",
+    output_type="TABLE"
+)
+print(result[0]['ddl'])        # Run this in Teradata
+print(result[0]['sample_dml']) # Optional: insert sample rows
+
+# Generate a VIEW template to wrap an existing lineage source
+result = handle_graph_edgeContractDDL(
+    conn=connection,
+    target_database="MY_PROJECT_Semantic",
+    object_name="lineage_graph",
+    output_type="VIEW"
+)
+```
+
+---
+
+### `graph_findRootObjects`
+
+Find objects with no upstream dependencies in specified containers.
+
+Root objects are foundational data sources that nothing else feeds into. They are the natural starting points for downstream impact analysis and migration wave planning.
+
+#### Parameters
+
+| Parameter | Type | Default | Required | Description |
+|-----------|------|---------|----------|-------------|
+| `container_pattern` | string | — | ✅ | Database/schema LIKE pattern(s). Supports `%` wildcards and CSV.<br>Examples: `MY_DB%`, `%PROJECT_A%,%PROJECT_B%` |
+| `exclude_objects` | string | `''` | ❌ | LIKE patterns to exclude. Matches `Container.Object`.<br>Example: `SANDBOX%,%.temp_%` |
+| `edge_repository` | string | — | ✅ | Edge repository conforming to the Graph Edge Contract.<br>AI-Native Data Products: `{ProductName}_Semantic.lineage_graph` |
+| `object_types` | string | `''` | ❌ | Filter by object type: `Table`, `View`, `Procedure`, `Macro`.<br>CSV supported: `Table,View`. Empty = all types. |
+| `return_format` | string | `detailed` | ❌ | `detailed` — full list with metadata<br>`summary` — statistics only |
+
+#### Use Cases
+
+| Use Case | Configuration |
+|----------|---------------|
+| Migration seed discovery | `container_pattern="%MY_PROJECT%"` |
+| Source table discovery | `object_types="Table"` |
+| Exclude sandbox schemas | `exclude_objects="SANDBOX%,%.temp_%"` |
+| Quick count | `return_format="summary"` |
+
+#### Example
+
+```python
+# Find root tables, ordered by downstream impact
 result = handle_graph_findRootObjects(
     conn=connection,
-    container_pattern="%WBC%,%StGeo%"
+    container_pattern="MY_DB_STD_T,MY_DB_STD_V",
+    object_types="Table",
+    edge_repository="MY_PROJECT_Semantic.EdgeRepository"
 )
 for obj in result['results']['summary']['top_impact_objects']:
     print(f"  {obj['name']} → {obj['downstream_count']} dependents")
-
-# Find only root tables excluding personal schemas
-result = handle_graph_findRootObjects(
-    conn=connection,
-    container_pattern="DEV01_%,DEV02_%",
-    object_types="Table",
-    exclude_objects="DFJ%,C_D02%,PRD_%"
-)
-
-# Quick summary
-result = handle_graph_findRootObjects(
-    conn=connection,
-    container_pattern="%StGeo%",
-    return_format="summary"
-)
-print(result['results']['summary_text'])
-```
-
-#### Return Format
-
-**Detailed** (default):
-```json
-{
-  "results": {
-    "root_objects": [
-      {
-        "DatabaseName": "DEV01_StGeo_RPT_T",
-        "ObjectName": "monthly_portfolio_risk_summary",
-        "FullyQualifiedName": "DEV01_StGeo_RPT_T.monthly_portfolio_risk_summary",
-        "ObjectType": "Table",
-        "DownstreamDependentCount": 8
-      }
-    ],
-    "summary": {
-      "total_root_objects": 32,
-      "object_type_counts": {"Table": 32},
-      "database_counts": {"DEV02_WBC_RPT_T": 3, "DEV01_StGeo_RPT_T": 5},
-      "top_impact_objects": [...]
-    }
-  }
-}
 ```
 
 ---
@@ -155,475 +244,264 @@ print(result['results']['summary_text'])
 
 Compute BFS shortest-path hop distances from one or more root nodes.
 
-**Implementation:** Pure Python — no stored procedure required. One SQL round-trip fetches the edge set; all BFS computation runs in the MCP server process.
+**Implementation:** Pure Python — One SQL round-trip fetches the scoped edge set; all BFS computation runs in the MCP server process.
 
-#### Description
+**Use this tool for:** deployment sequencing, migration wave grouping, blast-radius sizing, cycle candidate depth analysis.
 
-Returns one row per reachable node with signed hop distances and a wave grouping. Purpose-built for migration wave planning, deployment sequencing, and blast-radius sizing.
-
-**This is the right tool for:** sequencing, wave grouping, blast-radius counts, cycle depth analysis.  
-**This is not the right tool for:** lineage tracing, impact path detail, edge-level analysis — use `graph_queryDependenciesAgent` for those.
+**Do not use this tool for:** lineage tracing, impact path detail, edge-level analysis — use `graph_traceLineage` for those.
 
 #### Direction Convention
 
-ODEX edge semantics: `Src` "referenced by" `Tgt` → Src is the dependency (upstream); Tgt is the dependent (downstream).
+Each edge row: `Src` "is referenced by" `Tgt` → Src is the dependency (upstream); Tgt is the dependent (downstream).
 
 | Direction | Traversal | Meaning |
 |-----------|-----------|---------|
 | Upstream BFS | Reverse adjacency (Tgt → Src) | Discovers what a node depends on |
 | Downstream BFS | Forward adjacency (Src → Tgt) | Discovers what depends on a node |
 
-Root objects with in-degree zero correctly show `upstream_level=None` for all non-root nodes — they have no upstream sources. This is the correct behaviour, confirmed by the Option B direction fix applied during development.
-
-#### Use Cases
-
-| Use Case | Description | Configuration |
-|----------|-------------|---------------|
-| **Migration wave planning** | Group objects by nearest root | All roots in `root_node_list` |
-| **Deployment sequencing** | Order by `downstream_level` ascending | `max_depth_up=0, max_depth_down=10` |
-| **Blast-radius sizing** | Count objects within N hops | `max_depth_down=N` |
-| **Cycle member depth** | Find `direction='BOTH'` nodes | Both directions enabled |
-| **Scoped analysis** | Limit to project containers | `include_containers="DEV01_%,TABLEAU%"` |
+Root objects with in-degree zero correctly show `upstream_level=None` for all non-root nodes — they have no upstream sources.
 
 #### Parameters
 
 | Parameter | Type | Default | Required | Description |
 |-----------|------|---------|----------|-------------|
-| `root_node_list` | string | — | ✅ | CSV of exact FQ root node names. **No wildcards.** Use `graph_findRootObjects` to discover names. |
-| `max_depth_up` | integer | `10` | ❌ | Maximum upstream hops. `0` = skip upstream entirely. |
-| `max_depth_down` | integer | `10` | ❌ | Maximum downstream hops. `0` = skip downstream entirely. |
-| `exclude_objects` | string | `''` | ❌ | CSV of FQ LIKE patterns to exclude. Matched against both Src and Tgt. Applied in Python. |
-| `include_containers` | string | `''` | ❌ | CSV of container LIKE patterns. Both endpoints must match. Applied in SQL for efficiency. |
-| `edge_repository` | string | `DEV_01_ODEX_STD_0_V.ODEXRepository` | ❌ | ODEX repository view containing edges. |
+| `root_node_list` | string | — | ✅ | CSV of exact fully-qualified node names. No wildcards.<br>Example: `MY_DB.table_a,MY_DB.table_b` |
+| `max_depth_up` | integer | `10` | ❌ | Maximum upstream hops. `0` = skip upstream analysis. |
+| `max_depth_down` | integer | `10` | ❌ | Maximum downstream hops. `0` = skip downstream analysis. |
+| `exclude_objects` | string | `''` | ❌ | CSV LIKE patterns to exclude from BFS traversal |
+| `include_containers` | string | `''` | ❌ | CSV container LIKE patterns (whitelist). Always supply when scope is known — pushed into SQL to reduce fetch volume. |
+| `edge_repository` | string | — | ✅ | Edge repository conforming to the Graph Edge Contract |
 
-#### Example Calls
+#### Example
 
 ```python
-# Multi-root migration wave planning
-waves = handle_graph_bfsLevelsPy(
+# Wave planning: downstream only, scoped to project containers
+result = handle_graph_bfsLevels(
     conn=connection,
-    root_node_list=(
-        "DEV02_WBC_RPT_T.mortgage_portfolio_summary,"
-        "DEV01_StGeo_RPT_T.monthly_portfolio_risk_summary,"
-        "DFJ_DATA.dfj_reltnshps"
-    ),
-    include_containers="DEV01_StGeo%,DEV02_WBC%,DFJ%,POWERBI%,TABLEAU%"
-)
-# nearest_root → wave grouping
-# downstream_level → deployment order within each wave
-
-# Downstream consumers only (deployment sequencing)
-result = handle_graph_bfsLevelsPy(
-    conn=connection,
-    root_node_list="DEV02_WBC_STD_T.Borrower",
+    root_node_list="MY_DB_STD_T.source_a,MY_DB_STD_T.source_b",
     max_depth_up=0,
-    max_depth_down=10
+    max_depth_down=10,
+    include_containers="MY_DB%,REPORTING%",
+    edge_repository="MY_PROJECT_Semantic.EdgeRepository"
 )
-
-# With exclusions
-result = handle_graph_bfsLevelsPy(
-    conn=connection,
-    root_node_list="DEV01_StGeo_RPT_T.mortgage_products_summary",
-    exclude_objects="DFJ%,C_D02%,%.temp_%",
-    include_containers="DEV01_StGeo%,TABLEAU%"
-)
+# Sort by downstream_level ascending for deployment order
+# Group by nearest_root for wave assignment
 ```
-
-#### Return Format
-
-```json
-{
-  "results": {
-    "nodes": [
-      {
-        "node":             "DEV02_WBC_RPT_T.mortgage_portfolio_summary",
-        "container_name":   "DEV02_WBC_RPT_T",
-        "object_name":      "mortgage_portfolio_summary",
-        "object_kind":      "Table",
-        "upstream_level":   null,
-        "downstream_level": 0,
-        "nearest_root":     "DEV02_WBC_RPT_T.mortgage_portfolio_summary",
-        "direction":        "ROOT",
-        "is_root":          "Y"
-      },
-      {
-        "node":             "DEV02_WBC_RPT_V.mortgage_portfolio_summary",
-        "container_name":   "DEV02_WBC_RPT_V",
-        "object_name":      "mortgage_portfolio_summary",
-        "object_kind":      "View",
-        "upstream_level":   null,
-        "downstream_level": 1,
-        "nearest_root":     "DEV02_WBC_RPT_T.mortgage_portfolio_summary",
-        "direction":        "D",
-        "is_root":          "N"
-      }
-    ],
-    "cycle_candidates": [],
-    "summary": {
-      "total_nodes":            68,
-      "root_nodes":             10,
-      "upstream_only":          0,
-      "downstream_only":        58,
-      "both_directions":        0,
-      "cycle_candidates":       0,
-      "max_upstream_depth":     0,
-      "max_downstream_depth":   5,
-      "nodes_per_nearest_root": {
-        "DEV02_WBC_RPT_T.mortgage_portfolio_summary": 9
-      },
-      "object_kind_counts": {"Table": 12, "View": 22, "Procedure": 16}
-    }
-  },
-  "metadata": {
-    "implementation": "python_bfs",
-    "graph_stats": {
-      "unique_nodes_in_graph": 120,
-      "raw_edges_fetched": 95,
-      "edges_excluded": 3,
-      "edges_traversed": 92
-    }
-  }
-}
-```
-
-#### `direction` Values
-
-| Value | Meaning | `upstream_level` | `downstream_level` |
-|-------|---------|-----------------|-------------------|
-| `ROOT` | One of the input root nodes | `0` | `0` |
-| `U` | Reachable upstream only | Negative integer | `None` |
-| `D` | Reachable downstream only | `None` | Positive integer |
-| `BOTH` | Reachable both ways — possible cycle member | Negative integer | Positive integer |
-
-`BOTH` nodes where `abs(upstream_level) ≠ downstream_level` are cycle candidates — the asymmetry indicates a back-edge. Equal absolute levels indicate a shared dependency.
 
 ---
 
-### `graph_queryDependenciesAgent`
+### `graph_traceLineage`
 
-Comprehensive bidirectional dependency analysis with full edge detail.
+Analyse object dependencies — finds upstream dependencies (what the object depends on) and downstream dependents (what depends on the object).
 
-#### Description
+**Implementation:** Hybrid — Python constructs Teradata recursive CTEs that execute entirely server-side. Only the reachable subgraph crosses the network.
 
-Traverses upstream (what the object depends on) and downstream (what depends on the object) relationships using the `QueryDependenciesAgentBatch` stored procedure. Returns nodes and edges representing the complete dependency graph.
+**Use this tool for:** impact analysis, lineage tracing, pre-deployment validation, edge-level dependency detail.
 
-**Use this for:** lineage tracing, impact path detail, visualisation data, edge-level relationship analysis.  
-**Not for:** deployment sequencing or wave grouping — use `graph_bfsLevels` for those.
-
-#### Use Cases
-
-| Use Case | Description | Configuration |
-|----------|-------------|---------------|
-| **Impact analysis** | What breaks if I change/drop this object? | `max_depth_up=0, max_depth_down=5` |
-| **Data lineage** | Where does this data come from? | `max_depth_up=10, max_depth_down=0` |
-| **Pre-deployment validation** | Check impacts before deployment | `max_depth_up=3, max_depth_down=5` |
-| **Visualisation** | Feed D3.js or Cytoscape graph | `return_format="detailed"` |
-| **Quick impact check** | Fast assessment for approvals | `return_format="summary"` |
+**Do not use this tool for:** migration wave sequencing — use `graph_bfsLevels` for that.
 
 #### Parameters
 
 | Parameter | Type | Default | Required | Description |
 |-----------|------|---------|----------|-------------|
-| `object_name` | string | — | ✅ | FQ object name(s). Supports `%` wildcards and CSV.<br>Examples: `DB.Table`, `%WBC%.%`, `%WBC%.%,%StGeo%.%` |
-| `max_depth_up` | integer | `3` | ❌ | Upstream traversal depth (0–10). |
-| `max_depth_down` | integer | `3` | ❌ | Downstream traversal depth (0–10). |
-| `exclude_objects` | string | `''` | ❌ | Server-side SQL LIKE patterns for exclusion. |
-| `include_containers` | string | `''` | ❌ | Container whitelist (empty = all). |
-| `edge_repository` | string | `DEV_01_ODEX_STD_0_V.ODEXRepository` | ❌ | ODEX repository view. |
-| `return_format` | string | `detailed` | ❌ | `detailed`, `summary`, or `edges_only`. |
+| `object_name` | string | — | ✅ | Object name pattern(s). Supports `%` wildcards and CSV.<br>Single: `MY_DB.my_table`<br>Wildcard: `MY_DB%.%`<br>Multiple: `MY_DB_A.%,MY_DB_B.%` |
+| `max_depth_up` | integer | `3` | ❌ | Maximum upstream levels to traverse (0–10) |
+| `max_depth_down` | integer | `3` | ❌ | Maximum downstream levels to traverse (0–10) |
+| `exclude_objects` | string | `''` | ❌ | CSV LIKE patterns to exclude. Matches `DB.Object` format. |
+| `include_containers` | string | `''` | ❌ | CSV container LIKE patterns (whitelist). Empty = all containers. |
+| `edge_repository` | string | — | ✅ | Edge repository conforming to the Graph Edge Contract |
+| `return_format` | string | `detailed` | ❌ | `detailed`, `summary`, or `edges_only` |
 
-#### Exclusion Patterns
-
-The `exclude_objects` parameter uses server-side SQL LIKE filtering against `DatabaseName.ObjectName` — significantly more efficient than client-side filtering.
+#### Example
 
 ```python
-# Common patterns
-exclude_objects="PRD_%,PROD_%"              # Production safety
-exclude_objects="PRD_%,TST_%,UAT_%,STG_%"  # Dev-only focus
-exclude_objects="DFJ%,C_D02%,SANDBOX_%"    # Personal/sandbox exclusion
-exclude_objects="%.temp_%,%.bak_%"          # Temporary and backup objects
-```
-
-#### Example Calls
-
-```python
-# Downstream impact analysis
-result = handle_graph_queryDependenciesAgent(
+# Full impact analysis — what breaks if this object changes?
+result = handle_graph_traceLineage(
     conn=connection,
-    object_name="DEV01_StGeo_STD_T.mortgage_account",
+    object_name="MY_DB_STD_T.core_entity",
     max_depth_up=0,
     max_depth_down=5,
-    exclude_objects="PRD_%,OLD_%"
+    edge_repository="MY_PROJECT_Semantic.EdgeRepository"
 )
-impact = result['results']['summary']['downstream_nodes']
-print(f"Modifying this table affects {impact} downstream objects")
-
-# Data lineage tracing
-result = handle_graph_queryDependenciesAgent(
-    conn=connection,
-    object_name="DEV01_StGeo_RPT_V.mortgage_risk_analysis",
-    max_depth_up=10,
-    max_depth_down=0
-)
-
-# Wildcard — all WBC and StGeo objects
-result = handle_graph_queryDependenciesAgent(
-    conn=connection,
-    object_name="%WBC%.%,%StGeo%.%",
-    max_depth_up=3,
-    max_depth_down=3,
-    exclude_objects="DFJ%,PRD_%"
-)
+print(f"Downstream dependents: {len(result['results']['downstream_edges'])}")
 ```
 
 ---
 
 ### `graph_detectCycles`
 
-Detect circular references in the ODEX lineage graph.
+Detect circular references (cycles) in the dependency graph.
 
-#### Description
+**Implementation:** Pure Python — one SQL SELECT fetches the scoped edge set; Union-Find WCC partitioning followed by iterative DFS cycle detection runs in the MCP server process.
 
-Identifies all directed cycles using WCC partitioning and a single-pass `WITH RECURSIVE` CTE. Returns each cycle as an ordered node list with a human-readable path string. Use this to validate graph integrity (DAG property) before migration or deployment.
-
-#### Use Cases
-
-- Validate graph integrity before deployment sequencing
-- Find "stub-then-replace" code patterns
-- Identify objects causing topological sort failures
-- Pre-deployment cycle checks
+Run this tool before wave planning to confirm the graph is a valid DAG. A cycle will cause topological sort to hang silently.
 
 #### Parameters
 
 | Parameter | Type | Default | Required | Description |
 |-----------|------|---------|----------|-------------|
-| `container_pattern` | string | — | ✅ | CSV LIKE patterns for container scope. |
-| `excl_patterns` | string | `''` | ❌ | CSV LIKE patterns to exclude. |
-| `object_dependency_table` | string | `DEV_01_ODEX_STD_0_V.ODEXRepository` | ❌ | ODEX repository view. |
-| `strategy` | string | `AUTO` | ❌ | `AUTO` (default, WCC-partitioned CTE), `CTE` (small graphs), `DFS` (debugging). |
-| `max_edges_for_cte` | integer | `0` | ❌ | Strategy selection hint. `0` = let SP decide. |
+| `container_pattern` | string | — | ✅ | CSV LIKE patterns for container scope.<br>Example: `MY_DB%` or `%PROJECT_A%,%PROJECT_B%` |
+| `exclude_objects` | string | `''` | ❌ | CSV LIKE patterns to exclude from the scan |
+| `edge_repository` | string | — | ✅ | Edge repository conforming to the Graph Edge Contract |
 
-#### Example Calls
+#### Example
 
 ```python
-# Check for cycles across WBC and StGeo
 result = handle_graph_detectCycles(
     conn=connection,
-    container_pattern="%WBC%,%StGeo%",
-    excl_patterns="DFJ%,C_D02%"
+    container_pattern="MY_DB%",
+    edge_repository="MY_PROJECT_Semantic.EdgeRepository"
 )
-
-cycle_count = result['results']['summary_stats'][0]['Cycle_Count']
-print(f"Cycles found: {cycle_count}")
-
-if cycle_count > 0:
-    for cycle in result['results']['cycle_summaries']:
-        print(f"  Cycle: {cycle['Cycle_Path']}")
-```
-
-#### Return Format
-
-```json
-{
-  "results": {
-    "cycle_details":   [...],  // One row per node per cycle
-    "cycle_summaries": [...],  // One row per cycle with path string
-    "summary_stats":   [...]   // Single row: Cycle_Count, Edge_Count, Strategy_Used
-  }
-}
+print(result['results']['summary_stats'][0]['Summary_Message'])
+# "No cycles detected — graph is a DAG."
+# or: "3 cycle(s) detected."
+for cycle in result['results']['cycle_summaries']:
+    print(f"  Cycle {cycle['Cycle_Id']}: {cycle['Cycle_Path']}")
 ```
 
 ---
 
 ### `graph_connectedComponents`
 
-Identify all Weakly Connected Components (WCC) in the ODEX graph.
+Identify all Weakly Connected Components (WCC) in the dependency graph.
 
-#### Description
+**Implementation:** Pure Python — one SQL SELECT, then Union-Find WCC partitioning in the MCP server process.
 
-Partitions the graph into isolated sub-graphs (components) where every node can reach every other node when edge direction is ignored. Use this to understand graph structure, scope impact analysis to a single component, or pre-filter before cycle detection.
+A connected component is a maximal set of nodes reachable from one another when edge direction is ignored. Use this to understand graph structure, identify isolated sub-graphs, and pre-filter before cycle detection.
 
 #### Parameters
 
 | Parameter | Type | Default | Required | Description |
 |-----------|------|---------|----------|-------------|
-| `container_pattern` | string | — | ✅ | CSV LIKE patterns for container scope. |
-| `excl_patterns` | string | `''` | ❌ | CSV LIKE patterns to exclude. |
-| `object_dependency_table` | string | `DEV_01_ODEX_STD_0_V.ODEXRepository` | ❌ | ODEX repository view. |
+| `container_pattern` | string | — | ✅ | CSV LIKE patterns for container scope |
+| `exclude_objects` | string | `''` | ❌ | CSV LIKE patterns to exclude from the scan |
+| `edge_repository` | string | — | ✅ | Edge repository conforming to the Graph Edge Contract |
 
-#### Example Calls
+#### Example
 
 ```python
-# Partition the StGeo graph into components
 result = handle_graph_connectedComponents(
     conn=connection,
-    container_pattern="%StGeo%",
-    excl_patterns="PRD_%"
+    container_pattern="MY_DB%",
+    edge_repository="MY_PROJECT_Semantic.EdgeRepository"
 )
-
 stats = result['results']['summary_stats'][0]
-print(f"Components: {stats['Component_Count']}")
-print(f"Nodes: {stats['Node_Count']}, Edges: {stats['Edge_Count']}")
+print(f"{stats['Component_Count']} components, "
+      f"largest has {stats['Largest_Component']} nodes")
 ```
 
 ---
 
-## Integration Patterns
+### `graph_analyseDatabase`
 
-### Workflow: Migration Wave Planning
+Composite analysis — runs root object discovery, connected component analysis, cycle detection, and BFS wave planning in a **single MCP call** with **one shared edge fetch**.
+
+Use this instead of calling the four individual tools when you need two or more of those analyses together. It eliminates the scalability bottleneck of serial MCP round-trips (4 SQL fetches → 1; 4 MCP responses → 1).
+
+#### Parameters
+
+| Parameter | Type | Default | Required | Description |
+|-----------|------|---------|----------|-------------|
+| `container_pattern` | string | — | ✅ | CSV LIKE patterns for container scope |
+| `exclude_objects` | string | `''` | ❌ | CSV LIKE patterns to exclude |
+| `top_n_roots` | integer | `4` | ❌ | Number of top root objects (by downstream impact) to include in BFS wave analysis |
+| `max_depth_down` | integer | `10` | ❌ | Maximum downstream BFS hops from roots |
+| `max_depth_up` | integer | `0` | ❌ | Maximum upstream BFS hops. `0` = skip upstream. |
+| `edge_repository` | string | — | ✅ | Edge repository conforming to the Graph Edge Contract |
+
+#### Example
 
 ```python
-# Step 1 — Find root objects (seed points)
-roots = handle_graph_findRootObjects(
+# Full database readiness assessment — one call
+result = handle_graph_analyseDatabase(
     conn=connection,
-    container_pattern="%WBC%,%StGeo%,%DFJ%",
-    object_types="Table",
-    exclude_objects="PRD_%,C_D02%"
-)
-
-# Step 2 — Take top 10 by downstream count
-top_roots = roots['results']['summary']['top_impact_objects'][:10]
-root_fq_list = ",".join(obj['name'] for obj in top_roots)
-
-# Step 3 — BFS to compute wave groupings and deployment sequence
-waves = handle_graph_bfsLevelsPy(
-    conn=connection,
-    root_node_list=root_fq_list,
-    max_depth_up=0,      # Root objects have no upstream
+    container_pattern="MY_DB%",
+    top_n_roots=6,
     max_depth_down=10,
-    include_containers="%WBC%,%StGeo%,%DFJ%,POWERBI%,TABLEAU%",
-    exclude_objects="PRD_%,C_D02%"
+    edge_repository="MY_PROJECT_Semantic.EdgeRepository"
 )
 
-# Group by nearest_root → one migration wave per root
-# Sort by downstream_level → deployment order within each wave
-nodes = waves['results']['nodes']
-for node in sorted(nodes, key=lambda n: (n['nearest_root'], n['downstream_level'] or 0)):
-    print(f"  Wave: {node['nearest_root']} | Level: {node['downstream_level']} | {node['node']}")
-```
+root_count   = result['results']['root_objects']['summary']['total_root_objects']
+cycle_count  = result['results']['cycles']['stats'][0]['Cycle_Count']
+comp_count   = result['results']['components']['stats'][0]['Component_Count']
+bfs_nodes    = result['results']['bfs_waves']['summary']['total_nodes']
+total_ms     = result['results']['edge_stats']['total_time_ms']
 
-### Workflow: Pre-deployment Validation
-
-```python
-# Check for cycles before running topological sort
-cycles = handle_graph_detectCycles(
-    conn=connection,
-    container_pattern="%WBC%,%StGeo%"
-)
-
-if cycles['results']['summary_stats'][0]['Cycle_Count'] > 0:
-    raise ValueError(f"Cannot deploy — circular references detected")
-
-# Safe to proceed with wave planning
-waves = handle_graph_bfsLevelsPy(
-    conn=connection,
-    root_node_list="DEV02_WBC_STD_T.Borrower,DEV02_WBC_STD_T.Collateral"
-)
-```
-
-### Workflow: Change Impact Assessment
-
-```python
-# Assess blast radius before raising a change ticket
-result = handle_graph_queryDependenciesAgent(
-    conn=connection,
-    object_name="DEV01_StGeo_STD_T.mortgage_account",
-    max_depth_up=0,
-    max_depth_down=5,
-    return_format="summary"
-)
-
-impact_count = result['results']['statistics']['downstream_nodes']
-
-if impact_count > 20:
-    create_change_ticket(severity="HIGH", testing_required=True)
-elif impact_count > 5:
-    create_change_ticket(severity="MEDIUM", testing_required=True)
-else:
-    create_change_ticket(severity="LOW", testing_required=False)
+print(f"{root_count} roots | {cycle_count} cycles | "
+      f"{comp_count} components | {bfs_nodes} BFS nodes | {total_ms}ms")
 ```
 
 ---
 
-## Performance Guide
+## Architecture
 
-### Query Time Expectations
+### Python/SQL Design
 
-| Tool | Typical Time | Notes |
-|------|--------------|-------|
-| `graph_findRootObjects` | 2–5s | Single SQL query with NOT EXISTS |
-| `graph_bfsLevels` | 1–10s | One edge fetch + in-memory BFS |
-| `graph_queryDependenciesAgent` depth 1–3 | 2–10s | SP-based, standard analysis |
-| `graph_queryDependenciesAgent` depth 5 | 10–20s | Deep analysis |
-| `graph_queryDependenciesAgent` depth 10 | 30–60s+ | Complete lineage |
-| `graph_detectCycles` | 5–30s | Depends on graph size and component count |
-| `graph_connectedComponents` | 5–20s | WCC propagation across all edges |
+The only Teradata privilege required across the entire package is `SELECT` on the edge repository view or table.
 
-### `graph_bfsLevels` Performance Note
+| Tool | Implementation strategy |
+|------|------------------------|
+| `graph_edgeContractDDL` | Pure template generation — no SQL executed |
+| `graph_findRootObjects` | Single SQL SELECT with NOT EXISTS subquery |
+| `graph_bfsLevels` | One bulk edge SELECT; standard queue-based BFS (O(V+E)) in Python |
+| `graph_traceLineage` | Python constructs recursive CTEs; traversal runs server-side in Teradata spool |
+| `graph_detectCycles` | One scoped edge SELECT; Union-Find WCC + iterative DFS in Python |
+| `graph_connectedComponents` | One scoped edge SELECT; path-compressed Union-Find in Python |
+| `graph_analyseDatabase` | One shared edge SELECT; all four algorithms run in Python |
 
-The Python BFS fetches all matching edges in one round-trip. Performance is dominated by the edge fetch volume and network transfer, not BFS computation. For typical ODEX graphs (thousands to low tens of thousands of edges), the Python implementation is faster than the retired SP due to zero volatile table overhead.
+### Progressive Disclosure
 
-If `include_containers` is supplied, the SQL WHERE clause filters both endpoints before transfer — always use this parameter when the scope is known.
+The package supports both MCP registration modes simultaneously:
 
-### Optimisation Strategies
+- **Static mode:** `graph_tools.py` → `GRAPH_TOOLS` list → MCP server registration at startup
+- **Progressive Disclosure mode:** `__init__.py` → ModuleLoader discovers `handle_*` functions → `ContextCatalog` registers them using docstrings
 
-1. **Use `include_containers` for `graph_bfsLevels`** — pushed into SQL, dramatically reduces edge fetch volume
-2. **Use `exclude_objects` aggressively** — server-side for `graph_queryDependenciesAgent` (SP handles it); Python-side for `graph_bfsLevels`
-3. **Start with `max_depth=3`** for `graph_queryDependenciesAgent` — incrementally increase only if needed
-4. **Run `graph_detectCycles` first** before wave planning to confirm clean DAG
-5. **Use `return_format="summary"`** for quick checks and change approvals
+In Progressive Disclosure mode the ContextCatalog uses the function docstrings for both approximate-match summaries and exact-match full documentation. The `*_TOOL` descriptor dicts serve static mode only.
 
 ---
 
 ## Dependencies
 
-### Required Teradata Objects
+### Teradata
 
-| Object | Used By | Required |
-|--------|---------|----------|
-| `DEV_01_ODEX_STD_0_V.ODEXRepository` | All tools (SELECT only) | ✅ |
-| `DEV_01_ODEX_RPT_0_P.QueryDependenciesAgentBatch` | `graph_queryDependenciesAgent` | ✅ |
-| `DEV_01_ODEX_RPT_0_P.graph_detectCycles` | `graph_detectCycles` | ✅ |
-| `DEV_01_ODEX_RPT_0_P.graph_connectedComponents` | `graph_connectedComponents` | ✅ |
-| `DEV_01_ODEX_RPT_0_P.graph_bfsLevels` | **Retired** — replaced by Python BFS | ❌ |
+| Requirement | Details |
+|------------|---------|
+| `SELECT` on edge repository | The only privilege required — applies to all tools |
+| Edge repository | A table or view conforming to the Graph Edge Contract.<br>Generate one with `graph_edgeContractDDL`, or use an existing `{ProductName}_Semantic.lineage_graph` view. |
 
-### Python Packages
+No server-side DDL objects required.
 
-- `teradatasql` (included in base MCP server)
-- `fnmatch` (standard library — used by `graph_bfsLevels`)
-- `collections` (standard library — used by `graph_bfsLevels`)
-- `logging` (standard library)
+### Python
 
-### Permissions Required
+All packages are standard library or already included in the base MCP server:
 
-| Permission | Required For |
-|-----------|-------------|
-| `SELECT` on `ODEXRepository` | All tools |
-| `EXECUTE` on `QueryDependenciesAgentBatch` | `graph_queryDependenciesAgent` |
-| `EXECUTE` on `graph_detectCycles` | `graph_detectCycles` |
-| `EXECUTE` on `graph_connectedComponents` | `graph_connectedComponents` |
-| `CREATE VOLATILE TABLE` | `graph_queryDependenciesAgent` (SP requirement) |
-| `REPLACE PROCEDURE` on any graph SP | **Not required** — Python BFS needs no SP updates |
+| Package | Used by | Source |
+|---------|---------|--------|
+| `teradatasql` | All tools | MCP server base |
+| `collections` | `graph_bfsLevels`, `graph_analyseDatabase` | Standard library |
+| `fnmatch` | `graph_bfsLevels` | Standard library |
+| `logging` | All tools | Standard library |
 
 ---
 
 ## Installation
 
-### File Structure
+### File Placement
 
 ```
 teradata_mcp_server/tools/
-├── graph_tools.py                     # Registration hub
+├── graph_tools.py
 ├── graph/
 │   ├── __init__.py
 │   ├── _graph_utils.py
+│   ├── graph_edge_contract.py
 │   ├── graph_findRootObjects.py
-│   ├── graph_bfsLevelsPy.py
-│   ├── graph_queryDependenciesAgent.py
+│   ├── graph_bfsLevels.py
+│   ├── graph_traceLineage.py
 │   ├── graph_detectCycles.py
-│   └── graph_connectedComponents.py
-└── prompts/
-    └── graph_bfsLevels.yml            # YAML prompt descriptor (this release)
+│   ├── graph_connectedComponents.py
+│   └── graph_analyseDatabase.py
+└── utils.py
 ```
 
 ### Configuration
@@ -634,27 +512,43 @@ Add to your `profiles.yml`:
 graph:
   allmodule: True
   tool:
+    graph_edgeContractDDL: True
     graph_findRootObjects: True
     graph_bfsLevels: True
-    graph_queryDependenciesAgent: True
+    graph_traceLineage: True
     graph_detectCycles: True
     graph_connectedComponents: True
+    graph_analyseDatabase: True
 ```
+
+---
+
+## Performance
+
+### Key Principles
+
+**Always supply `include_containers` for `graph_bfsLevels`** — this filter is pushed into the SQL WHERE clause, dramatically reducing edge fetch volume. Without it, every edge in the repository is fetched. One additional LIKE pattern costs almost nothing; fetching a million irrelevant edges costs significantly.
+
+**Use `graph_analyseDatabase` when you need multiple analyses** — it runs four analyses from one edge fetch instead of four separate fetches.
+
+**Start with `max_depth=3` for `graph_traceLineage`** — incrementally increase only if needed. Recursive CTE depth directly affects server-side spool consumption.
+
+**Use `exclude_objects` aggressively** — filter out sandbox schemas, temporary objects, and personal schemas. Document and version-control your team's standard exclusion patterns.
+
+**Run `graph_detectCycles` before wave planning** — a cycle will cause topological sort to hang silently.
 
 ---
 
 ## Troubleshooting
 
-### Common Issues
-
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| **Query timeout** | Depth too high or large graph | Reduce `max_depth` or add `exclude_objects` / `include_containers` |
 | **Empty BFS results** | Root node FQ name incorrect | Verify exact name via `graph_findRootObjects` — no wildcards in `root_node_list` |
 | **`upstream_level` always None** | Correct behaviour for root objects | Root objects with in-degree zero have no upstream sources — this is expected |
 | **Large edge fetch for BFS** | No `include_containers` specified | Always supply `include_containers` when scope is known |
-| **SP procedure errors** | SP not deployed or privileges missing | Check `EXECUTE` permissions on the relevant SP |
-| **Stale results** | ODEX repository not refreshed | Check `MAX(LastUpdated)` on `ODEXRepository`; request refresh if > 1 week |
+| **Query timeout** | Depth too high or large graph | Reduce `max_depth` or add `exclude_objects` / `include_containers` |
+| **`edge_repository` error** | Parameter not supplied | Pass the FQ name of your edge repository. AI-Native Data Products: `{ProductName}_Semantic.lineage_graph`. Otherwise run `graph_edgeContractDDL` first. |
+| **NULL check violations** | Edge repository has NULL required columns | Run the validation query from the `graph_edgeContractDDL` sample DML output |
 
 ### Debug Steps
 
@@ -662,29 +556,39 @@ graph:
 # 1. Verify object exists and find exact FQ name
 result = handle_graph_findRootObjects(
     conn=connection,
-    container_pattern="DEV01_StGeo_RPT_T"
+    container_pattern="MY_DB_STD_T",
+    edge_repository="MY_PROJECT_Semantic.EdgeRepository"
 )
 # Check result for the exact FullyQualifiedName
 
-# 2. Test BFS with minimal scope
-result = handle_graph_bfsLevelsPy(
+# 2. Test BFS with minimal scope and shallow depth
+result = handle_graph_bfsLevels(
     conn=connection,
-    root_node_list="DEV01_StGeo_RPT_T.monthly_portfolio_risk_summary",
-    max_depth_down=2
+    root_node_list="MY_DB_STD_T.my_root_table",
+    max_depth_down=2,
+    edge_repository="MY_PROJECT_Semantic.EdgeRepository"
 )
 
-# 3. Check repository currency
-base_readQuery(sql="""
-    SELECT MAX(LastUpdated) AS LastRefresh
-    FROM DEV_01_ODEX_STD_0_V.ODEXRepository
-""")
-
-# 4. Check cycle-free before wave planning
+# 3. Check cycle-free before wave planning
 result = handle_graph_detectCycles(
     conn=connection,
-    container_pattern="%StGeo%"
+    container_pattern="MY_DB%",
+    edge_repository="MY_PROJECT_Semantic.EdgeRepository"
 )
 print(result['results']['summary_stats'][0]['Summary_Message'])
+
+# 4. Validate edge repository conforms to contract
+#    (Run the validation query from graph_edgeContractDDL sample_dml output)
+base_readQuery(sql="""
+    SELECT 'NULL_CHECK' AS Validation, COUNT(*) AS Violations
+    FROM MY_PROJECT_Semantic.EdgeRepository
+    WHERE Src_Container_Name IS NULL
+       OR Src_Object_Name    IS NULL
+       OR Src_Kind           IS NULL
+       OR Tgt_Container_Name IS NULL
+       OR Tgt_Object_Name    IS NULL
+       OR Tgt_Kind           IS NULL
+""")
 ```
 
 ---
@@ -695,15 +599,13 @@ print(result['results']['summary_stats'][0]['Summary_Message'])
 
 2. **Use `graph_findRootObjects` to seed `graph_bfsLevels`** — never guess root node names; they must be exact FQ names with no wildcards.
 
-3. **Always supply `include_containers` for `graph_bfsLevels`** — without it, every edge in the repository is fetched. One additional LIKE pattern costs almost nothing; fetching a million irrelevant edges costs significantly.
+3. **Always supply `include_containers` for `graph_bfsLevels`** — without it, every edge in the repository is fetched regardless of scope.
 
 4. **Deploy in `downstream_level` ascending order within each wave** — depth 0 (root) first, then +1, +2, and so on. Never deploy a consumer before its dependency.
 
 5. **Check `cycle_candidates` in BFS results** — `direction='BOTH'` nodes with unequal absolute levels indicate back-edges. Investigate before treating them as simple dependents.
 
-6. **Filter aggressively with `exclude_objects`** — document and version-control your team's standard exclusion patterns.
-
-7. **Validate ODEX repository currency before critical decisions** — request refresh if more than one week old.
+6. **Prefer `graph_analyseDatabase` for full readiness assessments** — one call, one edge fetch, four analyses.
 
 ---
 
@@ -711,11 +613,13 @@ print(result['results']['summary_stats'][0]['Summary_Message'])
 
 | Tool | Status | Notes |
 |------|--------|-------|
-| `graph_findRootObjects` | ✅ Implemented (v1.1) | |
-| `graph_bfsLevels` | ✅ Implemented (v2.0) | SP replaced by Python BFS |
-| `graph_queryDependenciesAgent` | ✅ Implemented (v1.0) | |
-| `graph_detectCycles` | ✅ Implemented (v1.2) | |
-| `graph_connectedComponents` | ✅ Implemented (v1.3) | |
+| `graph_edgeContractDDL` | ✅ v1.1 | Graph Edge Contract v1.1 — optional enrichment columns |
+| `graph_findRootObjects` | ✅ v1.1 | |
+| `graph_bfsLevels` | ✅ v2.0 | SP replaced by pure-Python BFS |
+| `graph_traceLineage` | ✅ v1.0 | Renamed from `graph_queryDependenciesAgent` |
+| `graph_detectCycles` | ✅ v2.0 | SP replaced by Python Union-Find + iterative DFS |
+| `graph_connectedComponents` | ✅ v2.0 | SP replaced by Python Union-Find |
+| `graph_analyseDatabase` | ✅ v1.0 | Composite single-fetch analysis |
 | `graph_findOrphanedObjects` | 🔲 Planned | Objects with no upstream or downstream |
 | `graph_calculateMetrics` | 🔲 Planned | Centrality, clustering coefficient |
 | `graph_suggestRefactoring` | 🔲 Planned | Structure-based refactoring opportunities |
@@ -724,26 +628,42 @@ print(result['results']['summary_stats'][0]['Summary_Message'])
 
 ## Version History
 
-- **2.0** (2026-03-31): Major refactor — modular package structure, SP replaced by Python BFS
-  - Split monolithic `graph_tools.py` into one file per tool under `graph/` sub-package
-  - `graph_tools.py` reduced to a thin registration hub (imports + `GRAPH_TOOLS` list only)
-  - `graph_bfsLevels` SP (`DEV_01_ODEX_RPT_0_P.graph_bfsLevels`) replaced by pure-Python BFS implementation (`handle_graph_bfsLevelsPy`) — no stored procedure required, one SQL round-trip, standard queue-based BFS
-  - BFS traversal direction fix applied (Option B): upstream BFS now correctly uses reverse adjacency (Tgt→Src); downstream uses forward (Src→Tgt). Root objects with in-degree zero now correctly show `upstream_level=None` for all non-root nodes
-  - Shared BFS helpers (`bfs_safe_int`, `create_bfs_summary`, `extract_cycle_candidates`) extracted to `graph/_graph_utils.py`
-  - Added `GRAPH_FIND_ROOT_OBJECTS_TOOL` and `GRAPH_QUERY_DEPENDENCIES_TOOL` descriptor constants (were previously missing)
-  - Added `YAML` prompt descriptor for `graph_bfsLevels` (`graph_bfsLevels.yml`)
-  - README updated to reflect all five tools, new package structure, and Python BFS
+### 3.0 (2026-04-10)
 
-- **1.3** (2026-01-15): Added `graph_connectedComponents` tool
-  - Weakly Connected Component analysis via `graph_buildWCC` SP
+Compliance pass, Graph Edge Contract v1.1, SP-free architecture for all tools.
 
-- **1.2** (2025-12-01): Added `graph_detectCycles` tool
-  - WCC-partitioned single-pass CTE cycle detection
+- **Rename:** `graph_queryDependenciesAgent` → `graph_traceLineage`. The tool is a deterministic recursive CTE query, not an agent.
+- **New tools:** `graph_edgeContractDDL` (DDL generator + canonical contract text) and `graph_analyseDatabase` (composite single-fetch analysis).
+- **SP-free:** `graph_detectCycles` and `graph_connectedComponents` converted from SP-based to pure-Python (Union-Find WCC + iterative DFS). No stored procedures remain anywhere in the package.
+- **Graph Edge Contract v1.1:** Column names corrected from `SrcContainer`/`SrcObject`/`SrcKind` to `Src_Container_Name`/`Src_Object_Name`/`Src_Kind` (and Tgt equivalents) — prior generated tables were incompatible with the tool SQL. Optional enrichment columns `Edge_Relationship` and `Transformation_Type` added. `Src_Kind`/`Tgt_Kind` COMPRESS lists expanded to cover both single-letter codes and full-word values.
+- **Parameter standardisation:** `object_dependency_table` → `edge_repository`; `excl_patterns` → `exclude_objects` across `graph_detectCycles` and `graph_connectedComponents`.
+- **Dead parameter removal:** `strategy` and `max_edges_for_cte` removed from `graph_detectCycles`.
+- **Helper consolidation (phase 1):** `parse_csv_patterns` and `build_like_or` extracted to `_graph_utils.py`; 10 local copies removed across 6 files.
+- **AI-Native Data Product convention:** `{ProductName}_Semantic.lineage_graph` (Observability Module v1.5) documented as a ready-to-use edge repository requiring no DDL generation.
+- Progressive Disclosure compliance: all 7 tools registered in `GRAPH_TOOLS`; `GRAPH_EDGE_CONTRACT_DDL_TOOL` descriptor added.
 
-- **1.1** (2025-03-05): Added `graph_findRootObjects` tool
-  - Find objects with no upstream dependencies
-  - CSV pattern support, object type filtering, two return formats
+### 2.0 (2026-03-31)
 
-- **1.0** (2025-03-04): Initial release
-  - `graph_queryDependenciesAgent` — bidirectional dependency analysis
-  - Server-side filtering, three return formats, comprehensive documentation
+Major refactor — modular package structure, SP replaced by Python BFS for `graph_bfsLevels`.
+
+- Split monolithic `graph_tools.py` into one file per tool under `graph/` sub-package
+- `graph_tools.py` reduced to a thin registration hub
+- `graph_bfsLevels` SP replaced by pure-Python BFS — no stored procedure, one SQL round-trip, standard queue-based BFS (O(V+E))
+- BFS traversal direction fix: upstream BFS now correctly uses reverse adjacency (Tgt→Src)
+- Shared BFS helpers extracted to `graph/_graph_utils.py`
+
+### 1.3 (2026-01-15)
+
+Added `graph_connectedComponents` — Weakly Connected Component analysis.
+
+### 1.2 (2025-12-01)
+
+Added `graph_detectCycles` — WCC-partitioned cycle detection.
+
+### 1.1 (2025-03-05)
+
+Added `graph_findRootObjects` — root object discovery with CSV pattern support, object type filtering, and two return formats.
+
+### 1.0 (2025-03-04)
+
+Initial release — `graph_queryDependenciesAgent` (now `graph_traceLineage`): bidirectional dependency analysis via server-side recursive CTEs.

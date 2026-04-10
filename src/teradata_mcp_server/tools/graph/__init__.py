@@ -1,6 +1,6 @@
 # graph/__init__.py
 """
-Graph analysis tools package for ODEX dependency analysis.
+Graph analysis tools package for dependency graph analysis.
 
 This __init__.py re-exports all handle_* functions from the individual
 tool modules so that the MCP server's ModuleLoader can discover them
@@ -17,7 +17,7 @@ If the handle_* functions are not importable at the package level,
 the ModuleLoader finds nothing and no graph tools are registered.
 
 Import order follows the logical workflow:
-  findRootObjects → bfsLevels → queryDependenciesAgent
+  findRootObjects → bfsLevels → traceLineage
   → detectCycles → connectedComponents → analyseDatabase (composite)
 
 Author:  Paul Dancer — Teradata Consulting Services
@@ -30,7 +30,7 @@ from .graph_findRootObjects import handle_graph_findRootObjects
 from .graph_bfsLevels import handle_graph_bfsLevels
 
 # ── Step 3: Full lineage / impact analysis (hybrid CTE) ──────────
-from .graph_queryDependenciesAgent import handle_graph_queryDependenciesAgent
+from .graph_traceLineage import handle_graph_traceLineage
 
 # ── Step 4: Cycle detection (Python Union-Find + iterative DFS) ──
 from .graph_detectCycles import handle_graph_detectCycles

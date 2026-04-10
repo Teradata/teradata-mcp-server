@@ -1,7 +1,7 @@
 """
-graph_queryDependenciesAgent.py — Dependency lineage analysis tool.
+graph_traceLineage.py — Dependency lineage analysis tool.
 
-Provides handle_graph_queryDependenciesAgent and GRAPH_QUERY_DEPENDENCIES_TOOL.
+Provides handle_graph_traceLineage and GRAPH_TRACE_LINEAGE_TOOL.
 
 Hybrid implementation — no stored procedure required.
 
@@ -35,6 +35,7 @@ Author:  Paul Dancer — Teradata Global Field Tech
 import logging
 from teradatasql import TeradataConnection
 from teradata_mcp_server.tools.utils import create_response, rows_to_json
+from teradata_mcp_server.tools.graph._graph_utils import parse_csv_patterns
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -42,18 +43,9 @@ logger = logging.getLogger("teradata_mcp_server")
 # ---------------------------------------------------------------------------
 # Internal helpers — pattern parsing
 # ---------------------------------------------------------------------------
-
-def _parse_csv_patterns(csv_str: str) -> list[str]:
-    """
-    Split a CSV pattern string into a list of trimmed, non-empty tokens.
-
-    Arguments:
-      csv_str - Comma-separated pattern string (may contain whitespace)
-
-    Returns:
-      List of trimmed pattern strings, empty list if csv_str is blank
-    """
-    return [p.strip() for p in (csv_str or '').split(',') if p.strip()]
+# parse_csv_patterns is imported from _graph_utils.
+# _build_or_like is kept local — it covers both Src and Tgt columns
+# simultaneously, which is a different pattern from build_like_or.
 
 
 def _build_or_like(patterns: list[str], src_col: str, tgt_col: str) -> str:
@@ -497,7 +489,7 @@ DOWNSTREAM (What Depends On These Objects)
 # Public handler
 # ---------------------------------------------------------------------------
 
-def handle_graph_queryDependenciesAgent(
+def handle_graph_traceLineage(
     conn: TeradataConnection,
     object_name: str,
     max_depth_up: int = 3,
@@ -579,7 +571,7 @@ def handle_graph_queryDependenciesAgent(
         Src_Kind, Tgt_Kind, Depth, DependencyPath
     """
     logger.debug(
-        "Tool: handle_graph_queryDependenciesAgent: Args: "
+        "Tool: handle_graph_traceLineage: Args: "
         "object_name=%s, max_depth_up=%s, max_depth_down=%s, "
         "exclude_objects=%s, include_containers=%s, "
         "edge_repository=%s, return_format=%s",
@@ -597,15 +589,25 @@ def handle_graph_queryDependenciesAgent(
     # -----------------------------------------------------------------------
     # Parse pattern inputs
     # -----------------------------------------------------------------------
-    seed_patterns   = _parse_csv_patterns(object_name)
-    excl_patterns   = _parse_csv_patterns(exclude_objects)
-    incl_containers = _parse_csv_patterns(include_containers)
+    seed_patterns   = parse_csv_patterns(object_name)
+    excl_patterns   = parse_csv_patterns(exclude_objects)
+    incl_containers = parse_csv_patterns(include_containers)
 
     if not seed_patterns:
         return create_response(
             {"error": "object_name must not be empty"},
             {
-                "tool_name":   tool_name or "graph_queryDependenciesAgent",
+                "tool_name":   tool_name or "graph_traceLineage",
+                "object_name": object_name,
+                "status":      "error",
+            }
+        )
+
+    if not edge_repository:
+        return create_response(
+            {"error": "edge_repository is required. Call graph_edgeContractDDL to generate one."},
+            {
+                "tool_name":   tool_name or "graph_traceLineage",
                 "object_name": object_name,
                 "status":      "error",
             }
@@ -639,7 +641,7 @@ def handle_graph_queryDependenciesAgent(
                         excl_fragment=excl_fragment,
                     )
                     logger.debug(
-                        "Tool: handle_graph_queryDependenciesAgent: "
+                        "Tool: handle_graph_traceLineage: "
                         "Upstream CTE for pattern '%s':\n%s",
                         pattern, up_sql
                     )
@@ -647,7 +649,7 @@ def handle_graph_queryDependenciesAgent(
                     batch = rows_to_json(cur.description, cur.fetchall())
                     all_edges_up.extend(batch)
                     logger.debug(
-                        "Tool: handle_graph_queryDependenciesAgent: "
+                        "Tool: handle_graph_traceLineage: "
                         "Pattern '%s' upstream: %d edges",
                         pattern, len(batch)
                     )
@@ -664,7 +666,7 @@ def handle_graph_queryDependenciesAgent(
                         excl_fragment=excl_fragment,
                     )
                     logger.debug(
-                        "Tool: handle_graph_queryDependenciesAgent: "
+                        "Tool: handle_graph_traceLineage: "
                         "Downstream CTE for pattern '%s':\n%s",
                         pattern, down_sql
                     )
@@ -672,7 +674,7 @@ def handle_graph_queryDependenciesAgent(
                     batch = rows_to_json(cur.description, cur.fetchall())
                     all_edges_down.extend(batch)
                     logger.debug(
-                        "Tool: handle_graph_queryDependenciesAgent: "
+                        "Tool: handle_graph_traceLineage: "
                         "Pattern '%s' downstream: %d edges",
                         pattern, len(batch)
                     )
@@ -722,7 +724,7 @@ def handle_graph_queryDependenciesAgent(
             }
 
         metadata = {
-            "tool_name":        tool_name or "graph_queryDependenciesAgent",
+            "tool_name":        tool_name or "graph_traceLineage",
             "object_name":      object_name,
             "max_depth_up":     max_depth_up,
             "max_depth_down":   max_depth_down,
@@ -743,19 +745,19 @@ def handle_graph_queryDependenciesAgent(
         }
 
         logger.debug(
-            "Tool: handle_graph_queryDependenciesAgent: metadata: %s", metadata
+            "Tool: handle_graph_traceLineage: metadata: %s", metadata
         )
         return create_response(formatted_data, metadata)
 
     except Exception as e:
         logger.error(
-            "Tool: handle_graph_queryDependenciesAgent: Error: %s",
+            "Tool: handle_graph_traceLineage: Error: %s",
             e, exc_info=True
         )
         return create_response(
             {"error": str(e)},
             {
-                "tool_name":   tool_name or "graph_queryDependenciesAgent",
+                "tool_name":   tool_name or "graph_traceLineage",
                 "object_name": object_name,
                 "status":      "error",
             }
@@ -765,9 +767,9 @@ def handle_graph_queryDependenciesAgent(
 # ---------------------------------------------------------------------------
 # Tool registration descriptor
 # ---------------------------------------------------------------------------
-GRAPH_QUERY_DEPENDENCIES_TOOL = {
-    "name": "graph_queryDependenciesAgent",
-    "handler": handle_graph_queryDependenciesAgent,
+GRAPH_TRACE_LINEAGE_TOOL = {
+    "name": "graph_traceLineage",
+    "handler": handle_graph_traceLineage,
     "description": (
         "Analyse object dependencies in Teradata — finds upstream dependencies "
         "(what the object depends on) and downstream dependents (what depends "

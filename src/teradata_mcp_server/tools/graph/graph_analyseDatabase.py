@@ -36,8 +36,10 @@ from teradatasql import TeradataConnection
 from teradata_mcp_server.tools.utils import create_response
 from teradata_mcp_server.tools.graph._graph_utils import (
     bfs_safe_int,
+    build_like_or,
     create_bfs_summary,
     extract_cycle_candidates,
+    parse_csv_patterns,
 )
 
 logger = logging.getLogger("teradata_mcp_server")
@@ -46,33 +48,7 @@ logger = logging.getLogger("teradata_mcp_server")
 # ═══════════════════════════════════════════════════════════════════
 # Shared helpers
 # ═══════════════════════════════════════════════════════════════════
-
-def _parse_csv(csv_str: str) -> list[str]:
-    """
-    Split a CSV string into trimmed, non-empty tokens.
-
-    Arguments:
-      csv_str - Comma-separated string (may contain whitespace)
-
-    Returns:
-      List of trimmed non-empty strings
-    """
-    return [p.strip() for p in csv_str.split(',') if p.strip()]
-
-
-def _build_like_or(patterns: list[str], column: str) -> str:
-    """
-    Build a parenthesised OR-joined LIKE clause for SQL WHERE.
-
-    Arguments:
-      patterns - List of SQL LIKE patterns (e.g. ['%SALES%', '%FINANCE%'])
-      column   - SQL column reference (e.g. 'Src_Container_Name')
-
-    Returns:
-      SQL fragment: "(col LIKE 'A%' OR col LIKE 'B%')"
-    """
-    clauses = [f"{column} LIKE '{p}'" for p in patterns]
-    return '(' + ' OR '.join(clauses) + ')'
+# parse_csv_patterns and build_like_or are imported from _graph_utils.
 
 
 def _build_excl_where(excl_patterns: list[str]) -> str:
@@ -437,8 +413,8 @@ def handle_graph_analyseDatabase(
     )
 
     t_start = time.time()
-    container_patterns = _parse_csv(container_pattern)
-    excl_patterns = _parse_csv(exclude_objects)
+    container_patterns = parse_csv_patterns(container_pattern)
+    excl_patterns = parse_csv_patterns(exclude_objects)
 
     if not container_patterns:
         return create_response(
@@ -447,11 +423,18 @@ def handle_graph_analyseDatabase(
              "status": "error"}
         )
 
+    if not edge_repository:
+        return create_response(
+            {"error": "edge_repository is required. Call graph_edgeContractDDL to generate one."},
+            {"tool_name": tool_name or "graph_analyseDatabase",
+             "status": "error"}
+        )
+
     try:
         # ═══════════════════════════════════════════════════════════
         # STEP 0 — Single shared edge fetch (ONE SQL round-trip)
         # ═══════════════════════════════════════════════════════════
-        container_where = _build_like_or(container_patterns, 'Src_Container_Name')
+        container_where = build_like_or(container_patterns, 'Src_Container_Name')
         excl_where = _build_excl_where(excl_patterns)
 
         edge_sql = f"""
