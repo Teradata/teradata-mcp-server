@@ -1,6 +1,11 @@
+import fnmatch
+import inspect
 import logging
 import re
+import time
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, default
@@ -309,6 +314,16 @@ def handle_base_saveDDL(
 # ================================================
 # Retrieves detailed column metadata for Teradata objects including
 # data types, character sets, case specificity, and format strings.
+#
+# REFACTORED (v1.1.0): All functions now use TeradataConnection with
+# the native conn.cursor() pattern and positional ? bind parameters,
+# matching every other tool in this module. The previous version used
+# SQLAlchemy Connection with text() and :named parameters, which was
+# incompatible with the TeradataConnection injected by the MCP server
+# framework - causing the tool to hang until the 4-minute MCP timeout.
+#
+# Author:  Paul Dancer
+# Version: 1.4.2 - Fixed Primary? flag (P/S not Y/N)
 #
 # ===========================================================================
 
@@ -1076,10 +1091,7 @@ def _get_objects(
     Returns:
         list[dict]: Each dict contains DatabaseName, ObjectName, TableKind.
     """
-    if table_kind:
-        kinds = [k.strip().upper() for k in table_kind.split(",") if k.strip()]
-    else:
-        kinds = ["T", "O", "V", "F"]
+    kinds = [k.strip().upper() for k in table_kind.split(",") if k.strip()] if table_kind else ["T", "O", "V", "F"]
 
     placeholders = ",".join(["?"] * len(kinds))
     sql = f"""
