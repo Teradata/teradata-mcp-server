@@ -520,7 +520,11 @@ def handle_base_columnMetadata(
         table_kind            - Optional: CSV of TableKind codes to filter by.
                                 Examples: 'V' (views only), 'T,O' (tables +
                                 NoPI), 'T,V' (tables and views). Defaults to
-                                all qualifying object types (T, O, V, F).
+                                all qualifying object types (T, O, V).
+                                Stored procedures (P, E), functions (A, F, R, B, S),
+                                and macros (M) are excluded — HELP COLUMN returns
+                                error [3668] against all of them. Parameter metadata
+                                via DBC.ColumnsV is a planned future enhancement.
         max_workers           - Optional: number of parallel threads for HELP
                                 COLUMN execution. Default: 8.
         fields                - Optional: CSV of field names to include in the
@@ -1038,6 +1042,17 @@ def _build_index_type_string(col: dict) -> Optional[str]:
     in an index, not which columns are grouped together in a composite index.
     For composite index membership, query DBC.IndicesV (IndexNumber grouping).
 
+    # TODO (future refactor): Replace HELP COLUMN index flags with a direct
+    # join to DBC.IndicesV for tables (T, O, Q). DBC.IndicesV provides:
+    #   - IndexNumber:    groups columns that share a composite index
+    #   - ColumnPosition: column ordering within the index
+    #   - IndexType:      primary/secondary distinction
+    #   - UniqueFlag:     unique/non-unique distinction
+    # This is superior to HELP COLUMN flags in every respect — it covers
+    # composite index grouping (which HELP COLUMN cannot), requires no
+    # special syntax, and can be batched across all objects in one query.
+    # Only views need to retain the HELP COLUMN path.
+
     Args:
         col: A normalised column metadata dict from _standardise_helpcol_row.
 
@@ -1081,7 +1096,17 @@ def _get_objects(
     Retrieve all qualifying objects (tables, views, functions) from a database.
 
     Queries DBC.TablesV filtered by TableKind. Defaults to
-    ('T','O','V','F') — tables, NoPI tables, views, and functions.
+    ('T','O','Q','V') — tables, NoPI tables, queue tables, and views.
+    Queue tables (Q) use identical HELP COLUMN syntax to regular tables.
+
+    The following object types are excluded from the default scope — HELP COLUMN
+    returns error [3668] against all of them. DBC.ColumnsV returns populated
+    ColumnType, ColumnLength, CharType, and SPParameterType for all:
+
+    Stored procedures:  TableKind 'P' (native), 'E' (external)
+    Functions:          TableKind 'A' (aggregate), 'F' (scalar), 'R' (table), 'B', 'S'
+    Macros:             TableKind 'M'
+    Other:              TableKind 'C' (table operator), 'U' (type), 'H' (method)
 
     Args:
         conn:       TeradataConnection (injected by MCP server).
@@ -1091,7 +1116,7 @@ def _get_objects(
     Returns:
         list[dict]: Each dict contains DatabaseName, ObjectName, TableKind.
     """
-    kinds = [k.strip().upper() for k in table_kind.split(",") if k.strip()] if table_kind else ["T", "O", "V", "F"]
+    kinds = [k.strip().upper() for k in table_kind.split(",") if k.strip()] if table_kind else ["T", "O", "Q", "V"]
 
     placeholders = ",".join(["?"] * len(kinds))
     sql = f"""
@@ -1147,15 +1172,26 @@ def _help_column_table(
     conn: TeradataConnection, db_name: str, object_name: str
 ) -> list:
     """
-    Execute HELP COLUMN against a table or function and return normalised rows.
+    Execute HELP COLUMN against a table (T, O, Q) and return normalised rows.
 
     Args:
         conn:        TeradataConnection (injected by MCP server).
         db_name:     Target database name.
-        object_name: The table or function name.
+        object_name: The table name.
 
     Returns:
         list[dict]: Normalised column metadata rows.
+
+    # TODO (future refactor): Replace this function entirely for tables (T, O, Q).
+    # DBC.ColumnsV and its variants return fully populated column metadata for
+    # all table types without any special syntax, and can be batched across all
+    # objects in a single query rather than one HELP COLUMN call per object.
+    # Index metadata should be sourced from DBC.IndicesV (joined on DatabaseName,
+    # TableName, ColumnName) rather than from HELP COLUMN flags — DBC.IndicesV
+    # provides composite index grouping (IndexNumber + ColumnPosition) which
+    # HELP COLUMN cannot. After this refactor, HELP COLUMN would be used only
+    # for views via _help_column_view, where it remains necessary to resolve
+    # actual column types from the view definition.
     """
     sql = f'HELP COLUMN "{db_name}"."{object_name}".*'
     with conn.cursor() as cur:
