@@ -647,7 +647,7 @@ def handle_base_columnMetadata(
             # Always include ObjectName, computed string fields, and status
             keep.update(
                 {"ObjectName", "ColumnTypeString", "IndexTypeString", "CharSetString",
-                 "status", "error_message"}
+                 "status", "error_message", "metadata_source"}
             )
 
         # Payload budget — default 900 KB (safely under 1 MB MCP limit).
@@ -681,7 +681,10 @@ def handle_base_columnMetadata(
                     cols = _help_column_table(conn, db_name, obj)
 
                 for col in cols:
-                    if col.get("status") == "BROKEN_VIEW":
+                    # Skip type-building for error/status records — these have
+                    # no column metadata fields to process (BROKEN_VIEW,
+                    # PERMISSION_FALLBACK_ERROR, ERROR, or any future status).
+                    if col.get("status"):
                         results.append(col)
                         continue
                     col["ColumnTypeString"] = _build_type_string(col)
@@ -903,6 +906,107 @@ def _standardise_helpcol_row(row: dict) -> dict:
         else:
             normalised[canonical_key] = value
     return normalised
+
+
+def _columnsVX_fallback(
+    conn: TeradataConnection,
+    db_name: str,
+    object_name: str,
+    logger: logging.Logger,
+) -> list:
+    """
+    Retrieve column metadata from DBC.ColumnsVX when the calling session
+    lacks SELECT privilege on the view (Teradata error 3523), making the
+    derived-table HELP COLUMN approach unavailable.
+
+    This is the same metadata source used by the legacy base_columnDescription
+    tool, providing backward compatibility for restricted-privilege callers.
+
+    REDUCED TYPE FIDELITY:
+    DBC.ColumnsVX does not reliably resolve column types for expression-derived
+    view columns (arithmetic, CAST, CASE, string functions without explicit
+    type-casting aliases). For those columns ColumnType will be NULL and
+    ColumnTypeString will be 'UNKNOWN'. Simple passthrough columns that map
+    directly to an underlying table column are generally resolved correctly.
+    This is a well-known Teradata dictionary limitation — HELP COLUMN with the
+    derived-table wrapper is the only fully reliable resolver for view types.
+
+    Each returned row includes metadata_source='DBC.ColumnsVX' to signal to
+    downstream consumers that type fidelity may be reduced.
+
+    Args:
+        conn:        TeradataConnection (injected by MCP server).
+        db_name:     Target database name.
+        object_name: The view name.
+        logger:      Logger instance for error reporting.
+
+    Returns:
+        list[dict]: Normalised column metadata rows compatible with the output
+                    of _standardise_helpcol_row. Returns a single
+                    PERMISSION_FALLBACK_ERROR record if the DBC.ColumnsVX
+                    query itself fails.
+    """
+    sql = """
+        SELECT
+             col.ColumnId
+            ,col.ColumnName
+            ,col.ColumnType
+            ,col.ColumnLength
+            ,col.Nullable
+            ,col.CharType
+            ,col.DecimalTotalDigits
+            ,col.DecimalFractionalDigits
+            ,col.UpperCaseFlag          AS UpperCase
+            ,col.DefaultValue
+            ,col.ColumnFormat           AS Format
+        FROM DBC.ColumnsVX AS col
+        WHERE col.DatabaseName = ?
+          AND col.TableName    = ?
+        ORDER BY col.ColumnId
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, [db_name, object_name])
+            rows = cur.fetchall()
+            data = rows_to_json(cur.description, rows)
+
+            results = []
+            for row in data:
+                # Normalise to the same key names produced by _standardise_helpcol_row
+                # so _build_type_string, _build_index_type_string, and
+                # _build_charset_string in _process_one all work without modification.
+                # Index-related keys (Indexed?, Primary?, Unique?) are absent — the
+                # builder functions return None for those, which is correct since
+                # DBC.ColumnsVX does not carry the same index flags as HELP COLUMN.
+                normalised = {
+                    "ColumnName":               (row.get("ColumnName") or "").strip(),
+                    "ColumnType":               (row.get("ColumnType") or "").strip(),
+                    "ColumnLength":             row.get("ColumnLength"),
+                    "Nullable":                 (row.get("Nullable") or "").strip(),
+                    "CharType":                 row.get("CharType"),
+                    "DecimalTotalDigits":       row.get("DecimalTotalDigits"),
+                    "DecimalFractionalDigits":  row.get("DecimalFractionalDigits"),
+                    "UpperCase":                (row.get("UpperCase") or "").strip(),
+                    "DefaultValue":             row.get("DefaultValue"),
+                    "Format":                   (row.get("Format") or "").strip(),
+                    "metadata_source":          "DBC.ColumnsVX",
+                }
+                results.append(normalised)
+
+            return results
+
+    except Exception as ex:
+        logger.error(
+            f"{C_MODULE}: DBC.ColumnsVX fallback failed for "
+            f"{db_name}.\"{object_name}\" — {ex}"
+        )
+        return [
+            {
+                "ObjectName":    object_name,
+                "status":        "PERMISSION_FALLBACK_ERROR",
+                "error_message": str(ex),
+            }
+        ]
 
 
 def _safe_int(value) -> Optional[int]:
@@ -1218,8 +1322,16 @@ def _help_column_view(
     for HELP COLUMN to enumerate all resolved columns from the derived table.
     This is a documented exception to the no-SELECT-* rule.
 
-    If the view is broken, this function catches the exception and returns a
-    BROKEN_VIEW status record instead of raising.
+    PERMISSION FALLBACK:
+    If the calling session lacks SELECT privilege on the view (Teradata error
+    3523), the derived-table approach cannot be executed. In this case the
+    function falls back to _columnsVX_fallback, which queries DBC.ColumnsVX
+    directly and does not require SELECT on the view. The fallback has reduced
+    type fidelity for expression-derived columns — see _columnsVX_fallback for
+    full details. Each fallback row is marked metadata_source='DBC.ColumnsVX'.
+
+    If the view is broken for any other reason, this function catches the
+    exception and returns a BROKEN_VIEW status record instead of raising.
 
     Args:
         conn:        TeradataConnection (injected by MCP server).
@@ -1248,13 +1360,26 @@ def _help_column_view(
             return [_standardise_helpcol_row(row) for row in data]
 
     except Exception as ex:
+        ex_str = str(ex)
+
+        # -- Teradata error 3523: no SELECT privilege on the view.
+        # Fall back to DBC.ColumnsVX (backward-compatible path).
+        if "3523" in ex_str:
+            logger.warning(
+                f"{C_MODULE}: No SELECT privilege on {db_name}.\"{object_name}\" "
+                f"— falling back to DBC.ColumnsVX (reduced type fidelity for "
+                f"expression-derived columns)"
+            )
+            return _columnsVX_fallback(conn, db_name, object_name, logger)
+
+        # -- All other errors: treat as a broken/invalid view.
         logger.error(
-            f"{C_MODULE}: Broken view detected: {db_name}.{object_name} - {ex}"
+            f"{C_MODULE}: Broken view detected: {db_name}.\"{object_name}\" - {ex}"
         )
         return [
             {
-                "ObjectName": object_name,
-                "status": "BROKEN_VIEW",
+                "ObjectName":    object_name,
+                "status":        "BROKEN_VIEW",
                 "error_message": str(ex),
             }
         ]
