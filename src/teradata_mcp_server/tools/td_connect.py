@@ -104,7 +104,9 @@ class TDConn:
 
         # Build SQLAlchemy connection string for teradatasqlalchemy
         main_query = self._build_query_string({"LOGMECH": self._default_basic_logmech})
-        sqlalchemy_url = f"teradatasql://{user}:{password}@{self._base_host}:{self._base_port}/{self._base_db}?{main_query}"
+        sqlalchemy_url = (
+            f"teradatasql://{user}:{password}@{self._base_host}:{self._base_port}/{self._base_db}?{main_query}"
+        )
 
         try:
             self.engine = create_engine(
