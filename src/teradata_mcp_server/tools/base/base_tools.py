@@ -405,6 +405,31 @@ CHARACTER_TYPES = {"CF", "CV", "CO", "LF"}
 # Module-level constant for tracing
 C_MODULE = "base_columnMetadata"
 
+# ---------------------------------------------------------------------------
+# Runtime constants for base_columnMetadata
+# ---------------------------------------------------------------------------
+
+# Teradata error code raised when the session lacks SELECT privilege on an
+# object. Caught by _help_column_view to trigger the DBC.ColumnsVX fallback.
+TD_ERR_NO_SELECT_ACCESS = "3523"
+
+# Default payload budget in kilobytes. Sized safely under the 1 MB MCP
+# response limit to leave headroom for metadata and JSON envelope overhead.
+DEFAULT_PAYLOAD_KB = 900
+
+# Default wall-clock execution budget in seconds. Sized safely under the
+# typical 240-second MCP transport timeout so the tool can return all data
+# collected so far (plus a continuation token) rather than being killed mid-
+# flight with nothing returned.
+DEFAULT_EXECUTION_SECONDS = 180
+
+# MCP transport timeout in seconds — informational only, not enforced here.
+# DEFAULT_EXECUTION_SECONDS must remain comfortably below this value.
+MCP_TRANSPORT_TIMEOUT_SECONDS = 240
+
+# Default number of parallel worker threads for HELP COLUMN view resolution.
+DEFAULT_MAX_WORKERS = 8
+
 
 # ------------------ Tool  ------------------#
 # Column metadata tool
@@ -423,8 +448,13 @@ def handle_base_columnMetadata(
 ):
     """
     Retrieves detailed column metadata for Teradata tables, views, and
-    functions using HELP COLUMN. Returns data types, character sets, case
-    specificity, precision, scale, and format strings for each column.
+    functions. Returns data types, character sets, case specificity,
+    precision, scale, and format strings for each column.
+
+    Resolution paths:
+        Tables (T, O, Q) — DBC.ColumnsVX + DBC.IndicesVX. No HELP COLUMN.
+        Views (V)        — HELP COLUMN with derived-table wrapper, the only
+                           reliable mechanism for resolving view column types.
 
     Uses the native TeradataConnection cursor pattern, consistent with all
     other tools in this module.
@@ -443,8 +473,9 @@ def handle_base_columnMetadata(
     Use these strategies to control both:
 
     1. FILTER FIELDS: Pass only the columns you need via the ``fields``
-       parameter. Each HELP COLUMN row returns ~49 fields by default;
-       trimming to 6-8 fields can reduce payload by 80%+.
+       parameter. View rows via HELP COLUMN return ~49 fields by default;
+       table rows via DBC.ColumnsVX return fewer. Trimming to 6-8 fields
+       can reduce payload by 80%+.
        Three computed fields (ColumnTypeString, IndexTypeString,
        CharSetString) are always included automatically.
        Example: fields='ColumnName,ColumnType,ColumnLength,CharType,
@@ -452,7 +483,7 @@ def handle_base_columnMetadata(
 
     2. EXCLUDE OBJECTS: Use ``exclude_objects`` to skip objects you do
        not need. Accepts SQL LIKE patterns (% wildcard) as a CSV.
-       Applied BEFORE any HELP COLUMN execution, so excluded objects
+       Applied before any metadata queries, so excluded objects
        consume zero time and zero payload.
        Example: exclude_objects='ResUsage%,%ResUsage%,Res%View'
 
@@ -520,20 +551,32 @@ def handle_base_columnMetadata(
         table_kind            - Optional: CSV of TableKind codes to filter by.
                                 Examples: 'V' (views only), 'T,O' (tables +
                                 NoPI), 'T,V' (tables and views). Defaults to
-                                all qualifying object types (T, O, V).
-                                Stored procedures (P, E), functions (A, F, R, B, S),
-                                and macros (M) are excluded — HELP COLUMN returns
-                                error [3668] against all of them. Parameter metadata
-                                via DBC.ColumnsV is a planned future enhancement.
-        max_workers           - Optional: number of parallel threads for HELP
-                                COLUMN execution. Default: 8.
+                                all qualifying object types (T, O, V, Q).
+                                Tables (T, O, Q) use DBC.ColumnsVX +
+                                DBC.IndicesVX. Views (V) use HELP COLUMN with
+                                a derived-table wrapper to force type
+                                resolution — this is the only reliable
+                                mechanism for view column types.
+                                Stored procedures (P, E), functions
+                                (A, F, R, B, S), and macros (M) are not
+                                supported. DBC.ColumnsVX does return parameter
+                                rows for these object types, but their
+                                parameter semantics (IN/OUT/INOUT,
+                                SPParameterType) are incompatible with the
+                                column metadata model this tool produces.
+                                Support is a planned future enhancement.
+        max_workers           - Optional: number of parallel threads for view
+                                resolution via HELP COLUMN. Default: 8.
+                                Table metadata is retrieved via DBC.ColumnsVX
+                                and DBC.IndicesVX within the same worker pool.
         fields                - Optional: CSV of field names to include in the
                                 response. Reduces payload size significantly.
                                 Computed fields (ObjectName, ColumnTypeString,
                                 IndexTypeString, CharSetString) always included.
         exclude_objects       - Optional: CSV of object name patterns to
                                 exclude. Uses SQL LIKE-style % wildcards.
-                                Applied BEFORE HELP COLUMN — zero query cost.
+                                Applied before any database calls — excluded
+                                objects incur zero query cost.
         max_payload_kb        - Optional: maximum response payload budget in KB.
                                 Default: 900. Set to 0 to disable.
         max_execution_seconds - Optional: maximum wall-clock execution time in
@@ -550,9 +593,15 @@ def handle_base_columnMetadata(
                                UNICODE", "DECIMAL(18,2)", "INTEGER")
             IndexTypeString  - Index classification: 'UPI', 'NUPI', 'USI',
                                'NUSI', or None if not indexed.
-                               NOTE: HELP COLUMN only reports column
-                               participation in an index, not composite index
-                               grouping. Query DBC.IndicesV for that.
+                               For tables (T, O, Q): sourced from
+                               DBC.IndicesVX — composite index grouping
+                               (IndexNumber + ColumnPosition) is fully
+                               preserved.
+                               For views (V): sourced from HELP COLUMN
+                               flags — reports column participation only,
+                               not composite index grouping. Query
+                               DBC.IndicesVX against the base table for
+                               full composite index detail.
             CharSetString    - Character set name: 'LATIN', 'UNICODE',
                                'KANJI1', 'GRAPHIC', 'KANJISJIS', or None.
 
@@ -606,8 +655,9 @@ def handle_base_columnMetadata(
         # ------------------------------------------------------------------
         # Step 015: Apply exclude_objects filter
         # ------------------------------------------------------------------
-        # Removes objects matching any exclusion pattern BEFORE HELP COLUMN
-        # is executed — excluded objects incur zero query cost and zero payload.
+        # Removes objects matching any exclusion pattern BEFORE any metadata
+        # queries are executed — excluded objects incur zero query cost and
+        # zero payload.
         # Patterns use SQL LIKE-style % wildcards, converted to fnmatch *.
         v_step_no = "015"
         if exclude_objects:
@@ -637,7 +687,7 @@ def handle_base_columnMetadata(
         # ------------------------------------------------------------------
         v_step_no = "020"
         data = []
-        workers = max_workers if max_workers and max_workers > 0 else 8
+        workers = max_workers if max_workers and max_workers > 0 else DEFAULT_MAX_WORKERS
 
         # Pre-compute field filter set — applied per-object during collection
         # so the budget check measures the ACTUAL payload to be returned.
@@ -652,7 +702,7 @@ def handle_base_columnMetadata(
 
         # Payload budget — default 900 KB (safely under 1 MB MCP limit).
         budget_bytes = (
-            (max_payload_kb if max_payload_kb and max_payload_kb > 0 else 900) * 1024
+            (max_payload_kb if max_payload_kb and max_payload_kb > 0 else DEFAULT_PAYLOAD_KB) * 1024
         )
         budget_enabled = max_payload_kb is None or max_payload_kb != 0
         accumulated_bytes = 0
@@ -663,7 +713,7 @@ def handle_base_columnMetadata(
         time_limit = (
             max_execution_seconds
             if max_execution_seconds is not None and max_execution_seconds > 0
-            else 180
+            else DEFAULT_EXECUTION_SECONDS
         )
         time_budget_enabled = max_execution_seconds is None or max_execution_seconds != 0
         time_exceeded = False
@@ -678,7 +728,7 @@ def handle_base_columnMetadata(
                 if kind == "V":
                     cols = _help_column_view(conn, db_name, obj, logger)
                 else:
-                    cols = _help_column_table(conn, db_name, obj)
+                    cols = _dbc_columns_table(conn, db_name, obj)
 
                 for col in cols:
                     # Skip type-building for error/status records — these have
@@ -688,7 +738,11 @@ def handle_base_columnMetadata(
                         results.append(col)
                         continue
                     col["ColumnTypeString"] = _build_type_string(col)
-                    col["IndexTypeString"] = _build_index_type_string(col)
+                    # IndexTypeString is pre-computed by _dbc_columns_table from
+                    # DBC.IndicesVX for tables. Only compute it here for view rows
+                    # (from _help_column_view) which carry HELP COLUMN flags instead.
+                    if "IndexTypeString" not in col:
+                        col["IndexTypeString"] = _build_index_type_string(col)
                     col["CharSetString"] = _build_charset_string(col)
                     col["ObjectName"] = obj
                     results.append(col)
@@ -922,17 +976,17 @@ def _columnsVX_fallback(
     This is the same metadata source used by the legacy base_columnDescription
     tool, providing backward compatibility for restricted-privilege callers.
 
-    REDUCED TYPE FIDELITY:
-    DBC.ColumnsVX does not reliably resolve column types for expression-derived
-    view columns (arithmetic, CAST, CASE, string functions without explicit
-    type-casting aliases). For those columns ColumnType will be NULL and
-    ColumnTypeString will be 'UNKNOWN'. Simple passthrough columns that map
-    directly to an underlying table column are generally resolved correctly.
-    This is a well-known Teradata dictionary limitation — HELP COLUMN with the
-    derived-table wrapper is the only fully reliable resolver for view types.
+    NO TYPE RESOLUTION FOR VIEWS:
+    DBC.ColumnsVX does not contain reliable column type metadata for any view
+    column. ColumnType will be NULL and ColumnTypeString will be 'UNKNOWN' for
+    all view columns — this is a well-known Teradata dictionary limitation that
+    applies universally, not just to expression-derived columns. HELP COLUMN
+    with the derived-table wrapper is the only reliable resolver for view
+    column types, and is unavailable when SELECT privilege is absent.
 
-    Each returned row includes metadata_source='DBC.ColumnsVX' to signal to
-    downstream consumers that type fidelity may be reduced.
+    This fallback returns column names and a best-effort type — callers should
+    treat all type information as unreliable for views resolved via this path.
+    Each returned row includes metadata_source='DBC.ColumnsVX' to signal this.
 
     Args:
         conn:        TeradataConnection (injected by MCP server).
@@ -1083,10 +1137,15 @@ def _infer_type_from_format(fmt: str, max_length: int | None) -> str:
 def _build_type_string(col: dict) -> str:
     """
     Construct a human-readable Teradata SQL type string from a
-    normalised HELP COLUMN row.
+    normalised column metadata dict.
+
+    Called for both resolution paths:
+        Views   — rows normalised by _standardise_helpcol_row (HELP COLUMN)
+        Tables  — rows normalised by _dbc_columns_table (DBC.ColumnsVX)
+    Both paths produce the same key names, so this function is path-agnostic.
 
     Args:
-        col: A normalised column metadata dict from _standardise_helpcol_row.
+        col: A normalised column metadata dict.
 
     Returns:
         str: The Teradata SQL type string (e.g. "VARCHAR(200) UNICODE").
@@ -1142,20 +1201,18 @@ def _build_index_type_string(col: dict) -> Optional[str]:
 
     Returns None if the column does not participate in any index.
 
+    SCOPE — VIEW COLUMNS ONLY:
+    This function is now called exclusively for view columns returned by
+    _help_column_view. Table columns (T, O, Q) have IndexTypeString
+    pre-computed by _dbc_columns_table from DBC.IndicesVX, which provides
+    correct composite index grouping (IndexNumber + ColumnPosition) that
+    HELP COLUMN flags cannot express. _process_one skips this function
+    when IndexTypeString is already present in the column dict.
+
     IMPORTANT CAVEAT: HELP COLUMN only reports that a column *participates*
     in an index, not which columns are grouped together in a composite index.
-    For composite index membership, query DBC.IndicesV (IndexNumber grouping).
-
-    # TODO (future refactor): Replace HELP COLUMN index flags with a direct
-    # join to DBC.IndicesV for tables (T, O, Q). DBC.IndicesV provides:
-    #   - IndexNumber:    groups columns that share a composite index
-    #   - ColumnPosition: column ordering within the index
-    #   - IndexType:      primary/secondary distinction
-    #   - UniqueFlag:     unique/non-unique distinction
-    # This is superior to HELP COLUMN flags in every respect — it covers
-    # composite index grouping (which HELP COLUMN cannot), requires no
-    # special syntax, and can be batched across all objects in one query.
-    # Only views need to retain the HELP COLUMN path.
+    For views this is acceptable — views do not have their own indices and
+    the flag reflects the underlying base table column participation.
 
     Args:
         col: A normalised column metadata dict from _standardise_helpcol_row.
@@ -1178,10 +1235,16 @@ def _build_index_type_string(col: dict) -> Optional[str]:
 
 def _build_charset_string(col: dict) -> Optional[str]:
     """
-    Derive a human-readable character set name from the HELP COLUMN CharType code.
+    Derive a human-readable character set name from the CharType code.
+
+    Called for both resolution paths:
+        Views   — CharType from HELP COLUMN (via _standardise_helpcol_row)
+        Tables  — CharType from DBC.ColumnsVX (via _dbc_columns_table)
+    Both paths populate CharType with the same integer code, so this
+    function is path-agnostic.
 
     Args:
-        col: A normalised column metadata dict from _standardise_helpcol_row.
+        col: A normalised column metadata dict.
 
     Returns:
         str or None: 'LATIN', 'UNICODE', 'KANJI1', 'GRAPHIC', 'KANJISJIS',
@@ -1201,11 +1264,17 @@ def _get_objects(
 
     Queries DBC.TablesV filtered by TableKind. Defaults to
     ('T','O','Q','V') — tables, NoPI tables, queue tables, and views.
-    Queue tables (Q) use identical HELP COLUMN syntax to regular tables.
 
-    The following object types are excluded from the default scope — HELP COLUMN
-    returns error [3668] against all of them. DBC.ColumnsV returns populated
-    ColumnType, ColumnLength, CharType, and SPParameterType for all:
+    Resolution paths used downstream by _process_one:
+        Views (V)         — HELP COLUMN with derived-table wrapper; the only
+                            reliable mechanism for resolving view column types.
+        All others (T,O,Q) — DBC.ColumnsVX + DBC.IndicesVX; no HELP COLUMN
+                            involved for any non-view object type.
+
+    The following object types are excluded from the default scope.
+    DBC.ColumnsVX does return parameter rows for these types, but their
+    parameter semantics (IN/OUT/INOUT, SPParameterType) are incompatible
+    with the column metadata model this tool produces:
 
     Stored procedures:  TableKind 'P' (native), 'E' (external)
     Functions:          TableKind 'A' (aggregate), 'F' (scalar), 'R' (table), 'B', 'S'
@@ -1272,37 +1341,153 @@ def _get_table_kind(
         return row[0].strip() if row else None
 
 
-def _help_column_table(
+def _dbc_columns_table(
     conn: TeradataConnection, db_name: str, object_name: str
 ) -> list:
     """
-    Execute HELP COLUMN against a table (T, O, Q) and return normalised rows.
+    Retrieve column metadata for a table (T, O, Q) from DBC.ColumnsVX,
+    supplemented with index classification from DBC.IndicesVX.
+
+    Replaces the former HELP COLUMN approach for tables. DBC.ColumnsVX
+    returns fully populated column metadata for all table types without
+    any special syntax, and applies additional access controls so the
+    session only receives metadata for objects it has been granted access
+    to — consistent with the security model used by base_columnDescription.
+    Supports future batching across multiple objects in a single query.
+    HELP COLUMN is now used exclusively for views via _help_column_view,
+    where the derived-table wrapper is the only reliable mechanism to
+    resolve expression-derived column types.
+
+    Index metadata is sourced from DBC.IndicesVX rather than HELP COLUMN
+    flags. DBC.IndicesVX provides:
+        - IndexNumber:    groups columns that share a composite index
+        - ColumnPosition: column ordering within the composite index
+        - IndexType:      'P' (Primary) or 'S' (Secondary)
+        - UniqueFlag:     'Y' (Unique) or 'N' (Non-unique)
+
+    This is superior to HELP COLUMN index flags in every respect — it
+    correctly handles composite index grouping, which HELP COLUMN cannot
+    express (HELP COLUMN only reports per-column participation, not which
+    columns share an index). Index type is pre-computed and stored as
+    IndexTypeString directly in each returned row, bypassing
+    _build_index_type_string which reads HELP COLUMN-specific flags that
+    are not present in DBC.ColumnsVX rows.
+
+    Priority rule when a column participates in multiple indices: Primary
+    index (IndexType='P') always wins over Secondary. Within the same
+    index type, the first encountered entry is retained.
 
     Args:
         conn:        TeradataConnection (injected by MCP server).
         db_name:     Target database name.
-        object_name: The table name.
+        object_name: The table name (TableKind T, O, or Q).
 
     Returns:
-        list[dict]: Normalised column metadata rows.
-
-    # TODO (future refactor): Replace this function entirely for tables (T, O, Q).
-    # DBC.ColumnsV and its variants return fully populated column metadata for
-    # all table types without any special syntax, and can be batched across all
-    # objects in a single query rather than one HELP COLUMN call per object.
-    # Index metadata should be sourced from DBC.IndicesV (joined on DatabaseName,
-    # TableName, ColumnName) rather than from HELP COLUMN flags — DBC.IndicesV
-    # provides composite index grouping (IndexNumber + ColumnPosition) which
-    # HELP COLUMN cannot. After this refactor, HELP COLUMN would be used only
-    # for views via _help_column_view, where it remains necessary to resolve
-    # actual column types from the view definition.
+        list[dict]: Normalised column metadata rows, each containing
+                    pre-computed IndexTypeString from DBC.IndicesVX.
     """
-    sql = f'HELP COLUMN "{db_name}"."{object_name}".*'
+    # ------------------------------------------------------------------
+    # Step 1: Column metadata from DBC.ColumnsVX
+    # DBC.ColumnsVX is used in preference to DBC.ColumnsV — it applies
+    # additional access controls so the session only receives metadata
+    # for objects to which it has been granted access, consistent with
+    # the security model used by base_columnDescription.
+    # ------------------------------------------------------------------
+    col_sql = """
+        SELECT
+             col.ColumnId
+            ,col.ColumnName
+            ,col.ColumnType
+            ,col.ColumnLength
+            ,col.Nullable
+            ,col.CharType
+            ,col.DecimalTotalDigits
+            ,col.DecimalFractionalDigits
+            ,col.UpperCaseFlag          AS UpperCase
+            ,col.DefaultValue
+            ,col.ColumnFormat           AS Format
+        FROM DBC.ColumnsVX AS col
+        WHERE col.DatabaseName = ?
+          AND col.TableName    = ?
+        ORDER BY col.ColumnId
+    """
+
+    # ------------------------------------------------------------------
+    # Step 2: Index classification from DBC.IndicesVX
+    # DBC.IndicesVX is used in preference to DBC.IndicesV for the same
+    # reason DBC.ColumnsVX is preferred — it applies access controls
+    # consistent with the rest of the tool's security model.
+    # Retrieves all index-participating columns for the object so that
+    # composite index membership (IndexNumber grouping) is preserved.
+    # ------------------------------------------------------------------
+    idx_sql = """
+        SELECT
+             idx.ColumnName
+            ,idx.IndexType      -- 'P' = Primary, 'S' = Secondary
+            ,idx.UniqueFlag     -- 'Y' = Unique,  'N' = Non-unique
+        FROM DBC.IndicesVX AS idx
+        WHERE idx.DatabaseName = ?
+          AND idx.TableName    = ?
+          AND idx.ColumnName   IS NOT NULL
+    """
+
     with conn.cursor() as cur:
-        cur.execute(sql)
-        rows = cur.fetchall()
-        data = rows_to_json(cur.description, rows)
-        return [_standardise_helpcol_row(row) for row in data]
+        # Fetch column metadata
+        cur.execute(col_sql, [db_name, object_name])
+        col_rows = cur.fetchall()
+        col_data = rows_to_json(cur.description, col_rows)
+
+        # Fetch index participation
+        cur.execute(idx_sql, [db_name, object_name])
+        idx_rows = cur.fetchall()
+        idx_data = rows_to_json(cur.description, idx_rows)
+
+    # ------------------------------------------------------------------
+    # Build index lookup: ColumnName → IndexTypeString
+    # Primary index wins over secondary; first entry wins within same type.
+    # Source: DBC.IndicesVX
+    idx_map: dict[str, str] = {}
+    for idx_row in idx_data:
+        col_name = (idx_row.get("ColumnName") or "").strip()
+        idx_type = (idx_row.get("IndexType")  or "").strip().upper()
+        unique   = (idx_row.get("UniqueFlag")  or "").strip().upper()
+
+        idx_str = (
+            "UPI"  if idx_type == "P" and unique == "Y" else
+            "NUPI" if idx_type == "P" else
+            "USI"  if unique == "Y" else
+            "NUSI"
+        )
+
+        # Primary index always wins; secondary only fills the gap
+        existing = idx_map.get(col_name)
+        if existing is None or (existing in ("USI", "NUSI") and idx_type == "P"):
+            idx_map[col_name] = idx_str
+
+    # ------------------------------------------------------------------
+    # Normalise column rows and embed pre-computed IndexTypeString
+    # ------------------------------------------------------------------
+    results = []
+    for row in col_data:
+        col_name = (row.get("ColumnName") or "").strip()
+        normalised = {
+            "ColumnName":               col_name,
+            "ColumnType":               (row.get("ColumnType") or "").strip(),
+            "ColumnLength":             row.get("ColumnLength"),
+            "Nullable":                 (row.get("Nullable") or "").strip(),
+            "CharType":                 row.get("CharType"),
+            "DecimalTotalDigits":       row.get("DecimalTotalDigits"),
+            "DecimalFractionalDigits":  row.get("DecimalFractionalDigits"),
+            "UpperCase":                (row.get("UpperCase") or "").strip(),
+            "DefaultValue":             row.get("DefaultValue"),
+            "Format":                   (row.get("Format") or "").strip(),
+            # Pre-computed from DBC.IndicesVX — _process_one skips
+            # _build_index_type_string when this key is already present.
+            "IndexTypeString":          idx_map.get(col_name),
+        }
+        results.append(normalised)
+
+    return results
 
 
 def _help_column_view(
@@ -1364,7 +1549,7 @@ def _help_column_view(
 
         # -- Teradata error 3523: no SELECT privilege on the view.
         # Fall back to DBC.ColumnsVX (backward-compatible path).
-        if "3523" in ex_str:
+        if TD_ERR_NO_SELECT_ACCESS in ex_str:
             logger.warning(
                 f"{C_MODULE}: No SELECT privilege on {db_name}.\"{object_name}\" "
                 f"— falling back to DBC.ColumnsVX (reduced type fidelity for "
