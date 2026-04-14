@@ -106,6 +106,11 @@ def create_mcp_app(settings: Settings):
     # Initialize TD connection and optional teradataml/EFS context
     tdconn = get_tdconn()
 
+    def get_db_user() -> str | None:
+        """Return the database username from the TDConn connection string."""
+        tc = get_tdconn()
+        return getattr(tc, "_db_user", None)
+
     enable_analytic_functions = profile_name and profile_name == "dataScientist"
 
     if enable_efs or enable_analytic_functions:
@@ -329,56 +334,53 @@ def create_mcp_app(settings: Settings):
                 from sqlalchemy import text
 
                 with tdconn_local.engine.connect() as conn:
-                    # Always attempt to set QueryBand when a request context is present
                     ctx = get_context()
                     request_context = ctx.get_state("request_context") if ctx else None
-                    if request_context is not None:
-                        qb = build_queryband(
-                            application=mcp.name,
-                            profile=profile_name,
-                            process_id=process_id,
-                            tool_name=tool_name,
-                            request_context=request_context,
-                        )
-                        try:
-                            conn.execute(text(f"SET QUERY_BAND = '{qb}' FOR SESSION"))
-                            logger.debug(f"QueryBand set: {qb}")
-                            logger.debug(f"Tool request context: {request_context}")
-                        except Exception as qb_error:
-                            logger.debug(f"Could not set QueryBand: {qb_error}")
-                            # If in Basic auth, do not run the tool without proxying
-                            if str(getattr(request_context, "auth_scheme", "")).lower() == "basic":
-                                return format_error_response(
-                                    f"Cannot run tool '{tool_name}': failed to set QueryBand for Basic auth. Error: {qb_error}"
-                                )
+                    qb = build_queryband(
+                        application=mcp.name,
+                        profile=profile_name,
+                        process_id=process_id,
+                        tool_name=tool_name,
+                        request_context=request_context,
+                        db_user=get_db_user(),
+                    )
+                    try:
+                        conn.execute(text(f"SET QUERY_BAND = '{qb}' FOR SESSION"))
+                        logger.debug(f"QueryBand set: {qb}")
+                        logger.debug(f"Tool request context: {request_context}")
+                    except Exception as qb_error:
+                        logger.debug(f"Could not set QueryBand: {qb_error}")
+                        # If in Basic auth, do not run the tool without proxying
+                        if request_context and str(getattr(request_context, "auth_scheme", "")).lower() == "basic":
+                            return format_error_response(
+                                f"Cannot run tool '{tool_name}': failed to set QueryBand for Basic auth. Error: {qb_error}"
+                            )
                     result = tool(conn, *args, **kwargs)
             else:
                 raw = tdconn_local.engine.raw_connection()
                 try:
-                    # Always attempt to set QueryBand when a request context is present
                     ctx = get_context()
                     request_context = ctx.get_state("request_context") if ctx else None
-                    if request_context is not None:
-                        qb = build_queryband(
-                            application=mcp.name,
-                            profile=profile_name,
-                            process_id=process_id,
-                            tool_name=tool_name,
-                            request_context=request_context,
-                        )
-                        try:
-                            cursor = raw.cursor()
-                            # Apply at session scope so it persists across statements
-                            cursor.execute(f"SET QUERY_BAND = '{qb}' FOR SESSION")
-                            cursor.close()
-                            logger.debug(f"QueryBand set: {qb}")
-                            logger.debug(f"Tool request context: {request_context}")
-                        except Exception as qb_error:
-                            logger.debug(f"Could not set QueryBand: {qb_error}")
-                            if str(getattr(request_context, "auth_scheme", "")).lower() == "basic":
-                                return format_error_response(
-                                    f"Cannot run tool '{tool_name}': failed to set QueryBand for Basic auth. Error: {qb_error}"
-                                )
+                    qb = build_queryband(
+                        application=mcp.name,
+                        profile=profile_name,
+                        process_id=process_id,
+                        tool_name=tool_name,
+                        request_context=request_context,
+                        db_user=get_db_user(),
+                    )
+                    try:
+                        cursor = raw.cursor()
+                        cursor.execute(f"SET QUERY_BAND = '{qb}' FOR SESSION")
+                        cursor.close()
+                        logger.debug(f"QueryBand set: {qb}")
+                        logger.debug(f"Tool request context: {request_context}")
+                    except Exception as qb_error:
+                        logger.debug(f"Could not set QueryBand: {qb_error}")
+                        if request_context and str(getattr(request_context, "auth_scheme", "")).lower() == "basic":
+                            return format_error_response(
+                                f"Cannot run tool '{tool_name}': failed to set QueryBand for Basic auth. Error: {qb_error}"
+                            )
                     result = tool(raw, *args, **kwargs)
                 finally:
                     raw.close()

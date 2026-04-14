@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from teradata_mcp_server import __version__
+
 
 def sanitize_qb_value(val: str | None) -> str:
     if val is None:
@@ -16,6 +18,7 @@ def build_queryband(
     process_id: str,
     tool_name: str,
     request_context: object | None,
+    db_user: str | None = None,
 ) -> str:
     parts: list[str] = []
 
@@ -23,6 +26,14 @@ def build_queryband(
         if value is None:
             return
         parts.append(f"{key}={sanitize_qb_value(value)};")
+
+    # Enterprise telemetry keys (TCA-compatible)
+    add("ORG", "TERADATA-INTERNAL-TELEM")
+    add("APPNAME", "TeradataOSSMCP")
+    add("APPVERSION", __version__)
+    add("APPFUNC", tool_name)
+    assume_user = getattr(request_context, "assume_user", None) if request_context else None
+    add("APPUSER", assume_user or db_user)
 
     add("APPLICATION", application)
     add("PROFILE", profile)

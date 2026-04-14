@@ -75,6 +75,7 @@ class TDConn:
         # Parse connection URL
         parsed_url = urlparse(connection_url)
         user = parsed_url.username
+        self._db_user = user
         password = parsed_url.password
         self._base_host = parsed_url.hostname
         self._base_port = parsed_url.port or 1025
