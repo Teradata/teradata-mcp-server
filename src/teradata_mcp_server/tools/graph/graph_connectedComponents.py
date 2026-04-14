@@ -135,7 +135,7 @@ def _build_node_details(
     rows = []
     for node_fq, comp_root in sorted(component_map.items()):
         parts = node_fq.split('.', 1)
-        db_name  = parts[0] if len(parts) > 1 else ''
+        db_name = parts[0] if len(parts) > 1 else ''
         obj_name = parts[1] if len(parts) > 1 else parts[0]
         rows.append({
             "Node_FQ":        node_fq,
@@ -197,7 +197,7 @@ def _build_summary_stats(
     comp_count = len(component_summaries)
 
     sizes = [c["Node_Count"] for c in component_summaries]
-    largest  = max(sizes, default=0)
+    largest = max(sizes, default=0)
     smallest = min(sizes, default=0)
 
     singleton_count = sum(1 for s in sizes if s == 1)
@@ -377,7 +377,7 @@ WHERE {container_where}
         # -------------------------------------------------------------------
         comp_map = uf.component_map()
         unique_roots = sorted({v for v in comp_map.values()})
-        root_to_id   = {r: i + 1 for i, r in enumerate(unique_roots)}
+        root_to_id = {r: i + 1 for i, r in enumerate(unique_roots)}
 
         component_count = len(unique_roots)
         logger.debug(
@@ -388,9 +388,9 @@ WHERE {container_where}
         # -------------------------------------------------------------------
         # Step 4 — Build response structures
         # -------------------------------------------------------------------
-        node_details        = _build_node_details(comp_map, root_to_id, node_kind)
+        node_details = _build_node_details(comp_map, root_to_id, node_kind)
         component_summaries = _build_component_summaries(comp_map, root_to_id)
-        summary_stats       = _build_summary_stats(component_summaries, edge_count)
+        summary_stats = _build_summary_stats(component_summaries, edge_count)
 
         response_data = {
             "node_details":        node_details,
@@ -477,7 +477,6 @@ GRAPH_CONNECTED_COMPONENTS_TOOL = {
                 "Required — no default."
             ),
             "required": True,
-        },
         },
     },
 }
