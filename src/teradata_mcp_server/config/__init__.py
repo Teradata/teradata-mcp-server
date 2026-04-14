@@ -29,6 +29,7 @@ class Settings:
 
     # Database configuration
     logmech: str = "TD2"
+    logmech_is_explicit: bool = False  # True when set via CLI arg or env var
     auth_rate_limit_attempts: int = 5
     auth_rate_limit_window: int = 60
     pool_size: int = 5
@@ -57,6 +58,7 @@ def settings_from_env() -> Settings:
         auth_mode=os.getenv("AUTH_MODE", "none").lower(),
         auth_cache_ttl=int(os.getenv("AUTH_CACHE_TTL", "300")),
         logmech=os.getenv("LOGMECH", "TD2"),
+        logmech_is_explicit=(os.getenv("LOGMECH") is not None),
         auth_rate_limit_attempts=int(os.getenv("AUTH_RATE_LIMIT_ATTEMPTS", "5")),
         auth_rate_limit_window=int(os.getenv("AUTH_RATE_LIMIT_WINDOW", "60")),
         pool_size=int(os.getenv("TD_POOL_SIZE", "5")),
