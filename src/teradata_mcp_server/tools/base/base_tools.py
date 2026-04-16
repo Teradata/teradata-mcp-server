@@ -1010,9 +1010,9 @@ def _columnsVX_fallback(
             ,col.CharType
             ,col.DecimalTotalDigits
             ,col.DecimalFractionalDigits
-            ,col.UpperCaseFlag          AS UpperCase
+            ,col.UpperCaseFlag          AS "UpperCase"
             ,col.DefaultValue
-            ,col.ColumnFormat           AS Format
+            ,col.ColumnFormat           AS "Format"
         FROM DBC.ColumnsVX AS col
         WHERE col.DatabaseName = ?
           AND col.TableName    = ?
@@ -1403,9 +1403,9 @@ def _dbc_columns_table(
             ,col.CharType
             ,col.DecimalTotalDigits
             ,col.DecimalFractionalDigits
-            ,col.UpperCaseFlag          AS UpperCase
+            ,col.UpperCaseFlag          AS "UpperCase"
             ,col.DefaultValue
-            ,col.ColumnFormat           AS Format
+            ,col.ColumnFormat           AS "Format"
         FROM DBC.ColumnsVX AS col
         WHERE col.DatabaseName = ?
           AND col.TableName    = ?
