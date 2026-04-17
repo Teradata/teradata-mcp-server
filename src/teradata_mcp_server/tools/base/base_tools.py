@@ -340,6 +340,15 @@ CHARSET_MAP = {
     5: "KANJISJIS",
 }
 
+# Case specificity flags from DBC.ColumnsVX UpperCaseFlag / HELP COLUMN
+# Reference: Teradata Database SQL Data Definition Language — Column Attributes
+CASE_SPECIFICITY_MAP = {
+    "U": "UPPERCASE",          # Column values stored and compared in uppercase
+    "C": "CASESPECIFIC",       # Column comparisons are case-sensitive
+    "N": "NOT CASESPECIFIC",   # Column comparisons are case-insensitive
+    # NULL — not applicable; no explicit case attribute defined on the column
+}
+
 # Teradata internal type codes to SQL type names
 # Reference: DBC.Columns ColumnType / HELP COLUMN Type field
 TYPE_CODE_MAP = {
@@ -586,24 +595,27 @@ def handle_base_columnMetadata(
 
     Returns:
         MCP-compliant response via create_response() containing a list
-        of column metadata records with normalised keys and three
+        of column metadata records with normalised keys and four
         computed string fields per column:
 
-            ColumnTypeString - Human-readable SQL type (e.g. "VARCHAR(200)
-                               UNICODE", "DECIMAL(18,2)", "INTEGER")
-            IndexTypeString  - Index classification: 'UPI', 'NUPI', 'USI',
-                               'NUSI', or None if not indexed.
-                               For tables (T, O, Q): sourced from
-                               DBC.IndicesVX — composite index grouping
-                               (IndexNumber + ColumnPosition) is fully
-                               preserved.
-                               For views (V): sourced from HELP COLUMN
-                               flags — reports column participation only,
-                               not composite index grouping. Query
-                               DBC.IndicesVX against the base table for
-                               full composite index detail.
-            CharSetString    - Character set name: 'LATIN', 'UNICODE',
-                               'KANJI1', 'GRAPHIC', 'KANJISJIS', or None.
+            ColumnTypeString      - Human-readable SQL type (e.g. "VARCHAR(200)
+                                    UNICODE", "DECIMAL(18,2)", "INTEGER")
+            IndexTypeString       - Index classification: 'UPI', 'NUPI', 'USI',
+                                    'NUSI', or None if not indexed.
+                                    For tables (T, O, Q): sourced from
+                                    DBC.IndicesVX — composite index grouping
+                                    (IndexNumber + ColumnPosition) is fully
+                                    preserved.
+                                    For views (V): sourced from HELP COLUMN
+                                    flags — reports column participation only,
+                                    not composite index grouping. Query
+                                    DBC.IndicesVX against the base table for
+                                    full composite index detail.
+            CharSetString         - Character set name: 'LATIN', 'UNICODE',
+                                    'KANJI1', 'GRAPHIC', 'KANJISJIS', or None.
+            CaseSpecificityString - Case attribute: 'UPPERCASE', 'CASESPECIFIC',
+                                    'NOT CASESPECIFIC', or None if no explicit
+                                    case attribute is defined on the column.
 
         When truncated, metadata will include:
             remaining_objects  - CSV of unprocessed object names
@@ -697,7 +709,7 @@ def handle_base_columnMetadata(
             # Always include ObjectName, computed string fields, and status
             keep.update(
                 {"ObjectName", "ColumnTypeString", "IndexTypeString", "CharSetString",
-                 "status", "error_message", "metadata_source"}
+                 "CaseSpecificityString", "status", "error_message", "metadata_source"}
             )
 
         # Payload budget — default 900 KB (safely under 1 MB MCP limit).
@@ -744,6 +756,7 @@ def handle_base_columnMetadata(
                     if "IndexTypeString" not in col:
                         col["IndexTypeString"] = _build_index_type_string(col)
                     col["CharSetString"] = _build_charset_string(col)
+                    col["CaseSpecificityString"] = _build_case_string(col)
                     col["ObjectName"] = obj
                     results.append(col)
 
@@ -1231,6 +1244,38 @@ def _build_index_type_string(col: dict) -> Optional[str]:
         return "UPI" if unique == "Y" else "NUPI"
     else:
         return "USI" if unique == "Y" else "NUSI"
+
+
+def _build_case_string(col: dict) -> Optional[str]:
+    """
+    Derive a human-readable case specificity label from the UpperCase flag.
+
+    Maps the single-character flag from DBC.ColumnsVX UpperCaseFlag or
+    HELP COLUMN UpperCase field to a descriptive string using
+    CASE_SPECIFICITY_MAP. Returns None when no explicit case attribute is
+    defined on the column (NULL flag value).
+
+    Called for both resolution paths:
+        Views   — UpperCase from HELP COLUMN (via _standardise_helpcol_row)
+        Tables  — UpperCase from DBC.ColumnsVX UpperCaseFlag (via _dbc_columns_table)
+    Both paths normalise the flag to the 'UpperCase' key, so this function
+    is path-agnostic.
+
+    NCSNP (Not CaseSpecific Not Padded) from HELP COLUMN is treated as 'N'
+    (NOT CASESPECIFIC) — it is a storage/padding variant, not a distinct
+    case specificity value. The _standardise_helpcol_row function maps it
+    to the 'NCSNP' key separately; callers requiring the padding distinction
+    should inspect that key directly.
+
+    Args:
+        col: A normalised column metadata dict.
+
+    Returns:
+        str or None: 'UPPERCASE', 'CASESPECIFIC', 'NOT CASESPECIFIC',
+                     or None if no explicit case attribute is defined.
+    """
+    flag = (col.get("UpperCase") or "").strip().upper()
+    return CASE_SPECIFICITY_MAP.get(flag)
 
 
 def _build_charset_string(col: dict) -> Optional[str]:
