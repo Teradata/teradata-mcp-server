@@ -625,7 +625,8 @@ def handle_base_columnMetadata(
             elapsed_seconds    - Wall-clock time consumed (always present)
     """
 
-    method_name = inspect.currentframe().f_code.co_name
+    frame = inspect.currentframe()
+    method_name = frame.f_code.co_name if frame is not None else "base_columnMetadata"
     logger = logging.getLogger(method_name)
     v_step_no = "000"
 
