@@ -57,6 +57,38 @@
           "database_name": "DBC",
           "obj_name": "TablesV"
         }
+      },
+      {
+        "name": "wildcard_obj_name_in_database",
+        "parameters": {
+          "database_name": "DBC",
+          "obj_name": "%"
+        }
+      },
+      {
+        "name": "like_pattern_obj_name",
+        "parameters": {
+          "database_name": "DBC",
+          "obj_name": "Tables%"
+        }
+      },
+      {
+        "name": "case_insensitive_obj_name",
+        "parameters": {
+          "database_name": "dbc",
+          "obj_name": "tablesv"
+        }
+      },
+      {
+        "name": "view_columns",
+        "parameters": {
+          "database_name": "DBC",
+          "obj_name": "DatabasesV"
+        }
+      },
+      {
+        "name": "no_parameters_defaults_to_all",
+        "parameters": {}
       }
     ],
     "base_tablePreview": [
