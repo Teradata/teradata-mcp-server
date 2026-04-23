@@ -27,7 +27,6 @@ from typing import Annotated, Any, Optional
 import yaml
 from fastmcp import FastMCP
 from fastmcp.prompts.prompt import Message, TextContent
-from fastmcp.server.dependencies import get_context
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection
 
@@ -318,6 +317,7 @@ def create_mcp_app(settings: Settings):
           context for easier debugging.
         """
         tool_name = kwargs.pop("tool_name", getattr(tool, "__name__", "unknown_tool"))
+        request_context = kwargs.pop("_request_context", None)
         tdconn_local = get_tdconn()
 
         if not getattr(tdconn_local, "engine", None):
@@ -334,8 +334,6 @@ def create_mcp_app(settings: Settings):
                 from sqlalchemy import text
 
                 with tdconn_local.engine.connect() as conn:
-                    ctx = get_context()
-                    request_context = ctx.get_state("request_context") if ctx else None
                     qb = build_queryband(
                         application=mcp.name,
                         profile=profile_name,
@@ -359,8 +357,6 @@ def create_mcp_app(settings: Settings):
             else:
                 raw = tdconn_local.engine.raw_connection()
                 try:
-                    ctx = get_context()
-                    request_context = ctx.get_state("request_context") if ctx else None
                     qb = build_queryband(
                         application=mcp.name,
                         profile=profile_name,
