@@ -63,25 +63,23 @@ def _build_excl_clauses(patterns: list[str]) -> str:
       SQL fragment beginning with "AND NOT (...)" or empty string
     """
     if not patterns:
-        return ''
+        return ""
 
     conditions = []
     for p in patterns:
-        if '.' in p:
-            db_part, obj_part = p.split('.', 1)
-            conditions.append(
-                f"(Src_Container_Name LIKE '{db_part}'"
-                f" AND Src_Object_Name LIKE '{obj_part}')"
-            )
+        if "." in p:
+            db_part, obj_part = p.split(".", 1)
+            conditions.append(f"(Src_Container_Name LIKE '{db_part}' AND Src_Object_Name LIKE '{obj_part}')")
         else:
             conditions.append(f"Src_Container_Name LIKE '{p}'")
 
-    return 'AND NOT (' + ' OR '.join(conditions) + ')'
+    return "AND NOT (" + " OR ".join(conditions) + ")"
 
 
 # ---------------------------------------------------------------------------
 # Union-Find for WCC partitioning
 # ---------------------------------------------------------------------------
+
 
 class _UnionFind:
     """
@@ -99,7 +97,7 @@ class _UnionFind:
         """Return canonical representative of x's component (with path compression)."""
         self._parent.setdefault(x, x)
         if self._parent[x] != x:
-            self._parent[x] = self.find(self._parent[x])   # path compression
+            self._parent[x] = self.find(self._parent[x])  # path compression
         return self._parent[x]
 
     def union(self, a, b) -> None:
@@ -117,10 +115,8 @@ class _UnionFind:
 # Iterative DFS cycle detection
 # ---------------------------------------------------------------------------
 
-def _detect_cycles_in_subgraph(
-    nodes: set,
-    adj: dict[str, list[str]]
-) -> list[list[str]]:
+
+def _detect_cycles_in_subgraph(nodes: set, adj: dict[str, list[str]]) -> list[list[str]]:
     """
     Find all simple directed cycles reachable in an adjacency sub-graph.
 
@@ -152,9 +148,7 @@ def _detect_cycles_in_subgraph(
             continue
 
         # Stack entries: (node, iterator-over-neighbours, path-so-far)
-        stack: list[tuple[str, Iterator[str], list[str]]] = [
-            (start, iter(adj.get(start, [])), [start])
-        ]
+        stack: list[tuple[str, Iterator[str], list[str]]] = [(start, iter(adj.get(start, [])), [start])]
         colour[start] = grey
 
         while stack:
@@ -170,9 +164,7 @@ def _detect_cycles_in_subgraph(
 
                 elif colour.get(nxt) != black:
                     colour[nxt] = grey
-                    stack.append(
-                        (nxt, iter(adj.get(nxt, [])), path + [nxt])
-                    )
+                    stack.append((nxt, iter(adj.get(nxt, [])), path + [nxt]))
 
             except StopIteration:
                 colour[node] = black
@@ -185,10 +177,8 @@ def _detect_cycles_in_subgraph(
 # Response assembly helpers
 # ---------------------------------------------------------------------------
 
-def _build_cycle_details(
-    cycles: list[list[str]],
-    component_id_map: dict[str, int]
-) -> list[dict]:
+
+def _build_cycle_details(cycles: list[list[str]], component_id_map: dict[str, int]) -> list[dict]:
     """
     Build the cycle_details result set — one row per node per cycle.
 
@@ -204,21 +194,20 @@ def _build_cycle_details(
         # The last element is a repeat of the first — omit it for position count
         members = cycle[:-1]
         for pos, node_fq in enumerate(members, start=1):
-            rows.append({
-                "Cycle_Id":        cycle_id,
-                "Cycle_Pos":       pos,
-                "Node_FQ":         node_fq,
-                "Cycle_Length":    len(members),
-                "Component_Id":    component_id_map.get(node_fq, -1),
-                "Strategy":        "DFS",
-            })
+            rows.append(
+                {
+                    "Cycle_Id": cycle_id,
+                    "Cycle_Pos": pos,
+                    "Node_FQ": node_fq,
+                    "Cycle_Length": len(members),
+                    "Component_Id": component_id_map.get(node_fq, -1),
+                    "Strategy": "DFS",
+                }
+            )
     return rows
 
 
-def _build_cycle_summaries(
-    cycles: list[list[str]],
-    component_id_map: dict[str, int]
-) -> list[dict]:
+def _build_cycle_summaries(cycles: list[list[str]], component_id_map: dict[str, int]) -> list[dict]:
     """
     Build the cycle_summaries result set — one row per cycle.
 
@@ -232,22 +221,20 @@ def _build_cycle_summaries(
     rows = []
     for cycle_id, cycle in enumerate(cycles, start=1):
         members = cycle[:-1]
-        path_str = ' -> '.join(cycle)       # start → ... → start
-        rows.append({
-            "Cycle_Id":        cycle_id,
-            "Cycle_Length":    len(members),
-            "Component_Id":    component_id_map.get(members[0], -1),
-            "Strategy":        "DFS",
-            "Cycle_Path":      path_str,
-        })
+        path_str = " -> ".join(cycle)  # start → ... → start
+        rows.append(
+            {
+                "Cycle_Id": cycle_id,
+                "Cycle_Length": len(members),
+                "Component_Id": component_id_map.get(members[0], -1),
+                "Strategy": "DFS",
+                "Cycle_Path": path_str,
+            }
+        )
     return rows
 
 
-def _build_summary_stats(
-    cycles: list[list[str]],
-    edge_count: int,
-    component_count: int
-) -> list[dict]:
+def _build_summary_stats(cycles: list[list[str]], edge_count: int, component_count: int) -> list[dict]:
     """
     Build the summary_stats result set — single aggregate row.
 
@@ -259,8 +246,8 @@ def _build_summary_stats(
     Returns:
       Single-element list matching the SP's cur_SummaryStats schema
     """
-    total_nodes_in_cycles = sum(len(c) - 1 for c in cycles)   # exclude repeated end
-    components_with_cycles = len({c[0] for c in cycles})       # rough proxy
+    total_nodes_in_cycles = sum(len(c) - 1 for c in cycles)  # exclude repeated end
+    components_with_cycles = len({c[0] for c in cycles})  # rough proxy
 
     if len(cycles) == 0:
         message = "No cycles detected — graph is a DAG."
@@ -269,29 +256,32 @@ def _build_summary_stats(
     else:
         message = f"{len(cycles)} cycles detected."
 
-    return [{
-        "Cycle_Count":              len(cycles),
-        "Total_Nodes_In_Cycles":    total_nodes_in_cycles,
-        "Components_With_Cycles":   components_with_cycles,
-        "Edge_Count":               edge_count,
-        "Components_Scanned":       component_count,
-        "Strategy_Used":            "DFS",
-        "Summary_Message":          message,
-    }]
+    return [
+        {
+            "Cycle_Count": len(cycles),
+            "Total_Nodes_In_Cycles": total_nodes_in_cycles,
+            "Components_With_Cycles": components_with_cycles,
+            "Edge_Count": edge_count,
+            "Components_Scanned": component_count,
+            "Strategy_Used": "DFS",
+            "Summary_Message": message,
+        }
+    ]
 
 
 # ---------------------------------------------------------------------------
 # Public handler
 # ---------------------------------------------------------------------------
 
+
 def handle_graph_detectCycles(
     conn: TeradataConnection,
     container_pattern: str,
-    exclude_objects: str = '',
-    edge_repository: str = '',
+    exclude_objects: str = "",
+    edge_repository: str = "",
     tool_name: str | None = None,
     *args,
-    **kwargs
+    **kwargs,
 ):
     """
     Detect circular dependencies (cycles) in the dependency graph.
@@ -350,9 +340,10 @@ def handle_graph_detectCycles(
         Edge_Count, Components_Scanned, Summary_Message
     """
     logger.debug(
-        "Tool: handle_graph_detectCycles: Args: "
-        "container_pattern=%s, exclude_objects=%s, edge_repository=%s",
-        container_pattern, exclude_objects, edge_repository
+        "Tool: handle_graph_detectCycles: Args: container_pattern=%s, exclude_objects=%s, edge_repository=%s",
+        container_pattern,
+        exclude_objects,
+        edge_repository,
     )
 
     # -----------------------------------------------------------------------
@@ -366,21 +357,23 @@ def handle_graph_detectCycles(
                 "tool_name": tool_name or "graph_detectCycles",
                 "container_pattern": container_pattern,
                 "status": "error",
-            }
+            },
         )
 
     if not edge_repository:
         return create_response(
-            {"error": (
-                "edge_repository is required. "
-                "For AI-Native Data Products use '{ProductName}_Semantic.lineage_graph'. "
-                "Call graph_edgeContractDDL to generate a new edge repository."
-            )},
+            {
+                "error": (
+                    "edge_repository is required. "
+                    "For AI-Native Data Products use '{ProductName}_Semantic.lineage_graph'. "
+                    "Call graph_edgeContractDDL to generate a new edge repository."
+                )
+            },
             {
                 "tool_name": tool_name or "graph_detectCycles",
                 "container_pattern": container_pattern,
                 "status": "error",
-            }
+            },
         )
 
     excl_pattern_list = parse_csv_patterns(exclude_objects)
@@ -390,9 +383,7 @@ def handle_graph_detectCycles(
             # -------------------------------------------------------------------
             # Step 1 — Fetch all scoped edges in one SQL SELECT
             # -------------------------------------------------------------------
-            container_where = build_like_or(
-                container_patterns, 'Src_Container_Name'
-            )
+            container_where = build_like_or(container_patterns, "Src_Container_Name")
             excl_where = _build_excl_clauses(excl_pattern_list)
 
             edge_sql = f"""
@@ -404,9 +395,7 @@ FROM  {edge_repository}
 WHERE {container_where}
   {excl_where}
 """
-            logger.debug(
-                "Tool: handle_graph_detectCycles: Fetching edges:\n%s", edge_sql
-            )
+            logger.debug("Tool: handle_graph_detectCycles: Fetching edges:\n%s", edge_sql)
 
             cur.execute(edge_sql)
             raw_edges = cur.fetchall()
@@ -423,40 +412,36 @@ WHERE {container_where}
             uf.union(src_fq, tgt_fq)
 
         edge_count = len(raw_edges)
-        logger.debug(
-            "Tool: handle_graph_detectCycles: Loaded %d edges", edge_count
-        )
+        logger.debug("Tool: handle_graph_detectCycles: Loaded %d edges", edge_count)
 
         if edge_count == 0:
             # No edges in scope — no cycles possible
             return create_response(
                 {
-                    "cycle_details":   [],
+                    "cycle_details": [],
                     "cycle_summaries": [],
-                    "summary_stats":   _build_summary_stats([], 0, 0),
+                    "summary_stats": _build_summary_stats([], 0, 0),
                 },
                 {
-                    "tool_name":         tool_name or "graph_detectCycles",
+                    "tool_name": tool_name or "graph_detectCycles",
                     "container_pattern": container_pattern,
-                    "exclude_objects":   exclude_objects,
-                    "edge_repository":   edge_repository,
+                    "exclude_objects": exclude_objects,
+                    "edge_repository": edge_repository,
                     "result_set_counts": {
-                        "cycle_details":   0,
+                        "cycle_details": 0,
                         "cycle_summaries": 0,
-                        "summary_stats":   1,
+                        "summary_stats": 1,
                     },
-                    "status":  "success",
+                    "status": "success",
                     "message": "No edges found in scope — no cycles possible.",
-                }
+                },
             )
 
         # Assign integer component IDs from the Union-Find roots
         comp_map = uf.component_map()
         unique_roots = list(set(comp_map.values()))
         root_to_id = {r: i + 1 for i, r in enumerate(unique_roots)}
-        component_id_map: dict[str, int] = {
-            n: root_to_id[r] for n, r in comp_map.items()
-        }
+        component_id_map: dict[str, int] = {n: root_to_id[r] for n, r in comp_map.items()}
 
         # Group nodes by component
         components: dict[str, set[str]] = defaultdict(set)
@@ -464,10 +449,7 @@ WHERE {container_where}
             components[comp_root].add(node)
 
         component_count = len(components)
-        logger.debug(
-            "Tool: handle_graph_detectCycles: %d components identified",
-            component_count
-        )
+        logger.debug("Tool: handle_graph_detectCycles: %d components identified", component_count)
 
         # -------------------------------------------------------------------
         # Step 3 — Run iterative DFS within each component
@@ -478,56 +460,47 @@ WHERE {container_where}
             cycles_in_comp = _detect_cycles_in_subgraph(comp_nodes, adj)
             all_cycles.extend(cycles_in_comp)
 
-        logger.debug(
-            "Tool: handle_graph_detectCycles: %d cycle(s) detected",
-            len(all_cycles)
-        )
+        logger.debug("Tool: handle_graph_detectCycles: %d cycle(s) detected", len(all_cycles))
 
         # -------------------------------------------------------------------
         # Step 4 — Assemble response structures
         # -------------------------------------------------------------------
-        cycle_details   = _build_cycle_details(all_cycles, component_id_map)
+        cycle_details = _build_cycle_details(all_cycles, component_id_map)
         cycle_summaries = _build_cycle_summaries(all_cycles, component_id_map)
-        summary_stats   = _build_summary_stats(
-            all_cycles, edge_count, component_count
-        )
+        summary_stats = _build_summary_stats(all_cycles, edge_count, component_count)
 
         response_data = {
-            "cycle_details":   cycle_details,
+            "cycle_details": cycle_details,
             "cycle_summaries": cycle_summaries,
-            "summary_stats":   summary_stats,
+            "summary_stats": summary_stats,
         }
 
         metadata = {
-            "tool_name":         tool_name or "graph_detectCycles",
+            "tool_name": tool_name or "graph_detectCycles",
             "container_pattern": container_pattern,
-            "exclude_objects":   exclude_objects,
-            "edge_repository":   edge_repository,
+            "exclude_objects": exclude_objects,
+            "edge_repository": edge_repository,
             "result_set_counts": {
-                "cycle_details":   len(cycle_details),
+                "cycle_details": len(cycle_details),
                 "cycle_summaries": len(cycle_summaries),
-                "summary_stats":   len(summary_stats),
+                "summary_stats": len(summary_stats),
             },
-            "status":  "success",
+            "status": "success",
             "message": summary_stats[0]["Summary_Message"],
         }
 
-        logger.debug(
-            "Tool: handle_graph_detectCycles: metadata: %s", metadata
-        )
+        logger.debug("Tool: handle_graph_detectCycles: metadata: %s", metadata)
         return create_response(response_data, metadata)
 
     except Exception as e:
-        logger.error(
-            "Tool: handle_graph_detectCycles: Error: %s", e, exc_info=True
-        )
+        logger.error("Tool: handle_graph_detectCycles: Error: %s", e, exc_info=True)
         return create_response(
             {"error": str(e)},
             {
-                "tool_name":         tool_name or "graph_detectCycles",
+                "tool_name": tool_name or "graph_detectCycles",
                 "container_pattern": container_pattern,
-                "status":            "error",
-            }
+                "status": "error",
+            },
         )
 
 

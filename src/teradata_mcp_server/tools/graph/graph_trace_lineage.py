@@ -69,12 +69,12 @@ def _build_or_like(patterns: list[str], src_col: str, tgt_col: str) -> str:
       Returns empty string if patterns is empty (no filtering).
     """
     if not patterns:
-        return ''
+        return ""
     clauses = []
     for p in patterns:
         clauses.append(f"{src_col} LIKE '{p}'")
         clauses.append(f"{tgt_col} LIKE '{p}'")
-    return 'AND (' + ' OR '.join(clauses) + ')'
+    return "AND (" + " OR ".join(clauses) + ")"
 
 
 def _build_excl_fragment(patterns: list[str], db_col: str, obj_col: str) -> str:
@@ -93,24 +93,23 @@ def _build_excl_fragment(patterns: list[str], db_col: str, obj_col: str) -> str:
       SQL fragment beginning with "AND NOT (...)" or empty string
     """
     if not patterns:
-        return ''
+        return ""
 
     conditions = []
     for p in patterns:
-        if '.' in p:
-            db_part, obj_part = p.split('.', 1)
-            conditions.append(
-                f"({db_col} LIKE '{db_part}' AND {obj_col} LIKE '{obj_part}')"
-            )
+        if "." in p:
+            db_part, obj_part = p.split(".", 1)
+            conditions.append(f"({db_col} LIKE '{db_part}' AND {obj_col} LIKE '{obj_part}')")
         else:
             conditions.append(f"{db_col} LIKE '{p}'")
 
-    return 'AND NOT (' + ' OR '.join(conditions) + ')'
+    return "AND NOT (" + " OR ".join(conditions) + ")"
 
 
 # ---------------------------------------------------------------------------
 # CTE builders
 # ---------------------------------------------------------------------------
+
 
 def _build_upstream_cte(
     seed_pattern: str,
@@ -324,6 +323,7 @@ ORDER BY Depth ASC, FQDependentObjectName
 # Node / summary helpers — identical contract to the SP-based version
 # ---------------------------------------------------------------------------
 
+
 def _safe_int(value) -> int:
     """
     Safely convert a value to int, returning 0 on failure.
@@ -360,27 +360,27 @@ def _derive_nodes_from_edges(
     nodes: dict[str, dict] = {}
 
     for edge in edges_up:
-        fq = edge.get('FQDependentObjectName')
+        fq = edge.get("FQDependentObjectName")
         if fq and fq not in nodes:
             nodes[fq] = {
-                'FQDependentObjectName': fq,
-                'DependentObjectDBName': edge.get('DependentObjectDBName'),
-                'DependentObjectName':   edge.get('DependentObjectName'),
-                'Direction':             'Upstream',
-                'Depth':                 _safe_int(edge.get('Depth', 0)),
-                'ObjectType':            edge.get('Src_Kind') or edge.get('Tgt_Kind'),
+                "FQDependentObjectName": fq,
+                "DependentObjectDBName": edge.get("DependentObjectDBName"),
+                "DependentObjectName": edge.get("DependentObjectName"),
+                "Direction": "Upstream",
+                "Depth": _safe_int(edge.get("Depth", 0)),
+                "ObjectType": edge.get("Src_Kind") or edge.get("Tgt_Kind"),
             }
 
     for edge in edges_down:
-        fq = edge.get('FQDependentObjectName')
+        fq = edge.get("FQDependentObjectName")
         if fq and fq not in nodes:
             nodes[fq] = {
-                'FQDependentObjectName': fq,
-                'DependentObjectDBName': edge.get('DependentObjectDBName'),
-                'DependentObjectName':   edge.get('DependentObjectName'),
-                'Direction':             'Downstream',
-                'Depth':                 _safe_int(edge.get('Depth', 0)),
-                'ObjectType':            edge.get('Src_Kind') or edge.get('Tgt_Kind'),
+                "FQDependentObjectName": fq,
+                "DependentObjectDBName": edge.get("DependentObjectDBName"),
+                "DependentObjectName": edge.get("DependentObjectName"),
+                "Direction": "Downstream",
+                "Depth": _safe_int(edge.get("Depth", 0)),
+                "ObjectType": edge.get("Src_Kind") or edge.get("Tgt_Kind"),
             }
 
     return list(nodes.values())
@@ -402,28 +402,24 @@ def _create_summary_stats(
     Returns:
       Dictionary of summary statistics
     """
-    upstream_nodes   = [n for n in nodes if n.get('Direction') == 'Upstream']
-    downstream_nodes = [n for n in nodes if n.get('Direction') == 'Downstream']
+    upstream_nodes = [n for n in nodes if n.get("Direction") == "Upstream"]
+    downstream_nodes = [n for n in nodes if n.get("Direction") == "Downstream"]
 
     type_counts: dict[str, int] = {}
     for node in nodes:
-        kind = node.get('ObjectType', 'Unknown') or 'Unknown'
+        kind = node.get("ObjectType", "Unknown") or "Unknown"
         type_counts[kind] = type_counts.get(kind, 0) + 1
 
     return {
-        "total_nodes":           len(nodes),
-        "upstream_nodes":        len(upstream_nodes),
-        "downstream_nodes":      len(downstream_nodes),
-        "total_edges":           len(edges_up) + len(edges_down),
-        "upstream_edges":        len(edges_up),
-        "downstream_edges":      len(edges_down),
-        "max_depth_upstream":    max(
-            (abs(_safe_int(n.get('Depth', 0))) for n in upstream_nodes), default=0
-        ),
-        "max_depth_downstream":  max(
-            (_safe_int(n.get('Depth', 0)) for n in downstream_nodes), default=0
-        ),
-        "object_type_counts":    type_counts,
+        "total_nodes": len(nodes),
+        "upstream_nodes": len(upstream_nodes),
+        "downstream_nodes": len(downstream_nodes),
+        "total_edges": len(edges_up) + len(edges_down),
+        "upstream_edges": len(edges_up),
+        "downstream_edges": len(edges_down),
+        "max_depth_upstream": max((abs(_safe_int(n.get("Depth", 0))) for n in upstream_nodes), default=0),
+        "max_depth_downstream": max((_safe_int(n.get("Depth", 0)) for n in downstream_nodes), default=0),
+        "object_type_counts": type_counts,
     }
 
 
@@ -445,45 +441,41 @@ def _format_summary(
     Returns:
       Dictionary with summary_text, statistics, upstream_objects, downstream_objects
     """
-    stats            = _create_summary_stats(nodes, edges_up, edges_down)
-    upstream_nodes   = [n for n in nodes if n.get('Direction') == 'Upstream']
-    downstream_nodes = [n for n in nodes if n.get('Direction') == 'Downstream']
+    stats = _create_summary_stats(nodes, edges_up, edges_down)
+    upstream_nodes = [n for n in nodes if n.get("Direction") == "Upstream"]
+    downstream_nodes = [n for n in nodes if n.get("Direction") == "Downstream"]
 
     summary_text = f"""
 DEPENDENCY ANALYSIS SUMMARY
-{'=' * 60}
+{"=" * 60}
 
 Object Pattern(s): {object_name}
 
 OVERVIEW
-  Total Nodes:               {stats['total_nodes']}
-  Total Edges:               {stats['total_edges']}
+  Total Nodes:               {stats["total_nodes"]}
+  Total Edges:               {stats["total_edges"]}
 
 UPSTREAM (What These Objects Depend On)
-  Dependencies Found:        {stats['upstream_nodes']}
-  Edges:                     {stats['upstream_edges']}
-  Max Depth Reached:         {stats['max_depth_upstream']}
+  Dependencies Found:        {stats["upstream_nodes"]}
+  Edges:                     {stats["upstream_edges"]}
+  Max Depth Reached:         {stats["max_depth_upstream"]}
 
 DOWNSTREAM (What Depends On These Objects)
-  Dependents Found:          {stats['downstream_nodes']}
-  Edges:                     {stats['downstream_edges']}
-  Max Depth Reached:         {stats['max_depth_downstream']}
+  Dependents Found:          {stats["downstream_nodes"]}
+  Edges:                     {stats["downstream_edges"]}
+  Max Depth Reached:         {stats["max_depth_downstream"]}
 """
 
-    if stats['object_type_counts']:
+    if stats["object_type_counts"]:
         summary_text += "\nBY OBJECT TYPE\n"
-        for obj_type, count in sorted(
-            stats['object_type_counts'].items(),
-            key=lambda x: x[1],
-            reverse=True
-        ):
+        for obj_type, count in sorted(stats["object_type_counts"].items(), key=lambda x: x[1], reverse=True):
             summary_text += f"  {obj_type:20s} {count:3d}\n"
 
     return {
-        "summary_text":       summary_text,
-        "statistics":         stats,
-        "upstream_objects":   [n['FQDependentObjectName'] for n in upstream_nodes],
-        "downstream_objects": [n['FQDependentObjectName'] for n in downstream_nodes],
+        "summary_text": summary_text,
+        "statistics": stats,
+        "upstream_objects": [n["FQDependentObjectName"] for n in upstream_nodes],
+        "downstream_objects": [n["FQDependentObjectName"] for n in downstream_nodes],
     }
 
 
@@ -491,18 +483,19 @@ DOWNSTREAM (What Depends On These Objects)
 # Public handler
 # ---------------------------------------------------------------------------
 
+
 def handle_graph_traceLineage(
     conn: TeradataConnection,
     object_name: str,
     max_depth_up: int = 3,
     max_depth_down: int = 3,
-    exclude_objects: str = '',
-    include_containers: str = '',
-    edge_repository: str = '',
-    return_format: str = 'detailed',
+    exclude_objects: str = "",
+    include_containers: str = "",
+    edge_repository: str = "",
+    return_format: str = "detailed",
     tool_name: str | None = None,
     *args,
-    **kwargs
+    **kwargs,
 ):
     """
     Analyse object dependencies in Teradata. Supports wildcards (%) and CSV patterns.
@@ -577,56 +570,56 @@ def handle_graph_traceLineage(
         "object_name=%s, max_depth_up=%s, max_depth_down=%s, "
         "exclude_objects=%s, include_containers=%s, "
         "edge_repository=%s, return_format=%s",
-        object_name, max_depth_up, max_depth_down,
-        exclude_objects, include_containers,
-        edge_repository, return_format
+        object_name,
+        max_depth_up,
+        max_depth_down,
+        exclude_objects,
+        include_containers,
+        edge_repository,
+        return_format,
     )
 
     # -----------------------------------------------------------------------
     # Validate and clamp depth parameters
     # -----------------------------------------------------------------------
-    max_depth_up   = max(0, min(10, int(max_depth_up)))
+    max_depth_up = max(0, min(10, int(max_depth_up)))
     max_depth_down = max(0, min(10, int(max_depth_down)))
 
     # -----------------------------------------------------------------------
     # Parse pattern inputs
     # -----------------------------------------------------------------------
-    seed_patterns   = parse_csv_patterns(object_name)
-    excl_patterns   = parse_csv_patterns(exclude_objects)
+    seed_patterns = parse_csv_patterns(object_name)
+    excl_patterns = parse_csv_patterns(exclude_objects)
     incl_containers = parse_csv_patterns(include_containers)
 
     if not seed_patterns:
         return create_response(
             {"error": "object_name must not be empty"},
             {
-                "tool_name":   tool_name or "graph_traceLineage",
+                "tool_name": tool_name or "graph_traceLineage",
                 "object_name": object_name,
-                "status":      "error",
-            }
+                "status": "error",
+            },
         )
 
     if not edge_repository:
         return create_response(
             {"error": "edge_repository is required. Call graph_edgeContractDDL to generate one."},
             {
-                "tool_name":   tool_name or "graph_traceLineage",
+                "tool_name": tool_name or "graph_traceLineage",
                 "object_name": object_name,
-                "status":      "error",
-            }
+                "status": "error",
+            },
         )
 
     try:
         # -----------------------------------------------------------------------
         # Build shared SQL fragments (same for every seed pattern)
         # -----------------------------------------------------------------------
-        incl_fragment = _build_or_like(
-            incl_containers, 'e.Src_Container_Name', 'e.Tgt_Container_Name'
-        )
-        excl_fragment = _build_excl_fragment(
-            excl_patterns, 'e.Src_Container_Name', 'e.Src_Object_Name'
-        )
+        incl_fragment = _build_or_like(incl_containers, "e.Src_Container_Name", "e.Tgt_Container_Name")
+        excl_fragment = _build_excl_fragment(excl_patterns, "e.Src_Container_Name", "e.Src_Object_Name")
 
-        all_edges_up:   list[dict] = []
+        all_edges_up: list[dict] = []
         all_edges_down: list[dict] = []
 
         with conn.cursor() as cur:
@@ -642,18 +635,12 @@ def handle_graph_traceLineage(
                         incl_fragment=incl_fragment,
                         excl_fragment=excl_fragment,
                     )
-                    logger.debug(
-                        "Tool: handle_graph_traceLineage: "
-                        "Upstream CTE for pattern '%s':\n%s",
-                        pattern, up_sql
-                    )
+                    logger.debug("Tool: handle_graph_traceLineage: Upstream CTE for pattern '%s':\n%s", pattern, up_sql)
                     cur.execute(up_sql)
                     batch = rows_to_json(cur.description, cur.fetchall())
                     all_edges_up.extend(batch)
                     logger.debug(
-                        "Tool: handle_graph_traceLineage: "
-                        "Pattern '%s' upstream: %d edges",
-                        pattern, len(batch)
+                        "Tool: handle_graph_traceLineage: Pattern '%s' upstream: %d edges", pattern, len(batch)
                     )
 
                 # ---------------------------------------------------------------
@@ -668,17 +655,13 @@ def handle_graph_traceLineage(
                         excl_fragment=excl_fragment,
                     )
                     logger.debug(
-                        "Tool: handle_graph_traceLineage: "
-                        "Downstream CTE for pattern '%s':\n%s",
-                        pattern, down_sql
+                        "Tool: handle_graph_traceLineage: Downstream CTE for pattern '%s':\n%s", pattern, down_sql
                     )
                     cur.execute(down_sql)
                     batch = rows_to_json(cur.description, cur.fetchall())
                     all_edges_down.extend(batch)
                     logger.debug(
-                        "Tool: handle_graph_traceLineage: "
-                        "Pattern '%s' downstream: %d edges",
-                        pattern, len(batch)
+                        "Tool: handle_graph_traceLineage: Pattern '%s' downstream: %d edges", pattern, len(batch)
                     )
 
         # -----------------------------------------------------------------------
@@ -687,18 +670,18 @@ def handle_graph_traceLineage(
         def _dedup(edges: list[dict]) -> list[dict]:
             """Remove duplicate edges, keeping the first occurrence."""
             seen: set[tuple] = set()
-            out:  list[dict] = []
+            out: list[dict] = []
             for e in edges:
                 key = (
-                    e.get('FQDependentObjectName'),
-                    e.get('FQReferencedObjectName'),
+                    e.get("FQDependentObjectName"),
+                    e.get("FQReferencedObjectName"),
                 )
                 if key not in seen:
                     seen.add(key)
                     out.append(e)
             return out
 
-        edges_up   = _dedup(all_edges_up)
+        edges_up = _dedup(all_edges_up)
         edges_down = _dedup(all_edges_down)
 
         # -----------------------------------------------------------------------
@@ -706,38 +689,34 @@ def handle_graph_traceLineage(
         # -----------------------------------------------------------------------
         nodes_data = _derive_nodes_from_edges(edges_up, edges_down)
 
-        if return_format == 'summary':
-            formatted_data = _format_summary(
-                nodes_data, edges_up, edges_down, object_name
-            )
-        elif return_format == 'edges_only':
+        if return_format == "summary":
+            formatted_data = _format_summary(nodes_data, edges_up, edges_down, object_name)
+        elif return_format == "edges_only":
             formatted_data = {
-                "upstream_edges":   edges_up,
+                "upstream_edges": edges_up,
                 "downstream_edges": edges_down,
             }
         else:  # detailed (default)
             formatted_data = {
-                "nodes":            nodes_data,
-                "upstream_edges":   edges_up,
+                "nodes": nodes_data,
+                "upstream_edges": edges_up,
                 "downstream_edges": edges_down,
-                "summary":          _create_summary_stats(
-                    nodes_data, edges_up, edges_down
-                ),
+                "summary": _create_summary_stats(nodes_data, edges_up, edges_down),
             }
 
         metadata = {
-            "tool_name":        tool_name or "graph_traceLineage",
-            "object_name":      object_name,
-            "max_depth_up":     max_depth_up,
-            "max_depth_down":   max_depth_down,
-            "edge_repository":  edge_repository,
-            "return_format":    return_format,
+            "tool_name": tool_name or "graph_traceLineage",
+            "object_name": object_name,
+            "max_depth_up": max_depth_up,
+            "max_depth_down": max_depth_down,
+            "edge_repository": edge_repository,
+            "return_format": return_format,
             "counts": {
-                "nodes":          len(nodes_data),
+                "nodes": len(nodes_data),
                 "upstream_edges": len(edges_up),
                 "downstream_edges": len(edges_down),
             },
-            "status":  "success",
+            "status": "success",
             "message": (
                 f"Dependency analysis complete: "
                 f"{len(nodes_data)} node(s), "
@@ -746,23 +725,18 @@ def handle_graph_traceLineage(
             ),
         }
 
-        logger.debug(
-            "Tool: handle_graph_traceLineage: metadata: %s", metadata
-        )
+        logger.debug("Tool: handle_graph_traceLineage: metadata: %s", metadata)
         return create_response(formatted_data, metadata)
 
     except Exception as e:
-        logger.error(
-            "Tool: handle_graph_traceLineage: Error: %s",
-            e, exc_info=True
-        )
+        logger.error("Tool: handle_graph_traceLineage: Error: %s", e, exc_info=True)
         return create_response(
             {"error": str(e)},
             {
-                "tool_name":   tool_name or "graph_traceLineage",
+                "tool_name": tool_name or "graph_traceLineage",
                 "object_name": object_name,
-                "status":      "error",
-            }
+                "status": "error",
+            },
         )
 
 
@@ -807,18 +781,12 @@ GRAPH_TRACE_LINEAGE_TOOL = {
         },
         "exclude_objects": {
             "type": "string",
-            "description": (
-                "CSV of FQ object name LIKE patterns to exclude. "
-                "Example: 'PRD_%,%.temp_%'. Default: ''."
-            ),
+            "description": ("CSV of FQ object name LIKE patterns to exclude. Example: 'PRD_%,%.temp_%'. Default: ''."),
             "default": "",
         },
         "include_containers": {
             "type": "string",
-            "description": (
-                "CSV of container LIKE patterns to include (whitelist). "
-                "Default: '' (all containers)."
-            ),
+            "description": ("CSV of container LIKE patterns to include (whitelist). Default: '' (all containers)."),
             "default": "",
         },
         "edge_repository": {
@@ -832,9 +800,7 @@ GRAPH_TRACE_LINEAGE_TOOL = {
         },
         "return_format": {
             "type": "string",
-            "description": (
-                "Output format: 'detailed' (default), 'summary', or 'edges_only'."
-            ),
+            "description": ("Output format: 'detailed' (default), 'summary', or 'edges_only'."),
             "default": "detailed",
         },
     },

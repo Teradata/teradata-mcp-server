@@ -57,25 +57,23 @@ def _build_excl_clauses(patterns: list[str]) -> str:
       SQL fragment beginning with "AND NOT (...)" or empty string
     """
     if not patterns:
-        return ''
+        return ""
 
     conditions = []
     for p in patterns:
-        if '.' in p:
-            db_part, obj_part = p.split('.', 1)
-            conditions.append(
-                f"(Src_Container_Name LIKE '{db_part}'"
-                f" AND Src_Object_Name LIKE '{obj_part}')"
-            )
+        if "." in p:
+            db_part, obj_part = p.split(".", 1)
+            conditions.append(f"(Src_Container_Name LIKE '{db_part}' AND Src_Object_Name LIKE '{obj_part}')")
         else:
             conditions.append(f"Src_Container_Name LIKE '{p}'")
 
-    return 'AND NOT (' + ' OR '.join(conditions) + ')'
+    return "AND NOT (" + " OR ".join(conditions) + ")"
 
 
 # ---------------------------------------------------------------------------
 # Union-Find
 # ---------------------------------------------------------------------------
+
 
 class _UnionFind:
     """
@@ -119,6 +117,7 @@ class _UnionFind:
 # Response assembly helpers
 # ---------------------------------------------------------------------------
 
+
 def _build_node_details(
     component_map: dict[str, str],
     root_to_id: dict[str, int],
@@ -137,16 +136,18 @@ def _build_node_details(
     """
     rows = []
     for node_fq, comp_root in sorted(component_map.items()):
-        parts = node_fq.split('.', 1)
-        db_name = parts[0] if len(parts) > 1 else ''
+        parts = node_fq.split(".", 1)
+        db_name = parts[0] if len(parts) > 1 else ""
         obj_name = parts[1] if len(parts) > 1 else parts[0]
-        rows.append({
-            "Node_FQ":        node_fq,
-            "DatabaseName":   db_name,
-            "ObjectName":     obj_name,
-            "Component_Id":   root_to_id[comp_root],
-            "Object_Kind":    node_kind.get(node_fq, 'Unknown'),
-        })
+        rows.append(
+            {
+                "Node_FQ": node_fq,
+                "DatabaseName": db_name,
+                "ObjectName": obj_name,
+                "Component_Id": root_to_id[comp_root],
+                "Object_Kind": node_kind.get(node_fq, "Unknown"),
+            }
+        )
     return rows
 
 
@@ -172,11 +173,13 @@ def _build_component_summaries(
     rows: list[dict[str, Any]] = []
     for comp_root, nodes in comp_nodes.items():
         nodes_sorted = sorted(nodes)
-        rows.append({
-            "Component_Id":  root_to_id[comp_root],
-            "Node_Count":    len(nodes_sorted),
-            "Node_List":     ', '.join(nodes_sorted),
-        })
+        rows.append(
+            {
+                "Component_Id": root_to_id[comp_root],
+                "Node_Count": len(nodes_sorted),
+                "Node_List": ", ".join(nodes_sorted),
+            }
+        )
 
     rows.sort(key=lambda r: r["Component_Id"])
     return rows
@@ -205,32 +208,34 @@ def _build_summary_stats(
 
     singleton_count = sum(1 for s in sizes if s == 1)
 
-    return [{
-        "Component_Count":   comp_count,
-        "Node_Count":        node_count,
-        "Edge_Count":        edge_count,
-        "Largest_Component": largest,
-        "Smallest_Component": smallest,
-        "Singleton_Count":   singleton_count,
-        "Summary_Message": (
-            f"{comp_count} connected component(s) identified "
-            f"across {node_count} node(s) and {edge_count} edge(s)."
-        ),
-    }]
+    return [
+        {
+            "Component_Count": comp_count,
+            "Node_Count": node_count,
+            "Edge_Count": edge_count,
+            "Largest_Component": largest,
+            "Smallest_Component": smallest,
+            "Singleton_Count": singleton_count,
+            "Summary_Message": (
+                f"{comp_count} connected component(s) identified across {node_count} node(s) and {edge_count} edge(s)."
+            ),
+        }
+    ]
 
 
 # ---------------------------------------------------------------------------
 # Public handler
 # ---------------------------------------------------------------------------
 
+
 def handle_graph_connectedComponents(
     conn: TeradataConnection,
     container_pattern: str,
-    exclude_objects: str = '',
-    edge_repository: str = '',
+    exclude_objects: str = "",
+    edge_repository: str = "",
     tool_name: str | None = None,
     *args,
-    **kwargs
+    **kwargs,
 ):
     """
     Identify all Weakly Connected Components (WCC) in the dependency graph.
@@ -295,9 +300,10 @@ def handle_graph_connectedComponents(
         Largest_Component, Smallest_Component, Singleton_Count, Summary_Message
     """
     logger.debug(
-        "Tool: handle_graph_connectedComponents: Args: "
-        "container_pattern=%s, exclude_objects=%s, edge_repository=%s",
-        container_pattern, exclude_objects, edge_repository
+        "Tool: handle_graph_connectedComponents: Args: container_pattern=%s, exclude_objects=%s, edge_repository=%s",
+        container_pattern,
+        exclude_objects,
+        edge_repository,
     )
 
     # -----------------------------------------------------------------------
@@ -308,24 +314,26 @@ def handle_graph_connectedComponents(
         return create_response(
             {"error": "container_pattern must not be empty"},
             {
-                "tool_name":         tool_name or "graph_connectedComponents",
+                "tool_name": tool_name or "graph_connectedComponents",
                 "container_pattern": container_pattern,
-                "status":            "error",
-            }
+                "status": "error",
+            },
         )
 
     if not edge_repository:
         return create_response(
-            {"error": (
-                "edge_repository is required. "
-                "For AI-Native Data Products use '{ProductName}_Semantic.lineage_graph'. "
-                "Call graph_edgeContractDDL to generate a new edge repository."
-            )},
             {
-                "tool_name":         tool_name or "graph_connectedComponents",
+                "error": (
+                    "edge_repository is required. "
+                    "For AI-Native Data Products use '{ProductName}_Semantic.lineage_graph'. "
+                    "Call graph_edgeContractDDL to generate a new edge repository."
+                )
+            },
+            {
+                "tool_name": tool_name or "graph_connectedComponents",
                 "container_pattern": container_pattern,
-                "status":            "error",
-            }
+                "status": "error",
+            },
         )
 
     excl_pattern_list = parse_csv_patterns(exclude_objects)
@@ -335,9 +343,7 @@ def handle_graph_connectedComponents(
             # -------------------------------------------------------------------
             # Step 1 — Fetch all scoped edges in one SQL SELECT
             # -------------------------------------------------------------------
-            container_where = build_like_or(
-                container_patterns, 'Src_Container_Name'
-            )
+            container_where = build_like_or(container_patterns, "Src_Container_Name")
             excl_where = _build_excl_clauses(excl_pattern_list)
 
             edge_sql = f"""
@@ -350,10 +356,7 @@ FROM  {edge_repository}
 WHERE {container_where}
   {excl_where}
 """
-            logger.debug(
-                "Tool: handle_graph_connectedComponents: Fetching edges:\n%s",
-                edge_sql
-            )
+            logger.debug("Tool: handle_graph_connectedComponents: Fetching edges:\n%s", edge_sql)
 
             cur.execute(edge_sql)
             raw_edges = cur.fetchall()
@@ -362,18 +365,16 @@ WHERE {container_where}
         # Step 2 — Build Union-Find and collect node kinds
         # -------------------------------------------------------------------
         uf = _UnionFind()
-        node_kind: dict[str, str] = {}      # {node_fq: object_kind}
+        node_kind: dict[str, str] = {}  # {node_fq: object_kind}
 
         for src_fq, tgt_fq, src_kind in raw_edges:
             uf.union(src_fq, tgt_fq)
             # Record source kind; target kind not available without a second lookup
             if src_fq not in node_kind:
-                node_kind[src_fq] = src_kind or 'Unknown'
+                node_kind[src_fq] = src_kind or "Unknown"
 
         edge_count = len(raw_edges)
-        logger.debug(
-            "Tool: handle_graph_connectedComponents: Loaded %d edges", edge_count
-        )
+        logger.debug("Tool: handle_graph_connectedComponents: Loaded %d edges", edge_count)
 
         # -------------------------------------------------------------------
         # Step 3 — Assign integer component IDs
@@ -383,10 +384,7 @@ WHERE {container_where}
         root_to_id = {r: i + 1 for i, r in enumerate(unique_roots)}
 
         component_count = len(unique_roots)
-        logger.debug(
-            "Tool: handle_graph_connectedComponents: %d component(s) identified",
-            component_count
-        )
+        logger.debug("Tool: handle_graph_connectedComponents: %d component(s) identified", component_count)
 
         # -------------------------------------------------------------------
         # Step 4 — Build response structures
@@ -396,41 +394,37 @@ WHERE {container_where}
         summary_stats = _build_summary_stats(component_summaries, edge_count)
 
         response_data = {
-            "node_details":        node_details,
+            "node_details": node_details,
             "component_summaries": component_summaries,
-            "summary_stats":       summary_stats,
+            "summary_stats": summary_stats,
         }
 
         metadata = {
-            "tool_name":         tool_name or "graph_connectedComponents",
+            "tool_name": tool_name or "graph_connectedComponents",
             "container_pattern": container_pattern,
-            "exclude_objects":   exclude_objects,
-            "edge_repository":   edge_repository,
+            "exclude_objects": exclude_objects,
+            "edge_repository": edge_repository,
             "result_set_counts": {
-                "node_details":        len(node_details),
+                "node_details": len(node_details),
                 "component_summaries": len(component_summaries),
-                "summary_stats":       len(summary_stats),
+                "summary_stats": len(summary_stats),
             },
-            "status":  "success",
+            "status": "success",
             "message": summary_stats[0]["Summary_Message"],
         }
 
-        logger.debug(
-            "Tool: handle_graph_connectedComponents: metadata: %s", metadata
-        )
+        logger.debug("Tool: handle_graph_connectedComponents: metadata: %s", metadata)
         return create_response(response_data, metadata)
 
     except Exception as e:
-        logger.error(
-            "Tool: handle_graph_connectedComponents: Error: %s", e, exc_info=True
-        )
+        logger.error("Tool: handle_graph_connectedComponents: Error: %s", e, exc_info=True)
         return create_response(
             {"error": str(e)},
             {
-                "tool_name":         tool_name or "graph_connectedComponents",
+                "tool_name": tool_name or "graph_connectedComponents",
                 "container_pattern": container_pattern,
-                "status":            "error",
-            }
+                "status": "error",
+            },
         )
 
 

@@ -55,17 +55,18 @@ logger = logging.getLogger("teradata_mcp_server")
 # Public handler
 # ---------------------------------------------------------------------------
 
+
 def handle_graph_bfsLevels(
     conn: TeradataConnection,
     root_node_list: str,
     max_depth_up: int = 10,
     max_depth_down: int = 10,
-    exclude_objects: str = '',
-    include_containers: str = '',
-    edge_repository: str = '',
+    exclude_objects: str = "",
+    include_containers: str = "",
+    edge_repository: str = "",
     tool_name: str | None = None,
     *args,
-    **kwargs
+    **kwargs,
 ):
     """
     Compute BFS shortest-path hop distances from one or more root nodes.
@@ -218,8 +219,12 @@ def handle_graph_bfsLevels(
         "Tool: handle_graph_bfsLevels: Args: root_node_list=%s, "
         "max_depth_up=%s, max_depth_down=%s, exclude_objects=%s, "
         "include_containers=%s, edge_repository=%s",
-        root_node_list, max_depth_up, max_depth_down,
-        exclude_objects, include_containers, edge_repository
+        root_node_list,
+        max_depth_up,
+        max_depth_down,
+        exclude_objects,
+        include_containers,
+        edge_repository,
     )
 
     if not edge_repository:
@@ -228,11 +233,11 @@ def handle_graph_bfsLevels(
             {
                 "tool_name": tool_name or "graph_bfsLevels",
                 "status": "error",
-            }
+            },
         )
 
     # Clamp depth parameters to safe range
-    max_depth_up   = max(0, min(10, int(max_depth_up)))
+    max_depth_up = max(0, min(10, int(max_depth_up)))
     max_depth_down = max(0, min(10, int(max_depth_down)))
 
     _tn = tool_name if tool_name else "graph_bfsLevels"
@@ -244,20 +249,14 @@ def handle_graph_bfsLevels(
         roots: list[str] = parse_csv_patterns(root_node_list)
 
         if not roots:
-            raise ValueError(
-                f"root_node_list is empty or could not be parsed: "
-                f"'{root_node_list}'"
-            )
+            raise ValueError(f"root_node_list is empty or could not be parsed: '{root_node_list}'")
 
-        logger.debug(
-            f"Tool: handle_graph_bfsLevels: "
-            f"Parsed {len(roots)} root node(s): {roots}"
-        )
+        logger.debug(f"Tool: handle_graph_bfsLevels: Parsed {len(roots)} root node(s): {roots}")
 
         # ------------------------------------------------------------------
         # Step 2 — Parse filter patterns for Python-side matching
         # ------------------------------------------------------------------
-        excl_patterns = parse_csv_patterns(exclude_objects)   # may be empty
+        excl_patterns = parse_csv_patterns(exclude_objects)  # may be empty
         incl_patterns = parse_csv_patterns(include_containers)  # may be empty
 
         # ------------------------------------------------------------------
@@ -279,23 +278,18 @@ def handle_graph_bfsLevels(
         #   Tgt_Kind           — object type of target
         # ------------------------------------------------------------------
         fetch_sql = _build_fetch_sql(
-            edge_repository  = edge_repository,
-            incl_patterns    = incl_patterns,
+            edge_repository=edge_repository,
+            incl_patterns=incl_patterns,
         )
 
-        logger.debug(
-            f"Tool: handle_graph_bfsLevels: Fetching edges: {fetch_sql}"
-        )
+        logger.debug(f"Tool: handle_graph_bfsLevels: Fetching edges: {fetch_sql}")
 
         with conn.cursor() as cur:
             cur.execute(fetch_sql)
             raw_rows = cur.fetchall()
             col_names = [d[0].lower() for d in cur.description]
 
-        logger.debug(
-            f"Tool: handle_graph_bfsLevels: "
-            f"Fetched {len(raw_rows)} raw edge rows"
-        )
+        logger.debug(f"Tool: handle_graph_bfsLevels: Fetched {len(raw_rows)} raw edge rows")
 
         # ------------------------------------------------------------------
         # Step 4 — Build in-memory graph structures
@@ -319,18 +313,18 @@ def handle_graph_bfsLevels(
 
         col_idx = {name: i for i, name in enumerate(col_names)}
 
-        edges_total    = 0
+        edges_total = 0
         edges_excluded = 0
 
         for row in raw_rows:
-            src_fq  = _val(row, col_idx, 'src_object_name_fq')
-            tgt_fq  = _val(row, col_idx, 'tgt_object_name_fq')
-            src_db  = _val(row, col_idx, 'src_container_name')
-            src_nm  = _val(row, col_idx, 'src_object_name')
-            src_knd = _val(row, col_idx, 'src_kind')
-            tgt_db  = _val(row, col_idx, 'tgt_container_name')
-            tgt_nm  = _val(row, col_idx, 'tgt_object_name')
-            tgt_knd = _val(row, col_idx, 'tgt_kind')
+            src_fq = _val(row, col_idx, "src_object_name_fq")
+            tgt_fq = _val(row, col_idx, "tgt_object_name_fq")
+            src_db = _val(row, col_idx, "src_container_name")
+            src_nm = _val(row, col_idx, "src_object_name")
+            src_knd = _val(row, col_idx, "src_kind")
+            tgt_db = _val(row, col_idx, "tgt_container_name")
+            tgt_nm = _val(row, col_idx, "tgt_object_name")
+            tgt_knd = _val(row, col_idx, "tgt_kind")
 
             if not src_fq or not tgt_fq:
                 continue
@@ -338,30 +332,27 @@ def handle_graph_bfsLevels(
             edges_total += 1
 
             # Apply exclude_objects filter — both endpoints checked
-            if excl_patterns and (
-                _matches_any(src_fq, excl_patterns) or
-                _matches_any(tgt_fq, excl_patterns)
-            ):
+            if excl_patterns and (_matches_any(src_fq, excl_patterns) or _matches_any(tgt_fq, excl_patterns)):
                 edges_excluded += 1
                 continue
 
             # Register both nodes in the registry
             if src_fq not in node_registry:
                 node_registry[src_fq] = {
-                    'container_name': src_db or '',
-                    'object_name':    src_nm or src_fq.split('.')[-1],
-                    'object_kind':    src_knd or '',
+                    "container_name": src_db or "",
+                    "object_name": src_nm or src_fq.split(".")[-1],
+                    "object_kind": src_knd or "",
                 }
             if tgt_fq not in node_registry:
                 node_registry[tgt_fq] = {
-                    'container_name': tgt_db or '',
-                    'object_name':    tgt_nm or tgt_fq.split('.')[-1],
-                    'object_kind':    tgt_knd or '',
+                    "container_name": tgt_db or "",
+                    "object_name": tgt_nm or tgt_fq.split(".")[-1],
+                    "object_kind": tgt_knd or "",
                 }
 
             # Build forward and reverse adjacency
-            fwd_adj[src_fq].add(tgt_fq)   # Src → Tgt
-            rev_adj[tgt_fq].add(src_fq)   # Tgt → Src
+            fwd_adj[src_fq].add(tgt_fq)  # Src → Tgt
+            rev_adj[tgt_fq].add(src_fq)  # Tgt → Src
 
         logger.debug(
             f"Tool: handle_graph_bfsLevels: "
@@ -374,11 +365,11 @@ def handle_graph_bfsLevels(
         # (isolated roots are valid — they appear only as ROOT in output)
         for r in roots:
             if r not in node_registry:
-                parts = r.split('.', 1)
+                parts = r.split(".", 1)
                 node_registry[r] = {
-                    'container_name': parts[0] if len(parts) > 1 else '',
-                    'object_name':    parts[1] if len(parts) > 1 else r,
-                    'object_kind':    '',
+                    "container_name": parts[0] if len(parts) > 1 else "",
+                    "object_name": parts[1] if len(parts) > 1 else r,
+                    "object_kind": "",
                 }
 
         # ------------------------------------------------------------------
@@ -403,26 +394,21 @@ def handle_graph_bfsLevels(
         # nodes exist, so upstream_level remains None for all non-root nodes.
         # This is correct behaviour.
         # ------------------------------------------------------------------
-        up_level:    dict[str, int]      = {}  # node_fq → hop count (0..N)
-        up_root:     dict[str, str]      = {}  # node_fq → nearest root
+        up_level: dict[str, int] = {}  # node_fq → hop count (0..N)
+        up_root: dict[str, str] = {}  # node_fq → nearest root
 
         if max_depth_up > 0:
             up_level, up_root = _bfs_multisource(
-                roots        = roots,
-                adj          = rev_adj,     # Tgt → {Src}: walk upstream
-                max_depth    = max_depth_up,
-                label        = "upstream",
+                roots=roots,
+                adj=rev_adj,  # Tgt → {Src}: walk upstream
+                max_depth=max_depth_up,
+                label="upstream",
             )
             logger.debug(
-                f"Tool: handle_graph_bfsLevels: "
-                f"Upstream BFS settled {len(up_level)} nodes "
-                f"(max_depth={max_depth_up})"
+                f"Tool: handle_graph_bfsLevels: Upstream BFS settled {len(up_level)} nodes (max_depth={max_depth_up})"
             )
         else:
-            logger.debug(
-                "Tool: handle_graph_bfsLevels: "
-                "Upstream BFS skipped (max_depth_up=0)"
-            )
+            logger.debug("Tool: handle_graph_bfsLevels: Upstream BFS skipped (max_depth_up=0)")
 
         # ------------------------------------------------------------------
         # Step 6 — Multi-source BFS: DOWNSTREAM pass
@@ -446,15 +432,15 @@ def handle_graph_bfsLevels(
         # are reachable via fwd_adj, so downstream_level correctly shows
         # positive values for views, macros, reports, etc.
         # ------------------------------------------------------------------
-        dn_level:    dict[str, int]      = {}
-        dn_root:     dict[str, str]      = {}
+        dn_level: dict[str, int] = {}
+        dn_root: dict[str, str] = {}
 
         if max_depth_down > 0:
             dn_level, dn_root = _bfs_multisource(
-                roots        = roots,
-                adj          = fwd_adj,     # Src → {Tgt}: walk downstream
-                max_depth    = max_depth_down,
-                label        = "downstream",
+                roots=roots,
+                adj=fwd_adj,  # Src → {Tgt}: walk downstream
+                max_depth=max_depth_down,
+                label="downstream",
             )
             logger.debug(
                 f"Tool: handle_graph_bfsLevels: "
@@ -462,10 +448,7 @@ def handle_graph_bfsLevels(
                 f"(max_depth={max_depth_down})"
             )
         else:
-            logger.debug(
-                "Tool: handle_graph_bfsLevels: "
-                "Downstream BFS skipped (max_depth_down=0)"
-            )
+            logger.debug("Tool: handle_graph_bfsLevels: Downstream BFS skipped (max_depth_down=0)")
 
         # ------------------------------------------------------------------
         # Step 7 — Assemble result rows
@@ -500,108 +483,96 @@ def handle_graph_bfsLevels(
             direction: str | None
 
             if is_root_node:
-                upstream_level   = 0
+                upstream_level = 0
                 downstream_level = 0
                 nearest_root_val = node_fq
-                direction        = 'ROOT'
+                direction = "ROOT"
             else:
                 raw_up = up_level.get(node_fq)
                 raw_dn = dn_level.get(node_fq)
 
                 # upstream_level: negative (opposite sign to hop count)
-                upstream_level   = (-(raw_up)) if raw_up is not None else None
+                upstream_level = (-(raw_up)) if raw_up is not None else None
                 # downstream_level: positive (same sign as hop count)
                 downstream_level = raw_dn if raw_dn is not None else None
 
                 # nearest_root: upstream wins on tie (matches SP behaviour)
-                nearest_root_val = (
-                    up_root.get(node_fq) or dn_root.get(node_fq)
-                )
+                nearest_root_val = up_root.get(node_fq) or dn_root.get(node_fq)
 
                 if raw_up is not None and raw_dn is not None:
-                    direction = 'BOTH'
+                    direction = "BOTH"
                 elif raw_up is not None:
-                    direction = 'U'
+                    direction = "U"
                 elif raw_dn is not None:
-                    direction = 'D'
+                    direction = "D"
                 else:
                     direction = None  # Should not occur — node is in all_nodes
 
-            result_nodes.append({
-                'node':             node_fq,
-                'container_name':   meta.get('container_name', ''),
-                'object_name':      meta.get('object_name', ''),
-                'object_kind':      meta.get('object_kind', ''),
-                'upstream_level':   upstream_level,
-                'downstream_level': downstream_level,
-                'nearest_root':     nearest_root_val,
-                'direction':        direction,
-                'is_root':          'Y' if is_root_node else 'N',
-            })
+            result_nodes.append(
+                {
+                    "node": node_fq,
+                    "container_name": meta.get("container_name", ""),
+                    "object_name": meta.get("object_name", ""),
+                    "object_kind": meta.get("object_kind", ""),
+                    "upstream_level": upstream_level,
+                    "downstream_level": downstream_level,
+                    "nearest_root": nearest_root_val,
+                    "direction": direction,
+                    "is_root": "Y" if is_root_node else "N",
+                }
+            )
 
-        logger.debug(
-            f"Tool: handle_graph_bfsLevels: "
-            f"Assembled {len(result_nodes)} result nodes"
-        )
+        logger.debug(f"Tool: handle_graph_bfsLevels: Assembled {len(result_nodes)} result nodes")
 
         # ------------------------------------------------------------------
         # Step 8 — Build summary and extract cycle candidates
         # (re-uses existing private helpers from the SP-based tool)
         # ------------------------------------------------------------------
         cycle_cands = extract_cycle_candidates(result_nodes)
-        summary     = create_bfs_summary(result_nodes, cycle_cands)
+        summary = create_bfs_summary(result_nodes, cycle_cands)
 
         # ------------------------------------------------------------------
         # Step 9 — Assemble response (identical schema to SP-based tool)
         # ------------------------------------------------------------------
         response_data = {
-            "nodes":            result_nodes,
+            "nodes": result_nodes,
             "cycle_candidates": cycle_cands,
-            "summary":          summary,
+            "summary": summary,
         }
 
         metadata = {
-            "tool_name":          _tn,
-            "root_node_list":     root_node_list,
-            "max_depth_up":       max_depth_up,
-            "max_depth_down":     max_depth_down,
-            "exclude_objects":    exclude_objects,
+            "tool_name": _tn,
+            "root_node_list": root_node_list,
+            "max_depth_up": max_depth_up,
+            "max_depth_down": max_depth_down,
+            "exclude_objects": exclude_objects,
             "include_containers": include_containers,
-            "edge_repository":    edge_repository,
-            "implementation":     "python_bfs",  # distinguishes from SP-based tool
+            "edge_repository": edge_repository,
+            "implementation": "python_bfs",  # distinguishes from SP-based tool
             "graph_stats": {
                 "unique_nodes_in_graph": len(node_registry),
-                "raw_edges_fetched":     edges_total,
-                "edges_excluded":        edges_excluded,
-                "edges_traversed":       edges_total - edges_excluded,
+                "raw_edges_fetched": edges_total,
+                "edges_excluded": edges_excluded,
+                "edges_traversed": edges_total - edges_excluded,
             },
-            "counts":             summary,
-            "status":             "success",
-            "rtn_code":           0,
-            "message": (
-                f"Module=graph_bfsLevels;"
-                f"RootCount={len(roots)};"
-                f"TotalNodes={len(result_nodes)};"
-                f"Success;"
-            ),
+            "counts": summary,
+            "status": "success",
+            "rtn_code": 0,
+            "message": (f"Module=graph_bfsLevels;RootCount={len(roots)};TotalNodes={len(result_nodes)};Success;"),
         }
 
-        logger.debug(
-            f"Tool: handle_graph_bfsLevels: metadata: {metadata}"
-        )
+        logger.debug(f"Tool: handle_graph_bfsLevels: metadata: {metadata}")
         return create_response(response_data, metadata)
 
     except Exception as e:
-        logger.error(
-            f"Tool: handle_graph_bfsLevels: Error: {e}", exc_info=True
-        )
+        logger.error(f"Tool: handle_graph_bfsLevels: Error: {e}", exc_info=True)
         return create_response(
             {"error": str(e)},
             {
-                "tool_name":      _tn,
+                "tool_name": _tn,
                 "root_node_list": root_node_list,
-                "status":         "error",
-            }
+                "status": "error",
+            },
         )
 
 
@@ -628,7 +599,7 @@ def _matches_any(fq_name: str, patterns: list[str]) -> bool:
     name_lower = fq_name.lower()
     for pat in patterns:
         # Convert SQL LIKE % to fnmatch *
-        fn_pat = pat.replace('%', '*').lower()
+        fn_pat = pat.replace("%", "*").lower()
         if fnmatch.fnmatch(name_lower, fn_pat):
             return True
     return False
@@ -652,7 +623,7 @@ def _matches_container_any(container: str, patterns: list[str]) -> bool:
         return True  # No whitelist = all containers included
     name_lower = container.lower()
     for pat in patterns:
-        fn_pat = pat.replace('%', '*').lower()
+        fn_pat = pat.replace("%", "*").lower()
         if fnmatch.fnmatch(name_lower, fn_pat):
             return True
     return False
@@ -660,7 +631,7 @@ def _matches_container_any(container: str, patterns: list[str]) -> bool:
 
 def _build_fetch_sql(
     edge_repository: str,
-    incl_patterns:   list[str],
+    incl_patterns: list[str],
 ) -> str:
     """
     Build the SQL query to fetch edges from the edge repository.
@@ -700,14 +671,8 @@ AND   TRIM(r.Tgt_Object_Name_FQ) <> ''"""
         # Build OR-expanded WHERE clause for container inclusion.
         # Applies to BOTH Src and Tgt containers — an edge is included only
         # if both endpoints are within the whitelisted container set.
-        src_clauses = " OR ".join(
-            f"TRIM(r.Src_Container_Name) LIKE '{p}'"
-            for p in incl_patterns
-        )
-        tgt_clauses = " OR ".join(
-            f"TRIM(r.Tgt_Container_Name) LIKE '{p}'"
-            for p in incl_patterns
-        )
+        src_clauses = " OR ".join(f"TRIM(r.Src_Container_Name) LIKE '{p}'" for p in incl_patterns)
+        tgt_clauses = " OR ".join(f"TRIM(r.Tgt_Container_Name) LIKE '{p}'" for p in incl_patterns)
         base_sql += f"\nAND   ({src_clauses})"
         base_sql += f"\nAND   ({tgt_clauses})"
 
@@ -736,10 +701,10 @@ def _val(row, col_idx: dict, col_name: str) -> str | None:
 
 
 def _bfs_multisource(
-    roots:     list[str],
-    adj:       dict[str, set[str]],
+    roots: list[str],
+    adj: dict[str, set[str]],
     max_depth: int,
-    label:     str,
+    label: str,
 ) -> tuple[dict[str, int], dict[str, str]]:
     """
     Standard queue-based multi-source BFS from a set of root nodes.
@@ -768,7 +733,7 @@ def _bfs_multisource(
         root_map  - Dict: node_fq → nearest_root FQ name
     """
     level_map: dict[str, int] = {}
-    root_map:  dict[str, str] = {}
+    root_map: dict[str, str] = {}
 
     # Seed: all root nodes at level 0.
     # Visited set initialised with roots so they are never re-settled
@@ -778,7 +743,7 @@ def _bfs_multisource(
     # Queue entries: (node_fq, nearest_root_fq, current_depth)
     queue: deque[tuple[str, str, int]] = deque()
 
-    for r in sorted(roots):   # sorted → lexicographic tie-breaking
+    for r in sorted(roots):  # sorted → lexicographic tie-breaking
         queue.append((r, r, 0))
 
     while queue:
@@ -789,20 +754,17 @@ def _bfs_multisource(
             continue
 
         # Traverse neighbours from the adjacency dict
-        for neighbour in sorted(adj.get(node, [])):   # sorted → determinism
+        for neighbour in sorted(adj.get(node, [])):  # sorted → determinism
             if neighbour in visited:
                 continue
 
             visited.add(neighbour)
             new_depth = depth + 1
             level_map[neighbour] = new_depth
-            root_map[neighbour]  = nearest_root
+            root_map[neighbour] = nearest_root
             queue.append((neighbour, nearest_root, new_depth))
 
-    logger.debug(
-        f"_bfs_multisource [{label}]: "
-        f"settled {len(level_map)} non-root nodes"
-    )
+    logger.debug(f"_bfs_multisource [{label}]: settled {len(level_map)} non-root nodes")
     return level_map, root_map
 
 
@@ -812,9 +774,7 @@ def _bfs_multisource(
 # create_bfs_summary — imported from _graph_utils
 
 
-
 # extract_cycle_candidates — imported from _graph_utils
-
 
 
 # ---------------------------------------------------------------------------
@@ -825,7 +785,7 @@ def _bfs_multisource(
 GRAPH_BFS_LEVELS_TOOL = {
     # Tool name matches the MCP protocol
     # interface and all existing agent prompts.
-    "name":    "graph_bfsLevels",
+    "name": "graph_bfsLevels",
     "handler": handle_graph_bfsLevels,
     "description": (
         "Compute BFS shortest-path hop distances from one or more root nodes "

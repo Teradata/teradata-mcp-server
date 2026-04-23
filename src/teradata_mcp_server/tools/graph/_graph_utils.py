@@ -35,7 +35,7 @@ def parse_csv_patterns(csv_str: str) -> list[str]:
     Returns:
       List of trimmed non-empty strings; empty list if csv_str is blank or None
     """
-    return [p.strip() for p in (csv_str or '').split(',') if p.strip()]
+    return [p.strip() for p in (csv_str or "").split(",") if p.strip()]
 
 
 def build_like_or(patterns: list[str], column: str) -> str:
@@ -55,7 +55,7 @@ def build_like_or(patterns: list[str], column: str) -> str:
       list produces the degenerate string "()" which is invalid SQL.
     """
     clauses = [f"{column} LIKE '{p}'" for p in patterns]
-    return '(' + ' OR '.join(clauses) + ')'
+    return "(" + " OR ".join(clauses) + ")"
 
 
 def bfs_safe_int(value) -> int | None:
@@ -98,50 +98,50 @@ def create_bfs_summary(nodes: list, cycle_candidates: list) -> dict:
         both_directions, cycle_candidates, max_upstream_depth,
         max_downstream_depth, nodes_per_nearest_root, object_kind_counts
     """
-    root_nodes       = [n for n in nodes if n.get('is_root')   == 'Y']
-    upstream_nodes   = [n for n in nodes if n.get('direction') == 'U']
-    downstream_nodes = [n for n in nodes if n.get('direction') == 'D']
-    both_nodes       = [n for n in nodes if n.get('direction') == 'BOTH']
-    cycle_cands      = cycle_candidates
+    root_nodes = [n for n in nodes if n.get("is_root") == "Y"]
+    upstream_nodes = [n for n in nodes if n.get("direction") == "U"]
+    downstream_nodes = [n for n in nodes if n.get("direction") == "D"]
+    both_nodes = [n for n in nodes if n.get("direction") == "BOTH"]
+    cycle_cands = cycle_candidates
 
     # Deepest upstream level (most negative → largest absolute value)
     up_levels = [
-        abs(bfs_safe_int(n.get('upstream_level')) or 0)
+        abs(bfs_safe_int(n.get("upstream_level")) or 0)
         for n in nodes
-        if bfs_safe_int(n.get('upstream_level')) is not None
+        if bfs_safe_int(n.get("upstream_level")) is not None
     ]
 
     # Deepest downstream level (most positive)
     down_levels = [
-        bfs_safe_int(n.get('downstream_level')) or 0
+        bfs_safe_int(n.get("downstream_level")) or 0
         for n in nodes
-        if bfs_safe_int(n.get('downstream_level')) is not None
+        if bfs_safe_int(n.get("downstream_level")) is not None
     ]
 
     # Nearest root grouping — how many nodes per root
     root_groups: dict[str, int] = {}
     for n in nodes:
-        nearest = n.get('nearest_root')
+        nearest = n.get("nearest_root")
         if nearest:
             root_groups[nearest] = root_groups.get(nearest, 0) + 1
 
     # Object kind breakdown
     kind_counts: dict[str, int] = {}
     for n in nodes:
-        kind = n.get('object_kind') or 'Unknown'
+        kind = n.get("object_kind") or "Unknown"
         kind_counts[kind] = kind_counts.get(kind, 0) + 1
 
     return {
-        "total_nodes":            len(nodes),
-        "root_nodes":             len(root_nodes),
-        "upstream_only":          len(upstream_nodes),
-        "downstream_only":        len(downstream_nodes),
-        "both_directions":        len(both_nodes),
-        "cycle_candidates":       len(cycle_cands),
-        "max_upstream_depth":     max(up_levels,   default=0),
-        "max_downstream_depth":   max(down_levels, default=0),
+        "total_nodes": len(nodes),
+        "root_nodes": len(root_nodes),
+        "upstream_only": len(upstream_nodes),
+        "downstream_only": len(downstream_nodes),
+        "both_directions": len(both_nodes),
+        "cycle_candidates": len(cycle_cands),
+        "max_upstream_depth": max(up_levels, default=0),
+        "max_downstream_depth": max(down_levels, default=0),
         "nodes_per_nearest_root": root_groups,
-        "object_kind_counts":     kind_counts,
+        "object_kind_counts": kind_counts,
     }
 
 
@@ -170,27 +170,27 @@ def extract_cycle_candidates(nodes: list) -> list:
     candidates = []
 
     for n in nodes:
-        if n.get('direction') != 'BOTH':
+        if n.get("direction") != "BOTH":
             continue
 
-        up_level   = bfs_safe_int(n.get('upstream_level'))
-        down_level = bfs_safe_int(n.get('downstream_level'))
+        up_level = bfs_safe_int(n.get("upstream_level"))
+        down_level = bfs_safe_int(n.get("downstream_level"))
 
         if up_level is None or down_level is None:
             continue
 
-        up_abs       = abs(up_level)
+        up_abs = abs(up_level)
         cycle_likely = up_abs != down_level
 
-        candidates.append({
-            **n,
-            "upstream_abs": up_abs,
-            "cycle_likely": cycle_likely,
-        })
+        candidates.append(
+            {
+                **n,
+                "upstream_abs": up_abs,
+                "cycle_likely": cycle_likely,
+            }
+        )
 
     # Sort: most likely cycles first (asymmetric), then by node name
-    candidates.sort(
-        key=lambda x: (not x['cycle_likely'], x.get('node', ''))
-    )
+    candidates.sort(key=lambda x: (not x["cycle_likely"], x.get("node", "")))
 
     return candidates

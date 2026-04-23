@@ -219,6 +219,7 @@ or CREATE VIEW statement for a conforming edge repository.
 #  No database connection required — pure template generation.                    #
 # ──────────────────────────────────────────────────────────────────────────────── #
 
+
 def handle_graph_edgeContractDDL(
     conn: Any,
     target_database: str,
@@ -276,18 +277,16 @@ def handle_graph_edgeContractDDL(
             - contract_version: Contract version string
     """
     logger.debug(
-        "Tool: handle_graph_edgeContractDDL: "
-        "Args: target_database=%s, object_name=%s, output_type=%s",
-        target_database, object_name, output_type
+        "Tool: handle_graph_edgeContractDDL: Args: target_database=%s, object_name=%s, output_type=%s",
+        target_database,
+        object_name,
+        output_type,
     )
 
     # ── Validate output_type ──────────────────────────────────────────────────
     output_type = output_type.upper().strip()
     if output_type not in ("TABLE", "VIEW"):
-        logger.warning(
-            "Tool: handle_graph_edgeContractDDL: Invalid output_type '%s'",
-            output_type
-        )
+        logger.warning("Tool: handle_graph_edgeContractDDL: Invalid output_type '%s'", output_type)
         return [{"error": f"Invalid output_type '{output_type}'. Must be 'TABLE' or 'VIEW'."}]
 
     # ── Generate DDL (and sample DML for TABLE variant) ─────────────────────
@@ -299,8 +298,7 @@ def handle_graph_edgeContractDDL(
         sample_dml = None
 
     logger.info(
-        "Tool: handle_graph_edgeContractDDL: Generated %s DDL for %s.%s",
-        output_type, target_database, object_name
+        "Tool: handle_graph_edgeContractDDL: Generated %s DDL for %s.%s", output_type, target_database, object_name
     )
 
     result = {
@@ -317,6 +315,7 @@ def handle_graph_edgeContractDDL(
 # ──────────────────────────────────────────────────────────────────────────────── #
 #  Internal DDL Templates                                                         #
 # ──────────────────────────────────────────────────────────────────────────────── #
+
 
 def _generate_table_ddl(db: str, name: str) -> str:
     """
@@ -561,7 +560,7 @@ FROM
     --   Your_DB.Your_Lineage_Table
     --   A join across metadata tables
     --   A UNION ALL of multiple lineage sources
-    --   {'{ProductName}'}_Observability.data_lineage (AI-Native Data Product)
+    --   {"{ProductName}"}_Observability.data_lineage (AI-Native Data Product)
     -- ============================================================
     YOUR_DATABASE.YOUR_LINEAGE_TABLE AS src
     -- Map your source columns to the contract column aliases above.
@@ -608,9 +607,7 @@ GRAPH_EDGE_CONTRACT_DDL_TOOL = {
         },
         "object_name": {
             "type": "string",
-            "description": (
-                "Name for the edge table or view. Default: 'EdgeRepository'."
-            ),
+            "description": ("Name for the edge table or view. Default: 'EdgeRepository'."),
             "default": "EdgeRepository",
         },
         "output_type": {

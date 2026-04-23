@@ -19,19 +19,19 @@ class ModuleLoader:
 
     # Map tool prefixes to their corresponding module paths
     MODULE_MAP = {
-        'bar': 'teradata_mcp_server.tools.bar',
-        'base': 'teradata_mcp_server.tools.base',
-        'chat': 'teradata_mcp_server.tools.chat',
-        'dba': 'teradata_mcp_server.tools.dba',
-        'fs': 'teradata_mcp_server.tools.fs',
-        'graph': 'teradata_mcp_server.tools.graph',
-        'qlty': 'teradata_mcp_server.tools.qlty',
-        'rag': 'teradata_mcp_server.tools.rag',
-        'sql_opt': 'teradata_mcp_server.tools.sql_opt',
-        'sec': 'teradata_mcp_server.tools.sec',
-        'tmpl': 'teradata_mcp_server.tools.tmpl',
-        'plot': 'teradata_mcp_server.tools.plot',
-        'tdvs': 'teradata_mcp_server.tools.tdvs'
+        "bar": "teradata_mcp_server.tools.bar",
+        "base": "teradata_mcp_server.tools.base",
+        "chat": "teradata_mcp_server.tools.chat",
+        "dba": "teradata_mcp_server.tools.dba",
+        "fs": "teradata_mcp_server.tools.fs",
+        "graph": "teradata_mcp_server.tools.graph",
+        "qlty": "teradata_mcp_server.tools.qlty",
+        "rag": "teradata_mcp_server.tools.rag",
+        "sql_opt": "teradata_mcp_server.tools.sql_opt",
+        "sec": "teradata_mcp_server.tools.sec",
+        "tmpl": "teradata_mcp_server.tools.tmpl",
+        "plot": "teradata_mcp_server.tools.plot",
+        "tdvs": "teradata_mcp_server.tools.tdvs",
     }
 
     def __init__(self):

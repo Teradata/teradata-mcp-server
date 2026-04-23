@@ -68,23 +68,21 @@ def _build_excl_where(excl_patterns: list[str]) -> str:
       SQL fragment starting with ' AND NOT (...)', or '' if no patterns
     """
     if not excl_patterns:
-        return ''
+        return ""
     clauses = []
     for p in excl_patterns:
-        if '.' in p:
-            db_part, obj_part = p.split('.', 1)
-            clauses.append(
-                f"(Src_Container_Name LIKE '{db_part}' "
-                f"AND Src_Object_Name LIKE '{obj_part}')"
-            )
+        if "." in p:
+            db_part, obj_part = p.split(".", 1)
+            clauses.append(f"(Src_Container_Name LIKE '{db_part}' AND Src_Object_Name LIKE '{obj_part}')")
         else:
             clauses.append(f"Src_Container_Name LIKE '{p}'")
-    return ' AND NOT (' + ' OR '.join(clauses) + ')'
+    return " AND NOT (" + " OR ".join(clauses) + ")"
 
 
 # ═══════════════════════════════════════════════════════════════════
 # Union-Find (path-compressed, union-by-rank)
 # ═══════════════════════════════════════════════════════════════════
+
 
 class _UnionFind:
     """
@@ -151,10 +149,8 @@ class _UnionFind:
 # Iterative DFS cycle detection
 # ═══════════════════════════════════════════════════════════════════
 
-def _find_cycles_dfs(
-    nodes: set,
-    adj: dict[str, list[str]]
-) -> list[list[str]]:
+
+def _find_cycles_dfs(nodes: set, adj: dict[str, list[str]]) -> list[list[str]]:
     """
     Find all simple directed cycles via iterative DFS (grey/black colouring).
 
@@ -174,9 +170,7 @@ def _find_cycles_dfs(
     for start in nodes:
         if colour.get(start) == black:
             continue
-        stack: list[tuple[str, Iterator[str], list[str]]] = [
-            (start, iter(adj.get(start, [])), [start])
-        ]
+        stack: list[tuple[str, Iterator[str], list[str]]] = [(start, iter(adj.get(start, [])), [start])]
         colour[start] = grey
 
         while stack:
@@ -200,13 +194,14 @@ def _find_cycles_dfs(
 # BFS engine
 # ═══════════════════════════════════════════════════════════════════
 
+
 def _run_bfs(
     root_fqs: list[str],
     fwd_adj: dict[str, list[str]],
     rev_adj: dict[str, list[str]],
     node_meta: dict[str, dict],
     max_depth_down: int,
-    max_depth_up: int
+    max_depth_up: int,
 ) -> dict:
     """
     Run multi-source BFS from the given roots on the in-memory edge set.
@@ -273,34 +268,36 @@ def _run_bfs(
         u_val = up_level.get(fq)
 
         if is_root:
-            direction = 'ROOT'
+            direction = "ROOT"
         elif d_val is not None and u_val is not None:
-            direction = 'BOTH'
+            direction = "BOTH"
         elif u_val is not None:
-            direction = 'U'
+            direction = "U"
         else:
-            direction = 'D'
+            direction = "D"
 
         meta = node_meta.get(fq, {})
-        nodes.append({
-            'node': fq,
-            'container_name': meta.get('container', fq.split('.')[0] if '.' in fq else ''),
-            'object_name': meta.get('object', fq.split('.')[1] if '.' in fq else fq),
-            'object_kind': meta.get('kind', 'Unknown'),
-            'upstream_level': u_val if not is_root else 0,
-            'downstream_level': d_val if d_val is not None else (0 if is_root else None),
-            'nearest_root': nearest_root.get(fq, ''),
-            'direction': direction,
-            'is_root': 'Y' if is_root else 'N',
-        })
+        nodes.append(
+            {
+                "node": fq,
+                "container_name": meta.get("container", fq.split(".")[0] if "." in fq else ""),
+                "object_name": meta.get("object", fq.split(".")[1] if "." in fq else fq),
+                "object_kind": meta.get("kind", "Unknown"),
+                "upstream_level": u_val if not is_root else 0,
+                "downstream_level": d_val if d_val is not None else (0 if is_root else None),
+                "nearest_root": nearest_root.get(fq, ""),
+                "direction": direction,
+                "is_root": "Y" if is_root else "N",
+            }
+        )
 
     cycle_cands = extract_cycle_candidates(nodes)
     summary = create_bfs_summary(nodes, cycle_cands)
 
     return {
-        'nodes': nodes,
-        'cycle_candidates': cycle_cands,
-        'summary': summary,
+        "nodes": nodes,
+        "cycle_candidates": cycle_cands,
+        "summary": summary,
     }
 
 
@@ -308,17 +305,18 @@ def _run_bfs(
 # Public handler
 # ═══════════════════════════════════════════════════════════════════
 
+
 def handle_graph_analyseDatabase(
     conn: TeradataConnection,
     container_pattern: str,
-    exclude_objects: str = '',
+    exclude_objects: str = "",
     top_n_roots: int = 4,
     max_depth_down: int = 10,
     max_depth_up: int = 0,
-    edge_repository: str = '',
+    edge_repository: str = "",
     tool_name: str | None = None,
     *args,
-    **kwargs
+    **kwargs,
 ):
     """
     Composite graph analysis — runs findRootObjects, connectedComponents,
@@ -411,8 +409,12 @@ def handle_graph_analyseDatabase(
         "Tool: handle_graph_analyseDatabase: Args: "
         "container_pattern=%s, exclude_objects=%s, top_n_roots=%d, "
         "max_depth_down=%d, max_depth_up=%d, edge_repository=%s",
-        container_pattern, exclude_objects, top_n_roots,
-        max_depth_down, max_depth_up, edge_repository
+        container_pattern,
+        exclude_objects,
+        top_n_roots,
+        max_depth_down,
+        max_depth_up,
+        edge_repository,
     )
 
     t_start = time.time()
@@ -422,22 +424,20 @@ def handle_graph_analyseDatabase(
     if not container_patterns:
         return create_response(
             {"error": "container_pattern must not be empty"},
-            {"tool_name": tool_name or "graph_analyseDatabase",
-             "status": "error"}
+            {"tool_name": tool_name or "graph_analyseDatabase", "status": "error"},
         )
 
     if not edge_repository:
         return create_response(
             {"error": "edge_repository is required. Call graph_edgeContractDDL to generate one."},
-            {"tool_name": tool_name or "graph_analyseDatabase",
-             "status": "error"}
+            {"tool_name": tool_name or "graph_analyseDatabase", "status": "error"},
         )
 
     try:
         # ═══════════════════════════════════════════════════════════
         # STEP 0 — Single shared edge fetch (ONE SQL round-trip)
         # ═══════════════════════════════════════════════════════════
-        container_where = build_like_or(container_patterns, 'Src_Container_Name')
+        container_where = build_like_or(container_patterns, "Src_Container_Name")
         excl_where = _build_excl_where(excl_patterns)
 
         edge_sql = f"""
@@ -453,9 +453,7 @@ FROM  {edge_repository}
 WHERE {container_where}
   {excl_where}
 """
-        logger.debug(
-            "Tool: handle_graph_analyseDatabase: Edge SQL:\n%s", edge_sql
-        )
+        logger.debug("Tool: handle_graph_analyseDatabase: Edge SQL:\n%s", edge_sql)
 
         with conn.cursor() as cur:
             cur.execute(edge_sql)
@@ -465,10 +463,7 @@ WHERE {container_where}
         fetch_ms = round((t_fetch - t_start) * 1000)
         edge_count = len(raw_edges)
 
-        logger.info(
-            "Tool: handle_graph_analyseDatabase: Fetched %d edges in %dms",
-            edge_count, fetch_ms
-        )
+        logger.info("Tool: handle_graph_analyseDatabase: Fetched %d edges in %dms", edge_count, fetch_ms)
 
         # ── Build in-memory structures shared by all analyses ──
         # Forward adjacency: src → [tgt, ...] (directed: dependency → dependent)
@@ -501,15 +496,15 @@ WHERE {container_where}
             # Store node metadata
             if src_fq not in node_meta:
                 node_meta[src_fq] = {
-                    'container': src_db,
-                    'object': src_obj,
-                    'kind': src_kind or 'Unknown',
+                    "container": src_db,
+                    "object": src_obj,
+                    "kind": src_kind or "Unknown",
                 }
             if tgt_fq not in node_meta:
                 node_meta[tgt_fq] = {
-                    'container': tgt_db,
-                    'object': tgt_obj,
-                    'kind': tgt_kind or 'Unknown',
+                    "container": tgt_db,
+                    "object": tgt_obj,
+                    "kind": tgt_kind or "Unknown",
                 }
 
         # ═══════════════════════════════════════════════════════════
@@ -519,41 +514,40 @@ WHERE {container_where}
         for fq, downstream_count in src_nodes.items():
             if fq not in tgt_nodes:
                 meta = node_meta.get(fq, {})
-                root_objects.append({
-                    'DatabaseName': meta.get('container', ''),
-                    'ObjectName': meta.get('object', ''),
-                    'FullyQualifiedName': fq,
-                    'ObjectType': meta.get('kind', 'Unknown'),
-                    'DownstreamDependentCount': downstream_count,
-                })
+                root_objects.append(
+                    {
+                        "DatabaseName": meta.get("container", ""),
+                        "ObjectName": meta.get("object", ""),
+                        "FullyQualifiedName": fq,
+                        "ObjectType": meta.get("kind", "Unknown"),
+                        "DownstreamDependentCount": downstream_count,
+                    }
+                )
 
         # Sort by downstream impact descending
-        root_objects.sort(
-            key=lambda x: (-x['DownstreamDependentCount'], x['FullyQualifiedName'])
-        )
+        root_objects.sort(key=lambda x: (-x["DownstreamDependentCount"], x["FullyQualifiedName"]))
 
         # Summary statistics
         type_counts: dict[str, int] = {}
         db_counts: dict[str, int] = {}
         for obj in root_objects:
-            t = obj['ObjectType']
+            t = obj["ObjectType"]
             type_counts[t] = type_counts.get(t, 0) + 1
-            d = obj['DatabaseName']
+            d = obj["DatabaseName"]
             db_counts[d] = db_counts.get(d, 0) + 1
 
         root_summary = {
-            'total_root_objects': len(root_objects),
-            'object_type_counts': type_counts,
-            'database_counts': db_counts,
-            'total_downstream_dependencies': sum(
-                o['DownstreamDependentCount'] for o in root_objects
-            ),
+            "total_root_objects": len(root_objects),
+            "object_type_counts": type_counts,
+            "database_counts": db_counts,
+            "total_downstream_dependencies": sum(o["DownstreamDependentCount"] for o in root_objects),
         }
 
         t_roots = time.time()
         logger.info(
             "Tool: handle_graph_analyseDatabase: Found %d root objects in %dms",
-            len(root_objects), round((t_roots - t_fetch) * 1000)
+            len(root_objects),
+            round((t_roots - t_fetch) * 1000),
         )
 
         # ═══════════════════════════════════════════════════════════
@@ -572,41 +566,48 @@ WHERE {container_where}
             for fq in members:
                 comp_id_map[fq] = cid
                 meta = node_meta.get(fq, {})
-                comp_node_details.append({
-                    'Node_FQ': fq,
-                    'DatabaseName': meta.get('container', ''),
-                    'ObjectName': meta.get('object', ''),
-                    'Component_Id': cid,
-                    'Object_Kind': meta.get('kind', 'Unknown'),
-                })
+                comp_node_details.append(
+                    {
+                        "Node_FQ": fq,
+                        "DatabaseName": meta.get("container", ""),
+                        "ObjectName": meta.get("object", ""),
+                        "Component_Id": cid,
+                        "Object_Kind": meta.get("kind", "Unknown"),
+                    }
+                )
 
         comp_summaries = []
         for root in sorted_roots:
             cid = root_to_id[root]
             members = raw_comps[root]
-            comp_summaries.append({
-                'Component_Id': cid,
-                'Node_Count': len(members),
-                'Node_List': ', '.join(members),
-            })
+            comp_summaries.append(
+                {
+                    "Component_Id": cid,
+                    "Node_Count": len(members),
+                    "Node_List": ", ".join(members),
+                }
+            )
 
-        comp_stats = [{
-            'Component_Count': len(raw_comps),
-            'Node_Count': len(comp_id_map),
-            'Edge_Count': edge_count,
-            'Largest_Component': max(len(m) for m in raw_comps.values()) if raw_comps else 0,
-            'Smallest_Component': min(len(m) for m in raw_comps.values()) if raw_comps else 0,
-            'Singleton_Count': sum(1 for m in raw_comps.values() if len(m) == 1),
-            'Summary_Message': (
-                f"{len(raw_comps)} connected component(s) identified "
-                f"across {len(comp_id_map)} node(s) and {edge_count} edge(s)."
-            ),
-        }]
+        comp_stats = [
+            {
+                "Component_Count": len(raw_comps),
+                "Node_Count": len(comp_id_map),
+                "Edge_Count": edge_count,
+                "Largest_Component": max(len(m) for m in raw_comps.values()) if raw_comps else 0,
+                "Smallest_Component": min(len(m) for m in raw_comps.values()) if raw_comps else 0,
+                "Singleton_Count": sum(1 for m in raw_comps.values() if len(m) == 1),
+                "Summary_Message": (
+                    f"{len(raw_comps)} connected component(s) identified "
+                    f"across {len(comp_id_map)} node(s) and {edge_count} edge(s)."
+                ),
+            }
+        ]
 
         t_comps = time.time()
         logger.info(
             "Tool: handle_graph_analyseDatabase: %d components in %dms",
-            len(raw_comps), round((t_comps - t_roots) * 1000)
+            len(raw_comps),
+            round((t_comps - t_roots) * 1000),
         )
 
         # ═══════════════════════════════════════════════════════════
@@ -645,52 +646,57 @@ WHERE {container_where}
             cycle_len = len(cycle) - 1
             for pos, fq in enumerate(cycle[:-1], 1):
                 cycle_node_set.add(fq)
-                cycle_details.append({
-                    'Cycle_Id': cycle_id,
-                    'Cycle_Pos': pos,
-                    'Node_FQ': fq,
-                    'Cycle_Length': cycle_len,
-                    'Component_Id': comp_id_map.get(fq, 0),
-                    'Strategy': 'DFS',
-                })
-            cycle_summaries.append({
-                'Cycle_Id': cycle_id,
-                'Cycle_Length': cycle_len,
-                'Component_Id': comp_id_map.get(cycle[0], 0),
-                'Strategy': 'DFS',
-                'Cycle_Path': ' -> '.join(cycle),
-            })
+                cycle_details.append(
+                    {
+                        "Cycle_Id": cycle_id,
+                        "Cycle_Pos": pos,
+                        "Node_FQ": fq,
+                        "Cycle_Length": cycle_len,
+                        "Component_Id": comp_id_map.get(fq, 0),
+                        "Strategy": "DFS",
+                    }
+                )
+            cycle_summaries.append(
+                {
+                    "Cycle_Id": cycle_id,
+                    "Cycle_Length": cycle_len,
+                    "Component_Id": comp_id_map.get(cycle[0], 0),
+                    "Strategy": "DFS",
+                    "Cycle_Path": " -> ".join(cycle),
+                }
+            )
 
-        comps_with_cycles = len({
-            cd['Component_Id'] for cd in cycle_details
-        })
+        comps_with_cycles = len({cd["Component_Id"] for cd in cycle_details})
 
-        cycle_stats = [{
-            'Cycle_Count': len(unique_cycles),
-            'Total_Nodes_In_Cycles': len(cycle_details),
-            'Unique_Nodes_In_Cycles': len(cycle_node_set),
-            'Components_With_Cycles': comps_with_cycles,
-            'Edge_Count': edge_count,
-            'Components_Scanned': components_scanned,
-            'Strategy_Used': 'DFS',
-            'Summary_Message': (
-                f"{len(unique_cycles)} cycle(s) detected."
-                if unique_cycles else
-                "No cycles detected — graph is a DAG."
-            ),
-        }]
+        cycle_stats = [
+            {
+                "Cycle_Count": len(unique_cycles),
+                "Total_Nodes_In_Cycles": len(cycle_details),
+                "Unique_Nodes_In_Cycles": len(cycle_node_set),
+                "Components_With_Cycles": comps_with_cycles,
+                "Edge_Count": edge_count,
+                "Components_Scanned": components_scanned,
+                "Strategy_Used": "DFS",
+                "Summary_Message": (
+                    f"{len(unique_cycles)} cycle(s) detected."
+                    if unique_cycles
+                    else "No cycles detected — graph is a DAG."
+                ),
+            }
+        ]
 
         t_cycles = time.time()
         logger.info(
             "Tool: handle_graph_analyseDatabase: %d cycles in %dms",
-            len(unique_cycles), round((t_cycles - t_comps) * 1000)
+            len(unique_cycles),
+            round((t_cycles - t_comps) * 1000),
         )
 
         # ═══════════════════════════════════════════════════════════
         # STEP 4 — BFS waves from top N root objects
         # ═══════════════════════════════════════════════════════════
         top_roots = root_objects[:top_n_roots]
-        top_root_fqs = [r['FullyQualifiedName'] for r in top_roots]
+        top_root_fqs = [r["FullyQualifiedName"] for r in top_roots]
 
         if top_root_fqs:
             bfs_result = _run_bfs(
@@ -703,22 +709,27 @@ WHERE {container_where}
             )
         else:
             bfs_result = {
-                'nodes': [],
-                'cycle_candidates': [],
-                'summary': {
-                    'total_nodes': 0, 'root_nodes': 0,
-                    'upstream_only': 0, 'downstream_only': 0,
-                    'both_directions': 0, 'cycle_candidates': 0,
-                    'max_upstream_depth': 0, 'max_downstream_depth': 0,
-                    'nodes_per_nearest_root': {},
-                    'object_kind_counts': {},
+                "nodes": [],
+                "cycle_candidates": [],
+                "summary": {
+                    "total_nodes": 0,
+                    "root_nodes": 0,
+                    "upstream_only": 0,
+                    "downstream_only": 0,
+                    "both_directions": 0,
+                    "cycle_candidates": 0,
+                    "max_upstream_depth": 0,
+                    "max_downstream_depth": 0,
+                    "nodes_per_nearest_root": {},
+                    "object_kind_counts": {},
                 },
             }
 
         t_bfs = time.time()
         logger.info(
             "Tool: handle_graph_analyseDatabase: BFS %d nodes in %dms",
-            len(bfs_result['nodes']), round((t_bfs - t_cycles) * 1000)
+            len(bfs_result["nodes"]),
+            round((t_bfs - t_cycles) * 1000),
         )
 
         # ═══════════════════════════════════════════════════════════
@@ -727,53 +738,53 @@ WHERE {container_where}
         t_total = round((time.time() - t_start) * 1000)
 
         response_data = {
-            'root_objects': {
-                'objects': root_objects,
-                'summary': root_summary,
+            "root_objects": {
+                "objects": root_objects,
+                "summary": root_summary,
             },
-            'components': {
-                'node_details': comp_node_details,
-                'summaries': comp_summaries,
-                'stats': comp_stats,
+            "components": {
+                "node_details": comp_node_details,
+                "summaries": comp_summaries,
+                "stats": comp_stats,
             },
-            'cycles': {
-                'details': cycle_details,
-                'summaries': cycle_summaries,
-                'stats': cycle_stats,
+            "cycles": {
+                "details": cycle_details,
+                "summaries": cycle_summaries,
+                "stats": cycle_stats,
             },
-            'bfs_waves': bfs_result,
-            'edge_stats': {
-                'total_edges': edge_count,
-                'fetch_time_ms': fetch_ms,
-                'total_time_ms': t_total,
+            "bfs_waves": bfs_result,
+            "edge_stats": {
+                "total_edges": edge_count,
+                "fetch_time_ms": fetch_ms,
+                "total_time_ms": t_total,
             },
         }
 
         metadata = {
-            'tool_name': tool_name or 'graph_analyseDatabase',
-            'container_pattern': container_pattern,
-            'exclude_objects': exclude_objects,
-            'top_n_roots': top_n_roots,
-            'max_depth_down': max_depth_down,
-            'max_depth_up': max_depth_up,
-            'edge_repository': edge_repository,
-            'timing': {
-                'edge_fetch_ms': fetch_ms,
-                'root_objects_ms': round((t_roots - t_fetch) * 1000),
-                'components_ms': round((t_comps - t_roots) * 1000),
-                'cycles_ms': round((t_cycles - t_comps) * 1000),
-                'bfs_ms': round((t_bfs - t_cycles) * 1000),
-                'total_ms': t_total,
+            "tool_name": tool_name or "graph_analyseDatabase",
+            "container_pattern": container_pattern,
+            "exclude_objects": exclude_objects,
+            "top_n_roots": top_n_roots,
+            "max_depth_down": max_depth_down,
+            "max_depth_up": max_depth_up,
+            "edge_repository": edge_repository,
+            "timing": {
+                "edge_fetch_ms": fetch_ms,
+                "root_objects_ms": round((t_roots - t_fetch) * 1000),
+                "components_ms": round((t_comps - t_roots) * 1000),
+                "cycles_ms": round((t_cycles - t_comps) * 1000),
+                "bfs_ms": round((t_bfs - t_cycles) * 1000),
+                "total_ms": t_total,
             },
-            'counts': {
-                'edges': edge_count,
-                'root_objects': len(root_objects),
-                'components': len(raw_comps),
-                'cycles': len(unique_cycles),
-                'bfs_nodes': len(bfs_result['nodes']),
+            "counts": {
+                "edges": edge_count,
+                "root_objects": len(root_objects),
+                "components": len(raw_comps),
+                "cycles": len(unique_cycles),
+                "bfs_nodes": len(bfs_result["nodes"]),
             },
-            'status': 'success',
-            'message': (
+            "status": "success",
+            "message": (
                 f"Composite analysis complete: {len(root_objects)} roots, "
                 f"{len(raw_comps)} components, {len(unique_cycles)} cycles, "
                 f"{len(bfs_result['nodes'])} BFS nodes. "
@@ -782,26 +793,25 @@ WHERE {container_where}
         }
 
         logger.info(
-            "Tool: handle_graph_analyseDatabase: Complete in %dms — "
-            "%d roots, %d components, %d cycles, %d BFS nodes",
-            t_total, len(root_objects), len(raw_comps),
-            len(unique_cycles), len(bfs_result['nodes'])
+            "Tool: handle_graph_analyseDatabase: Complete in %dms — %d roots, %d components, %d cycles, %d BFS nodes",
+            t_total,
+            len(root_objects),
+            len(raw_comps),
+            len(unique_cycles),
+            len(bfs_result["nodes"]),
         )
 
         return create_response(response_data, metadata)
 
     except Exception as e:
-        logger.error(
-            "Tool: handle_graph_analyseDatabase: Error: %s",
-            e, exc_info=True
-        )
+        logger.error("Tool: handle_graph_analyseDatabase: Error: %s", e, exc_info=True)
         return create_response(
             {"error": str(e)},
             {
                 "tool_name": tool_name or "graph_analyseDatabase",
                 "container_pattern": container_pattern,
                 "status": "error",
-            }
+            },
         )
 
 
@@ -837,32 +847,24 @@ GRAPH_ANALYSE_DATABASE_TOOL = {
         },
         "exclude_objects": {
             "type": "string",
-            "description": (
-                "CSV LIKE patterns to exclude. "
-                "Example: 'SANDBOX%,%.temp_%'. Default: ''."
-            ),
+            "description": ("CSV LIKE patterns to exclude. Example: 'SANDBOX%,%.temp_%'. Default: ''."),
             "default": "",
         },
         "top_n_roots": {
             "type": "integer",
             "description": (
-                "Number of top root objects (by downstream impact) "
-                "to include in BFS wave analysis. Default: 4."
+                "Number of top root objects (by downstream impact) to include in BFS wave analysis. Default: 4."
             ),
             "default": 4,
         },
         "max_depth_down": {
             "type": "integer",
-            "description": (
-                "Maximum downstream BFS hops from roots. Default: 10."
-            ),
+            "description": ("Maximum downstream BFS hops from roots. Default: 10."),
             "default": 10,
         },
         "max_depth_up": {
             "type": "integer",
-            "description": (
-                "Maximum upstream BFS hops. 0 = skip upstream. Default: 0."
-            ),
+            "description": ("Maximum upstream BFS hops. 0 = skip upstream. Default: 0."),
             "default": 0,
         },
         "edge_repository": {

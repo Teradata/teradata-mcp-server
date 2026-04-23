@@ -22,13 +22,13 @@ logger = logging.getLogger("teradata_mcp_server")
 def handle_graph_findRootObjects(
     conn: TeradataConnection,
     container_pattern: str,
-    exclude_objects: str = '',
-    edge_repository: str = '',
-    object_types: str = '',
-    return_format: str = 'detailed',
+    exclude_objects: str = "",
+    edge_repository: str = "",
+    object_types: str = "",
+    return_format: str = "detailed",
     tool_name: str | None = None,
     *args,
-    **kwargs
+    **kwargs,
 ):
     """
     Find root objects (objects with no upstream dependencies) in specified containers.
@@ -149,8 +149,11 @@ def handle_graph_findRootObjects(
         "Tool: handle_graph_findRootObjects: Args: "
         "container_pattern=%s, exclude_objects=%s, edge_repository=%s, "
         "object_types=%s, return_format=%s",
-        container_pattern, exclude_objects, edge_repository,
-        object_types, return_format
+        container_pattern,
+        exclude_objects,
+        edge_repository,
+        object_types,
+        return_format,
     )
 
     if not edge_repository:
@@ -159,7 +162,7 @@ def handle_graph_findRootObjects(
             {
                 "tool_name": tool_name or "graph_findRootObjects",
                 "status": "error",
-            }
+            },
         )
 
     try:
@@ -174,8 +177,7 @@ def handle_graph_findRootObjects(
             # Build LIKE clauses for container patterns - used in main WHERE and NOT EXISTS
             container_conditions = []
             for pattern in container_patterns:
-                container_conditions.append(
-                    f"Src_Container_Name LIKE '{pattern}'")
+                container_conditions.append(f"Src_Container_Name LIKE '{pattern}'")
 
             container_where = " OR ".join(container_conditions)
 
@@ -186,30 +188,28 @@ def handle_graph_findRootObjects(
                 exclusion_conditions = []
                 for pattern in exclude_patterns:
                     # Check if pattern contains a dot (fully qualified) or just database pattern
-                    if '.' in pattern:
+                    if "." in pattern:
                         # Fully qualified pattern like 'DB.Object'
-                        db_part, obj_part = pattern.split('.', 1)
+                        db_part, obj_part = pattern.split(".", 1)
                         exclusion_conditions.append(
                             f"(o1.Src_Container_Name LIKE '{db_part}' AND o1.Src_Object_Name LIKE '{obj_part}')"
                         )
                     else:
                         # Database-only pattern like 'PRD_%'
-                        exclusion_conditions.append(
-                            f"o1.Src_Container_Name LIKE '{pattern}'")
+                        exclusion_conditions.append(f"o1.Src_Container_Name LIKE '{pattern}'")
 
                 if exclusion_conditions:
-                    exclusion_where = " AND NOT (" + \
-                        " OR ".join(exclusion_conditions) + ")"
+                    exclusion_where = " AND NOT (" + " OR ".join(exclusion_conditions) + ")"
 
             # Build object type filter if provided
             type_where = ""
             if object_types:
-                type_list = [
-                    f"'{t.strip()}'" for t in object_types.split(',') if t.strip()]
+                type_list = [f"'{t.strip()}'" for t in object_types.split(",") if t.strip()]
                 if type_list:
                     type_where = f" AND o1.Src_Kind IN ({','.join(type_list)})"
 
             import time
+
             start_time = time.time()
             # Main query to find root objects using NOT EXISTS
             # This is more efficient than NOT IN for large datasets
@@ -231,7 +231,7 @@ WHERE ({container_where})
       FROM {edge_repository} o2
       WHERE o2.Tgt_Container_Name = o1.Src_Container_Name
         AND o2.Tgt_Object_Name = o1.Src_Object_Name
-        AND ({container_where.replace('Src_Container_Name', 'o2.Src_Container_Name')})
+        AND ({container_where.replace("Src_Container_Name", "o2.Src_Container_Name")})
   )
 GROUP BY
     o1.Src_Container_Name,
@@ -243,45 +243,36 @@ ORDER BY
     o1.Src_Object_Name
             """
 
-            logger.debug(
-                "Tool: handle_graph_findRootObjects: Executing SQL:\n%s", sql)
+            logger.debug("Tool: handle_graph_findRootObjects: Executing SQL:\n%s", sql)
 
             # Execute query
             cur.execute(sql)
 
             query_time = time.time() - start_time
-            logger.debug(
-                "Tool: handle_graph_findRootObjects: Query execution took %.2fs",
-                query_time)
+            logger.debug("Tool: handle_graph_findRootObjects: Query execution took %.2fs", query_time)
 
             # Fetch all results and convert to list of dictionaries
             # NOTE: rows_to_json takes (description, rows) - description FIRST!
             root_objects = rows_to_json(cur.description, cur.fetchall())
 
-            logger.debug(
-                "Tool: handle_graph_findRootObjects: Found %d root objects",
-                len(root_objects))
+            logger.debug("Tool: handle_graph_findRootObjects: Found %d root objects", len(root_objects))
             if root_objects:
-                logger.debug(
-                    "Tool: handle_graph_findRootObjects: First object: %s",
-                    root_objects[0])
+                logger.debug("Tool: handle_graph_findRootObjects: First object: %s", root_objects[0])
 
             # Safety check: ensure root_objects is a list of dicts, not a string
             if not isinstance(root_objects, list):
                 logger.error(
-                    "Tool: handle_graph_findRootObjects: "
-                    "root_objects is not a list — type: %s",
-                    type(root_objects))
+                    "Tool: handle_graph_findRootObjects: root_objects is not a list — type: %s", type(root_objects)
+                )
                 root_objects = []
 
             # Format results based on return_format
-            if return_format == 'summary':
-                formatted_data = _format_root_summary(
-                    root_objects, container_pattern)
+            if return_format == "summary":
+                formatted_data = _format_root_summary(root_objects, container_pattern)
             else:  # detailed
                 formatted_data = {
                     "root_objects": root_objects,
-                    "summary": _create_root_summary_stats(root_objects, container_pattern)
+                    "summary": _create_root_summary_stats(root_objects, container_pattern),
                 }
 
             # Build metadata
@@ -293,27 +284,23 @@ ORDER BY
                 "edge_repository": edge_repository,
                 "return_format": return_format,
                 "sql": sql,
-                "columns": [
-                    {"name": desc[0], "type": "str"} for desc in cur.description
-                ],
+                "columns": [{"name": desc[0], "type": "str"} for desc in cur.description],
                 "row_count": len(root_objects),
-                "status": "success"
+                "status": "success",
             }
 
-            logger.debug(
-                "Tool: handle_graph_findRootObjects: metadata: %s", metadata)
+            logger.debug("Tool: handle_graph_findRootObjects: metadata: %s", metadata)
             return create_response(formatted_data, metadata)
 
     except Exception as e:
-        logger.error(
-            "Tool: handle_graph_findRootObjects: Error: %s", e, exc_info=True)
+        logger.error("Tool: handle_graph_findRootObjects: Error: %s", e, exc_info=True)
         return create_response(
             {"error": str(e)},
             {
                 "tool_name": tool_name if tool_name else "graph_findRootObjects",
                 "container_pattern": container_pattern,
-                "status": "error"
-            }
+                "status": "error",
+            },
         )
 
 
@@ -331,28 +318,32 @@ def _create_root_summary_stats(root_objects: list, container_pattern: str) -> di
     # Count by object type
     type_counts: dict[str, int] = {}
     for obj in root_objects:
-        obj_type = obj.get('ObjectType', 'Unknown')
+        obj_type = obj.get("ObjectType", "Unknown")
         type_counts[obj_type] = type_counts.get(obj_type, 0) + 1
 
     # Count by database
     db_counts: dict[str, int] = {}
     for obj in root_objects:
-        db_name = obj.get('DatabaseName', 'Unknown')
+        db_name = obj.get("DatabaseName", "Unknown")
         db_counts[db_name] = db_counts.get(db_name, 0) + 1
 
     # Calculate total downstream dependencies
     total_downstream = sum(
-        int(obj.get('DownstreamDependentCount', 0)) if isinstance(obj.get('DownstreamDependentCount'), str)
-        else obj.get('DownstreamDependentCount', 0)
+        int(obj.get("DownstreamDependentCount", 0))
+        if isinstance(obj.get("DownstreamDependentCount"), str)
+        else obj.get("DownstreamDependentCount", 0)
         for obj in root_objects
     )
 
     # Find objects with most downstream dependencies
     top_objects = sorted(
         root_objects,
-        key=lambda x: int(x.get('DownstreamDependentCount', 0)) if isinstance(x.get(
-            'DownstreamDependentCount'), str) else x.get('DownstreamDependentCount', 0),
-        reverse=True
+        key=lambda x: (
+            int(x.get("DownstreamDependentCount", 0))
+            if isinstance(x.get("DownstreamDependentCount"), str)
+            else x.get("DownstreamDependentCount", 0)
+        ),
+        reverse=True,
     )[:10]
 
     return {
@@ -364,12 +355,12 @@ def _create_root_summary_stats(root_objects: list, container_pattern: str) -> di
         "average_downstream_per_root": round(total_downstream / len(root_objects), 2) if root_objects else 0,
         "top_impact_objects": [
             {
-                "name": obj.get('FullyQualifiedName'),
-                "type": obj.get('ObjectType'),
-                "downstream_count": obj.get('DownstreamDependentCount')
+                "name": obj.get("FullyQualifiedName"),
+                "type": obj.get("ObjectType"),
+                "downstream_count": obj.get("DownstreamDependentCount"),
             }
             for obj in top_objects
-        ]
+        ],
     }
 
 
@@ -388,14 +379,14 @@ def _format_root_summary(root_objects: list, container_pattern: str) -> dict:
 
     summary_text = f"""
 ROOT OBJECTS ANALYSIS SUMMARY
-{'=' * 60}
+{"=" * 60}
 
 Container Pattern(s): {container_pattern}
 
 OVERVIEW
-  Total Root Objects Found:  {stats['total_root_objects']}
-  Total Downstream Impact:   {stats['total_downstream_dependencies']} objects
-  Avg Downstream per Root:   {stats['average_downstream_per_root']}
+  Total Root Objects Found:  {stats["total_root_objects"]}
+  Total Downstream Impact:   {stats["total_downstream_dependencies"]} objects
+  Avg Downstream per Root:   {stats["average_downstream_per_root"]}
 
 DEFINITION
   Root objects are objects with NO upstream dependencies.
@@ -403,22 +394,22 @@ DEFINITION
   starting points for downstream impact analysis.
 """
 
-    if stats['object_type_counts']:
+    if stats["object_type_counts"]:
         summary_text += "\nBY OBJECT TYPE\n"
-        for obj_type, count in sorted(stats['object_type_counts'].items(), key=lambda x: x[1], reverse=True):
+        for obj_type, count in sorted(stats["object_type_counts"].items(), key=lambda x: x[1], reverse=True):
             summary_text += f"  {obj_type:20s} {count:3d}\n"
 
-    if stats['database_counts']:
+    if stats["database_counts"]:
         summary_text += "\nBY DATABASE\n"
-        for db_name, count in sorted(stats['database_counts'].items(), key=lambda x: x[1], reverse=True)[:10]:
+        for db_name, count in sorted(stats["database_counts"].items(), key=lambda x: x[1], reverse=True)[:10]:
             summary_text += f"  {db_name:40s} {count:3d}\n"
 
-        if len(stats['database_counts']) > 10:
+        if len(stats["database_counts"]) > 10:
             summary_text += f"  ... and {len(stats['database_counts']) - 10} more databases\n"
 
-    if stats['top_impact_objects']:
+    if stats["top_impact_objects"]:
         summary_text += "\nTOP 10 ROOT OBJECTS BY DOWNSTREAM IMPACT\n"
-        for i, obj in enumerate(stats['top_impact_objects'], 1):
+        for i, obj in enumerate(stats["top_impact_objects"], 1):
             summary_text += f"  {i:2d}. {obj['name']:50s} ({obj['type']}) → {obj['downstream_count']} dependents\n"
 
     summary_text += """
@@ -431,7 +422,7 @@ RECOMMENDATION
     return {
         "summary_text": summary_text,
         "statistics": stats,
-        "root_object_names": [obj.get('FullyQualifiedName') for obj in root_objects]
+        "root_object_names": [obj.get("FullyQualifiedName") for obj in root_objects],
     }
 
 
@@ -456,18 +447,14 @@ GRAPH_FIND_ROOT_OBJECTS_TOOL = {
         "container_pattern": {
             "type": "string",
             "description": (
-                "CSV LIKE patterns for databases/schemas to search. "
-                "Supports wildcards: \'%WBC%\' or \'%WBC%,%StGeo%\'."
+                "CSV LIKE patterns for databases/schemas to search. Supports wildcards: '%WBC%' or '%WBC%,%StGeo%'."
             ),
-            "required": True
+            "required": True,
         },
         "exclude_objects": {
             "type": "string",
-            "description": (
-                "CSV of FQ object name LIKE patterns to exclude. "
-                "Example: \'PRD_%,%.temp_%\'. Default: \'\'."
-            ),
-            "default": ""
+            "description": ("CSV of FQ object name LIKE patterns to exclude. Example: 'PRD_%,%.temp_%'. Default: ''."),
+            "default": "",
         },
         "edge_repository": {
             "type": "string",
@@ -476,20 +463,19 @@ GRAPH_FIND_ROOT_OBJECTS_TOOL = {
                 "Call graph_edgeContractDDL to generate one if needed. "
                 "Required parameter — no default."
             ),
-            "required": True
+            "required": True,
         },
         "object_types": {
             "type": "string",
             "description": (
-                "CSV of object type codes to include. "
-                "Example: \'Table\' or \'Table,View\'. Default: \'\'  (all types)."
+                "CSV of object type codes to include. Example: 'Table' or 'Table,View'. Default: ''  (all types)."
             ),
-            "default": ""
+            "default": "",
         },
         "return_format": {
             "type": "string",
-            "description": "Output format: \'detailed\' (default) or \'summary\'.",
-            "default": "detailed"
-        }
-    }
+            "description": "Output format: 'detailed' (default) or 'summary'.",
+            "default": "detailed",
+        },
+    },
 }

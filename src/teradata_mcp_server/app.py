@@ -1293,10 +1293,8 @@ Returns:
     # AI agents retrieve this to understand the edge_repository schema
     # required by all graph_* tools.
     # ──────────────────────────────────────────────────────────────────────
-    if any(
-        re.match(pattern, "graph_edge_contract")
-        for pattern in config.get('resource', [])
-    ):
+    if any(re.match(pattern, "graph_edge_contract") for pattern in config.get("resource", [])):
+
         @mcp.resource("graph://edge-contract")
         def get_graph_edge_contract() -> str:
             """Return the Graph Edge Contract schema definition."""

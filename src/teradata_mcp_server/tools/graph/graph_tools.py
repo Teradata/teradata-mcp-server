@@ -168,17 +168,13 @@ logger = logging.getLogger("teradata_mcp_server")
 # To add a new tool: append its descriptor (see ADDING A NEW TOOL above).
 
 GRAPH_TOOLS = [
-    GRAPH_EDGE_CONTRACT_DDL_TOOL,     # Step 0 — generate edge repository DDL
-    GRAPH_FIND_ROOT_OBJECTS_TOOL,     # Step 1 — discover seed objects
-    GRAPH_BFS_LEVELS_TOOL,            # Step 2 — wave planning + blast radius
-    GRAPH_TRACE_LINEAGE_TOOL,         # Step 3 — full lineage + impact paths
-    GRAPH_DETECT_CYCLES_TOOL,         # Step 4 — cycle validation
+    GRAPH_EDGE_CONTRACT_DDL_TOOL,  # Step 0 — generate edge repository DDL
+    GRAPH_FIND_ROOT_OBJECTS_TOOL,  # Step 1 — discover seed objects
+    GRAPH_BFS_LEVELS_TOOL,  # Step 2 — wave planning + blast radius
+    GRAPH_TRACE_LINEAGE_TOOL,  # Step 3 — full lineage + impact paths
+    GRAPH_DETECT_CYCLES_TOOL,  # Step 4 — cycle validation
     GRAPH_CONNECTED_COMPONENTS_TOOL,  # Step 5 — graph partitioning
-    GRAPH_ANALYSE_DATABASE_TOOL,      # Step 6 — composite single-fetch analysis
+    GRAPH_ANALYSE_DATABASE_TOOL,  # Step 6 — composite single-fetch analysis
 ]
 
-logger.debug(
-    "graph_tools: registered %d tools: %s",
-    len(GRAPH_TOOLS),
-    [t['name'] for t in GRAPH_TOOLS]
-)
+logger.debug("graph_tools: registered %d tools: %s", len(GRAPH_TOOLS), [t["name"] for t in GRAPH_TOOLS])
