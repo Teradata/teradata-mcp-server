@@ -5,7 +5,6 @@ teradata_mcp_server
 Lightweight MCP server tools for Teradata.
 """
 
-
 from importlib.metadata import PackageNotFoundError, version
 
 try:

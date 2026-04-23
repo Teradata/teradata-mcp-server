@@ -18,18 +18,28 @@ def parse_args_to_settings() -> Settings:
         description="Teradata MCP Server",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument('-v', '--version', action='version', version=f'%(prog)s {__version__}')
-    parser.add_argument('--profile', type=str, required=False, help='Profile name to load from profiles.yml')
-    parser.add_argument('--config_dir', type=str, required=False, help='Directory for user configuration files (default: current working directory)')
-    parser.add_argument('--mcp_transport', type=str, choices=['stdio', 'streamable-http', 'sse'], required=False)
-    parser.add_argument('--mcp_host', type=str, required=False)
-    parser.add_argument('--mcp_port', type=int, required=False)
-    parser.add_argument('--mcp_path', type=str, required=False)
-    parser.add_argument('--database_uri', type=str, required=False, help='Override DATABASE_URI connection string')
-    parser.add_argument('--logmech', type=str, required=False)
-    parser.add_argument('--auth_mode', type=str, required=False)
-    parser.add_argument('--auth_cache_ttl', type=int, required=False)
-    parser.add_argument('--logging_level', type=str, required=False)
+    parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {__version__}")
+    parser.add_argument("--profile", type=str, required=False, help="Profile name to load from profiles.yml")
+    parser.add_argument(
+        "--config_dir",
+        type=str,
+        required=False,
+        help="Directory for user configuration files (default: current working directory)",
+    )
+    parser.add_argument("--mcp_transport", type=str, choices=["stdio", "streamable-http", "sse"], required=False)
+    parser.add_argument("--mcp_host", type=str, required=False)
+    parser.add_argument("--mcp_port", type=int, required=False)
+    parser.add_argument("--mcp_path", type=str, required=False)
+    parser.add_argument("--database_uri", type=str, required=False, help="Override DATABASE_URI connection string")
+    parser.add_argument("--logmech", type=str, required=False)
+    parser.add_argument("--auth_mode", type=str, required=False)
+    parser.add_argument("--auth_cache_ttl", type=int, required=False)
+    parser.add_argument("--logging_level", type=str, required=False)
+    parser.add_argument(
+        "--progressive_disclosure",
+        action="store_true",
+        help="Enable progressive disclosure for tool registration instead of static tool listing",
+    )
 
     args, _ = parser.parse_known_args()
 
@@ -43,9 +53,11 @@ def parse_args_to_settings() -> Settings:
         mcp_port=args.mcp_port if args.mcp_port is not None else env.mcp_port,
         mcp_path=args.mcp_path if args.mcp_path is not None else env.mcp_path,
         logmech=args.logmech if args.logmech is not None else env.logmech,
+        logmech_is_explicit=(args.logmech is not None) or env.logmech_is_explicit,
         auth_mode=(args.auth_mode or env.auth_mode).lower(),
         auth_cache_ttl=args.auth_cache_ttl if args.auth_cache_ttl is not None else env.auth_cache_ttl,
         logging_level=(args.logging_level or env.logging_level).upper(),
+        progressive_disclosure=args.progressive_disclosure or env.progressive_disclosure,
     )
 
 
@@ -64,13 +76,13 @@ async def main():
         logger.warning("Signal handling not supported on this platform")
 
     # Run transport
-    if settings.mcp_transport == 'sse':
-        await mcp.run_sse_async(host=settings.mcp_host, port=settings.mcp_port, path=settings.mcp_path)
-    elif settings.mcp_transport == 'streamable-http':
-        await mcp.run_http_async(transport='streamable-http', host=settings.mcp_host, port=settings.mcp_port, path=settings.mcp_path)
+    if settings.mcp_transport in ["sse", "streamable-http"]:
+        await mcp.run_http_async(
+            transport=settings.mcp_transport, host=settings.mcp_host, port=settings.mcp_port, path=settings.mcp_path
+        )
     else:
         await mcp.run_stdio_async()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())

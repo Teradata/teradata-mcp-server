@@ -22,18 +22,18 @@ import json
 import os
 import re
 from importlib.resources import files as pkg_files
-from typing import Annotated, Any
+from typing import Annotated, Any, Optional
 
 import yaml
 from fastmcp import FastMCP
 from fastmcp.prompts.prompt import Message, TextContent
-from fastmcp.server.dependencies import get_context
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection
 
 from teradata_mcp_server import utils as config_utils
 from teradata_mcp_server.config import Settings
 from teradata_mcp_server.middleware import RequestContextMiddleware
+from teradata_mcp_server.tools import ContextCatalog
 from teradata_mcp_server.tools.utils import (
     convert_tdml_docstring_to_mcp_docstring,
     execute_analytic_function,
@@ -41,6 +41,7 @@ from teradata_mcp_server.tools.utils import (
     get_dynamic_function_definition,
     get_partition_col_order_col_doc_string,
 )
+from teradata_mcp_server.tools.utils.factory import create_mcp_tool
 from teradata_mcp_server.tools.utils.queryband import build_queryband
 from teradata_mcp_server.utils import format_error_response, format_text_response, resolve_type_hint, setup_logging
 from teradata_mcp_server.tools.graph.graph_edge_contract import GRAPH_EDGE_CONTRACT
@@ -53,6 +54,7 @@ def create_mcp_app(settings: Settings):
     from pathlib import Path
 
     from teradata_mcp_server import config_loader
+
     config_dir = Path(settings.config_dir).resolve() if settings.config_dir else Path.cwd()
     config_loader.set_global_config_dir(config_dir)
     logger.info(f"Configuration directory set to: {config_dir}")
@@ -61,7 +63,7 @@ def create_mcp_app(settings: Settings):
     try:
         from teradata_mcp_server import tools as td
     except ImportError:
-        import tools as td  # dev fallback
+        import tools as td  # type: ignore[no-redef]  # dev fallback
 
     mcp = FastMCP("teradata-mcp-server")
 
@@ -72,22 +74,48 @@ def create_mcp_app(settings: Settings):
     config = config_utils.get_profile_config(profile_name)
 
     # Feature flags from profiles
-    enable_efs = bool(any(re.match(pattern, 'fs_*') for pattern in config.get('tool', [])))
-    enable_tdvs = bool(any(re.match(pattern, 'tdvs_*') for pattern in config.get('tool', [])))
-    enable_bar = bool(any(re.match(pattern, 'bar_*') for pattern in config.get('tool', [])))
-    enable_chat = bool(any(re.match(pattern, 'chat_*') for pattern in config.get('tool', [])))
+    enable_efs = bool(any(re.match(pattern, "fs_*") for pattern in config.get("tool", [])))
+    enable_tdvs = bool(any(re.match(pattern, "tdvs_*") for pattern in config.get("tool", [])))
+    enable_bar = bool(any(re.match(pattern, "bar_*") for pattern in config.get("tool", [])))
+    enable_chat = bool(any(re.match(pattern, "chat_*") for pattern in config.get("tool", [])))
+
+    # TD connection supplier
+    tdconn = None
+    fs_config = None
+
+    def get_tdconn(recreate: bool = False):
+        nonlocal tdconn, fs_config
+
+        # Create connection if needed (first call or recreate requested)
+        if tdconn is None or recreate:
+            tdconn = td.TDConn(settings=settings)
+
+            if enable_efs:
+                try:
+                    import teradataml as tdml
+
+                    fs_config = td.FeatureStoreConfig()
+                    with contextlib.suppress(Exception):
+                        tdml.create_context(tdsqlengine=tdconn.engine)
+                except Exception:
+                    pass
+
+        return tdconn
 
     # Initialize TD connection and optional teradataml/EFS context
-    # Pass settings object to TDConn instead of just connection_url
-    tdconn = td.TDConn(settings=settings)
+    tdconn = get_tdconn()
 
-    enable_analytic_functions = profile_name and profile_name == 'dataScientist'
+    def get_db_user() -> str | None:
+        """Return the database username from the TDConn connection string."""
+        tc = get_tdconn()
+        return getattr(tc, "_db_user", None)
 
-    fs_config = None
+    enable_analytic_functions = profile_name and profile_name == "dataScientist"
+
     if enable_efs or enable_analytic_functions:
-
         try:
             import teradataml as tdml
+
             tdml.create_context(tdsqlengine=tdconn.engine)
         except (AttributeError, ImportError, ModuleNotFoundError) as e:
             logger.warning(f"teradataml not installed - disabling analytic functions: {e}")
@@ -99,6 +127,7 @@ def create_mcp_app(settings: Settings):
         # Only import FeatureStoreConfig (which depends on tdfs4ds) when EFS tools are enabled
         try:
             from teradata_mcp_server.tools.fs.fs_utils import FeatureStoreConfig
+
             fs_config = FeatureStoreConfig()
             # teradataml is optional; warn if unavailable but keep EFS enabled
             try:
@@ -109,12 +138,12 @@ def create_mcp_app(settings: Settings):
             logger.warning(f"Feature Store module not available - disabling EFS functionality: {e}")
             enable_efs = False
 
-
     # TeradataVectorStore connection (optional)
     tdvs = None
     if len(os.getenv("TD_BASE_URL", "").strip()) > 0:
         try:
             from teradata_mcp_server.tools.tdvs.tdvs_utilies import create_teradataml_context
+
             create_teradataml_context()
             enable_tdvs = True
         except Exception as e:
@@ -125,9 +154,10 @@ def create_mcp_app(settings: Settings):
     if enable_bar:
         try:
             # Check for BAR system availability by importing required modules
-            import requests
+            import requests  # type: ignore[import-untyped]
 
             from teradata_mcp_server.tools.bar.dsa_client import DSAClient
+
             # Verify DSA connection if environment variables are set
             dsa_base_url = os.getenv("DSA_BASE_URL")
             dsa_host = os.getenv("DSA_HOST")
@@ -135,7 +165,9 @@ def create_mcp_app(settings: Settings):
             if dsa_base_url or (dsa_host and dsa_port):
                 logger.info("BAR system configured with DSA connection")
             else:
-                logger.warning("BAR tools enabled but DSA connection not configured (missing DSA_BASE_URL or DSA_HOST/DSA_PORT) - disabling BAR functionality")
+                logger.warning(
+                    "BAR tools enabled but DSA connection not configured (missing DSA_BASE_URL or DSA_HOST/DSA_PORT) - disabling BAR functionality"
+                )
                 enable_bar = False
         except (AttributeError, ImportError, ModuleNotFoundError) as e:
             logger.warning(f"BAR system dependencies not available - disabling BAR functionality: {e}")
@@ -177,7 +209,7 @@ def create_mcp_app(settings: Settings):
                             "Database checks (function existence and permissions) will be skipped in stdio mode - "
                             "they will be validated on first tool use."
                         )
-                    else:
+                    elif tdconn.engine is not None:
                         with tdconn.engine.connect() as conn:
                             from sqlalchemy import text
 
@@ -203,7 +235,9 @@ def create_mcp_app(settings: Settings):
 
                                 # First, get current username
                                 username_result = conn.execute(text("SELECT USER"))
-                                current_user = username_result.fetchone()[0]
+                                username_row = username_result.fetchone()
+                                assert username_row is not None
+                                current_user = username_row[0]
 
                                 check_permission_sql = text(f"""
                                     SELECT 1
@@ -252,22 +286,10 @@ def create_mcp_app(settings: Settings):
             enable_chat = False
 
     # Middleware (auth + request context)
+    # Note: registry_load_callback will be set later after load_registry_tools is defined
     from teradata_mcp_server.tools.auth_cache import SecureAuthCache
-    auth_cache = SecureAuthCache(ttl_seconds=settings.auth_cache_ttl)
 
-    def get_tdconn(recreate: bool = False):
-        nonlocal tdconn, fs_config
-        if recreate:
-            tdconn = td.TDConn(settings=settings)
-            if enable_efs:
-                try:
-                    import teradataml as tdml
-                    fs_config = td.FeatureStoreConfig()
-                    with contextlib.suppress(Exception):
-                        tdml.create_context(tdsqlengine=tdconn.engine)
-                except Exception:
-                    pass
-        return tdconn
+    auth_cache = SecureAuthCache(ttl_seconds=settings.auth_cache_ttl)
 
     middleware = RequestContextMiddleware(
         logger=logger,
@@ -280,6 +302,7 @@ def create_mcp_app(settings: Settings):
 
     # Adapters (inlined for simplicity)
     import socket
+
     hostname = socket.gethostname()
     process_id = f"{hostname}:{os.getpid()}"
 
@@ -293,7 +316,8 @@ def create_mcp_app(settings: Settings):
         - Formats return values into FastMCP content and captures exceptions with
           context for easier debugging.
         """
-        tool_name = kwargs.pop('tool_name', getattr(tool, '__name__', 'unknown_tool'))
+        tool_name = kwargs.pop("tool_name", getattr(tool, "__name__", "unknown_tool"))
+        request_context = kwargs.pop("_request_context", None)
         tdconn_local = get_tdconn()
 
         if not getattr(tdconn_local, "engine", None):
@@ -308,124 +332,60 @@ def create_mcp_app(settings: Settings):
         try:
             if use_sqla:
                 from sqlalchemy import text
+
                 with tdconn_local.engine.connect() as conn:
-                    # Always attempt to set QueryBand when a request context is present
-                    ctx = get_context()
-                    request_context = ctx.get_state("request_context") if ctx else None
-                    if request_context is not None:
-                        qb = build_queryband(
-                            application=mcp.name,
-                            profile=profile_name,
-                            process_id=process_id,
-                            tool_name=tool_name,
-                            request_context=request_context,
-                        )
-                        try:
-                            conn.execute(text(f"SET QUERY_BAND = '{qb}' FOR SESSION"))
-                            logger.debug(f"QueryBand set: {qb}")
-                            logger.debug(f"Tool request context: {request_context}")
-                        except Exception as qb_error:
-                            logger.debug(f"Could not set QueryBand: {qb_error}")
-                            # If in Basic auth, do not run the tool without proxying
-                            if str(getattr(request_context, "auth_scheme", "")).lower() == "basic":
-                                return format_error_response(
-                                    f"Cannot run tool '{tool_name}': failed to set QueryBand for Basic auth. Error: {qb_error}"
-                                )
+                    qb = build_queryband(
+                        application=mcp.name,
+                        profile=profile_name,
+                        process_id=process_id,
+                        tool_name=tool_name,
+                        request_context=request_context,
+                        db_user=get_db_user(),
+                    )
+                    try:
+                        conn.execute(text(f"SET QUERY_BAND = '{qb}' FOR SESSION"))
+                        logger.debug(f"QueryBand set: {qb}")
+                        logger.debug(f"Tool request context: {request_context}")
+                    except Exception as qb_error:
+                        logger.debug(f"Could not set QueryBand: {qb_error}")
+                        # If in Basic auth, do not run the tool without proxying
+                        if request_context and str(getattr(request_context, "auth_scheme", "")).lower() == "basic":
+                            return format_error_response(
+                                f"Cannot run tool '{tool_name}': failed to set QueryBand for Basic auth. Error: {qb_error}"
+                            )
                     result = tool(conn, *args, **kwargs)
             else:
                 raw = tdconn_local.engine.raw_connection()
                 try:
-                    # Always attempt to set QueryBand when a request context is present
-                    ctx = get_context()
-                    request_context = ctx.get_state("request_context") if ctx else None
-                    if request_context is not None:
-                        qb = build_queryband(
-                            application=mcp.name,
-                            profile=profile_name,
-                            process_id=process_id,
-                            tool_name=tool_name,
-                            request_context=request_context,
-                        )
-                        try:
-                            cursor = raw.cursor()
-                            # Apply at session scope so it persists across statements
-                            cursor.execute(f"SET QUERY_BAND = '{qb}' FOR SESSION")
-                            cursor.close()
-                            logger.debug(f"QueryBand set: {qb}")
-                            logger.debug(f"Tool request context: {request_context}")
-                        except Exception as qb_error:
-                            logger.debug(f"Could not set QueryBand: {qb_error}")
-                            if str(getattr(request_context, "auth_scheme", "")).lower() == "basic":
-                                return format_error_response(
-                                    f"Cannot run tool '{tool_name}': failed to set QueryBand for Basic auth. Error: {qb_error}"
-                                )
+                    qb = build_queryband(
+                        application=mcp.name,
+                        profile=profile_name,
+                        process_id=process_id,
+                        tool_name=tool_name,
+                        request_context=request_context,
+                        db_user=get_db_user(),
+                    )
+                    try:
+                        cursor = raw.cursor()
+                        cursor.execute(f"SET QUERY_BAND = '{qb}' FOR SESSION")
+                        cursor.close()
+                        logger.debug(f"QueryBand set: {qb}")
+                        logger.debug(f"Tool request context: {request_context}")
+                    except Exception as qb_error:
+                        logger.debug(f"Could not set QueryBand: {qb_error}")
+                        if request_context and str(getattr(request_context, "auth_scheme", "")).lower() == "basic":
+                            return format_error_response(
+                                f"Cannot run tool '{tool_name}': failed to set QueryBand for Basic auth. Error: {qb_error}"
+                            )
                     result = tool(raw, *args, **kwargs)
                 finally:
                     raw.close()
             return format_text_response(result)
         except Exception as e:
-            logger.error(f"Error in execute_db_tool: {e}", exc_info=True, extra={"session_info": {"tool_name": tool_name}})
+            logger.error(
+                f"Error in execute_db_tool: {e}", exc_info=True, extra={"session_info": {"tool_name": tool_name}}
+            )
             return format_error_response(str(e))
-
-    def create_mcp_tool(
-        *,
-        executor_func=None,
-        signature,
-        inject_kwargs=None,
-        validate_required=False,
-        tool_name="mcp_tool",
-        tool_description=None,
-    ):
-        """
-        Unified factory for creating async MCP tool functions.
-
-        All tool functions use asyncio.to_thread to execute blocking database operations.
-
-        Args:
-            executor_func: Callable that will be executed. Should be a function that
-                          calls execute_db_tool with appropriate arguments.
-            signature: The inspect.Signature for the MCP tool function.
-            inject_kwargs: Dict of kwargs to inject when calling executor_func.
-            validate_required: Whether to validate required parameters are present.
-            tool_name: Name to assign to the MCP tool function.
-            tool_description: Description/docstring for the MCP tool function.
-
-        Returns:
-            An async function suitable for use as an MCP tool.
-        """
-        inject_kwargs = inject_kwargs or {}
-
-        # Extract annotations from signature parameters
-        annotations = {
-            name: param.annotation
-            for name, param in signature.parameters.items()
-            if param.annotation is not inspect.Parameter.empty
-        }
-
-        if validate_required:
-            # Build list of required parameter names (those without defaults)
-            required_params = [
-                name for name, param in signature.parameters.items()
-                if param.default is inspect.Parameter.empty
-            ]
-
-            async def _mcp_tool(**kwargs):
-                missing = [n for n in required_params if n not in kwargs]
-                if missing:
-                    raise ValueError(f"Missing required parameters: {missing}")
-                merged_kwargs = {**inject_kwargs, **kwargs}
-                return await asyncio.to_thread(executor_func, **merged_kwargs)
-        else:
-            async def _mcp_tool(**kwargs):
-                merged_kwargs = {**inject_kwargs, **kwargs}
-                return await asyncio.to_thread(executor_func, **merged_kwargs)
-
-        _mcp_tool.__name__ = tool_name
-        _mcp_tool.__signature__ = signature
-        _mcp_tool.__doc__ = tool_description
-        _mcp_tool.__annotations__ = annotations
-
-        return _mcp_tool
 
     def make_tool_wrapper(func):
         """Create an MCP-facing wrapper for a handle_* function.
@@ -443,8 +403,10 @@ def create_mcp_app(settings: Settings):
             removable.add("fs_config")
 
         params = [
-            p for name, p in sig.parameters.items()
-            if name not in removable and p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+            p
+            for name, p in sig.parameters.items()
+            if name not in removable
+            and p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
         ]
         new_sig = sig.replace(parameters=params)
 
@@ -461,15 +423,95 @@ def create_mcp_app(settings: Settings):
             tool_description=func.__doc__,
         )
 
+    # If progressive disclosure enabled, initialize context catalog and search/execute tools
+    if settings.progressive_disclosure:
+        context_catalog = ContextCatalog()
+        logger.info("Progressive disclosure mode enabled - tools will be registered in catalog")
+
+        # MCP tool to search for tools in the context catalog
+        @mcp.tool(name="search_tool")
+        def search_tool(
+            query: Annotated[str, "Tool name or keywords to search for. Leave empty to list all tools."] = "",
+            limit: Annotated[int, "Maximum number of results for approximate matches"] = 10,
+        ):
+            """Search for available tools - supports three modes based on the query.
+
+            THREE MODES:
+
+            1. LIST ALL (empty query):
+               - Returns: All tool names only (no details)
+               - Use: To discover what tools exist
+               - Example: search_tool("") or search_tool()
+
+            2. EXACT MATCH (query = exact tool name):
+               - Returns: Full documentation with complete parameters
+               - Use: To get complete details about a specific tool
+               - Example: search_tool("base_readQuery")
+
+            3. SEARCH (query = keywords):
+               - Returns: Short summaries of matching tools
+               - Use: To find tools related to a topic
+               - Example: search_tool("table list")
+
+            WORKFLOW:
+            1. List all tools: search_tool("")
+            2. Find relevant tools: search_tool("table")
+            3. Get full docs: search_tool("base_tableList")
+            4. Execute: execute_tool("base_tableList", {"database_name": "demo"})
+            """
+            try:
+                results = context_catalog.search_tools(query, limit)
+                return format_text_response(json.dumps({"status": "success", "results": results}, default=str))
+            except Exception as e:
+                logger.error(f"Error in search_tool: {e}", exc_info=True)
+                return format_error_response(str(e))
+
+        # MCP tool to execute a tool in the context catalog
+        @mcp.tool(name="execute_tool")
+        def execute_tool(
+            tool_name: Annotated[str, "Name of the tool to execute (from search_tool results)"],
+            arguments: Annotated[dict[str, Any] | None, "Dictionary of arguments to pass to the tool"] = None,
+        ):
+            """Execute a tool by name with provided arguments.
+
+            First use search_tool to find available tools, then execute them here.
+            The tool will validate arguments and execute the database operation.
+
+            Example: execute_tool("base_tableList", {"database_name": "demo"})
+            """
+            try:
+                if arguments is None:
+                    arguments = {}
+
+                # Validate tool exists
+                metadata = context_catalog.get_tool(tool_name)
+                if not metadata:
+                    return format_error_response(
+                        f"Tool '{tool_name}' not found. Use search_tool to find available tools."
+                    )
+
+                # Validate arguments
+                valid, error_msg = context_catalog.validate_arguments(tool_name, **arguments)
+                if not valid:
+                    return format_error_response(f"Invalid arguments: {error_msg}")
+
+                # Execute using existing infrastructure
+                return execute_db_tool(metadata.func, tool_name=tool_name, **arguments)
+            except Exception as e:
+                logger.error(f"Error in execute_tool: {e}", exc_info=True)
+                return format_error_response(str(e))
+
     # Register code tools via module loader
     module_loader = td.initialize_module_loader(config)
     if module_loader:
         all_functions = module_loader.get_all_functions()
+        registered_count = 0
+
         for name, func in all_functions.items():
             if not (inspect.isfunction(func) and name.startswith("handle_")):
                 continue
-            tool_name = name[len("handle_"):]
-            if not any(re.match(p, tool_name) for p in config.get('tool', [])):
+            tool_name = name[len("handle_") :]
+            if not any(re.match(p, tool_name) for p in config.get("tool", [])):
                 continue
             # Skip template tools (used for developer reference only)
             if tool_name.startswith("tmpl_"):
@@ -483,20 +525,43 @@ def create_mcp_app(settings: Settings):
             if tool_name.startswith("chat_") and not enable_chat:
                 logger.info(f"Skipping chat completion tool: {tool_name} (chat completion functionality disabled)")
                 continue
-            wrapped = make_tool_wrapper(func)
-            mcp.tool(name=tool_name, description=wrapped.__doc__)(wrapped)
-            logger.info(f"Created tool: {tool_name}")
-            logger.debug(f"Tool Docstring: {wrapped.__doc__}")
+
+            # Register tools for MCP access. We have two modes:
+            #    - Static registration: Individual MCP tools via @mcp.tool decorator, all listed in list_tools()
+            #    - Progressive disclosure: Tools registered in catalog, accessed via search_tool() and execute_tool()
+            if settings.progressive_disclosure:
+                # Determine category from tool prefix
+                category = tool_name.split("_")[0] if "_" in tool_name else "misc"
+                context_catalog.register_tool(func, category=category)
+                registered_count += 1
+                logger.debug(f"Registered tool in catalog: {tool_name} (category: {category})")
+
+                # Always register base_readQuery as a direct MCP tool (core tool)
+                if tool_name == "base_readQuery":
+                    wrapped = make_tool_wrapper(func)
+                    mcp.tool(name=tool_name, description=wrapped.__doc__)(wrapped)
+                    logger.info(f"Registered core tool as direct MCP tool: {tool_name}")
+            else:
+                # Static mode: register all tools as MCP tools
+                wrapped = make_tool_wrapper(func)
+                mcp.tool(name=tool_name, description=wrapped.__doc__)(wrapped)
+                registered_count += 1
+                logger.debug(f"Registered MCP tool: {tool_name}")
+
+        if settings.progressive_disclosure:
+            logger.info(f"Progressive disclosure: Registered {registered_count} tools in catalog")
+            logger.info("MCP exposes: search_tool, execute_tool, base_readQuery")
+        else:
+            logger.info(f"Static mode: Registered {registered_count} MCP tools")
     else:
         logger.warning("No module loader available, skipping code-defined tool registration")
 
     from teradata_mcp_server.tools.constants import TD_ANALYTIC_FUNCS as funcs
-    if enable_analytic_functions:
 
+    if enable_analytic_functions:
         tdml_processed_funcs = set(tdml.analytics.json_parser.json_store._JsonStore._get_function_list()[0].keys())
 
         for func_name in funcs:
-
             # Before adding the function, check if function is existed or not.
             # Connection is not mandatory for MCP server. If connection is not there, then
             # functions can not be added.
@@ -520,15 +585,15 @@ def create_mcp_app(settings: Settings):
             func_args_str = get_anlytic_function_signature(func_params)
 
             full_func_name = "tdml_" + func_name
+            init_doc = func_obj.__init__.__doc__  # type: ignore[misc]
             func_str = get_dynamic_function_definition().format(
                 analytic_function=full_func_name,
-                doc_string=func_obj.__init__.__doc__,
+                doc_string=init_doc,
                 func_args_str=func_args_str,
-                tables_to_df=json.dumps(inp_data)
+                tables_to_df=json.dumps(inp_data),
             )
 
-            doc_string = convert_tdml_docstring_to_mcp_docstring(
-                func_obj.__init__.__doc__, additional_args_docs)
+            doc_string = convert_tdml_docstring_to_mcp_docstring(init_doc, additional_args_docs)
 
             # Execute the generated function definition in the global scope.
             # Global scope will have all other functions. So reference to other functions will work.
@@ -540,9 +605,13 @@ def create_mcp_app(settings: Settings):
             mcp.tool(name=full_func_name, description=doc_string)(func)
 
     # Load YAML-defined tools/resources/prompts from config directory
-    custom_object_files = [config_dir / file for file in os.listdir(config_dir) if file.endswith("_objects.yml")]
+    custom_object_files: list[Any] = [
+        config_dir / file for file in os.listdir(config_dir) if file.endswith("_objects.yml")
+    ]
     if custom_object_files:
-        logger.info(f"Found {len(custom_object_files)} custom object files in config directory: {[f.name for f in custom_object_files]}")
+        logger.info(
+            f"Found {len(custom_object_files)} custom object files in config directory: {[f.name for f in custom_object_files]}"
+        )
     if module_loader and profile_name:
         profile_yml_files = module_loader.get_required_yaml_paths()
         custom_object_files.extend(profile_yml_files)
@@ -554,7 +623,7 @@ def create_mcp_app(settings: Settings):
             for subpkg in tools_pkg_root.iterdir():
                 if subpkg.is_dir():
                     for entry in subpkg.iterdir():
-                        if entry.is_file() and entry.name.endswith('.yml'):
+                        if entry.is_file() and entry.name.endswith(".yml"):
                             tool_yml_resources.append(entry)
         custom_object_files.extend(tool_yml_resources)
         logger.info(f"Loading all YAML files (no specific profile): {len(tool_yml_resources)} files")
@@ -564,11 +633,11 @@ def create_mcp_app(settings: Settings):
     for file in custom_object_files:
         try:
             if hasattr(file, "read_text"):
-                text = file.read_text(encoding='utf-8')
+                file_text = file.read_text(encoding="utf-8")
             else:
-                with open(file, encoding='utf-8', errors='replace') as f:
-                    text = f.read()
-            loaded = yaml.safe_load(text)
+                with open(file, encoding="utf-8", errors="replace") as f:
+                    file_text = f.read()
+            loaded = yaml.safe_load(file_text)
             if loaded:
                 custom_objects.update(loaded)
         except Exception as e:
@@ -577,26 +646,28 @@ def create_mcp_app(settings: Settings):
     # Prompt helpers
     def make_custom_prompt(prompt_name: str, prompt: str, desc: str, parameters: dict | None = None):
         if parameters is None or len(parameters) == 0:
+
             async def _dynamic_prompt():
                 return Message(role="user", content=TextContent(type="text", text=prompt))
+
             _dynamic_prompt.__name__ = prompt_name
             return mcp.prompt(description=desc)(_dynamic_prompt)
         else:
             param_objects: list[inspect.Parameter] = []
             annotations: dict[str, Any] = {}
             for param_name, meta in parameters.items():
-                meta = meta or {}
-                type_hint_raw = meta.get("type_hint", "str")
+                meta_val = meta or {}
+                type_hint_raw = meta_val.get("type_hint", "str")
                 type_hint = resolve_type_hint(type_hint_raw)
-                required = meta.get("required", True)
-                desc_txt = meta.get("description", "")
+                required = meta_val.get("required", True)
+                desc_txt = meta_val.get("description", "")
                 # Get the type name for display
-                type_name = type_hint.__name__ if hasattr(type_hint, '__name__') else str(type_hint_raw)
+                type_name = type_hint.__name__ if hasattr(type_hint, "__name__") else str(type_hint_raw)
                 desc_txt += f" (type: {type_name})"
-                if required and "default" not in meta:
+                if required and "default" not in meta_val:
                     default_value = Field(..., description=desc_txt)
                 else:
-                    default_value = Field(default=meta.get("default", None), description=desc_txt)
+                    default_value = Field(default=meta_val.get("default", None), description=desc_txt)
                 param_objects.append(
                     inspect.Parameter(
                         param_name,
@@ -607,58 +678,124 @@ def create_mcp_app(settings: Settings):
                 )
                 annotations[param_name] = type_hint
             sig = inspect.Signature(param_objects)
-            async def _dynamic_prompt(**kwargs):
-                missing = [name for name, meta in parameters.items() if (meta or {}).get("required", True) and name not in kwargs]
+
+            async def _dynamic_prompt_with_params(**kwargs: Any):  # type: ignore[no-untyped-def]
+                missing = [
+                    name
+                    for name, meta in parameters.items()
+                    if (meta or {}).get("required", True) and name not in kwargs
+                ]
                 if missing:
                     raise ValueError(f"Missing parameters: {missing}")
                 formatted_prompt = prompt.format(**kwargs)
                 return Message(role="user", content=TextContent(type="text", text=formatted_prompt))
-            _dynamic_prompt.__signature__ = sig
-            _dynamic_prompt.__annotations__ = annotations
-            _dynamic_prompt.__name__ = prompt_name
-            return mcp.prompt(description=desc)(_dynamic_prompt)
 
-    def make_custom_query_tool(name, tool):
+            _dynamic_prompt_with_params.__signature__ = sig  # type: ignore[attr-defined]
+            _dynamic_prompt_with_params.__annotations__ = annotations
+            _dynamic_prompt_with_params.__name__ = prompt_name
+            return mcp.prompt(description=desc)(_dynamic_prompt_with_params)
+
+    def create_custom_query_handler(name, tool):
+        """
+        Create a handler function for a custom query tool (from YAML).
+
+        This creates a handle_* style function that can be registered in the catalog
+        or wrapped as an MCP tool, just like Python-defined tools.
+
+        Returns: (handler_function, description, signature)
+        """
         description = tool.get("description", "")
         param_defs = tool.get("parameters", {})
         parameters = []
-        if param_defs:
-            description += "\nArguments:"
+
+        # Build docstring with parameters
+        docstring_parts = [description]
+        if True:  # Always show Arguments section to include persist
+            docstring_parts.append("\nArguments:")
+            for param_name, p in param_defs.items():
+                param_desc = p.get("description", "")
+                docstring_parts.append(f"  {param_name} - {param_desc}")
+            # Add persist parameter documentation
+            docstring_parts.append(
+                "  persist - If True, materializes result as a volatile table and returns table name"
+            )
+
+        # Add required 'conn' parameter at the beginning (for catalog compatibility)
+        # Connection annotation is required so execute_db_tool injects a SQLAlchemy connection
+        parameters.append(
+            inspect.Parameter("conn", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Connection)
+        )
+
+        # Add tool_name parameter (internal, will be filtered out)
+        parameters.append(inspect.Parameter("tool_name", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None))
+
+        # Add persist parameter (for materializing results as volatile table)
+        persist_description = "If True, materializes result as a volatile table and returns table name"
+        parameters.append(
+            inspect.Parameter(
+                "persist",
+                kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                default=False,
+                annotation=Annotated[bool, persist_description],
+            )
+        )
+
+        # Add custom parameters - separate required and optional
+        required_params = []
+        optional_params = []
+
         for param_name, p in param_defs.items():
             param_description = p.get("description", "")
             type_hint_raw = p.get("type_hint", "str")
-            type_hint = resolve_type_hint(type_hint_raw)  # Convert type string to actual type class
+            type_hint = resolve_type_hint(type_hint_raw)
             annotation = Annotated[type_hint, param_description] if param_description else type_hint
-            default = p.get("default", inspect.Parameter.empty)  # inspect.Parameter.empty if p.get("required", True) else p.get("default", None)
+            default = p.get("default", inspect.Parameter.empty)
 
-            parameters.append(
-                inspect.Parameter(param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=default, annotation=annotation)
+            param = inspect.Parameter(
+                param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=default, annotation=annotation
             )
 
-            # Append parameter name and description to function description
-            # Disabled as already included in Annotations (consider introducing a way to toggle this if clients can't see annotations)
-            if False:
-                type_name = type_hint.__name__ if hasattr(type_hint, '__name__') else str(type_hint_raw)
-                description += f"\n    * {param_name}"
-                description += f": {param_description}" if param_description else ""
-                description += f" (type: {type_name})"
-        sig = inspect.Signature(parameters)
+            if default is inspect.Parameter.empty:
+                required_params.append(param)
+            else:
+                optional_params.append(param)
 
-        # Create executor function that will be run in thread
-        def executor(**kwargs):
-            return execute_db_tool(td.handle_base_readQuery, tool["sql"], tool_name=name, **kwargs)
+        # Build signature with correct order: conn, required_custom_params, tool_name, persist (both with defaults), optional_custom_params
+        sig = inspect.Signature([parameters[0]] + required_params + [parameters[1], parameters[2]] + optional_params)
 
-        tool_func = create_mcp_tool(
-            executor_func=executor,
-            signature=sig,
-            validate_required=True,
-            tool_name=name,
-        )
-        return mcp.tool(name=name, description=description)(tool_func)
+        # Create the handler function (like handle_* functions)
+        def handler(conn: Connection, tool_name=None, **kwargs):
+            """Custom YAML-defined query tool handler."""
+            sql = tool["sql"]
+            # Support Python format-string style {param} for identifier substitution (e.g. table names,
+            # which cannot be SQLAlchemy bind parameters). When {…} placeholders are detected, format
+            # the SQL template first; otherwise fall through to :param bind-parameter style.
+            if "{" in sql:
+                db_name = kwargs.get("database_name") or ""
+                tbl_name = kwargs.get("table_name") or ""
+                fmt = {k: (v if v is not None else "") for k, v in kwargs.items()}
+                fmt["table_ref"] = f"{db_name}.{tbl_name}" if db_name else tbl_name
+                format_keys = set(re.findall(r"\{(\w+)\}", sql))
+                # table_ref is a synthetic key built from database_name + table_name; exclude both
+                # source params when table_ref was used, so they aren't passed as SQL bind params.
+                if "table_ref" in format_keys:
+                    format_keys.update({"database_name", "table_name"})
+                sql = sql.format_map(fmt)
+                bind_kwargs = {k: v for k, v in kwargs.items() if k not in format_keys}
+                return td.handle_base_readQuery(conn, sql, tool_name=tool_name or name, **bind_kwargs)
+            return td.handle_base_readQuery(conn, sql, tool_name=tool_name or name, **kwargs)
+
+        # Set metadata on the handler
+        handler.__name__ = f"handle_{name}"
+        handler.__doc__ = "\n".join(docstring_parts)
+        handler.__signature__ = sig
+
+        return handler
 
     """
     Generate a SQL generation function that returns a query string for a given cube definition and tool parameters (grain, measures, filters...).
     """
+
     def generate_cube_query_tool(name, cube):
         """
         Generate a function to create aggregation SQL from a cube definition.
@@ -666,7 +803,10 @@ def create_mcp_app(settings: Settings):
         :param cube: The cube definition
         :return: A SQL query string generator function taking dimensions and measures as comma-separated strings.
         """
-        def _cube_query_tool(dimensions: str, measures: str, dim_filters: str, meas_filters: str, order_by: str, top: int) -> str:
+
+        def _cube_query_tool(
+            dimensions: str, measures: str, dim_filters: str, meas_filters: str, order_by: str, top: int
+        ) -> str:
             """
             Generate a SQL query string for the cube using the specified dimensions and measures.
 
@@ -684,10 +824,9 @@ def create_mcp_app(settings: Settings):
             dim_list_raw = [d.strip() for d in dimensions.split(",") if d.strip()]
             mes_list_raw = [m.strip() for m in measures.split(",") if m.strip()]
             # Get dimension expressions from dictionary
-            dim_list = ",\n  ".join([
-                cube["dimensions"][d]["expression"] if d in cube["dimensions"] else d
-                for d in dim_list_raw
-            ])
+            dim_list = ",\n  ".join(
+                [cube["dimensions"][d]["expression"] if d in cube["dimensions"] else d for d in dim_list_raw]
+            )
             mes_lines = []
             for measure in mes_list_raw:
                 mdef = cube["measures"].get(measure)
@@ -718,12 +857,13 @@ def create_mcp_app(settings: Settings):
                 ";"
             )
             return sql
+
         return _cube_query_tool
 
     def make_custom_cube_tool(name, cube):
         # Build allowed values and examples FIRST so we can use them in annotations
-        dimensions_dict = cube.get('dimensions', {})
-        measures_dict = cube.get('measures', {})
+        dimensions_dict = cube.get("dimensions", {})
+        measures_dict = cube.get("measures", {})
 
         # Build dimension list with descriptions
         dim_list = [f"{n}: {d.get('description', '')}" for n, d in dimensions_dict.items()]
@@ -736,17 +876,19 @@ def create_mcp_app(settings: Settings):
         measures_desc = f"Comma-separated measure names to aggregate. Allowed: {', '.join(meas_names)}"
 
         # Build filter examples
-        dim_examples = [f"{d} {e}" for d, e in zip(dim_names[:2], ["= 'value'", "in ('X', 'Y', 'Z')"])] if dim_names else []
-        dim_example = ' AND '.join(dim_examples) if dim_examples else "dimension_name = 'value'"
+        dim_examples = (
+            [f"{d} {e}" for d, e in zip(dim_names[:2], ["= 'value'", "in ('X', 'Y', 'Z')"])] if dim_names else []
+        )
+        dim_example = " AND ".join(dim_examples) if dim_examples else "dimension_name = 'value'"
         dim_filters_desc = f"Filter expression to apply to dimensions. Valid dimension names: [{', '.join(dim_names)}]. Example: {dim_example}"
 
         meas_examples = [f"{m} {e}" for m, e in zip(meas_names[:2], ["> 1000", "= 100"])] if meas_names else []
-        meas_example = ' AND '.join(meas_examples) if meas_examples else "measure_name > 1000"
+        meas_example = " AND ".join(meas_examples) if meas_examples else "measure_name > 1000"
         meas_filters_desc = f"Filter expression to apply to computed measures. Valid measure names: [{', '.join(meas_names)}]. Example: {meas_example}"
 
         # Build order example
         order_examples = [f"{d} {e}" for d, e in zip(dim_names[:2], ["ASC", "DESC"])] if dim_names else []
-        order_example = ', '.join(order_examples) if order_examples else "dimension_name ASC"
+        order_example = ", ".join(order_examples) if order_examples else "dimension_name ASC"
         order_by_desc = f"Order expression on dimensions and measures. Example: {order_example}"
 
         # Now build custom parameters
@@ -760,7 +902,9 @@ def create_mcp_app(settings: Settings):
             annotation = Annotated[type_hint, param_description] if param_description else type_hint
             default = p.get("default", inspect.Parameter.empty)
             parameters.append(
-                inspect.Parameter(param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=default, annotation=annotation)
+                inspect.Parameter(
+                    param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=default, annotation=annotation
+                )
             )
             # Track required custom params for validation
             if default is inspect.Parameter.empty:
@@ -769,18 +913,36 @@ def create_mcp_app(settings: Settings):
         # Build the combined signature: fixed cube parameters + custom parameters
         # Fixed cube parameters with detailed annotated descriptions
         cube_params = [
-            inspect.Parameter("dimensions", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                            annotation=Annotated[str, dimensions_desc]),
-            inspect.Parameter("measures", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                            annotation=Annotated[str, measures_desc]),
-            inspect.Parameter("dim_filters", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default="",
-                            annotation=Annotated[str, dim_filters_desc]),
-            inspect.Parameter("meas_filters", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default="",
-                            annotation=Annotated[str, meas_filters_desc]),
-            inspect.Parameter("order_by", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default="",
-                            annotation=Annotated[str, order_by_desc]),
-            inspect.Parameter("top", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None,
-                            annotation=Annotated[int, "Limit the number of rows returned (positive integer)"]),
+            inspect.Parameter(
+                "dimensions", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Annotated[str, dimensions_desc]
+            ),
+            inspect.Parameter(
+                "measures", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Annotated[str, measures_desc]
+            ),
+            inspect.Parameter(
+                "dim_filters",
+                kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                default="",
+                annotation=Annotated[str, dim_filters_desc],
+            ),
+            inspect.Parameter(
+                "meas_filters",
+                kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                default="",
+                annotation=Annotated[str, meas_filters_desc],
+            ),
+            inspect.Parameter(
+                "order_by",
+                kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                default="",
+                annotation=Annotated[str, order_by_desc],
+            ),
+            inspect.Parameter(
+                "top",
+                kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                default=None,
+                annotation=Annotated[int, "Limit the number of rows returned (positive integer)"],
+            ),
         ]
 
         # Separate required and optional custom parameters
@@ -812,10 +974,10 @@ def create_mcp_app(settings: Settings):
                     dim_filters=dim_filters,
                     meas_filters=meas_filters,
                     order_by=order_by,
-                    top=top
+                    top=top,
                 ),
                 tool_name=name,
-                **kwargs
+                **kwargs,
             )
 
         # Build detailed dimension and measure lists for docstring
@@ -825,11 +987,11 @@ def create_mcp_app(settings: Settings):
         # Build custom parameters documentation
         custom_param_lines = []
         for param_name, p in param_defs.items():
-            param_desc = p.get('description', '')
-            type_hint_raw = p.get('type_hint', 'str')
+            param_desc = p.get("description", "")
+            type_hint_raw = p.get("type_hint", "str")
             type_hint = resolve_type_hint(type_hint_raw)
-            param_type = type_hint.__name__ if hasattr(type_hint, '__name__') else str(type_hint_raw)
-            is_required = p.get('default', inspect.Parameter.empty) is inspect.Parameter.empty
+            param_type = type_hint.__name__ if hasattr(type_hint, "__name__") else str(type_hint_raw)
+            is_required = p.get("default", inspect.Parameter.empty) is inspect.Parameter.empty
             required_text = " (required)" if is_required else " (optional)"
             custom_param_lines.append(f"    * {param_name} ({param_type}){required_text}: {param_desc}")
 
@@ -839,7 +1001,7 @@ def create_mcp_app(settings: Settings):
             custom_params_section = "\n" + chr(10).join(custom_param_lines) + "\n"
 
         doc_string = f"""
-{cube.get('description', '')}
+{cube.get("description", "")}
 This is an OLAP cube tool that presents selected measures at a specified level of aggregation and filtering.
 
 Expected inputs:
@@ -862,7 +1024,7 @@ Returns:
             executor_func=executor,
             signature=sig,
             validate_required=False,  # Validation happens inside executor for custom params
-            tool_name='get_cube_' + name,
+            tool_name="get_cube_" + name,
             tool_description=doc_string,
         )
         return mcp.tool(name=name, description=doc_string)(tool_func)
@@ -871,27 +1033,230 @@ Returns:
     custom_terms: list[tuple[str, Any, str]] = []
     for name, obj in custom_objects.items():
         obj_type = obj.get("type")
-        if obj_type == "tool" and any(re.match(pattern, name) for pattern in config.get('tool',[])):
-            fn = make_custom_query_tool(name, obj)
-            globals()[name] = fn
-            logger.info(f"Created tool: {name}")
-        elif obj_type == "prompt"  and any(re.match(pattern, name) for pattern in config.get('prompt',[])):
+
+        # Handle custom query tools (from YAML)
+        if obj_type == "tool" and any(re.match(pattern, name) for pattern in config.get("tool", [])):
+            # Create handler function (like handle_* functions)
+            handler = create_custom_query_handler(name, obj)
+
+            # Register according to mode (same pattern as Python tools)
+            if settings.progressive_disclosure:
+                # Determine category from tool prefix
+                category = name.split("_")[0] if "_" in name else "custom"
+                context_catalog.register_tool(handler, category=category)
+                logger.info(f"Registered custom YAML tool in catalog: {name} (category: {category})")
+            else:
+                # Static mode: wrap and register as MCP tool
+                wrapped = make_tool_wrapper(handler)
+                mcp.tool(name=name, description=wrapped.__doc__)(wrapped)
+                logger.info(f"Registered custom YAML tool as MCP tool: {name}")
+
+        elif obj_type == "prompt" and any(re.match(pattern, name) for pattern in config.get("prompt", [])):
             fn = make_custom_prompt(name, obj["prompt"], obj.get("description", ""), obj.get("parameters", {}))
             globals()[name] = fn
             logger.info(f"Created prompt: {name}")
-        elif obj_type == "cube"  and any(re.match(pattern, name) for pattern in config.get('tool',[])):
+
+        elif obj_type == "cube" and any(re.match(pattern, name) for pattern in config.get("tool", [])):
+            # TODO: Cube tools also need the same treatment for progressive disclosure
+            # For now, keeping them as direct MCP tools (can be addressed later if needed)
             fn = make_custom_cube_tool(name, obj)
             globals()[name] = fn
-            logger.info(f"Created cube: {name}")
-        elif obj_type == "glossary"  and any(re.match(pattern, name) for pattern in config.get('resource',[])):
+            logger.info(f"Created cube: {name} (always as MCP tool)")
+
+        elif obj_type == "glossary" and any(re.match(pattern, name) for pattern in config.get("resource", [])):
             custom_glossary = {k: v for k, v in obj.items() if k != "type"}
             logger.info(f"Added custom glossary entries for: {name}.")
+
         else:
-            logger.info(f"Type {obj_type if obj_type else ''} for custom object {name} is {'unknown' if obj_type else 'undefined'}.")
+            logger.info(
+                f"Type {obj_type if obj_type else ''} for custom object {name} is {'unknown' if obj_type else 'undefined'}."
+            )
 
         for section in ("measures", "dimensions"):
-            if section in obj and  any(re.match(pattern, name) for pattern in config.get('tool',[])):
+            if section in obj and any(re.match(pattern, name) for pattern in config.get("tool", [])):
                 custom_terms.extend((term, details, name) for term, details in obj[section].items())
+
+    def create_registry_handler(tool_name, tool_def):
+        """
+        Create a handler function for a registry tool (from database).
+
+        This creates a handle_* style function that can be registered in the catalog
+        or wrapped as an MCP tool, just like Python-defined tools.
+
+        Returns: handler function with proper signature and metadata
+        """
+        from teradata_mcp_server.tools.registry.registry_tools import build_registry_sql
+
+        description = tool_def.get("description", "")
+        param_defs = tool_def.get("parameters", {})
+
+        # Build docstring with parameters
+        docstring_parts = [description]
+        if param_defs:
+            docstring_parts.append("\nArguments:")
+            for param_name, p in sorted(param_defs.items(), key=lambda x: x[1].get("position", 0)):
+                param_desc = p.get("description", "")
+                docstring_parts.append(f"  {param_name} - {param_desc}")
+        docstring_parts.append(f"\nRegistry tool: {tool_def['object_type']} {tool_def['db_object']}")
+        docstring_parts.append("Note: Registry tools do not support the 'persist' parameter")
+
+        # Add required 'conn' parameter at the beginning (for catalog compatibility)
+        parameters = [inspect.Parameter("conn", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD)]
+
+        # Add tool_name parameter (internal, will be filtered out)
+        parameters.append(inspect.Parameter("tool_name", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None))
+
+        # Add registry parameters - separate required and optional
+        required_params = []
+        optional_params = []
+
+        for param_name, p in sorted(param_defs.items(), key=lambda x: x[1].get("position", 0)):
+            param_description = p.get("description", "")
+            type_hint = p.get("type_hint", str)
+            annotation = Annotated[type_hint, param_description] if param_description else type_hint
+            default = inspect.Parameter.empty if p.get("required", True) else p.get("default", None)
+
+            param = inspect.Parameter(
+                param_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, default=default, annotation=annotation
+            )
+
+            if default is inspect.Parameter.empty:
+                required_params.append(param)
+            else:
+                optional_params.append(param)
+
+        # Build signature: conn, required_params, tool_name (with default), optional_params
+        sig = inspect.Signature([parameters[0]] + required_params + [parameters[1]] + optional_params)
+
+        # Create the handler function (like handle_* functions)
+        def handler(conn, tool_name=None, **kwargs):
+            """Registry-defined database tool handler."""
+            from teradata_mcp_server.tools.registry.registry_tools import (
+                build_registry_sql_with_values,
+                cast_parameters,
+            )
+
+            logger.info(f"[REGISTRY_HANDLER] Starting handler for tool '{tool_name}'")
+            logger.info(f"[REGISTRY_HANDLER] Received kwargs: {kwargs}")
+
+            # Extract tool parameters (excluding special params)
+            # Note: persist is not supported for registry tools
+            special_params = {"tool_name"}
+            tool_params = {k: v for k, v in kwargs.items() if k not in special_params}
+            logger.info(f"[REGISTRY_HANDLER] Tool params before casting: {tool_params}")
+
+            # Cast parameters to their correct types based on tool definition
+            # This ensures values are properly typed before formatting into SQL
+            cast_params = cast_parameters(tool_params, tool_def)
+            logger.info(f"[REGISTRY_HANDLER] Tool params after casting: {cast_params}")
+
+            # Build SQL with values formatted as literals
+            # This approach is necessary because SQLAlchemy parameter binding doesn't
+            # preserve type information correctly with the Teradata driver
+            sql = build_registry_sql_with_values(tool_def, cast_params)
+            logger.info(f"[REGISTRY_HANDLER] Generated SQL: {sql}")
+
+            # Execute the SQL without parameters (values already in SQL)
+            # Note: persist=False for registry tools (not supported)
+            return execute_db_tool(
+                td.handle_base_readQuery,
+                sql,  # SQL string with values already formatted
+                tool_name=tool_name or tool_name,
+                persist=False,  # Registry tools do not support persist
+                # No **kwargs here - values are already in the SQL string
+            )
+
+        # Set metadata on the handler
+        handler.__name__ = f"handle_{tool_name}"
+        handler.__doc__ = "\n".join(docstring_parts)
+        handler.__signature__ = sig
+
+        return handler
+
+    # Registry tools: Load tools from database registry incrementally
+    registry_db = config.get("registry")
+
+    def load_registry_tools(last_load_ts: str | None = None) -> str | None:
+        """
+        Load registry tools incrementally based on last load timestamp.
+
+        Args:
+            last_load_ts: Timestamp of last load (None for initial load)
+
+        Returns:
+            New timestamp to use as watermark for next refresh, or None if no tools loaded
+        """
+        if not registry_db:
+            logger.debug("No database registry configured")
+            return None
+
+        tdconn_local = get_tdconn()
+        if not getattr(tdconn_local, "engine", None):
+            logger.warning("No database engine available - cannot load registry tools")
+            return None
+
+        if last_load_ts:
+            logger.info(f"Loading registry tools from database '{registry_db}' (incremental since {last_load_ts})")
+        else:
+            logger.info(f"Loading registry tools from database '{registry_db}' (initial load)")
+
+        try:
+            from teradata_mcp_server.tools.registry import RegistryLoader
+            from teradata_mcp_server.tools.registry.registry_tools import build_registry_sql
+
+            loader = RegistryLoader(tdconn_local, registry_db, last_load_ts=last_load_ts)
+            registry_tools, current_ts = loader.load_tools()
+
+            if not registry_tools:
+                # No new tools, but still return current timestamp for next refresh
+                return current_ts
+
+            logger.info(
+                f"Found {len(registry_tools)} {'new/updated ' if last_load_ts else ''}tools in registry, registering..."
+            )
+
+            for tool_name, tool_def in registry_tools.items():
+                logger.info(
+                    f"[REGISTRY] Processing tool {tool_name} ({tool_def['object_type']} {tool_def['db_object']})"
+                )
+
+                # Create handler function (like handle_* functions)
+                handler = create_registry_handler(tool_name, tool_def)
+
+                # Register according to mode (SAME AS PYTHON/YAML TOOLS)
+                if settings.progressive_disclosure:
+                    # Determine category (could enhance registry to include category field)
+                    category = "registry"
+                    context_catalog.register_tool(handler, category=category)
+                    logger.info(
+                        f"[REGISTRY] Registered in catalog: {tool_name} (category: {category}, type: {tool_def['object_type']}, object: {tool_def['db_object']})"
+                    )
+                else:
+                    # Static mode: wrap and register as MCP tool
+                    wrapped = make_tool_wrapper(handler)
+                    mcp.tool(name=tool_name, description=wrapped.__doc__)(wrapped)
+                    logger.info(
+                        f"[REGISTRY] Registered as MCP tool: {tool_name} (type: {tool_def['object_type']}, object: {tool_def['db_object']}, registered: {tool_def.get('registered_ts')})"
+                    )
+
+            logger.info(f"Successfully registered {len(registry_tools)} registry tools")
+
+            return current_ts
+
+        except Exception as e:
+            logger.error(f"Failed to load registry tools: {e}", exc_info=True)
+            return None
+
+    # Set the registry load callback in middleware for on_initialize hook
+    middleware.registry_load_callback = load_registry_tools
+
+    # Try initial load of registry tools if DB connection is available
+    # This ensures tools are available immediately for HTTP transport
+    tdconn_check = get_tdconn()
+    if getattr(tdconn_check, "engine", None) and registry_db:
+        initial_ts = load_registry_tools()
+        if initial_ts:
+            middleware.registry_tools_loaded_ts = initial_ts
 
     # Enrich glossary
     for term, details, tool_name in custom_terms:
@@ -905,17 +1270,18 @@ Returns:
                 custom_glossary[term_key]["tools"].append(tool_name)
 
     if custom_glossary:
+
         @mcp.resource("glossary://all")
-        def get_glossary() -> dict:
+        def get_glossary() -> dict[str, Any]:
             return custom_glossary
 
         @mcp.resource("glossary://definitions")
-        def get_glossary_definitions() -> dict:
+        def get_glossary_definitions() -> dict[str, Any]:
             return {term: details["definition"] for term, details in custom_glossary.items()}
 
         @mcp.resource("glossary://term/{term_name}")
-        def get_glossary_term(term_name: str)  -> dict:
-            term = custom_glossary.get(term_name)
+        def get_glossary_term(term_name: str) -> dict[str, Any]:
+            term: dict[str, Any] | None = custom_glossary.get(term_name)
             if term:
                 return term
             else:

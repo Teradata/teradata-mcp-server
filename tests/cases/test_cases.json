@@ -50,6 +50,38 @@
           "database_name": "DBC",
           "obj_name": "TablesV"
         }
+      },
+      {
+        "name": "wildcard_obj_name_in_database",
+        "parameters": {
+          "database_name": "DBC",
+          "obj_name": "%"
+        }
+      },
+      {
+        "name": "like_pattern_obj_name",
+        "parameters": {
+          "database_name": "DBC",
+          "obj_name": "Tables%"
+        }
+      },
+      {
+        "name": "case_insensitive_obj_name",
+        "parameters": {
+          "database_name": "dbc",
+          "obj_name": "tablesv"
+        }
+      },
+      {
+        "name": "view_columns",
+        "parameters": {
+          "database_name": "DBC",
+          "obj_name": "DatabasesV"
+        }
+      },
+      {
+        "name": "no_parameters_defaults_to_all",
+        "parameters": {}
       }
     ],
     "base_tablePreview": [
@@ -77,17 +109,39 @@
     ],
     "dba_tableSpace": [
       {
-        "name": "system_table_space",
+        "name": "database_and_table",
         "parameters": {
           "database_name": "DBC",
           "table_name": "Tables"
         }
       },
       {
-        "name": "all_tables_space",
+        "name": "all_tables",
+        "parameters": {}
+      },
+      {
+        "name": "database_only",
         "parameters": {
-          "database_name": "DBC",
-          "table_name": "Tables"
+          "database_name": "DBC"
+        }
+      },
+      {
+        "name": "table_name_only",
+        "parameters": {
+          "table_name": "TVM"
+        }
+      },
+      {
+        "name": "top_n_tables",
+        "parameters": {
+          "top_n": 5
+        }
+      },
+      {
+        "name": "exclude_system_tables",
+        "parameters": {
+          "top_n": 5,
+          "exclude_system": "Y"
         }
       }
     ],
@@ -101,7 +155,7 @@
       {
         "name": "dbc_user_sessions",
         "parameters": {
-          "user_name": "DBC"
+          "user_name": "data_scientist"
         }
       }
     ],
@@ -111,21 +165,39 @@
         "parameters": {
           "user_name": "DBC"
         }
+      },
+      {
+        "name": "syslib_user_permissions",
+        "parameters": {
+          "user_name": "SYSLIB"
+        }
       }
     ],
     "sec_rolePermissions": [
       {
-        "name": "public_role_permissions",
+        "name": "demo_user_role_permissions",
         "parameters": {
-          "role_name": "PUBLIC"
+          "role_name": "demo_user"
+        }
+      },
+      {
+        "name": "tdwm_user_role_permissions",
+        "parameters": {
+          "role_name": "tdwm"
         }
       }
     ],
     "sec_userRoles": [
       {
-        "name": "dbc_user_roles",
+        "name": "admin_roles",
         "parameters": {
-          "user_name": "DBC"
+          "user_name": "Admin"
+        }
+      },
+      {
+        "name": "td_prefixed_roles",
+        "parameters": {
+          "user_name": "TD"
         }
       }
     ],
@@ -156,6 +228,12 @@
           "database_name": "DBC",
           "table_name": "Tables"
         }
+      },
+      {
+        "name": "fully_qualified_table_name",
+        "parameters": {
+          "table_name": "DBC.DatabasesV"
+        }
       }
     ],
     "qlty_distinctCategories": [
@@ -166,6 +244,14 @@
           "table_name": "Tables",
           "column_name": "TableKind"
         }
+      },
+      {
+        "name": "perm_type_categories",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "DatabasesV",
+          "column_name": "PermType"
+        }
       }
     ],
     "qlty_columnSummary": [
@@ -174,6 +260,83 @@
         "parameters": {
           "database_name": "DBC",
           "table_name": "Tables"
+        }
+      },
+      {
+        "name": "numeric_table_column_summary",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "DatabasesV"
+        }
+      }
+    ],
+    "qlty_negativeValues": [
+      {
+        "name": "check_negative_values",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "Tables"
+        }
+      },
+      {
+        "name": "check_negative_numeric_columns",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "DatabasesV"
+        }
+      }
+    ],
+    "qlty_rowsWithMissingValues": [
+      {
+        "name": "rows_missing_values",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "databasesV",
+          "column_name": "CommentString"
+        }
+      },
+      {
+        "name": "tables_missing_comment",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "Tables",
+          "column_name": "CommentString"
+        }
+      }
+    ],
+    "qlty_standardDeviation": [
+      {
+        "name": "column_std_dev",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "databasesV",
+          "column_name": "PermSpace"
+        }
+      },
+      {
+        "name": "max_perm_std_dev",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "databasesV",
+          "column_name": "MaxPerm"
+        }
+      }
+    ],
+    "qlty_univariateStatistics": [
+      {
+        "name": "column_statistics",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "databasesV",
+          "column_name": "PermSpace"
+        }
+      },
+      {
+        "name": "max_perm_statistics",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "databasesV",
+          "column_name": "MaxPerm"
         }
       }
     ],
@@ -219,7 +382,7 @@
         "name": "system_table_affinity",
         "parameters": {
           "database_name": "DBC",
-          "obj_name": "TablesV"
+          "obj_name": "DBQLogTbl"
         }
       }
     ],
@@ -238,26 +401,73 @@
     "dba_featureUsage": [
       {
         "name": "get_feature_usage",
-        "parameters": {}
+        "parameters": {
+          "start_date": "2026-01-01",
+          "end_date": "2026-04-03"
+        }
       }
     ],
     "dba_flowControl": [
       {
         "name": "get_flow_control",
-        "parameters": {}
+        "parameters": {
+          "start_date": "2026-01-01",
+          "end_date": "2026-04-03"
+        }
       }
     ],
     "dba_resusageSummary": [
       {
         "name": "system_resource_usage",
         "parameters": {}
+      },
+      {
+        "name": "resource_usage_30_days",
+        "parameters": {
+          "no_days": 30
+        }
+      },
+      {
+        "name": "resource_usage_by_workload_type",
+        "parameters": {
+          "workloadType": "QUERY",
+          "no_days": 7
+        }
+      },
+      {
+        "name": "resource_usage_by_complexity",
+        "parameters": {
+          "workloadComplexity": "Answers",
+          "no_days": 7
+        }
+      },
+      {
+        "name": "resource_usage_by_user",
+        "parameters": {
+          "user_name": "DBC",
+          "no_days": 7
+        }
+      },
+      {
+        "name": "resource_usage_by_hour",
+        "parameters": {
+          "hourOfDay": "9",
+          "no_days": 90
+        }
+      },
+      {
+        "name": "resource_usage_by_day_of_week",
+        "parameters": {
+          "dayOfWeek": "Monday",
+          "no_days": 90
+        }
       }
     ],
     "dba_tableSqlList": [
       {
         "name": "tables_sql_activity",
         "parameters": {
-          "table_name": "TablesV",
+          "table_name": "DBQLogTbl",
           "no_days": 7
         }
       }
@@ -267,21 +477,24 @@
         "name": "dbc_table_impact",
         "parameters": {
           "database_name": "DBC",
-          "user_name": "DBC"
+          "user_name": "data_scientist"
         }
       }
     ],
     "dba_userDelay": [
       {
         "name": "get_user_delays",
-        "parameters": {}
+        "parameters": {
+          "start_date": "2026-01-01",
+          "end_date": "2026-04-03"
+        }
       }
     ],
     "dba_userSqlList": [
       {
         "name": "dbc_user_sql",
         "parameters": {
-          "user_name": "DBC",
+          "user_name": "data_scientist",
           "no_days": 7
         }
       }

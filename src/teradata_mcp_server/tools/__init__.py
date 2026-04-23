@@ -4,11 +4,13 @@ Tools package with lazy loading support.
 Modules are now loaded on-demand based on profile requirements.
 """
 
+from .context_catalog import ContextCatalog  # explicit export for context catalog
 from .module_loader import ModuleLoader
 from .td_connect import TDConn  # explicit export for DB connection
 
 # Create a global module loader instance
 _module_loader = None
+
 
 def initialize_module_loader(config: dict):
     """Initialize the module loader with the given profile configuration."""
@@ -17,9 +19,11 @@ def initialize_module_loader(config: dict):
     _module_loader.determine_required_modules(config)
     return _module_loader
 
+
 def get_module_loader():
     """Get the current module loader instance."""
     return _module_loader
+
 
 def __getattr__(name):
     """
@@ -32,4 +36,3 @@ def __getattr__(name):
             return all_functions[name]
     # If not found, raise AttributeError as usual
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
-

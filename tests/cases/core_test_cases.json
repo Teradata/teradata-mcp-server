@@ -18,6 +18,13 @@
         "parameters": {
           "sql": "SELECT InfoKey, InfoData FROM DBC.DBCInfoV WHERE InfoKey = 'VERSION'"
         }
+      },
+      {
+        "name": "persist_result_as_volatile_table",
+        "parameters": {
+          "sql": "SELECT TOP 20 DatabaseName, TableName FROM DBC.TablesV WHERE DatabaseName = 'DBC'",
+          "persist": true
+        }
       }
     ],
     "base_tableList": [
@@ -30,7 +37,7 @@
     ],
     "base_databaseList": [
       {
-        "name": "list_all_databases", 
+        "name": "list_all_databases",
         "parameters": {}
       }
     ],
@@ -50,6 +57,38 @@
           "database_name": "DBC",
           "obj_name": "TablesV"
         }
+      },
+      {
+        "name": "wildcard_obj_name_in_database",
+        "parameters": {
+          "database_name": "DBC",
+          "obj_name": "%"
+        }
+      },
+      {
+        "name": "like_pattern_obj_name",
+        "parameters": {
+          "database_name": "DBC",
+          "obj_name": "Tables%"
+        }
+      },
+      {
+        "name": "case_insensitive_obj_name",
+        "parameters": {
+          "database_name": "dbc",
+          "obj_name": "tablesv"
+        }
+      },
+      {
+        "name": "view_columns",
+        "parameters": {
+          "database_name": "DBC",
+          "obj_name": "DatabasesV"
+        }
+      },
+      {
+        "name": "no_parameters_defaults_to_all",
+        "parameters": {}
       }
     ],
     "base_tablePreview": [
@@ -66,7 +105,7 @@
         "name": "system_table_affinity",
         "parameters": {
           "database_name": "DBC",
-          "obj_name": "tvm"
+          "table_name": "DBQLogTbl"
         }
       }
     ],
@@ -91,18 +130,44 @@
       },
       {
         "name": "all_database_space",
-        "parameters": {
-          "database_name": "DBC"
-        }
+        "parameters": {}
       }
     ],
     "dba_tableSpace": [
-
       {
         "name": "tvm_table_space",
         "parameters": {
           "database_name": "dbc",
           "table_name": "TVM"
+        }
+      },
+      {
+        "name": "all_tables",
+        "parameters": {}
+      },
+      {
+        "name": "database_only",
+        "parameters": {
+          "database_name": "DBC"
+        }
+      },
+      {
+        "name": "table_name_only",
+        "parameters": {
+          "table_name": "TVM"
+        }
+      },
+      {
+        "name": "top_n_tables",
+        "parameters": {
+          "top_n": 10
+        }
+      },
+      {
+        "name": "exclude_system_tables",
+        "parameters": {
+          "top_n": 10,
+          "exclude_system": "Y"
         }
       }
     ],
@@ -114,18 +179,30 @@
     ],
     "dba_sessionInfo": [
       {
-        "name": "dbc_user_sessions",
+        "name": "current_user_sessions",
         "parameters": {
-          "user_name": "demo_user"
+          "user_name": "data_scientist"
         }
+      },
+      {
+        "name": "all_user_sessions",
+        "parameters": {
+          "user_name": "*"
+        }
+      }
+    ],
+    "dba_systemSpace": [
+      {
+        "name": "total_system_space",
+        "parameters": {}
       }
     ],
     "dba_featureUsage": [
       {
         "name": "get_feature_usage",
         "parameters": {
-          "start_date": "2025-01-01",
-          "end_date": "2025-12-31"
+          "start_date": "2026-01-01",
+          "end_date": "2026-04-03"
         }
       }
     ],
@@ -133,8 +210,8 @@
       {
         "name": "get_flow_control",
         "parameters": {
-          "start_date": "2025-01-01",
-          "end_date": "2025-12-31"
+          "start_date": "2026-01-01",
+          "end_date": "2026-04-03"
         }
       }
     ],
@@ -142,14 +219,62 @@
       {
         "name": "system_resource_usage",
         "parameters": {}
+      },
+      {
+        "name": "resource_usage_30_days",
+        "parameters": {
+          "no_days": 30
+        }
+      },
+      {
+        "name": "resource_usage_by_workload_type",
+        "parameters": {
+          "workloadType": "QUERY",
+          "no_days": 7
+        }
+      },
+      {
+        "name": "resource_usage_by_complexity",
+        "parameters": {
+          "workloadComplexity": "Answers",
+          "no_days": 7
+        }
+      },
+      {
+        "name": "resource_usage_by_user",
+        "parameters": {
+          "user_name": "DBC",
+          "no_days": 7
+        }
+      },
+      {
+        "name": "resource_usage_by_hour",
+        "parameters": {
+          "hourOfDay": "9",
+          "no_days": 90
+        }
+      },
+      {
+        "name": "resource_usage_by_day_of_week",
+        "parameters": {
+          "dayOfWeek": "Monday",
+          "no_days": 90
+        }
       }
     ],
     "dba_tableSqlList": [
       {
         "name": "tables_sql_activity",
         "parameters": {
-          "table_name": "TablesV",
+          "table_name": "DBQLSqlTbl",
           "no_days": 7
+        }
+      },
+      {
+        "name": "tables_sql_activity_30_days",
+        "parameters": {
+          "table_name": "DBQLSqlTbl",
+          "no_days": 30
         }
       }
     ],
@@ -157,8 +282,18 @@
       {
         "name": "dbc_table_impact",
         "parameters": {
-          "database_name": "demo_user",
-          "user_name": "demo_user"
+          "database_name": "data_scientist",
+          "user_name": "data_scientist"
+        }
+      },
+      {
+        "name": "all_table_impact",
+        "parameters": {}
+      },
+      {
+        "name": "database_table_impact",
+        "parameters": {
+          "database_name": "data_scientist"
         }
       }
     ],
@@ -166,8 +301,8 @@
       {
         "name": "get_user_delays",
         "parameters": {
-          "start_date": "2025-01-01",
-          "end_date": "2025-12-31"
+          "start_date": "2026-01-01",
+          "end_date": "2026-04-03"
         }
       }
     ],
@@ -178,6 +313,16 @@
           "user_name": "DBC",
           "no_days": 7
         }
+      },
+      {
+        "name": "all_users_sql",
+        "parameters": {}
+      },
+      {
+        "name": "all_users_sql_30_days",
+        "parameters": {
+          "no_days": 30
+        }
       }
     ],
     "sec_userDbPermissions": [
@@ -186,21 +331,39 @@
         "parameters": {
           "user_name": "demo_user"
         }
+      },
+      {
+        "name": "syslib_user_permissions",
+        "parameters": {
+          "user_name": "SYSLIB"
+        }
       }
     ],
     "sec_rolePermissions": [
       {
-        "name": "public_role_permissions",
+        "name": "demo_user_role_permissions",
         "parameters": {
-          "role_name": "PUBLIC"
+          "role_name": "demo_user"
+        }
+      },
+      {
+        "name": "tdwm_user_role_permissions",
+        "parameters": {
+          "role_name": "tdwm"
         }
       }
     ],
     "sec_userRoles": [
       {
-        "name": "dbc_user_roles",
+        "name": "admin_roles",
         "parameters": {
-          "user_name": "demo_user"
+          "user_name": "Admin"
+        }
+      },
+      {
+        "name": "td_prefixed_roles",
+        "parameters": {
+          "user_name": "TD"
         }
       }
     ],
@@ -231,6 +394,19 @@
           "database_name": "DBC",
           "table_name": "Tables"
         }
+      },
+      {
+        "name": "numeric_table_missing_values",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "DatabasesV"
+        }
+      },
+      {
+        "name": "fully_qualified_table_name",
+        "parameters": {
+          "table_name": "DBC.DatabasesV"
+        }
       }
     ],
     "qlty_distinctCategories": [
@@ -241,6 +417,14 @@
           "table_name": "Tables",
           "column_name": "TableKind"
         }
+      },
+      {
+        "name": "perm_type_categories",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "DatabasesV",
+          "column_name": "JournalFlag"
+        }
       }
     ],
     "qlty_columnSummary": [
@@ -249,6 +433,13 @@
         "parameters": {
           "database_name": "DBC",
           "table_name": "Tables"
+        }
+      },
+      {
+        "name": "numeric_table_column_summary",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "DatabasesV"
         }
       }
     ],
@@ -259,6 +450,13 @@
           "database_name": "DBC",
           "table_name": "Tables"
         }
+      },
+      {
+        "name": "check_negative_numeric_columns",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "DatabasesV"
+        }
       }
     ],
     "qlty_rowsWithMissingValues": [
@@ -267,6 +465,14 @@
         "parameters": {
           "database_name": "DBC",
           "table_name": "databasesV",
+          "column_name": "CommentString"
+        }
+      },
+      {
+        "name": "tables_missing_comment",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "Tables",
           "column_name": "CommentString"
         }
       }
@@ -279,6 +485,14 @@
           "table_name": "databasesV",
           "column_name": "PermSpace"
         }
+      },
+      {
+        "name": "max_perm_std_dev",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "databasesV",
+          "column_name": "SpoolSpace"
+        }
       }
     ],
     "qlty_univariateStatistics": [
@@ -288,6 +502,14 @@
           "database_name": "DBC",
           "table_name": "databasesV",
           "column_name": "PermSpace"
+        }
+      },
+      {
+        "name": "max_perm_statistics",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "databasesV",
+          "column_name": "SpoolSpace"
         }
       }
     ]

@@ -1,3 +1,221 @@
+base_databaseList:
+  type: tool
+  description: "Lists databases in the Teradata System."
+  parameters:
+    scope:
+      description: "Filter scope: 'user' returns only user-created databases (excludes system databases), 'all' returns every database."
+      type_hint: str
+      default: 'user'
+  sql: |
+    SELECT DataBaseName, DECODE(DBKind, 'U', 'User', 'D', 'DataBase') AS DBType, CommentString
+    FROM dbc.DatabasesV dv
+    WHERE OwnerName <> 'PDCRADM'
+    AND (:scope = 'all' OR (
+        DataBaseName NOT IN (
+            'DBC','SYSLIB','SystemFe','SYSUDTLIB','SYSJDBC','SYSSPATIAL',
+            'TD_SYSFNLIB','TDQCD','TDStats','TDPUSER','dbcmngr','Crashdumps',
+            'LockLogShredder','SYSBAR','SysAdmin','Sys_Calendar','EXTUSER',
+            'DEFAULT','All','PUBLIC','SQLJ','SYSUIF','TD_ANALYTICS_DB',
+            'TD_SERVER_DB','TD_SYSGPL','TDSYSFLOW','TDMaps','SAS_SYSFNLIB',
+            'TDBCMgmt','External_AP','PDCRAdmin','PDCRSTG','PDCRDATA',
+            'PDCRINFO','PDCRTPCD','PDCRADM','TD_DATASHARING_REPO',
+            'TD_METRIC_SVC','console','tdwm','val'
+        )
+        AND DataBaseName NOT LIKE 'TDaaS%'
+    ));
+
+base_tableList:
+  type: tool
+  description: "Lists all tables and views in a database."
+  parameters:
+    database_name:
+      description: "Database name. Leave empty for all databases."
+      type_hint: str
+      default: ''
+  sql: |
+    SELECT DatabaseName, TableName
+    FROM dbc.TablesV tv
+    WHERE tv.TableKind IN ('T','V', 'O', 'Q')
+    AND (:database_name = '' OR UPPER(tv.DatabaseName) = UPPER(:database_name));
+
+base_tableDDL:
+  type: tool
+  description: "Displays the DDL definition of a table."
+  parameters:
+    table_name:
+      description: "Table name"
+      type_hint: str
+    database_name:
+      description: "Database name"
+      type_hint: str
+      default: ''
+  sql: |
+    SHOW TABLE {table_ref}
+
+base_columnDescription:
+  type: tool
+  description: "Shows detailed column information about a database table or view."
+  parameters:
+    database_name:
+      description: "Database name. Defaults to '%' (all databases)."
+      type_hint: str
+      default: '%'
+    obj_name:
+      description: "Table or view name. Defaults to '%' (all tables)."
+      type_hint: str
+      default: '%'
+  sql: |
+    SELECT TableName, ColumnName, CASE ColumnType
+        WHEN '++' THEN 'TD_ANYTYPE'
+        WHEN 'A1' THEN 'UDT'
+        WHEN 'AT' THEN 'TIME'
+        WHEN 'BF' THEN 'BYTE'
+        WHEN 'BO' THEN 'BLOB'
+        WHEN 'BV' THEN 'VARBYTE'
+        WHEN 'CF' THEN 'CHAR'
+        WHEN 'CO' THEN 'CLOB'
+        WHEN 'CV' THEN 'VARCHAR'
+        WHEN 'D'  THEN 'DECIMAL'
+        WHEN 'DA' THEN 'DATE'
+        WHEN 'DH' THEN 'INTERVAL DAY TO HOUR'
+        WHEN 'DM' THEN 'INTERVAL DAY TO MINUTE'
+        WHEN 'DS' THEN 'INTERVAL DAY TO SECOND'
+        WHEN 'DY' THEN 'INTERVAL DAY'
+        WHEN 'F'  THEN 'FLOAT'
+        WHEN 'HM' THEN 'INTERVAL HOUR TO MINUTE'
+        WHEN 'HR' THEN 'INTERVAL HOUR'
+        WHEN 'HS' THEN 'INTERVAL HOUR TO SECOND'
+        WHEN 'I1' THEN 'BYTEINT'
+        WHEN 'I2' THEN 'SMALLINT'
+        WHEN 'I8' THEN 'BIGINT'
+        WHEN 'I'  THEN 'INTEGER'
+        WHEN 'MI' THEN 'INTERVAL MINUTE'
+        WHEN 'MO' THEN 'INTERVAL MONTH'
+        WHEN 'MS' THEN 'INTERVAL MINUTE TO SECOND'
+        WHEN 'N'  THEN 'NUMBER'
+        WHEN 'PD' THEN 'PERIOD(DATE)'
+        WHEN 'PM' THEN 'PERIOD(TIMESTAMP WITH TIME ZONE)'
+        WHEN 'PS' THEN 'PERIOD(TIMESTAMP)'
+        WHEN 'PT' THEN 'PERIOD(TIME)'
+        WHEN 'PZ' THEN 'PERIOD(TIME WITH TIME ZONE)'
+        WHEN 'SC' THEN 'INTERVAL SECOND'
+        WHEN 'SZ' THEN 'TIMESTAMP WITH TIME ZONE'
+        WHEN 'TS' THEN 'TIMESTAMP'
+        WHEN 'TZ' THEN 'TIME WITH TIME ZONE'
+        WHEN 'UT' THEN 'UDT'
+        WHEN 'YM' THEN 'INTERVAL YEAR TO MONTH'
+        WHEN 'YR' THEN 'INTERVAL YEAR'
+        WHEN 'AN' THEN 'UDT'
+        WHEN 'XM' THEN 'XML'
+        WHEN 'JN' THEN 'JSON'
+        WHEN 'DT' THEN 'DATASET'
+        WHEN '??' THEN 'STGEOMETRY''ANY_TYPE'
+        END AS CType
+    FROM DBC.ColumnsVX
+    WHERE UPPER(tableName) LIKE UPPER(:obj_name)
+    AND UPPER(DatabaseName) LIKE UPPER(:database_name);
+
+base_tablePreview:
+  type: tool
+  description: "Returns a data sample (top 5 rows) and inferred structure from a database table or view."
+  parameters:
+    table_name:
+      description: "Table or view name"
+      type_hint: str
+    database_name:
+      description: "Database name"
+      type_hint: str
+      default: ''
+  sql: |
+    SELECT TOP 5 * FROM {table_ref}
+
+base_tableAffinity:
+  type: tool
+  description: "Get tables commonly used together by database users, helpful to infer relationships between tables."
+  parameters:
+    database_name:
+      description: "Database name"
+      type_hint: str
+    table_name:
+      description: "Table or view name"
+      type_hint: str
+  sql: |
+    LOCKING ROW FOR ACCESS
+    SELECT
+        TRIM(QTU2.DatabaseName) AS "DatabaseName",
+        TRIM(QTU2.TableName) AS "TableName",
+        COUNT(DISTINCT QTU1.QueryID) AS "QueryCount",
+        (current_timestamp - min(QTU2.CollectTimeStamp)) day(4) AS "FirstQueryDaysAgo",
+        (current_timestamp - max(QTU2.CollectTimeStamp)) day(4) AS "LastQueryDaysAgo"
+    FROM (
+        SELECT objectdatabasename AS DatabaseName, ObjectTableName AS TableName, QueryId
+        FROM DBC.DBQLObjTbl
+        WHERE Objecttype IN ('Tab', 'Viw')
+        AND ObjectTableName = '{table_name}'
+        AND objectdatabasename = '{database_name}'
+        AND ObjectTableName IS NOT NULL
+        AND ObjectColumnName IS NULL
+        GROUP BY 1, 2, 3
+    ) AS QTU1
+    INNER JOIN (
+        SELECT objectdatabasename AS DatabaseName, ObjectTableName AS TableName, QueryId, CollectTimeStamp
+        FROM DBC.DBQLObjTbl
+        WHERE Objecttype IN ('Tab', 'Viw')
+        AND ObjectTableName IS NOT NULL
+        AND ObjectColumnName IS NULL
+        GROUP BY 1, 2, 3, 4
+    ) AS QTU2 ON QTU1.QueryID = QTU2.QueryID
+    INNER JOIN DBC.DBQLogTbl QU ON QTU1.QueryID = QU.QueryID
+    WHERE (TRIM(QTU2.TableName) <> TRIM(QTU1.TableName) OR TRIM(QTU2.DatabaseName) <> TRIM(QTU1.DatabaseName))
+    AND (QU.AMPCPUTime + QU.ParserCPUTime) > 0
+    GROUP BY 1, 2
+    ORDER BY 3 DESC, 5 DESC;
+
+base_tableUsage:
+  type: tool
+  description: "Measure the usage of tables and views by users in a schema, helpful to infer what database objects are most actively used."
+  parameters:
+    database_name:
+      description: "Database name. Leave empty for all databases."
+      type_hint: str
+      default: ''
+  sql: |
+    LOCKING ROW FOR ACCESS
+    SELECT
+        DatabaseName,
+        TableName,
+        Weight AS "QueryCount",
+        100 * "Weight" / SUM("Weight") OVER (PARTITION BY 1) AS PercentTotal,
+        CASE
+            WHEN PercentTotal >= 10 THEN 'High'
+            WHEN PercentTotal >= 5  THEN 'Medium'
+            ELSE 'Low'
+        END (CHAR(6)) AS usage_freq,
+        FirstQueryDaysAgo,
+        LastQueryDaysAgo
+    FROM (
+        SELECT
+            TRIM(QTU1.TableName) AS "TableName",
+            TRIM(QTU1.DatabaseName) AS "DatabaseName",
+            MAX((current_timestamp - CollectTimeStamp) DAY(4)) AS "FirstQueryDaysAgo",
+            MIN((current_timestamp - CollectTimeStamp) DAY(4)) AS "LastQueryDaysAgo",
+            COUNT(DISTINCT QTU1.QueryID) AS "Weight"
+        FROM (
+            SELECT objectdatabasename AS DatabaseName, ObjectTableName AS TableName, QueryId
+            FROM DBC.DBQLObjTbl
+            WHERE Objecttype IN ('Tab', 'Viw')
+            AND (:database_name = '' OR objectdatabasename = :database_name)
+            AND ObjectTableName IS NOT NULL
+            AND ObjectColumnName IS NULL
+            GROUP BY 1, 2, 3
+        ) AS QTU1
+        INNER JOIN DBC.DBQLogTbl QU ON QTU1.QueryID = QU.QueryID
+            AND (QU.AMPCPUTime + QU.ParserCPUTime) > 0
+        GROUP BY 1, 2
+    ) a
+    ORDER BY PercentTotal DESC
+    QUALIFY PercentTotal > 0;
+
 _testMyServer:
   type: prompt
   description: "Test all the MCP tools, prompts and resources. (prompt_type: reporting)"
@@ -223,34 +441,27 @@ base_databaseBusinessDesc:
 
    ## your role will work through the phases
    Perform the phases in order, and do not skip any phase.
-   
-   ## Phase 0 - Get the database name from the user
-   - the database name is {database_name}
 
-   ## Phase 1 - get the list of tables
+   ## Phase 1 - Get the list of tables
+   - The database name is {database_name}
    - Use the `base_tableList` function to get the list of tables in the database.
 
-   ## Phase 2 - describe the tables
-   For each table, you will:
+   ## Phase 2 - Get the DDL for each table
+   For each table from Phase 1:
    - Use the `base_tableDDL` function to get the DDL for the table.
-   - Based *only* on the DDL you just received, describe the table in a business context. **Do not use any other tools or prompts for this description step.**
 
    ## Phase 3 - Describe the database
-   - Describe the database in a business context based on the business descriptions of the tables. 
-   - The description should be a paragraph. 
-
-
-   ## Communication guidelines:
-         - Be concise but informative in your explanations
-         - Clearly indicate which phase the process is currently in
-         - summarize the outcome of the phase before moving to the next phase
+   Using ALL DDL definitions collected in Phase 2:
+   - For each table, describe its business purpose based *only* on its DDL.
+   - Then describe the overall database in a business context based on all table descriptions.
+   - Present the result as the final output.
 
    ## Final output guidelines:
-         - return in markdown
-         - Example:
-         ***Database Name:*** `database_name`
+   - return in markdown
+   - Example:
+   ***Database Name:*** `database_name`
 
-         ***Description:*** `database_description`
+   ***Description:*** `database_description`
   parameters:
     database_name:
       name: database_name

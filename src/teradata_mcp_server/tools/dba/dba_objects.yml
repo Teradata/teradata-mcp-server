@@ -1,3 +1,272 @@
+dba_tableSpace:
+  type: tool
+  description: "Get table space used across all tables, or filtered by database and/or table name."
+  parameters:
+    database_name:
+      description: "Database name filter. Leave empty for all databases."
+      type_hint: str
+      default: ''
+    table_name:
+      description: "Table name filter. Leave empty for all tables."
+      type_hint: str
+      default: ''
+    top_n:
+      description: "Limit results to top N largest tables by space. Set to 0 for no limit (default: 0)."
+      type_hint: int
+      default: 0
+    exclude_system:
+      description: "Exclude system databases and tables. Set to 'Y' to exclude, 'N' to include all (default: 'N')."
+      type_hint: str
+      default: 'N'
+  sql: |
+    SELECT a.DatabaseName, a.TableName,
+        SUM(a.CurrentPerm) AS CurrentPerm1, SUM(a.PeakPerm) AS PeakPerm,
+        CAST((100-(AVG(a.CURRENTPERM)/MAX(NULLIFZERO(a.CURRENTPERM))*100)) AS DECIMAL(5,2)) AS SkewPct
+    FROM DBC.AllSpaceV a
+    LEFT JOIN DBC.TablesV t ON a.DatabaseName = t.DatabaseName AND a.TableName = t.TableName
+    WHERE (:database_name = '' OR a.DatabaseName = :database_name)
+    AND (:table_name = '' OR a.TableName = :table_name)
+    AND (:exclude_system <> 'Y' OR (
+        t.TableKind = 'T'
+        AND a.DatabaseName NOT IN (
+            'DBC','SYSLIB','SystemFe','SYSUDTLIB','SYSJDBC','SYSSPATIAL',
+            'TD_SYSFNLIB','TDQCD','TDStats','TDPUSER','dbcmngr','Crashdumps',
+            'LockLogShredder','SYSBAR','SysAdmin','Sys_Calendar','EXTUSER',
+            'DEFAULT','All','PUBLIC','SQLJ','SYSUIF','TD_ANALYTICS_DB',
+            'TD_SERVER_DB','TD_SYSGPL','TDSYSFLOW','TDMaps','SAS_SYSFNLIB',
+            'TDBCMgmt','External_AP','PDCRAdmin','PDCRSTG','PDCRDATA',
+            'PDCRINFO','PDCRTPCD','PDCRADM','TD_DATASHARING_REPO',
+            'TD_METRIC_SVC','console','tdwm','val'
+        )
+        AND a.DatabaseName NOT LIKE 'TDaaS%'
+        AND a.TableName <> 'All'
+        AND a.TableName NOT LIKE 'hist_%'
+        AND a.TableName NOT LIKE '%.%'
+    ))
+    GROUP BY a.DatabaseName, a.TableName
+    QUALIFY ROW_NUMBER() OVER (ORDER BY CurrentPerm1 DESC) <= COALESCE(NULLIFZERO(:top_n), 2147483647)
+    ORDER BY CurrentPerm1 DESC;
+
+dba_tableSqlList:
+  type: tool
+  description: "Get a list of SQL run against a table in the last number of days."
+  parameters:
+    table_name:
+      description: "Table name to search for"
+      type_hint: str
+    no_days:
+      description: "Number of days to look back"
+      type_hint: int
+      default: 7
+  sql: |
+    SELECT t1.QueryID, t1.ProcID, t1.CollectTimeStamp, t1.SqlTextInfo, t2.UserName
+    FROM DBC.QryLogSqlV t1
+    JOIN DBC.QryLogV t2 ON t1.QueryID = t2.QueryID
+    WHERE CAST(t1.CollectTimeStamp AS DATE) >= CURRENT_DATE - :no_days
+    AND t1.SqlTextInfo LIKE '%' || :table_name || '%'
+    ORDER BY t1.CollectTimeStamp DESC;
+
+dba_userSqlList:
+  type: tool
+  description: "Get SQL run by a user in the last number of days. Leave user_name empty for all users."
+  parameters:
+    user_name:
+      description: "User name filter. Leave empty or omit for all users."
+      type_hint: str
+      default: ''
+    no_days:
+      description: "Number of days to look back"
+      type_hint: int
+      default: 7
+  sql: |
+    SELECT t1.QueryID, t1.ProcID, t1.CollectTimeStamp, t1.SqlTextInfo, t2.UserName
+    FROM DBC.QryLogSqlV t1
+    JOIN DBC.QryLogV t2 ON t1.QueryID = t2.QueryID
+    WHERE CAST(t1.CollectTimeStamp AS DATE) >= CURRENT_DATE - :no_days
+    AND (:user_name = '' OR t2.UserName = :user_name)
+    ORDER BY t1.CollectTimeStamp DESC;
+
+dba_databaseSpace:
+  type: tool
+  description: "Get database space allocation for a specific database or all databases."
+  parameters:
+    database_name:
+      description: "Database name. Leave empty or omit for all databases."
+      type_hint: str
+      default: ''
+  sql: |
+    SELECT
+        DatabaseName,
+        CAST(SUM(MaxPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceAllocated_GB,
+        CAST(SUM(CurrentPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceUsed_GB,
+        CAST((SUM(MaxPerm) - SUM(CurrentPerm))/1024/1024/1024 AS DECIMAL(10,2)) AS FreeSpace_GB,
+        CAST((SUM(CurrentPerm) * 100.0 / NULLIF(SUM(MaxPerm),0)) AS DECIMAL(10,2)) AS PercentUsed
+    FROM DBC.DiskSpaceV
+    WHERE MaxPerm > 0
+    AND (:database_name = '' OR DatabaseName = :database_name)
+    GROUP BY 1
+    ORDER BY 5 DESC;
+
+dba_tableUsageImpact:
+  type: tool
+  description: "Measure the usage of tables and views by users to understand what users and tables are driving most resource usage."
+  parameters:
+    database_name:
+      description: "Database name to analyze. Leave empty for all databases."
+      type_hint: str
+      default: ''
+    user_name:
+      description: "User name to analyze. Leave empty for all users."
+      type_hint: str
+      default: ''
+  sql: |
+    LOCKING ROW FOR ACCESS
+    SELECT
+        DatabaseName, TableName, UserName,
+        Weight AS "QueryCount",
+        100 * "Weight" / SUM("Weight") OVER (PARTITION BY 1) AS PercentTotal,
+        CASE
+            WHEN PercentTotal >= 10 THEN 'High'
+            WHEN PercentTotal >= 5  THEN 'Medium'
+            ELSE 'Low'
+        END (CHAR(6)) AS usage_freq,
+        FirstQueryDaysAgo, LastQueryDaysAgo
+    FROM (
+        SELECT
+            TRIM(QTU1.TableName) AS "TableName",
+            TRIM(QTU1.DatabaseName) AS "DatabaseName",
+            QU.UserName AS "UserName",
+            MAX((CURRENT_TIMESTAMP - CollectTimeStamp) DAY(4)) AS "FirstQueryDaysAgo",
+            MIN((CURRENT_TIMESTAMP - CollectTimeStamp) DAY(4)) AS "LastQueryDaysAgo",
+            COUNT(DISTINCT QTU1.QueryID) AS "Weight"
+        FROM (
+            SELECT objectdatabasename AS DatabaseName, ObjectTableName AS TableName, ob.QueryId
+            FROM DBC.DBQLObjTbl ob
+            WHERE ObjectType IN ('Tab', 'Viw')
+            AND (:database_name = '' OR objectdatabasename = :database_name)
+            AND ObjectTableName IS NOT NULL
+            AND ObjectColumnName IS NULL
+            GROUP BY 1, 2, 3
+        ) AS QTU1
+        INNER JOIN DBC.DBQLogTbl QU ON QTU1.QueryID = QU.QueryID
+            AND (QU.AMPCPUTime + QU.ParserCPUTime) > 0
+            AND (QU.UserName = '' OR QU.UserName = :user_name)
+        GROUP BY 1, 2, 3
+    ) a
+    ORDER BY PercentTotal DESC
+    QUALIFY PercentTotal > 0;
+
+dba_resusageSummary:
+  type: tool
+  description: "Get summary of resource usage (CPU, IO, Memory) for a specified date range, broken down by specified dimensions."
+  parameters:
+    user_name:
+      description: "User name to filter by. Leave empty for all users."
+      type_hint: str
+      default: ''
+    LogDate:
+      description: "Log date to filter by in YYYY-MM-DD format. Leave empty for all dates."
+      type_hint: str
+      default: ''
+    dayOfWeek:
+      description: "Day of week to filter by (1=Sunday, 2=Monday, ..., 7=Saturday). Leave empty for all days."
+      type_hint: str
+      default: ''
+    hourOfDay:
+      description: "Hour of day to filter by (0-23). Leave empty for all hours."
+      type_hint: str
+      default: ''
+    workloadType:
+      description: "Workload type to filter by (e.g., 'Batch', 'Interactive'). Leave empty for all workload types."
+      type_hint: str
+      default: ''
+    workloadComplexity:
+      description: "Workload complexity to filter by (e.g., 'Simple', 'Medium', 'Complex'). Leave empty for all complexity levels."
+      type_hint: str
+      default: ''
+    AppID:
+      description: "Application ID to filter by. Leave empty for all applications."
+      type_hint: str
+      default: ''
+    no_days:
+      description: "Number of days to look back from today (e.g., 7, 30, 90)."
+      type_hint: int
+      default: 7
+  sql: |
+    SELECT
+      LogDate,
+      hourOfDay,
+      dayOfWeek,
+      workloadType,
+      workloadComplexity,
+      UserName,
+      AppId,       
+      COUNT(*) AS "Request Count",
+      SUM(AMPCPUTime) AS "Total AMPCPUTime",
+      SUM(TotalIOCount) AS "Total IOCount",
+      SUM(ReqIOKB) AS "Total ReqIOKB",
+      SUM(ReqPhysIO) AS "Total ReqPhysIO",
+      SUM(ReqPhysIOKB) AS "Total ReqPhysIOKB",
+      SUM(SumLogIO_GB) AS "Total ReqIO GB",
+      SUM(SumPhysIO_GB) AS "Total ReqPhysIOGB",
+      SUM(TotalServerByteCount) AS "Total Server Byte Count"
+    FROM
+      (
+        SELECT
+          CAST(QryLog.Starttime as DATE) AS LogDate,
+          EXTRACT(HOUR FROM StartTime) AS hourOfDay,
+          CASE QryCal.day_of_week
+            WHEN 1 THEN 'Sunday'
+            WHEN 2 THEN 'Monday'
+            WHEN 3 THEN 'Tuesday'
+            WHEN 4 THEN 'Wednesday'
+            WHEN 5 THEN 'Thursday'
+            WHEN 6 THEN 'Friday'
+            WHEN 7 THEN 'Saturday'
+          END AS dayOfWeek,
+          QryLog.UserName,
+          QryLog.AcctString,
+          QryLog.AppID ,
+          CASE
+            WHEN QryLog.AppID LIKE ANY('TPTLOAD%', 'TPTUPD%', 'FASTLOAD%', 'MULTLOAD%', 'EXECUTOR%', 'JDBCL%') THEN 'LOAD'
+            WHEN QryLog.StatementType IN ('Insert', 'Update', 'Delete', 'Create Table', 'Merge Into')
+                AND QryLog.AppID NOT LIKE ANY('TPTLOAD%', 'TPTUPD%', 'FASTLOAD%', 'MULTLOAD%', 'EXECUTOR%', 'JDBCL%') THEN 'ETL/ELT'
+            WHEN QryLog.StatementType = 'Select' AND (AppID IN ('TPTEXP', 'FASTEXP') OR AppID LIKE 'JDBCE%') THEN 'EXPORT'
+            WHEN QryLog.StatementType = 'Select'
+                AND QryLog.AppID NOT LIKE ANY('TPTLOAD%', 'TPTUPD%', 'FASTLOAD%', 'MULTLOAD%', 'EXECUTOR%', 'JDBCL%') THEN 'QUERY'
+            WHEN QryLog.StatementType IN ('Dump Database', 'Unrecognized type', 'Release Lock', 'Collect Statistics') THEN 'ADMIN'
+            ELSE 'OTHER'
+          END AS workloadType,
+          CASE
+            WHEN StatementType = 'Merge Into' THEN 'Ingest & Prep'
+            WHEN StatementType = 'Select' THEN 'Answers'
+            ELSE 'System/Procedural'
+          END AS workloadComplexity,
+          QryLog.AMPCPUTime,
+          QryLog.TotalIOCount,
+          QryLog.ReqIOKB,
+          QryLog.ReqPhysIO,
+          QryLog.ReqPhysIOKB,
+          QryLog.TotalServerByteCount,
+          (QryLog.ReqIOKB / 1024 / 1024) AS SumLogIO_GB,
+          (QryLog.ReqPhysIOKB / 1024 / 1024) AS SumPhysIO_GB
+        FROM
+          DBC.DBQLogTbl QryLog
+          INNER JOIN Sys_Calendar.CALENDAR QryCal
+          ON QryCal.calendar_date = CAST(QryLog.Starttime as DATE)
+        WHERE
+          CAST(QryLog.Starttime as DATE) BETWEEN CURRENT_DATE - {no_days} AND CURRENT_DATE
+          AND StartTime IS NOT NULL
+      ) AS QryDetails
+    WHERE (:LogDate = '' OR CAST(LogDate AS VARCHAR(10)) = :LogDate)
+    AND (:hourOfDay = '' OR hourOfDay = :hourOfDay)
+    AND (:dayOfWeek = '' OR dayOfWeek = :dayOfWeek)
+    AND (:workloadType = '' OR workloadType = :workloadType)
+    AND (:workloadComplexity = '' OR workloadComplexity = :workloadComplexity)
+    AND (:user_name = '' OR UserName = :user_name)
+    AND (:AppID = '' OR AppID = :AppID)
+    GROUP BY 1,2,3,4,5,6,7;
+
 dba_databaseVersion:
   type: tool
   description: " Get Teradata database version information."
@@ -154,30 +423,21 @@ dba_tableArchive:
   prompt: |
     You are a Teradata DBA who is an expert in finding opportunities for archiving data.
 
-    ## your role will work through the phases
-    
-    ## Phase 1. 
-    Get a list of the 10 largest tables in the Teradata system using dba_tableSpace tool, ignore tables that: 
-    - start with hist_ 
-    - called All
-    - are in the DBC database
+    ## Phase 1 - Get the 10 largest user tables
+    Use dba_tableSpace tool with top_n=10 and exclude_system='Y' to get the 10 largest user tables.
+    Save the list of {DatabaseName, TableName} pairs for Phase 2.
 
-    ## Phase 2.
-    For each table starting with the largest table and work to the smallest table, you will:
-    1. Get the DDL for the table using the base_tableDDL tool
-    2. Determine the best strategy for archiving the older data only
-    3. Write a Teradata SQL archiving statement to perform a insert select into a table named with the prefix of hist_
+    ## Phase 2 - Get DDL for each table
+    Cycle through the tables from Phase 1 (largest first).
+    For each table, use base_tableDDL tool to get its DDL definition.
 
-    ## Phase 3
-    Bring the archiving statements together into a single script.
-    
-    ## Communication guidelines:
-        - Be concise but informative in your explanations
-        - Clearly indicate which phase the process is currently in
-        - summarize the outcome of the phase before moving to the next phase
-
-    ## Final output guidelines:
-        - will be a SQL script only
+    ## Phase 3 - Present archive SQL script
+    Using ALL DDL definitions collected in Phase 2, generate a single SQL archive script.
+    For each table:
+    1. Identify date or timestamp columns suitable for partitioning old vs new data
+    2. Write a Teradata SQL INSERT SELECT statement that archives rows older than 90 days into a table named hist_{original_table_name} in the same database
+    3. If the table has no date or timestamp column, skip it and add a comment explaining why
+    Present the complete SQL script as the final output.
 
 
 dba_databaseLineage :
@@ -185,35 +445,22 @@ dba_databaseLineage :
   description: "You are a Teradata DBA who is an expert in finding the lineage of tables in a database. (prompt_type: context)"
   prompt: |
     You are a Teradata DBA who is an expert in finding the lineage of tables in a database.
-
-    ## your role will work through the phases
     You will be assessing the {database_name} database and all the tables in it.
 
     ## Phase 1 - Get a list of tables in the database
-    Get a list of tables in the Teradata system using base_tableList tool, ignore tables that: 
-    - called All
+    Use base_tableList tool with database_name={database_name} to get all tables.
+    Exclude any table named "All".
+    Save the list of table names for Phase 2.
 
-    ## Phase 2 - Collect SQL for the table
-    Cycle through the list of tables, following the following two steps in order
-    Step 1. Get all the SQL that has executed against the table in the last {number_days} days using the dba_tableSqlList tool
-    Step 2. Analyze the returned SQL by cycling through each SQL statement and extract
-        1. Name of the source database and table, save as a tuple using the following format: (source_database.source_table, tardatabase.tartable)
-        2. Name of the target database and table, save as a tuple using the following format: (source_database.source_table, tardatabase.tartable)
+    ## Phase 2 - Collect SQL history for each table
+    Cycle through the tables from Phase 1.
+    For each table, use dba_tableSqlList tool with no_days={number_days} to get recent SQL statements.
 
-    ## Phase 3 - Create a distinct list 
-    1. Review the tuples and create a destinct list of tuples, remove duplicates tuples
-
-    ## Phase 4 - return results
-    - return the list of tuples only.
-
-    ## Communication guidelines:
-        - Be concise but informative in your explanations
-        - Clearly indicate which phase the process is currently in
-        - summarize the outcome of the phase before moving to the next phase
-
-    ## Final output guidelines:
-        - return the list of tuples only.
-        - do not return any explanation of results
+    ## Phase 3 - Present lineage analysis
+    Using ALL SQL history collected in Phase 2, analyze the data flow between tables:
+    1. For each SQL statement, identify source and target tables from INSERT/SELECT, CREATE TABLE AS, MERGE, and JOIN patterns
+    2. Create a distinct list of (source_database.source_table, target_database.target_table) tuples, removing duplicates
+    3. Present the lineage as the final output
   parameters:
     database_name:
       name: database_name
@@ -240,21 +487,21 @@ dba_tableDropImpact:
     ## Phase 2 - Analyze Usage data
     Using the SQL list collected in Phase 1:
     1. Create two dictionaries:
-       - user_counts: to track usernames and their usage counts
-       - table_deps: to track dependent tables and their reference counts
+       - user_counts: to track distinct usernames and their query counts
+       - table_deps: to track other user tables referenced alongside {table_name} and their counts
     2. For each SQL statement in the list:
-       - Extract and count the username who executed it
-       - Identify and count any tables that depend on our target table
-    3. Keep these counts for use in Phase 3
+       - Extract and count the username who executed it (add to user_counts)
+       - Parse the SQL text for references to other user tables (add to table_deps).
+         Only count tables that belong to user databases — do NOT count any of the following:
+         - The target table itself ({database_name}.{table_name} in any case variation)
+         - Any DBC system object (DBC.QryLogV, DBC.QryLogSqlV, DBC.AllSpaceV, DBC.Tables, DBC.DBQLObjTbl, etc.)
+         - Teradata built-in analytic functions (TD_UnivariateStatistics, TD_ColumnSummary, TD_getRowsWithMissingValues, etc.)
+         If a table name does not have a database prefix, assume it belongs to {database_name}.
+    3. Merge case-insensitive duplicates (e.g. "Products" and "products" are the same table)
+    4. Keep these counts for use in Phase 3
 
-    ## Phase 3 - Create a distinct list
-    Using the user_counts and table_deps dictionaries from Phase 2:
-    1. Create a sorted list of unique entries combining:
-       - All usernames from user_counts (with their counts)
-       - All dependent table names from table_deps (with their counts)
-
-    ## Phase 4 - return results
-    - return the list of usernames and tablenames only.
+    ## Phase 3 - Return results
+    Return the combined list of users and dependent tables.
 
     ## Communication guidelines:
         - Be concise but informative in your explanations
@@ -269,6 +516,7 @@ dba_tableDropImpact:
             | Table | tablename1 | count |
         - Sort the results by Usage Count in descending order
         - Include both users and dependent tables, with Type column indicating which is which
+        - The table must NOT contain DBC system objects or Teradata built-in functions
         - Do not include any additional explanation of results
   parameters:
     table_name:
@@ -292,64 +540,96 @@ dba_databaseHealthAssessment :
   type: prompt
   description: "You are a Teradata DBA who is an expert in assessing the health of a database. (prompt_type: reporting)"
   prompt: |
-    Generate a comprehensive Teradata system health dashboard for the last 30 days, structured as an executive summary followed by detailed technical analysis. Create a visual dashboard using tables, charts, and color-coded indicators to highlight critical metrics and resource constraints. 
+    Generate a comprehensive Teradata system health dashboard for the last 30 days, structured as an executive summary followed by detailed technical analysis.
 
-    Executive Summary Section: 
-    * System overview with key performance indicators  (number of databases, number of tables, number of views, number of macros, number of user defined views, number of users and space utilization percentages) 
-    * Critical alerts highlighting databases/tables approaching space limits (use red for >85% utilization, yellow for >70%) 
-    * Top 5 resource consumption trends and usage patterns 
+    ## Phase 1 - Get list of databases and space metrics
+    Use base_databaseList tool with scope='{database_scope}' to get a list of databases.
+    Create a list of database names for the phases below.
+    Also use dba_databaseSpace tool to get space usage metrics across all databases.
+    Also use dba_tableSpace tool with top_n=10 and exclude_system='Y' to get the top 10 space-consuming tables.
 
-    Detailed Technical Analysis: 
-    * Current database version and system configuration 
-    * Complete space utilization breakdown across all databases with visual charts 
-    * Top 10 space-consuming tables with growth trends and utilization percentages 
-    * CPU Resource usage heatmaps showing patterns by weekday and hour of day 
-    * IO Resource usage heatmaps showing patterns by weekday and hour of day 
-    * Memory Resource usage heatmaps showing patterns by weekday and hour of day 
-    * Flow control metrics and user delay analysis with performance bottleneck identification 
-    * Database and table activity rankings showing most frequently accessed objects 
-    * User activity patterns and resource impact analysis 
+    ## Phase 2 - Resource usage analysis for the last 30 days
+    Use dba_resusageSummary tool with no_days=30 to gather CPU, IO, and Memory resource usage patterns.
+    The tool uses no_days to calculate the date range internally - do NOT pass a date parameter.
+    Call the tool twice:
+      1. First call with dimensions=["LogDate"] for the daily summary trend
+      2. Second call with dimensions=["LogDate","hourOfDay"] for the 30-day heatmap (date x hour matrix)
 
-    Formatting Requirements: 
-    * Use color coding: Red (critical/>85%), Yellow (warning/70-85%), Green (healthy/<70%) 
-    * Include bar charts for space utilization and usage patterns 
-    * Present data in sortable tables with key metrics highlighted 
-    * Add trend indicators (arrows/percentages) for changing metrics 
-    * Target audience: DBA management and Teradata system owners 
+    ## Phase 3 - Flow control analysis for the last 30 days
+    IMPORTANT: This is a SINGLE tool call, not a date iteration. Do NOT generate a date list or iterate per day.
+    Use dba_flowControl tool ONCE with start_date = 30 days before today and end_date = today, both in YYYY-MM-DD format.
+    Calculate these dates yourself and pass them directly as arguments.
+
+    ## Phase 4 - User delay analysis for the last 30 days
+    IMPORTANT: This is a SINGLE tool call, not a date iteration. Do NOT generate a date list or iterate per day.
+    Use dba_userDelay tool ONCE with the same date range as Phase 3: start_date = 30 days before today, end_date = today, both in YYYY-MM-DD format.
+    Calculate these dates yourself and pass them directly as arguments.
+
+    ## Phase 5 - Database-level detail
+    Cycle through the list of databases from Phase 1, for each database do the following steps in order:
+    Step 1. Use base_tableList tool to get a list of tables in the database
+    Step 2. Use base_tableUsage tool to get table activity and access patterns
+
+    ## Phase 6 - Present results as a dashboard
+    Generate a comprehensive dashboard using the data from all phases above.
+
+    Executive Summary Section:
+    * System overview with key performance indicators (number of databases, number of tables, space utilization percentages)
+    * Critical alerts highlighting databases/tables approaching space limits (use red for >85% utilization, yellow for >70%)
+    * Top 5 resource consumption trends and usage patterns
+
+    Detailed Technical Analysis:
+    * Complete space utilization breakdown across all databases with visual charts
+    * Top 10 space-consuming tables with growth trends and utilization percentages
+    * CPU Resource usage heatmaps showing all dates in the 30-day period by hour of day (rows = dates, columns = hours 0-23)
+    * IO Resource usage heatmaps showing all dates in the 30-day period by hour of day (rows = dates, columns = hours 0-23)
+    * Flow control metrics and user delay analysis with performance bottleneck identification
+    * Database and table activity rankings showing most frequently accessed objects
+
+    Formatting Requirements:
+    * Use color coding: Red (critical/>85%), Yellow (warning/70-85%), Green (healthy/<70%)
+    * Include bar charts for space utilization and usage patterns
+    * Present data in sortable tables with key metrics highlighted
+    * Add trend indicators (arrows/percentages) for changing metrics
+    * Target audience: DBA management and Teradata system owners
     * Focus on informational assessment rather than actionable recommendation
     * Ensure that dashboard is mobile friendly and scales easily
-
-    Think through the problem.
-
+  parameters:
+    database_scope:
+      name: database_scope
+      description: "Scope of databases to include: 'user' for user-created databases only (excludes system databases), 'all' for all databases including system databases."
+      required: true
+      type_hint: str
 
 dba_userActivityAnalysis:
   type: prompt
   description: "Analyze Teradata user activity patterns for the past 7 days (prompt_type: reporting)"
   prompt: |
-    Analyze Teradata user activity patterns for the past 7 days, focusing on resource consumption and query behavior. Create a comprehensive analysis dashboard for DBA review with detailed breakdowns of user behavior and system impact.
+    You are a Teradata DBA analyzing user activity patterns for the past 7 days.
 
-    Primary Analysis Requirements:
-        • Rank users by resource consumption priority: CPU time (primary), I/O operations (secondary), memory usage (tertiary)
-        • Categorize all queries by complexity type (simple/medium/complex based on execution characteristics)
-        • Provide hourly activity breakdowns showing all usage periods color coded by CPU usage
-        • Include user names directly in all reports and analysis
-    Detailed Reporting Structure:
-        • System-wide resource consumption overview with hourly heatmaps for the 7-day period
-        • Complete user ranking table showing CPU time, I/O operations, and memory usage with percentage of total system resources
-        • Activity pattern analysis displaying each user's peak activity hours and workload distribution
-    Top 5 Resource Consumers Deep Dive:
-        • Individual user profiles with recent SQL activity logs and execution statistics
-        • Table access frequency analysis showing most queried objects per user
-        • Query complexity distribution and execution time patterns
-        • Hourly activity charts showing when each high-consumption user is most active
-    Output Format:
-        - Dashboard-style presentation with sortable tables and visual charts
-        - Color-coded metrics to highlight resource usage levels
-        - Include specific query examples and table access patterns
-        - Target audience: Database administrators for performance monitoring and user guidance assessment
-        - Ensure that dashboard is mobile friendly and scales easily
+    IMPORTANT: Do NOT add phases for TDA_CurrentDate or TDA_DateRange. The tools below handle temporal logic internally via their no_days parameter.
 
-    Think through the problem
+    ## Phase 1 - Get resource usage data
+    Use dba_resusageSummary tool with dimensions=["LogDate","hourOfDay","UserName"] and no_days=7.
+    This returns CPU time, I/O operations, and memory usage broken down by date, hour, and user.
+    A single call returns all 7 days of data. Do NOT pass a date parameter.
+
+    ## Phase 2 - Get recent SQL activity
+    Use dba_userSqlList tool with no arguments.
+    This tool defaults to 7 days for all users. Do NOT pass user_name.
+
+    ## Phase 3 - Present user activity analysis
+    Using ALL data from Phase 1 and Phase 2, generate a comprehensive DBA dashboard report with the following sections:
+    1. System-wide resource consumption overview with hourly heatmaps for the 7-day period, color-coded by CPU usage levels
+    2. User ranking table: rank all users by CPU time (primary), I/O operations (secondary), memory usage (tertiary), showing percentage of total system resources. Include user names directly in all tables
+    3. Activity pattern analysis: each user's peak activity hours and workload distribution
+    4. Top 5 resource consumers deep dive:
+       - Individual user profiles with recent SQL activity logs and execution statistics
+       - Table access frequency analysis showing most queried objects per user
+       - Query complexity distribution (simple/medium/complex based on execution characteristics) and execution time patterns
+       - Hourly activity charts showing when each high-consumption user is most active
+    5. Output format: dashboard-style presentation with sortable tables, color-coded metrics to highlight resource usage levels, include specific query examples and table access patterns
+    Present the complete analysis as the final output
 
 dba_systemVoice:
   type: prompt

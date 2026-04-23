@@ -88,6 +88,74 @@ The server uses a **layered configuration approach** where configuration files a
 Later layers override earlier layers, and top-level keys are replaced entirely (no merge)
 
 
+## Teradata Vector Store tools (`tdvs`)
+
+The `tdvs` module provides tools to manage and use Teradata Vector Stores. It requires **Teradata Vantage 20.0+** and the `teradatagenai` Python library.
+
+### Install the optional dependency
+
+The `teradatagenai` library is not installed by default. Add it with the `[tdvs]` extra:
+
+```bash
+# With uv
+uv tool install "teradata-mcp-server[tdvs]"
+
+# With pip
+pip install "teradata-mcp-server[tdvs]"
+```
+
+### Environment variables
+
+In addition to `DATABASE_URI`, the `tdvs` module requires the following variables:
+
+| Variable | Required | Description |
+|---|---|---|
+| `DATABASE_URI` | Yes | Standard Teradata connection string |
+| `TD_BASE_URL` | Yes | Base URL of the Teradata Vector Store service |
+| `TD_PAT` | No | Personal Access Token for authentication. Falls back to `DATABASE_URI` credentials if not set. |
+| `TD_PEM` | No | Path to PEM certificate file. Used together with `TD_PAT`. |
+
+Add them to your `.env` file:
+
+```dotenv
+DATABASE_URI=teradata://myuser:mypassword@my-host:1025/mydb
+TD_BASE_URL=https://my-tdvs-host/api
+TD_PAT=my-personal-access-token
+TD_PEM=/path/to/my/cert.pem
+```
+
+### Claude Desktop configuration
+
+Use `uvx` with the `--from` flag to pull the `[tdvs]` extra, and pass the variables in the `env` block.
+
+> **Shell quoting note:** If running `uvx` manually in a terminal (zsh/bash), quote the package spec to prevent glob expansion: `uvx --from "teradata-mcp-server[tdvs]" teradata-mcp-server`. In the Claude Desktop JSON config below this is not needed — args are passed directly to the process without shell interpretation.
+
+```json
+{
+  "mcpServers": {
+    "teradata-mcp-server": {
+      "command": "uvx",
+      "args": [
+        "--from", "teradata-mcp-server[tdvs]",
+        "teradata-mcp-server"
+      ],
+      "env": {
+        "DATABASE_URI": "teradata://myuser:mypassword@my-host:1025/mydb",
+        "PROFILE": "all",
+        "MCP_TRANSPORT": "stdio",
+        "TD_BASE_URL": "https://my-tdvs-host/api",
+        "TD_PAT": "my-personal-access-token",
+        "TD_PEM": "/path/to/my/cert.pem"
+      }
+    }
+  }
+}
+```
+
+> **Note:** `TD_PAT` and `TD_PEM` are optional. If omitted, the server authenticates to the Vector Store using the username and password from `DATABASE_URI`.
+
+---
+
 ## 🎯 Profiles
 
 Profiles control which tools and resources are available:
@@ -158,6 +226,28 @@ Your custom `profiles.yml` will be merged with the built-in profiles, allowing y
 - Override existing profiles
 - Add new profiles
 - Extend built-in profiles with additional tools
+
+## 🔍 Progressive Disclosure
+
+By default, all tools in the active profile are registered individually and listed by the client at startup. With many tools loaded this can consume a significant portion of the LLM context window.
+
+**Progressive disclosure** reduces this by exposing only three proxy tools to the client — `search_tool`, and `execute_tool`— while keeping the full tool catalog available on demand. The LLM searches for tools by keyword, retrieves full documentation on the ones it needs, then executes them.
+
+```bash
+# Enable via flag
+teradata-mcp-server --progressive_disclosure
+
+# Or via environment variable
+export PROGRESSIVE_DISCLOSURE=true
+teradata-mcp-server
+```
+
+| Mode | Client sees | Context window |
+|------|-------------|----------------|
+| Static (default) | All tools listed at startup | Higher usage |
+| Progressive disclosure | 3 proxy tools | ~99% reduction |
+
+See the [developer guide](../developer_guide/PROGRESSIVE_DISCLOSURE.md) for details on the search algorithm and two-tier discovery workflow.
 
 ## 🚄 Transport Modes
 

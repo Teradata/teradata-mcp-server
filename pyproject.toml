@@ -1,6 +1,6 @@
 [project]
 name = "teradata-mcp-server"
-version = "0.1.7"
+version = "0.2.1"
 description = "Model Context Protocol (MCP) server for Teradata, Community edition"
 readme = {file = "README.md", content-type = "text/markdown"}
 license = {text = "MIT"}
@@ -23,7 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "pydantic>=2.8.0,<3.0.0",
-    "fastmcp>=2.12.0,<3.0.0",
+    "fastmcp>=3.2.0,<3.3.0",
     "mcp[cli]>=1.0.0,<2.0.0",
     "teradatasqlalchemy>=20.0.0.0",
     "python-dotenv>=1.0.0",
@@ -100,7 +100,8 @@ select = [
     "PL",  # pylint
 ]
 ignore = [
-    "F403",  # Wildcard imports (temporarily ignore for gradual refactoring)
+    "F403",   # Wildcard imports (temporarily ignore for gradual refactoring)
+    "PLR2004", # Magic value comparisons (row index access patterns are self-documenting)
     "F401",  # Unused imports in __init__.py files (common pattern for re-exports)
     "E402",  # Module level import not at top (some tools have conditional imports)
     "E501",  # strings over 120 characters
@@ -115,6 +116,8 @@ ignore = [
     "PLR0915", # Too many statements (common in setup functions)
     "PLW0603", # Use of globals statements
     "PLC0415", # Import statements outside the module top level scope
+    "PLR0911", # Too many return statements (dispatch-style functions)
+    "N811",    # Constant imported as non-constant (readability aliases)
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -131,6 +134,7 @@ warn_unused_configs = true
 disallow_untyped_defs = false  # Gradually enable this
 ignore_missing_imports = true
 strict_optional = true
+disable_error_code = ["import-untyped"]
 
 [dependency-groups]
 dev = [

@@ -16,11 +16,12 @@ import os
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 from uuid import uuid4
 
+import mcp.types as mt
 from fastmcp.server.dependencies import get_http_headers
-from fastmcp.server.middleware import Middleware, MiddlewareContext
+from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
 
 
 @dataclass
@@ -44,27 +45,36 @@ class RequestContextMiddleware(Middleware):
         self,
         logger,
         auth_cache,
-        tdconn_supplier: Callable[[], object],
+        tdconn_supplier: Callable[[], Any],
         auth_mode: str = "none",
         transport: str | None = None,
+        registry_load_callback: Callable[[str | None], str | None] | None = None,
     ) -> None:
         self.logger = logger
         self.auth_cache = auth_cache
         self.tdconn_supplier = tdconn_supplier
         self.auth_mode = (auth_mode or "none").lower()
         self.transport = (transport or "stdio").lower()
+        self.registry_load_callback = registry_load_callback
+        self.registry_tools_loaded_ts: str | None = None
+        self.logger.info(
+            f"RequestContextMiddleware initialized: transport={self.transport}, auth_mode={self.auth_mode}, registry_callback={registry_load_callback is not None}"
+        )
 
     async def on_request(self, context: MiddlewareContext, call_next):
+        self.logger.info(f"on_request: Called with transport={self.transport}")
         # stdio: generate lightweight context; do not touch stdout
         if self.transport == "stdio":
             try:
                 rc = RequestContext(
                     headers={},
                     request_id=uuid4().hex,
-                    session_id=(getattr(context.fastmcp_context, "session_id", None) if context.fastmcp_context else uuid4().hex),
+                    session_id=(
+                        getattr(context.fastmcp_context, "session_id", None) if context.fastmcp_context else uuid4().hex
+                    ),
                 )
                 if context.fastmcp_context:
-                    context.fastmcp_context.set_state("request_context", rc)
+                    await context.fastmcp_context.set_state("request_context", rc, serializable=False)
                 else:
                     self.logger.warning("No FastMCP context available - RequestContext not stored")
             except Exception as e:
@@ -154,6 +164,7 @@ class RequestContextMiddleware(Middleware):
                         InvalidUsernameError,
                         RateLimitExceededError,
                     )
+
                     if isinstance(e, RateLimitExceededError):
                         self.logger.warning(f"Rate limit exceeded for auth attempt: {e}")
                         raise PermissionError("Too many authentication attempts. Please try again later.") from e
@@ -166,9 +177,7 @@ class RequestContextMiddleware(Middleware):
                 if not validated_user:
                     raise PermissionError("Invalid credentials")
                 assume_user = validated_user
-                self.logger.info(
-                    f"AUTH_MODE=basic: Validated identity of user {assume_user} from database."
-                )
+                self.logger.info(f"AUTH_MODE=basic: Validated identity of user {assume_user} from database.")
                 self.auth_cache.set(session_id, validated_user, auth_token_sha256)
 
         # Build and set RequestContext in FastMCP state
@@ -188,7 +197,7 @@ class RequestContextMiddleware(Middleware):
                 user_id=assume_user,
             )
             if context.fastmcp_context:
-                context.fastmcp_context.set_state("request_context", rc)
+                await context.fastmcp_context.set_state("request_context", rc, serializable=False)
             else:
                 self.logger.warning("No FastMCP context available - RequestContext not stored")
         except Exception as e:
@@ -196,3 +205,37 @@ class RequestContextMiddleware(Middleware):
 
         return await call_next(context)
 
+    async def on_initialize(
+        self,
+        context: MiddlewareContext[mt.InitializeRequest],
+        call_next: CallNext[mt.InitializeRequest, mt.InitializeResult | None],
+    ) -> mt.InitializeResult | None:
+        """
+        Hook called when a client session initializes.
+
+        This is the perfect place to refresh registry tools, as it happens once per session
+        and after the database connection is available.
+        """
+        self.logger.info(
+            f"on_initialize: Session initializing (registry_load_callback configured: {self.registry_load_callback is not None})"
+        )
+
+        # Trigger registry tool refresh if callback is configured
+        if self.registry_load_callback:
+            try:
+                self.logger.info(
+                    f"on_initialize: Refreshing registry tools (last_load_ts: {self.registry_tools_loaded_ts})"
+                )
+                # Call the registry load callback with current timestamp watermark
+                new_ts = self.registry_load_callback(self.registry_tools_loaded_ts)
+                if new_ts:
+                    self.registry_tools_loaded_ts = new_ts
+                    self.logger.info(f"on_initialize: Registry tools refreshed successfully, new watermark: {new_ts}")
+                else:
+                    self.logger.info("on_initialize: Registry refresh completed, no new timestamp returned")
+            except Exception as e:
+                self.logger.error(f"on_initialize: Error refreshing registry tools: {e}", exc_info=True)
+        else:
+            self.logger.info("on_initialize: No registry_load_callback configured, skipping registry refresh")
+
+        return await call_next(context)

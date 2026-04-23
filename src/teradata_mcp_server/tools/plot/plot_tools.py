@@ -1,10 +1,9 @@
-
 from teradatasql import TeradataConnection
 
 from teradata_mcp_server.tools.plot.plot_utils import get_plot_json_data, get_radar_plot_json_data
 
 
-def handle_plot_line_chart(conn: TeradataConnection, table_name: str, labels: str, columns: str|list[str]):
+def handle_plot_line_chart(conn: TeradataConnection, table_name: str, labels: str, columns: str | list[str]):
     """
     Function to generate a line plot for labels and columns.
     Columns mentioned in labels are used for x-axis and columns are used for y-axis.
@@ -63,7 +62,7 @@ def handle_plot_polar_chart(conn: TeradataConnection, table_name: str, labels: s
     if not isinstance(labels, str):
         raise ValueError("labels must be a string representing the column name for x-axis.")
 
-    return get_plot_json_data(conn, table_name, labels, column, 'polar')
+    return get_plot_json_data(conn, table_name, labels, column, "polar")
 
 
 def handle_plot_pie_chart(conn: TeradataConnection, table_name: str, labels: str, column: str):
@@ -93,10 +92,10 @@ def handle_plot_pie_chart(conn: TeradataConnection, table_name: str, labels: str
     if not isinstance(labels, str):
         raise ValueError("labels must be a string representing the column name for x-axis.")
 
-    return get_plot_json_data(conn, table_name, labels, column, 'pie')
+    return get_plot_json_data(conn, table_name, labels, column, "pie")
 
 
-def handle_plot_radar_chart(conn: TeradataConnection, table_name: str, labels: str, columns: str|list[str]):
+def handle_plot_radar_chart(conn: TeradataConnection, table_name: str, labels: str, columns: str | list[str]):
     """
     Function to generate a radar plot for labels and columns.
     Columns mentioned in labels are used as labels and column is used to plot.

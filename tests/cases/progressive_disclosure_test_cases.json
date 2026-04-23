@@ -1,0 +1,72 @@
+{
+  "test_cases": {
+    "search_tool": [
+      {
+        "name": "list_all_tools",
+        "parameters": {
+          "query": ""
+        }
+      },
+      {
+        "name": "exact_match_base_tableList",
+        "parameters": {
+          "query": "base_tableList"
+        }
+      },
+      {
+        "name": "keyword_search_table",
+        "parameters": {
+          "query": "table list"
+        }
+      },
+      {
+        "name": "keyword_search_read_query",
+        "parameters": {
+          "query": "read query"
+        }
+      },
+      {
+        "name": "exact_match_base_readQuery",
+        "parameters": {
+          "query": "base_readQuery"
+        }
+      }
+    ],
+    "execute_tool": [
+      {
+        "name": "execute_base_readQuery",
+        "parameters": {
+          "tool_name": "base_readQuery",
+          "arguments": {
+            "sql": "SELECT CURRENT_TIMESTAMP"
+          }
+        }
+      },
+      {
+        "name": "execute_base_tableList",
+        "parameters": {
+          "tool_name": "base_tableList",
+          "arguments": {
+            "database_name": "DBC"
+          }
+        }
+      },
+      {
+        "name": "execute_base_databaseList",
+        "parameters": {
+          "tool_name": "base_databaseList",
+          "arguments": {}
+        }
+      },
+      {
+        "name": "execute_base_databaseList_with_user_scope",
+        "parameters": {
+          "tool_name": "base_databaseList",
+          "arguments": {
+            "scope": "user"
+          }
+        }
+      }
+    ]
+  }
+}

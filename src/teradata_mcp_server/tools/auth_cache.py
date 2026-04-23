@@ -11,6 +11,7 @@ from typing import NamedTuple, Optional
 @dataclass
 class AuthCacheEntry:
     """Authentication cache entry with expiration."""
+
     principal: str
     auth_hash: str
     expires_at: float
@@ -53,12 +54,8 @@ class SecureAuthCache:
         current_time = time.time()
         with self._lock:
             self._cache[session_id] = AuthCacheEntry(
-                principal=principal,
-                auth_hash=auth_hash,
-                expires_at=current_time + self._ttl,
-                created_at=current_time
+                principal=principal, auth_hash=auth_hash, expires_at=current_time + self._ttl, created_at=current_time
             )
-
 
     def invalidate(self, session_id: str):
         """Remove cached entry for session."""
@@ -107,5 +104,5 @@ class SecureAuthCache:
             "total_entries": len(self._cache),
             "active_entries": active_count,
             "expired_entries": expired_count,
-            "ttl_seconds": self._ttl
+            "ttl_seconds": self._ttl,
         }
