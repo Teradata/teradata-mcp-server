@@ -17,3 +17,4 @@ examples/app-flowise/.*
 test_*.py
 .planning/
 .ruff_cache/
+Start_MCP_Server.bat
