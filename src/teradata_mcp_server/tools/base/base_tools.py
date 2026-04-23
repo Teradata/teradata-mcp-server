@@ -445,13 +445,13 @@ DEFAULT_MAX_WORKERS = 8
 def handle_base_columnMetadata(
     conn: TeradataConnection,
     db_name: str,
-    object_name: Optional[str] = None,
-    table_kind: Optional[str] = None,
-    max_workers: Optional[int] = None,
-    fields: Optional[str] = None,
-    exclude_objects: Optional[str] = None,
-    max_payload_kb: Optional[int] = None,
-    max_execution_seconds: Optional[int] = None,
+    object_name: list[str] | None = None,
+    table_kind: list[str] | None = None,
+    max_workers: list[int] | None = None,
+    fields: list[str] | None = None,
+    exclude_objects: list[str] | None = None,
+    max_payload_kb: list[int] | None = None,
+    max_execution_seconds: list[int] | None = None,
     *args,
     **kwargs,
 ):
@@ -1077,7 +1077,7 @@ def _columnsVX_fallback(
         ]
 
 
-def _safe_int(value) -> Optional[int]:
+def _safe_int(value) -> list[int] | None:
     """
     Safely convert a value to int, returning None on failure.
 
@@ -1203,7 +1203,7 @@ def _build_type_string(col: dict) -> str:
     return type_code or fmt or "UNKNOWN"
 
 
-def _build_index_type_string(col: dict) -> Optional[str]:
+def _build_index_type_string(col: dict) -> list[str] | None:
     """
     Derive a human-readable Teradata index type from HELP COLUMN flags.
 
@@ -1247,7 +1247,7 @@ def _build_index_type_string(col: dict) -> Optional[str]:
         return "USI" if unique == "Y" else "NUSI"
 
 
-def _build_case_string(col: dict) -> Optional[str]:
+def _build_case_string(col: dict) -> list[str] | None:
     """
     Derive a human-readable case specificity label from the UpperCase flag.
 
@@ -1279,7 +1279,7 @@ def _build_case_string(col: dict) -> Optional[str]:
     return CASE_SPECIFICITY_MAP.get(flag)
 
 
-def _build_charset_string(col: dict) -> Optional[str]:
+def _build_charset_string(col: dict) -> list[str] | None:
     """
     Derive a human-readable character set name from the CharType code.
 
@@ -1303,7 +1303,7 @@ def _build_charset_string(col: dict) -> Optional[str]:
 
 
 def _get_objects(
-    conn: TeradataConnection, db_name: str, table_kind: Optional[str] = None
+    conn: TeradataConnection, db_name: str, table_kind: list[str] | None = None
 ) -> list:
     """
     Retrieve all qualifying objects (tables, views, functions) from a database.
@@ -1363,7 +1363,7 @@ def _get_objects(
 
 def _get_table_kind(
     conn: TeradataConnection, db_name: str, object_name: str
-) -> Optional[str]:
+) -> list[str] | None:
     """
     Look up the TableKind for a single object in DBC.TablesV.
 
