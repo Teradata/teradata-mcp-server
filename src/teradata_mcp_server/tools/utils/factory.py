@@ -2,6 +2,17 @@ import asyncio
 import inspect
 
 
+async def _fetch_request_context():
+    """Fetch RequestContext from FastMCP state in the async layer before thread dispatch."""
+    try:
+        from fastmcp.server.dependencies import get_context
+
+        ctx = get_context()
+        return await ctx.get_state("request_context")
+    except Exception:
+        return None
+
+
 def create_mcp_tool(
     *,
     executor_func=None,
@@ -48,12 +59,14 @@ def create_mcp_tool(
             missing = [n for n in required_params if n not in kwargs]
             if missing:
                 raise ValueError(f"Missing required parameters: {missing}")
-            merged_kwargs = {**inject_kwargs, **kwargs}
+            request_context = await _fetch_request_context()
+            merged_kwargs = {**inject_kwargs, **kwargs, "_request_context": request_context}
             return await asyncio.to_thread(executor_func, **merged_kwargs)
     else:
 
         async def _mcp_tool(**kwargs):
-            merged_kwargs = {**inject_kwargs, **kwargs}
+            request_context = await _fetch_request_context()
+            merged_kwargs = {**inject_kwargs, **kwargs, "_request_context": request_context}
             return await asyncio.to_thread(executor_func, **merged_kwargs)
 
     _mcp_tool.__name__ = tool_name
