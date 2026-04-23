@@ -21,8 +21,21 @@ from .queryband import build_queryband, sanitize_qb_value  # noqa: F401
 
 # -------------------- Serialization & response helpers -------------------- #
 def serialize_teradata_types(obj: Any) -> Any:
-    """Convert Teradata-specific types to JSON serializable formats."""
-    if isinstance(obj, date | datetime):
+    """Convert Teradata-specific types to JSON-serialisable formats.
+
+    Handles None explicitly so that database NULL values are preserved
+    as Python None (→ JSON null) rather than the string ``"None"``.
+
+    Args:
+        obj: The value to convert.
+
+    Returns:
+        A JSON-native type (str, int, float, bool, None) or an
+        ISO-formatted date string.
+    """
+    if obj is None:
+        return None
+    if isinstance(obj, (date, datetime)):
         return obj.isoformat()
     if isinstance(obj, Decimal):
         return float(obj)
@@ -40,17 +53,83 @@ def rows_to_json(cursor_description: Any, rows: list[Any]) -> list[dict[str, Any
     return out
 
 
-def create_response(data: Any, metadata: dict[str, Any] | None = None, error: dict[str, Any] | None = None) -> str:
-    """Create a standardized JSON response structure."""
+def _make_serialisable(obj: Any) -> Any:
+    """Recursively walk an object tree, converting every leaf to a
+    JSON-native Python type.
+
+    This is the deep-conversion counterpart of
+    :func:`serialize_teradata_types`.  It ensures that nested dicts
+    and lists produced by tool handlers contain only types that
+    ``json.dumps`` can serialise without a custom *default* hook,
+    and — critically — that ``None`` values survive as ``None``
+    (JSON ``null``) instead of the string ``"None"``.
+
+    Args:
+        obj: Any Python object (scalar, dict, list, tuple, etc.).
+
+    Returns:
+        A recursively sanitised copy whose leaves are all
+        ``str | int | float | bool | None``.
+    """
+    if obj is None:
+        return None
+    if isinstance(obj, (str, int, float, bool)):
+        return obj
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    if isinstance(obj, Decimal):
+        return float(obj)
+    if isinstance(obj, dict):
+        return {k: _make_serialisable(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_make_serialisable(item) for item in obj]
+    # Fallback: cast to string (e.g. bytes, custom objects)
+    return str(obj)
+
+
+def create_response(
+    data: Any,
+    metadata: dict[str, Any] | None = None,
+    error: dict[str, Any] | None = None,
+) -> dict:
+    """Create a standardised MCP response structure.
+
+    .. versionchanged:: 1.1.0
+       Returns a **dict** instead of a JSON string.  The MCP
+       framework requires ``structured_content`` to be a ``dict``
+       (or ``None``); returning a JSON string caused the server to
+       wrap it in a ``[{"type": "text", ...}]`` list which the
+       framework rejected.
+
+       All nested values are recursively sanitised via
+       :func:`_make_serialisable` so that ``None`` / NULL values
+       are preserved as ``None`` (JSON ``null``) and Teradata-
+       specific types (``Decimal``, ``datetime``, etc.) are
+       converted to JSON-native equivalents.
+
+    Args:
+        data:     Payload — typically a list of row-dicts.
+        metadata: Optional dict of tool metadata (tool_name, sql, etc.).
+        error:    Optional error dict; if supplied the response
+                  status is set to ``"error"``.
+
+    Returns:
+        dict: A JSON-serialisable dict ready to be used as
+              MCP ``structured_content``.
+    """
     if error:
-        resp = {"status": "error", "message": error}
+        resp: dict[str, Any] = {"status": "error", "message": error}
         if metadata:
-            resp["metadata"] = metadata
-        return json.dumps(resp, default=serialize_teradata_types)
-    resp = {"status": "success", "results": data}
+            resp["metadata"] = _make_serialisable(metadata)
+        return resp
+
+    resp = {
+        "status": "success",
+        "results": _make_serialisable(data),
+    }
     if metadata:
-        resp["metadata"] = metadata
-    return json.dumps(resp, default=serialize_teradata_types)
+        resp["metadata"] = _make_serialisable(metadata)
+    return resp
 
 
 # ------------------------------ Auth helpers ------------------------------ #

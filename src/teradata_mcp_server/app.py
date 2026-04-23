@@ -34,6 +34,7 @@ from teradata_mcp_server import utils as config_utils
 from teradata_mcp_server.config import Settings
 from teradata_mcp_server.middleware import RequestContextMiddleware
 from teradata_mcp_server.tools import ContextCatalog
+from teradata_mcp_server.tools.graph.graph_edge_contract import GRAPH_EDGE_CONTRACT
 from teradata_mcp_server.tools.utils import (
     convert_tdml_docstring_to_mcp_docstring,
     execute_analytic_function,
@@ -1286,6 +1287,20 @@ Returns:
                 return term
             else:
                 return {"error": f"Glossary term not found: {term_name}"}
+
+    # ── Graph Edge Contract Resource ──────────────────────────────────────
+    # Always registered (static content, no YAML dependency).
+    # AI agents retrieve this to understand the edge_repository schema
+    # required by all graph_* tools.
+    # ──────────────────────────────────────────────────────────────────────
+    if any(re.match(pattern, "graph_edge_contract") for pattern in config.get("resource", [])):
+
+        @mcp.resource("graph://edge-contract")
+        def get_graph_edge_contract() -> str:
+            """Return the Graph Edge Contract schema definition."""
+            return GRAPH_EDGE_CONTRACT
+
+        logger.info("Registered resource: graph_edge_contract")
 
     # Return the configured app and some handles used by the entrypoint if needed
     return mcp, logger
