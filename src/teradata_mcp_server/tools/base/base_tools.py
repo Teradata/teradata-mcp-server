@@ -5,7 +5,6 @@ import re
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, default
@@ -343,9 +342,9 @@ CHARSET_MAP = {
 # Case specificity flags from DBC.ColumnsVX UpperCaseFlag / HELP COLUMN
 # Reference: Teradata Database SQL Data Definition Language — Column Attributes
 CASE_SPECIFICITY_MAP = {
-    "U": "UPPERCASE",          # Column values stored and compared in uppercase
-    "C": "CASESPECIFIC",       # Column comparisons are case-sensitive
-    "N": "NOT CASESPECIFIC",   # Column comparisons are case-insensitive
+    "U": "UPPERCASE",  # Column values stored and compared in uppercase
+    "C": "CASESPECIFIC",  # Column comparisons are case-sensitive
+    "N": "NOT CASESPECIFIC",  # Column comparisons are case-insensitive
     # NULL — not applicable; no explicit case attribute defined on the column
 }
 
@@ -355,7 +354,7 @@ TYPE_CODE_MAP = {
     # -- Character types --
     "CF": "CHAR",
     "CV": "VARCHAR",
-    "CO": "VARCHAR",           # VARCHAR variant returned by some HELP COLUMN versions
+    "CO": "VARCHAR",  # VARCHAR variant returned by some HELP COLUMN versions
     "LF": "LONG VARCHAR",
     "BF": "BYTE",
     "BV": "VARBYTE",
@@ -363,12 +362,12 @@ TYPE_CODE_MAP = {
     # -- Numeric types --
     "I1": "BYTEINT",
     "I2": "SMALLINT",
-    "I":  "INTEGER",
+    "I": "INTEGER",
     "I8": "BIGINT",
-    "F":  "FLOAT",
-    "D":  "DOUBLE PRECISION",
+    "F": "FLOAT",
+    "D": "DOUBLE PRECISION",
     "DC": "DECIMAL",
-    "N":  "NUMBER",
+    "N": "NUMBER",
     # -- Date/Time types --
     "DA": "DATE",
     "AT": "TIME",
@@ -654,8 +653,7 @@ def handle_base_columnMetadata(
                     obj_infos.append({"ObjectName": name, "TableKind": kind})
                 else:
                     logger.warning(
-                        f"{C_MODULE}:{v_step_no} Object '{name}' not found "
-                        f"in database '{db_name}' — skipping"
+                        f"{C_MODULE}:{v_step_no} Object '{name}' not found in database '{db_name}' — skipping"
                     )
             if not obj_infos:
                 raise ValueError(f"None of the specified objects found in '{db_name}'")
@@ -674,19 +672,12 @@ def handle_base_columnMetadata(
         # Patterns use SQL LIKE-style % wildcards, converted to fnmatch *.
         v_step_no = "015"
         if exclude_objects:
-            patterns = [
-                p.strip().replace("%", "*")
-                for p in exclude_objects.split(",")
-                if p.strip()
-            ]
+            patterns = [p.strip().replace("%", "*") for p in exclude_objects.split(",") if p.strip()]
             pre_count = len(obj_infos)
             obj_infos = [
                 info
                 for info in obj_infos
-                if not any(
-                    fnmatch.fnmatch(info["ObjectName"].upper(), pat.upper())
-                    for pat in patterns
-                )
+                if not any(fnmatch.fnmatch(info["ObjectName"].upper(), pat.upper()) for pat in patterns)
             ]
             excluded_count = pre_count - len(obj_infos)
             logger.debug(
@@ -709,14 +700,20 @@ def handle_base_columnMetadata(
             keep = {f.strip() for f in fields.split(",") if f.strip()}
             # Always include ObjectName, computed string fields, and status
             keep.update(
-                {"ObjectName", "ColumnTypeString", "IndexTypeString", "CharSetString",
-                 "CaseSpecificityString", "status", "error_message", "metadata_source"}
+                {
+                    "ObjectName",
+                    "ColumnTypeString",
+                    "IndexTypeString",
+                    "CharSetString",
+                    "CaseSpecificityString",
+                    "status",
+                    "error_message",
+                    "metadata_source",
+                }
             )
 
         # Payload budget — default 900 KB (safely under 1 MB MCP limit).
-        budget_bytes = (
-            (max_payload_kb if max_payload_kb and max_payload_kb > 0 else DEFAULT_PAYLOAD_KB) * 1024
-        )
+        budget_bytes = (max_payload_kb if max_payload_kb and max_payload_kb > 0 else DEFAULT_PAYLOAD_KB) * 1024
         budget_enabled = max_payload_kb is None or max_payload_kb != 0
         accumulated_bytes = 0
         processed_objects: set = set()
@@ -762,15 +759,14 @@ def handle_base_columnMetadata(
                     results.append(col)
 
             except Exception as obj_ex:
-                logger.warning(
-                    f"{C_MODULE}:{v_step_no} Skipping {db_name}.\"{obj}\" "
-                    f"(TableKind={kind}): {obj_ex}"
+                logger.warning(f'{C_MODULE}:{v_step_no} Skipping {db_name}."{obj}" (TableKind={kind}): {obj_ex}')
+                results.append(
+                    {
+                        "ObjectName": obj,
+                        "status": "ERROR",
+                        "error_message": str(obj_ex),
+                    }
                 )
-                results.append({
-                    "ObjectName": obj,
-                    "status": "ERROR",
-                    "error_message": str(obj_ex),
-                })
             return results
 
         # Execute in parallel — each thread gets its own Teradata cursor
@@ -781,10 +777,7 @@ def handle_base_columnMetadata(
         )
 
         with ThreadPoolExecutor(max_workers=workers) as executor:
-            futures = {
-                executor.submit(_process_one, info): info["ObjectName"]
-                for info in obj_infos
-            }
+            futures = {executor.submit(_process_one, info): info["ObjectName"] for info in obj_infos}
             for future in as_completed(futures):
                 obj_name_key = futures[future]
                 try:
@@ -792,10 +785,7 @@ def handle_base_columnMetadata(
 
                     # Apply field filtering immediately so budget check is accurate
                     if keep:
-                        result_rows = [
-                            {k: v for k, v in rec.items() if k in keep}
-                            for rec in result_rows
-                        ]
+                        result_rows = [{k: v for k, v in rec.items() if k in keep} for rec in result_rows]
 
                     chunk_size = len(str(result_rows))
 
@@ -835,14 +825,14 @@ def handle_base_columnMetadata(
                     processed_objects.add(obj_name_key)
 
                 except Exception as ex:
-                    logger.error(
-                        f"{C_MODULE}:{v_step_no} Future failed for {obj_name_key}: {ex}"
+                    logger.error(f"{C_MODULE}:{v_step_no} Future failed for {obj_name_key}: {ex}")
+                    data.append(
+                        {
+                            "ObjectName": obj_name_key,
+                            "status": "ERROR",
+                            "error_message": str(ex),
+                        }
                     )
-                    data.append({
-                        "ObjectName": obj_name_key,
-                        "status": "ERROR",
-                        "error_message": str(ex),
-                    })
                     processed_objects.add(obj_name_key)
 
         # ------------------------------------------------------------------
@@ -877,11 +867,7 @@ def handle_base_columnMetadata(
         # can pass them straight into object_name on the next call.
         truncated = time_exceeded or budget_exceeded
         if truncated:
-            remaining = [
-                info["ObjectName"]
-                for info in obj_infos
-                if info["ObjectName"] not in processed_objects
-            ]
+            remaining = [info["ObjectName"] for info in obj_infos if info["ObjectName"] not in processed_objects]
             metadata["truncated"] = True
             metadata["truncation_reason"] = truncation_reason
             metadata["remaining_objects"] = ",".join(remaining)
@@ -931,23 +917,23 @@ def _standardise_helpcol_row(row: dict) -> dict:
     """
     mapping = {
         # --- Full / spaced forms (named-table HELP COLUMN) ---
-        "Column Name":                  "ColumnName",
-        "Type":                         "ColumnType",
-        "Comment":                      "Comment",
-        "Nullable":                     "Nullable",
-        "Format":                       "Format",
-        "Title":                        "Title",
-        "Max Length":                   "ColumnLength",
-        "Length":                       "ColumnLength",
-        "Decimal Total Digits":         "DecimalTotalDigits",
-        "Decimal Fractional Digits":    "DecimalFractionalDigits",
-        "Char Type":                    "CharType",
-        "CharType":                     "CharType",
-        "Upper Case":                   "UpperCase",
-        "Case Specific":                "CaseSpecific",
-        "Not Casespecific Not Padded":  "NCSNP",
-        "Default Value":                "DefaultValue",
-        "Range":                        "Range",
+        "Column Name": "ColumnName",
+        "Type": "ColumnType",
+        "Comment": "Comment",
+        "Nullable": "Nullable",
+        "Format": "Format",
+        "Title": "Title",
+        "Max Length": "ColumnLength",
+        "Length": "ColumnLength",
+        "Decimal Total Digits": "DecimalTotalDigits",
+        "Decimal Fractional Digits": "DecimalFractionalDigits",
+        "Char Type": "CharType",
+        "CharType": "CharType",
+        "Upper Case": "UpperCase",
+        "Case Specific": "CaseSpecific",
+        "Not Casespecific Not Padded": "NCSNP",
+        "Default Value": "DefaultValue",
+        "Range": "Range",
         # --- Abbreviated single-letter forms (derived-table wrapper) ---
         # Mapping verified against Teradata HELP COLUMN dt.* output.
         "C": "ColumnName",
@@ -1047,31 +1033,28 @@ def _columnsVX_fallback(
                 # builder functions return None for those, which is correct since
                 # DBC.ColumnsVX does not carry the same index flags as HELP COLUMN.
                 normalised = {
-                    "ColumnName":               (row.get("ColumnName") or "").strip(),
-                    "ColumnType":               (row.get("ColumnType") or "").strip(),
-                    "ColumnLength":             row.get("ColumnLength"),
-                    "Nullable":                 (row.get("Nullable") or "").strip(),
-                    "CharType":                 row.get("CharType"),
-                    "DecimalTotalDigits":       row.get("DecimalTotalDigits"),
-                    "DecimalFractionalDigits":  row.get("DecimalFractionalDigits"),
-                    "UpperCase":                (row.get("UpperCase") or "").strip(),
-                    "DefaultValue":             row.get("DefaultValue"),
-                    "Format":                   (row.get("Format") or "").strip(),
-                    "metadata_source":          "DBC.ColumnsVX",
+                    "ColumnName": (row.get("ColumnName") or "").strip(),
+                    "ColumnType": (row.get("ColumnType") or "").strip(),
+                    "ColumnLength": row.get("ColumnLength"),
+                    "Nullable": (row.get("Nullable") or "").strip(),
+                    "CharType": row.get("CharType"),
+                    "DecimalTotalDigits": row.get("DecimalTotalDigits"),
+                    "DecimalFractionalDigits": row.get("DecimalFractionalDigits"),
+                    "UpperCase": (row.get("UpperCase") or "").strip(),
+                    "DefaultValue": row.get("DefaultValue"),
+                    "Format": (row.get("Format") or "").strip(),
+                    "metadata_source": "DBC.ColumnsVX",
                 }
                 results.append(normalised)
 
             return results
 
     except Exception as ex:
-        logger.error(
-            f"{C_MODULE}: DBC.ColumnsVX fallback failed for "
-            f"{db_name}.\"{object_name}\" — {ex}"
-        )
+        logger.error(f'{C_MODULE}: DBC.ColumnsVX fallback failed for {db_name}."{object_name}" — {ex}')
         return [
             {
-                "ObjectName":    object_name,
-                "status":        "PERMISSION_FALLBACK_ERROR",
+                "ObjectName": object_name,
+                "status": "PERMISSION_FALLBACK_ERROR",
                 "error_message": str(ex),
             }
         ]
@@ -1166,9 +1149,7 @@ def _build_type_string(col: dict) -> str:
     """
     type_code = (col.get("ColumnType") or col.get("Type") or "").strip()
     fmt = (col.get("Format") or "").strip()
-    max_length = _safe_int(
-        col.get("ColumnLength") or col.get("MaxLength") or col.get("Length")
-    )
+    max_length = _safe_int(col.get("ColumnLength") or col.get("MaxLength") or col.get("Length"))
 
     # -- Character types: include length and charset --
     if type_code in CHARACTER_TYPES:
@@ -1180,12 +1161,8 @@ def _build_type_string(col: dict) -> str:
 
     # -- Decimal/Number types: include precision and scale --
     if type_code in DECIMAL_TYPES:
-        dec_tot = _safe_int(
-            col.get("DecimalTotalDigits") or col.get("Decimal Total Digits")
-        )
-        dec_frac = _safe_int(
-            col.get("DecimalFractionalDigits") or col.get("Decimal Fractional Digits")
-        )
+        dec_tot = _safe_int(col.get("DecimalTotalDigits") or col.get("Decimal Total Digits"))
+        dec_frac = _safe_int(col.get("DecimalFractionalDigits") or col.get("Decimal Fractional Digits"))
         base_name = TYPE_CODE_MAP.get(type_code, type_code)
         if dec_tot is not None and dec_frac is not None:
             return f"{base_name}({dec_tot},{dec_frac})"
@@ -1302,9 +1279,7 @@ def _build_charset_string(col: dict) -> list[str] | None:
     return CHARSET_MAP.get(char_type)
 
 
-def _get_objects(
-    conn: TeradataConnection, db_name: str, table_kind: list[str] | None = None
-) -> list:
+def _get_objects(conn: TeradataConnection, db_name: str, table_kind: list[str] | None = None) -> list:
     """
     Retrieve all qualifying objects (tables, views, functions) from a database.
 
@@ -1361,9 +1336,7 @@ def _get_objects(
         ]
 
 
-def _get_table_kind(
-    conn: TeradataConnection, db_name: str, object_name: str
-) -> list[str] | None:
+def _get_table_kind(conn: TeradataConnection, db_name: str, object_name: str) -> list[str] | None:
     """
     Look up the TableKind for a single object in DBC.TablesV.
 
@@ -1387,9 +1360,7 @@ def _get_table_kind(
         return row[0].strip() if row else None
 
 
-def _dbc_columns_table(
-    conn: TeradataConnection, db_name: str, object_name: str
-) -> list:
+def _dbc_columns_table(conn: TeradataConnection, db_name: str, object_name: str) -> list:
     """
     Retrieve column metadata for a table (T, O, Q) from DBC.ColumnsVX,
     supplemented with index classification from DBC.IndicesVX.
@@ -1495,14 +1466,17 @@ def _dbc_columns_table(
     idx_map: dict[str, str] = {}
     for idx_row in idx_data:
         col_name = (idx_row.get("ColumnName") or "").strip()
-        idx_type = (idx_row.get("IndexType")  or "").strip().upper()
-        unique   = (idx_row.get("UniqueFlag")  or "").strip().upper()
+        idx_type = (idx_row.get("IndexType") or "").strip().upper()
+        unique = (idx_row.get("UniqueFlag") or "").strip().upper()
 
         idx_str = (
-            "UPI"  if idx_type == "P" and unique == "Y" else
-            "NUPI" if idx_type == "P" else
-            "USI"  if unique == "Y" else
-            "NUSI"
+            "UPI"
+            if idx_type == "P" and unique == "Y"
+            else "NUPI"
+            if idx_type == "P"
+            else "USI"
+            if unique == "Y"
+            else "NUSI"
         )
 
         # Primary index always wins; secondary only fills the gap
@@ -1517,19 +1491,19 @@ def _dbc_columns_table(
     for row in col_data:
         col_name = (row.get("ColumnName") or "").strip()
         normalised = {
-            "ColumnName":               col_name,
-            "ColumnType":               (row.get("ColumnType") or "").strip(),
-            "ColumnLength":             row.get("ColumnLength"),
-            "Nullable":                 (row.get("Nullable") or "").strip(),
-            "CharType":                 row.get("CharType"),
-            "DecimalTotalDigits":       row.get("DecimalTotalDigits"),
-            "DecimalFractionalDigits":  row.get("DecimalFractionalDigits"),
-            "UpperCase":                (row.get("UpperCase") or "").strip(),
-            "DefaultValue":             row.get("DefaultValue"),
-            "Format":                   (row.get("Format") or "").strip(),
+            "ColumnName": col_name,
+            "ColumnType": (row.get("ColumnType") or "").strip(),
+            "ColumnLength": row.get("ColumnLength"),
+            "Nullable": (row.get("Nullable") or "").strip(),
+            "CharType": row.get("CharType"),
+            "DecimalTotalDigits": row.get("DecimalTotalDigits"),
+            "DecimalFractionalDigits": row.get("DecimalFractionalDigits"),
+            "UpperCase": (row.get("UpperCase") or "").strip(),
+            "DefaultValue": row.get("DefaultValue"),
+            "Format": (row.get("Format") or "").strip(),
             # Pre-computed from DBC.IndicesVX — _process_one skips
             # _build_index_type_string when this key is already present.
-            "IndexTypeString":          idx_map.get(col_name),
+            "IndexTypeString": idx_map.get(col_name),
         }
         results.append(normalised)
 
@@ -1597,20 +1571,18 @@ def _help_column_view(
         # Fall back to DBC.ColumnsVX (backward-compatible path).
         if TD_ERR_NO_SELECT_ACCESS in ex_str:
             logger.warning(
-                f"{C_MODULE}: No SELECT privilege on {db_name}.\"{object_name}\" "
+                f'{C_MODULE}: No SELECT privilege on {db_name}."{object_name}" '
                 f"— falling back to DBC.ColumnsVX (reduced type fidelity for "
                 f"expression-derived columns)"
             )
             return _columnsVX_fallback(conn, db_name, object_name, logger)
 
         # -- All other errors: treat as a broken/invalid view.
-        logger.error(
-            f"{C_MODULE}: Broken view detected: {db_name}.\"{object_name}\" - {ex}"
-        )
+        logger.error(f'{C_MODULE}: Broken view detected: {db_name}."{object_name}" - {ex}')
         return [
             {
-                "ObjectName":    object_name,
-                "status":        "BROKEN_VIEW",
+                "ObjectName": object_name,
+                "status": "BROKEN_VIEW",
                 "error_message": str(ex),
             }
         ]
