@@ -34,18 +34,19 @@ Edge direction convention (critical — matches the corrected SP):
 Author:  Paul Dancer — Teradata Global Field Tech
 """
 
-import logging
 import fnmatch
+import logging
 from collections import defaultdict, deque
 
 from teradatasql import TeradataConnection
-from teradata_mcp_server.tools.utils import create_response, rows_to_json
+
 from teradata_mcp_server.tools.graph._graph_utils import (
     bfs_safe_int,
     create_bfs_summary,
     extract_cycle_candidates,
     parse_csv_patterns,
 )
+from teradata_mcp_server.tools.utils import create_response, rows_to_json
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -492,6 +493,11 @@ def handle_graph_bfsLevels(
         for node_fq in sorted(all_nodes):
             meta = node_registry.get(node_fq, {})
             is_root_node = node_fq in root_set
+
+            upstream_level: int | None
+            downstream_level: int | None
+            nearest_root_val: str | None
+            direction: str | None
 
             if is_root_node:
                 upstream_level   = 0

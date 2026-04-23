@@ -24,12 +24,15 @@ Author:  Paul Dancer — Teradata Global Field Tech
 
 import logging
 from collections import defaultdict
+from typing import Any
+
 from teradatasql import TeradataConnection
-from teradata_mcp_server.tools.utils import create_response
+
 from teradata_mcp_server.tools.graph._graph_utils import (
     build_like_or,
     parse_csv_patterns,
 )
+from teradata_mcp_server.tools.utils import create_response
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -83,9 +86,9 @@ class _UnionFind:
     """
 
     def __init__(self):
-        self._parent: dict = {}
+        self._parent: dict[str, str] = {}
 
-    def find(self, x) -> str:
+    def find(self, x: str) -> str:
         """Return canonical representative for x (with path compression)."""
         self._parent.setdefault(x, x)
         # -- Walk to root --
@@ -166,7 +169,7 @@ def _build_component_summaries(
     for node_fq, comp_root in component_map.items():
         comp_nodes[comp_root].append(node_fq)
 
-    rows = []
+    rows: list[dict[str, Any]] = []
     for comp_root, nodes in comp_nodes.items():
         nodes_sorted = sorted(nodes)
         rows.append({
@@ -376,7 +379,7 @@ WHERE {container_where}
         # Step 3 — Assign integer component IDs
         # -------------------------------------------------------------------
         comp_map = uf.component_map()
-        unique_roots = sorted({v for v in comp_map.values()})
+        unique_roots = sorted(set(comp_map.values()))
         root_to_id = {r: i + 1 for i, r in enumerate(unique_roots)}
 
         component_count = len(unique_roots)

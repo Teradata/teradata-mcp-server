@@ -114,6 +114,27 @@ the edge_repository view/table.
 
 import logging
 
+from teradata_mcp_server.tools.graph.graph_analyse_database import (
+    GRAPH_ANALYSE_DATABASE_TOOL,
+    handle_graph_analyseDatabase,
+)
+from teradata_mcp_server.tools.graph.graph_bfs_levels import (
+    GRAPH_BFS_LEVELS_TOOL,
+    handle_graph_bfsLevels,
+)
+from teradata_mcp_server.tools.graph.graph_connected_components import (
+    GRAPH_CONNECTED_COMPONENTS_TOOL,
+    handle_graph_connectedComponents,
+)
+from teradata_mcp_server.tools.graph.graph_detect_cycles import (
+    GRAPH_DETECT_CYCLES_TOOL,
+    handle_graph_detectCycles,
+)
+from teradata_mcp_server.tools.graph.graph_edge_contract import (
+    GRAPH_EDGE_CONTRACT_DDL_TOOL,
+    handle_graph_edgeContractDDL,
+)
+
 # ── Individual tool imports ────────────────────────────────────────────────
 #
 # Each import pair brings in:
@@ -122,40 +143,13 @@ import logging
 #
 # Import order matches logical workflow:
 #   findRootObjects → bfsLevels → traceLineage → detectCycles → connectedComponents → analyseDatabase
-
-from teradata_mcp_server.tools.graph.graph_findRootObjects import (
-    handle_graph_findRootObjects,
+from teradata_mcp_server.tools.graph.graph_find_root_objects import (
     GRAPH_FIND_ROOT_OBJECTS_TOOL,
+    handle_graph_findRootObjects,
 )
-
-from teradata_mcp_server.tools.graph.graph_bfsLevels import (
-    handle_graph_bfsLevels,
-    GRAPH_BFS_LEVELS_TOOL,
-)
-
-from teradata_mcp_server.tools.graph.graph_traceLineage import (
-    handle_graph_traceLineage,
+from teradata_mcp_server.tools.graph.graph_trace_lineage import (
     GRAPH_TRACE_LINEAGE_TOOL,
-)
-
-from teradata_mcp_server.tools.graph.graph_detectCycles import (
-    handle_graph_detectCycles,
-    GRAPH_DETECT_CYCLES_TOOL,
-)
-
-from teradata_mcp_server.tools.graph.graph_connectedComponents import (
-    handle_graph_connectedComponents,
-    GRAPH_CONNECTED_COMPONENTS_TOOL,
-)
-
-from teradata_mcp_server.tools.graph.graph_analyseDatabase import (
-    handle_graph_analyseDatabase,
-    GRAPH_ANALYSE_DATABASE_TOOL,
-)
-
-from teradata_mcp_server.tools.graph.graph_edge_contract import (
-    handle_graph_edgeContractDDL,
-    GRAPH_EDGE_CONTRACT_DDL_TOOL,
+    handle_graph_traceLineage,
 )
 
 logger = logging.getLogger("teradata_mcp_server")

@@ -24,22 +24,21 @@ Author:  Paul Dancer — Teradata Consulting Services
 """
 
 # ── Step 1: Root object discovery (SQL-only) ──────────────────────
-from .graph_findRootObjects import handle_graph_findRootObjects
+# ── Step 6: Composite analysis (single call, shared edge fetch) ──
+from .graph_analyse_database import handle_graph_analyseDatabase
 
 # ── Step 2: BFS wave planning (pure Python) ───────────────────────
-from .graph_bfsLevels import handle_graph_bfsLevels
-
-# ── Step 3: Full lineage / impact analysis (hybrid CTE) ──────────
-from .graph_traceLineage import handle_graph_traceLineage
-
-# ── Step 4: Cycle detection (Python Union-Find + iterative DFS) ──
-from .graph_detectCycles import handle_graph_detectCycles
+from .graph_bfs_levels import handle_graph_bfsLevels
 
 # ── Step 5: Connected components (Python Union-Find WCC) ─────────
-from .graph_connectedComponents import handle_graph_connectedComponents
+from .graph_connected_components import handle_graph_connectedComponents
 
-# ── Step 6: Composite analysis (single call, shared edge fetch) ──
-from .graph_analyseDatabase import handle_graph_analyseDatabase
+# ── Step 4: Cycle detection (Python Union-Find + iterative DFS) ──
+from .graph_detect_cycles import handle_graph_detectCycles
 
 # ── Step 7: Edge contract DDL generator (no DB connection needed) ─
 from .graph_edge_contract import handle_graph_edgeContractDDL
+from .graph_find_root_objects import handle_graph_findRootObjects
+
+# ── Step 3: Full lineage / impact analysis (hybrid CTE) ──────────
+from .graph_trace_lineage import handle_graph_traceLineage

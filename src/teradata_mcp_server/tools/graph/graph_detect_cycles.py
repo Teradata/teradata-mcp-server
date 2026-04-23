@@ -30,12 +30,15 @@ Author:  Paul Dancer — Teradata Global Field Tech
 
 import logging
 from collections import defaultdict
+from collections.abc import Iterator
+
 from teradatasql import TeradataConnection
-from teradata_mcp_server.tools.utils import create_response
+
 from teradata_mcp_server.tools.graph._graph_utils import (
     build_like_or,
     parse_csv_patterns,
 )
+from teradata_mcp_server.tools.utils import create_response
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -90,9 +93,9 @@ class _UnionFind:
     """
 
     def __init__(self):
-        self._parent: dict = {}
+        self._parent: dict[str, str] = {}
 
-    def find(self, x) -> str:
+    def find(self, x: str) -> str:
         """Return canonical representative of x's component (with path compression)."""
         self._parent.setdefault(x, x)
         if self._parent[x] != x:
@@ -140,39 +143,39 @@ def _detect_cycles_in_subgraph(
     Returns:
       List of cycles; each cycle is a list of FQ node names (start == end).
     """
-    WHITE, GREY, BLACK = 0, 1, 2
+    white, grey, black = 0, 1, 2
     colour: dict[str, int] = {}
     cycles: list[list[str]] = []
 
     for start in nodes:
-        if colour.get(start) == BLACK:
+        if colour.get(start) == black:
             continue
 
         # Stack entries: (node, iterator-over-neighbours, path-so-far)
-        stack: list[tuple[str, object, list[str]]] = [
+        stack: list[tuple[str, Iterator[str], list[str]]] = [
             (start, iter(adj.get(start, [])), [start])
         ]
-        colour[start] = GREY
+        colour[start] = grey
 
         while stack:
             node, neighbours, path = stack[-1]
             try:
                 nxt = next(neighbours)
 
-                if colour.get(nxt) == GREY:
+                if colour.get(nxt) == grey:
                     # Back-edge found — reconstruct the cycle portion
                     cycle_start_idx = path.index(nxt)
                     cycle = path[cycle_start_idx:] + [nxt]
                     cycles.append(cycle)
 
-                elif colour.get(nxt) != BLACK:
-                    colour[nxt] = GREY
+                elif colour.get(nxt) != black:
+                    colour[nxt] = grey
                     stack.append(
                         (nxt, iter(adj.get(nxt, [])), path + [nxt])
                     )
 
             except StopIteration:
-                colour[node] = BLACK
+                colour[node] = black
                 stack.pop()
 
     return cycles
@@ -449,7 +452,7 @@ WHERE {container_where}
 
         # Assign integer component IDs from the Union-Find roots
         comp_map = uf.component_map()
-        unique_roots = list({v for v in comp_map.values()})
+        unique_roots = list(set(comp_map.values()))
         root_to_id = {r: i + 1 for i, r in enumerate(unique_roots)}
         component_id_map: dict[str, int] = {
             n: root_to_id[r] for n, r in comp_map.items()
@@ -471,7 +474,7 @@ WHERE {container_where}
         # -------------------------------------------------------------------
         all_cycles: list[list[str]] = []
 
-        for comp_root, comp_nodes in components.items():
+        for _comp_root, comp_nodes in components.items():
             cycles_in_comp = _detect_cycles_in_subgraph(comp_nodes, adj)
             all_cycles.extend(cycles_in_comp)
 

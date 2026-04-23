@@ -32,8 +32,10 @@ Author:  Paul Dancer — Teradata Global Field Tech
 import logging
 import time
 from collections import defaultdict, deque
+from collections.abc import Iterator
+
 from teradatasql import TeradataConnection
-from teradata_mcp_server.tools.utils import create_response
+
 from teradata_mcp_server.tools.graph._graph_utils import (
     bfs_safe_int,
     build_like_or,
@@ -41,6 +43,7 @@ from teradata_mcp_server.tools.graph._graph_utils import (
     extract_cycle_candidates,
     parse_csv_patterns,
 )
+from teradata_mcp_server.tools.utils import create_response
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -164,30 +167,30 @@ def _find_cycles_dfs(
     Returns:
       List of cycles; each cycle is a list of FQ names (start == end)
     """
-    WHITE, GREY, BLACK = 0, 1, 2
+    white, grey, black = 0, 1, 2
     colour: dict[str, int] = {}
     cycles: list[list[str]] = []
 
     for start in nodes:
-        if colour.get(start) == BLACK:
+        if colour.get(start) == black:
             continue
-        stack: list[tuple[str, object, list[str]]] = [
+        stack: list[tuple[str, Iterator[str], list[str]]] = [
             (start, iter(adj.get(start, [])), [start])
         ]
-        colour[start] = GREY
+        colour[start] = grey
 
         while stack:
             node, neighbours, path = stack[-1]
             try:
                 nxt = next(neighbours)
-                if colour.get(nxt) == GREY:
+                if colour.get(nxt) == grey:
                     idx = path.index(nxt)
                     cycles.append(path[idx:] + [nxt])
-                elif colour.get(nxt) != BLACK:
-                    colour[nxt] = GREY
+                elif colour.get(nxt) != black:
+                    colour[nxt] = grey
                     stack.append((nxt, iter(adj.get(nxt, [])), path + [nxt]))
             except StopIteration:
-                colour[node] = BLACK
+                colour[node] = black
                 stack.pop()
 
     return cycles
@@ -613,11 +616,11 @@ WHERE {container_where}
         components_scanned = 0
 
         for root in sorted_roots:
-            members = set(raw_comps[root])
-            if len(members) < 2:
+            cycle_members = set(raw_comps[root])
+            if len(cycle_members) < 2:
                 continue
             components_scanned += 1
-            cycles = _find_cycles_dfs(members, fwd_adj)
+            cycles = _find_cycles_dfs(cycle_members, fwd_adj)
             all_cycles.extend(cycles)
 
         # Deduplicate by canonical form (min rotation)

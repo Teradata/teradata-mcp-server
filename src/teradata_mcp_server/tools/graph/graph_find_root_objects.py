@@ -10,9 +10,11 @@ Author:  Paul Dancer — Teradata Global Field Tech
 
 import logging
 import time
+
 from teradatasql import TeradataConnection
-from teradata_mcp_server.tools.utils import create_response, rows_to_json
+
 from teradata_mcp_server.tools.graph._graph_utils import parse_csv_patterns
+from teradata_mcp_server.tools.utils import create_response, rows_to_json
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -213,7 +215,7 @@ def handle_graph_findRootObjects(
             # This is more efficient than NOT IN for large datasets
             # The query finds objects that exist as sources but never as targets
             sql = f"""
-LOCKING ROW FOR ACCESS 
+LOCKING ROW FOR ACCESS
 SELECT DISTINCT
     o1.Src_Container_Name AS DatabaseName,
     o1.Src_Object_Name AS ObjectName,
@@ -231,11 +233,11 @@ WHERE ({container_where})
         AND o2.Tgt_Object_Name = o1.Src_Object_Name
         AND ({container_where.replace('Src_Container_Name', 'o2.Src_Container_Name')})
   )
-GROUP BY 
+GROUP BY
     o1.Src_Container_Name,
     o1.Src_Object_Name,
     o1.Src_Kind
-ORDER BY 
+ORDER BY
     DownstreamDependentCount DESC,
     o1.Src_Container_Name,
     o1.Src_Object_Name
@@ -327,13 +329,13 @@ def _create_root_summary_stats(root_objects: list, container_pattern: str) -> di
       Dictionary with summary statistics
     """
     # Count by object type
-    type_counts = {}
+    type_counts: dict[str, int] = {}
     for obj in root_objects:
         obj_type = obj.get('ObjectType', 'Unknown')
         type_counts[obj_type] = type_counts.get(obj_type, 0) + 1
 
     # Count by database
-    db_counts = {}
+    db_counts: dict[str, int] = {}
     for obj in root_objects:
         db_name = obj.get('DatabaseName', 'Unknown')
         db_counts[db_name] = db_counts.get(db_name, 0) + 1
@@ -397,7 +399,7 @@ OVERVIEW
 
 DEFINITION
   Root objects are objects with NO upstream dependencies.
-  They represent foundational data sources and are ideal 
+  They represent foundational data sources and are ideal
   starting points for downstream impact analysis.
 """
 

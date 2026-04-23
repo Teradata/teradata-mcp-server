@@ -34,6 +34,7 @@ from teradata_mcp_server import utils as config_utils
 from teradata_mcp_server.config import Settings
 from teradata_mcp_server.middleware import RequestContextMiddleware
 from teradata_mcp_server.tools import ContextCatalog
+from teradata_mcp_server.tools.graph.graph_edge_contract import GRAPH_EDGE_CONTRACT
 from teradata_mcp_server.tools.utils import (
     convert_tdml_docstring_to_mcp_docstring,
     execute_analytic_function,
@@ -44,7 +45,7 @@ from teradata_mcp_server.tools.utils import (
 from teradata_mcp_server.tools.utils.factory import create_mcp_tool
 from teradata_mcp_server.tools.utils.queryband import build_queryband
 from teradata_mcp_server.utils import format_error_response, format_text_response, resolve_type_hint, setup_logging
-from teradata_mcp_server.tools.graph.graph_edge_contract import GRAPH_EDGE_CONTRACT
+
 
 def create_mcp_app(settings: Settings):
     """Create and configure the FastMCP app with middleware, tools, prompts, resources."""

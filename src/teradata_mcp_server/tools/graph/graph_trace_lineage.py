@@ -33,9 +33,11 @@ Author:  Paul Dancer — Teradata Global Field Tech
 """
 
 import logging
+
 from teradatasql import TeradataConnection
-from teradata_mcp_server.tools.utils import create_response, rows_to_json
+
 from teradata_mcp_server.tools.graph._graph_utils import parse_csv_patterns
+from teradata_mcp_server.tools.utils import create_response, rows_to_json
 
 logger = logging.getLogger("teradata_mcp_server")
 
