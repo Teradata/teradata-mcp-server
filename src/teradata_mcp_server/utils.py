@@ -166,6 +166,8 @@ def format_text_response(text: Any):
             return [types.TextContent(type="text", text=json.dumps(parsed, indent=2, ensure_ascii=False))]
         except json.JSONDecodeError:
             return [types.TextContent(type="text", text=str(text))]
+    if isinstance(text, (dict, list)):
+        return [types.TextContent(type="text", text=json.dumps(text, indent=2, ensure_ascii=False, default=str))]
     return [types.TextContent(type="text", text=str(text))]
 
 
