@@ -35,6 +35,37 @@ There are many client options that you can choose from, they each have different
 - [Google Gemini CLI](./Google_Gemini_CLI.md)
 
 
+---------------------------------------------------------------------
+
+## Row caps and the `get_all` escape hatch
+
+Tools that return result sets are capped server-side before rows reach the LLM. Defaults are 1000 rows with a 50000 hard ceiling, both configurable on the server (`DEFAULT_ROW_LIMIT`, `MAX_ROW_LIMIT`). Most clients do not need to do anything — the cap is transparent.
+
+Two things are worth knowing when integrating a client:
+
+**1. Every capped tool exposes a `get_all` parameter.** Set `get_all=true` on a single call to raise the cap to the per-tool ceiling. Use it sparingly — the ceiling exists to protect the context window. Tools that opt out of the cap (single-row results, DDL, plans, charts) do not advertise `get_all`.
+
+**2. Truncated responses include a `metadata.truncation` block.** When a result is trimmed, the response payload looks like:
+
+```json
+{
+  "results": [ ... ],
+  "metadata": {
+    "tool_name": "base_columnDescription",
+    "truncation": {
+      "truncated": true,
+      "rows_returned": 1000,
+      "row_limit": 1000,
+      "hard_ceiling": 50000,
+      "get_all_used": false,
+      "hint": "Result truncated. Refine using parameters [table_name, column_name] to narrow the result, or pass get_all=true to raise the limit to 50000 rows."
+    }
+  }
+}
+```
+
+The `hint` is generated server-side and already names the parameters worth narrowing on (or, for `base_readQuery`, suggests adding `TOP`/`SAMPLE`/`WHERE` to the SQL). Client agents should surface this hint to the LLM so it can either ask the user a narrowing question or retry with `get_all=true`. When `get_all=true` was already used and the ceiling was hit, the hint instructs the LLM to refine further or use `persist=true` and query the volatile table directly.
+
 
 
 

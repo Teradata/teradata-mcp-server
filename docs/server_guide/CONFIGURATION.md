@@ -42,6 +42,10 @@ export AUTH_MODE="none"                # or "basic"
 export AUTH_CACHE_TTL="300"            # seconds
 export AUTH_RATE_LIMIT_ATTEMPTS="5"
 export AUTH_RATE_LIMIT_WINDOW="60"
+
+# Optional: Row-cap on tool outputs (see "Row caps on tool outputs" below)
+export DEFAULT_ROW_LIMIT="1000"        # default cap applied to every tool
+export MAX_ROW_LIMIT="50000"           # ceiling reached when get_all=true
 ```
 
 ### Configuration File (.env) - Optional
@@ -226,6 +230,35 @@ Your custom `profiles.yml` will be merged with the built-in profiles, allowing y
 - Override existing profiles
 - Add new profiles
 - Extend built-in profiles with additional tools
+
+## 📏 Row caps on tool outputs
+
+Tools that return result sets are capped before rows reach the LLM, so a stray `SELECT *` does not blow up the context window. Capped tools expose a universal `get_all` parameter the client can set to raise the cap to a hard ceiling for a single call.
+
+### Limits
+
+| Setting | Env var | Default | Purpose |
+|---|---|---|---|
+| Default cap | `DEFAULT_ROW_LIMIT` | `1000` | Rows returned when `get_all` is not set |
+| Hard ceiling | `MAX_ROW_LIMIT` | `50000` | Upper bound when `get_all=true` |
+
+When a result is trimmed, the response includes a `metadata.truncation` block describing what was capped and which parameters the client could narrow on (see the [Client Guide](../client_guide/CLIENT_GUIDE.md#row-caps-and-the-get_all-escape-hatch)).
+
+### Per-profile overrides
+
+Add a `tool_row_limits:` map to any profile in `profiles.yml` to override the default cap for specific Python tools by exact name:
+
+```yaml
+dba:
+  tool:
+    - "dba_*"
+    - "base_*"
+  tool_row_limits:
+    base_tableList: 5000
+    base_columnDescription: 2000
+```
+
+YAML-defined tools should set `row_limit:` directly in their `*_objects.yml` definition instead — see [How to add your function](../developer_guide/HOW_TO_ADD_YOUR_FUNCTION.md#row-caps).
 
 ## 🔍 Progressive Disclosure
 

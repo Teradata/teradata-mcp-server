@@ -94,12 +94,39 @@ You do not need to write a wrapper or call decorators. At startup, the server:
   - Injects a DB connection (`Connection`) as `conn`
   - Optionally injects `fs_config` if your handler declares it
   - Removes internal params (`conn`, `tool_name`, `fs_config`) from the MCP signature
+  - Injects a universal `get_all` parameter (see [Row caps](#row-caps) below) unless the tool opts out
   - Calls the internal `execute_db_tool` which handles:
     - QueryBand (using request context)
     - Error handling + response formatting
     - Reconnect logic if needed
 
 Therefore, handlers should be protocol‑agnostic and not import MCP.
+
+---
+
+### Row caps
+
+Tool result sets are capped before they reach the LLM (defaults: 1000 rows, 50000 ceiling — configurable via `DEFAULT_ROW_LIMIT` / `MAX_ROW_LIMIT`). For most tools you do not need to do anything: handlers that go through `handle_base_readQuery` are capped automatically by `SELECT TOP N+1` injection, and a wrapper-level fallback trims oversized list results from any other handler.
+
+**Customize the cap from YAML.** In your `*_objects.yml`, alongside `parameters:` / `sql:`, set any of:
+
+```yaml
+my_tool_listThings:
+  type: tool
+  description: "..."
+  row_limit: 200              # default cap, overrides DEFAULT_ROW_LIMIT
+  max_row_limit: 5000         # ceiling raised by get_all=true, overrides MAX_ROW_LIMIT
+  bypass_row_cap: true        # never cap; do not inject get_all
+  narrowing_parameters:       # surfaced in the truncation hint
+    - user_name
+    - no_days
+```
+
+Use `bypass_row_cap: true` on tools that already return a single row, return non-list payloads (e.g. DDL, plans, charts), or have their own paging contract. The `narrowing_parameters` list is shown to the client when truncation fires, so the LLM knows which inputs would shrink the result set.
+
+**Reserved kwargs.** When the cap is active the wrapper passes `_row_limit`, `_hard_ceiling`, `_get_all_used`, and `_narrowing_params` into your handler. If you call `handle_base_readQuery` you can ignore them — it pops them itself. If you implement your own SQL execution path, pop them off `kwargs` before binding parameters and either honour the cap yourself or rely on the wrapper-level trim. Do **not** declare a parameter named `get_all` — the wrapper owns that name.
+
+When truncation fires, attach `metadata["truncation"] = build_truncation_metadata(...)` (from `teradata_mcp_server.tools.utils.row_cap`) so the client sees a uniform shape across tools.
 
 ---
 
