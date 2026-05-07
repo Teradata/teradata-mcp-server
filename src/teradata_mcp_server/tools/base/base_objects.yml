@@ -1,3 +1,13 @@
+# Tool definitions for the `base_*` family.
+#
+# Optional row-cap keys (issue #249) accepted alongside `parameters:`/`sql:`:
+#   row_limit: 200              # default cap for this tool, overrides DEFAULT_ROW_LIMIT
+#   max_row_limit: 5000         # ceiling raised by get_all=true, overrides MAX_ROW_LIMIT
+#   bypass_row_cap: true        # never cap this tool, do not inject get_all
+#   narrowing_parameters:       # parameter names mentioned in the truncation hint
+#     - user_name
+#     - no_days
+
 base_databaseList:
   type: tool
   description: "Lists databases in the Teradata System."

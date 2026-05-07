@@ -44,7 +44,18 @@ from teradata_mcp_server.tools.utils import (
 )
 from teradata_mcp_server.tools.utils.factory import create_mcp_tool
 from teradata_mcp_server.tools.utils.queryband import build_queryband
+from teradata_mcp_server.tools.utils.row_cap import (
+    build_truncation_metadata,
+    compute_narrowing_params,
+    is_bypassed,
+    resolve_row_limit,
+)
 from teradata_mcp_server.utils import format_error_response, format_text_response, resolve_type_hint, setup_logging
+
+
+def _normalize_tool_name(name: str) -> str:
+    """Strip ``handle_`` prefix so bypass-list checks compare against MCP-exposed names."""
+    return name[7:] if name.startswith("handle_") else name
 
 
 def create_mcp_app(settings: Settings):
@@ -307,6 +318,37 @@ def create_mcp_app(settings: Settings):
     hostname = socket.gethostname()
     process_id = f"{hostname}:{os.getpid()}"
 
+    # Row-cap (issue #249): YAML metadata and profile overrides are wired in by Commit 8;
+    # for now the closures pull straight from Settings.
+    _yaml_objects: dict[str, dict[str, Any]] = {}
+    profile_tool_row_limits: dict[str, int] = config.get("tool_row_limits", {}) or {}
+
+    def _resolve_cap_for_tool(tool_name: str, *, get_all: bool, tool_callable=None):
+        """Resolve the effective row-cap for a tool call, or None when bypassed."""
+        normalized = _normalize_tool_name(tool_name)
+        yaml_meta = _yaml_objects.get(normalized)
+        if is_bypassed(normalized, yaml_meta=yaml_meta):
+            return None
+        yaml_row_limit = yaml_meta.get("row_limit") if yaml_meta else None
+        yaml_max = yaml_meta.get("max_row_limit") if yaml_meta else None
+        limit, ceiling, get_all_used = resolve_row_limit(
+            normalized,
+            get_all=get_all,
+            settings_default=settings.default_row_limit,
+            settings_max=settings.max_row_limit,
+            yaml_row_limit=yaml_row_limit if isinstance(yaml_row_limit, int) else None,
+            yaml_max_row_limit=yaml_max if isinstance(yaml_max, int) else None,
+            profile_tool_row_limits=profile_tool_row_limits,
+        )
+        sig = None
+        if tool_callable is not None:
+            try:
+                sig = inspect.signature(tool_callable)
+            except (TypeError, ValueError):
+                sig = None
+        narrowing = compute_narrowing_params(sig, yaml_meta=yaml_meta)
+        return limit, ceiling, narrowing, get_all_used, normalized
+
     def execute_db_tool(tool, *args, **kwargs):
         """Execute a handler with a DB connection and MCP concerns.
 
@@ -319,6 +361,17 @@ def create_mcp_app(settings: Settings):
         """
         tool_name = kwargs.pop("tool_name", getattr(tool, "__name__", "unknown_tool"))
         request_context = kwargs.pop("_request_context", None)
+
+        # Row-cap resolution (issue #249). Pop get_all before it reaches the handler.
+        get_all_flag = bool(kwargs.pop("get_all", False))
+        row_cap_info = _resolve_cap_for_tool(tool_name, get_all=get_all_flag, tool_callable=tool)
+        if row_cap_info is not None:
+            cap_limit, cap_ceiling, cap_narrowing, cap_get_all_used, cap_normalized_name = row_cap_info
+            kwargs["_row_limit"] = cap_limit
+            kwargs["_hard_ceiling"] = cap_ceiling
+            kwargs["_get_all_used"] = cap_get_all_used
+            kwargs["_narrowing_params"] = cap_narrowing
+
         tdconn_local = get_tdconn()
 
         if not getattr(tdconn_local, "engine", None):
@@ -381,6 +434,26 @@ def create_mcp_app(settings: Settings):
                     result = tool(raw, *args, **kwargs)
                 finally:
                     raw.close()
+
+            # Wrapper-side row-cap trim fallback (issue #249). Only fires when the
+            # handler did not already stamp metadata.truncation. Guards against
+            # double-truncation while covering tools that bypass handle_base_readQuery.
+            if row_cap_info is not None and isinstance(result, dict):
+                existing_meta = result.get("metadata") or {}
+                if "truncation" not in existing_meta:
+                    results = result.get("results")
+                    if isinstance(results, list) and len(results) > cap_limit:
+                        result["results"] = results[:cap_limit]
+                        meta = result.setdefault("metadata", {})
+                        meta["truncation"] = build_truncation_metadata(
+                            rows_returned=cap_limit,
+                            row_limit=cap_limit,
+                            hard_ceiling=cap_ceiling,
+                            get_all_used=cap_get_all_used,
+                            tool_name=cap_normalized_name,
+                            narrowing_params=cap_narrowing,
+                        )
+
             return format_text_response(result)
         except Exception as e:
             logger.error(
@@ -395,8 +468,12 @@ def create_mcp_app(settings: Settings):
           signature while still injecting them into the underlying handler.
         - Preserves the handler's parameter names and types so MCP clients can
           render friendly forms.
+        - Injects a universal ``get_all`` parameter on capped tools (issue #249).
         """
         sig = inspect.signature(func)
+        if "get_all" in sig.parameters:
+            raise ValueError(f"Tool {func.__name__} declares reserved parameter 'get_all'")
+
         inject_kwargs = {}
         removable = {"conn", "tool_name"}
         if "fs_config" in sig.parameters:
@@ -409,6 +486,22 @@ def create_mcp_app(settings: Settings):
             if name not in removable
             and p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
         ]
+
+        # Inject get_all on capped tools so MCP clients can raise the row cap.
+        normalized = _normalize_tool_name(func.__name__)
+        if not is_bypassed(normalized, yaml_meta=_yaml_objects.get(normalized)):
+            params.append(
+                inspect.Parameter(
+                    "get_all",
+                    kind=inspect.Parameter.KEYWORD_ONLY,
+                    default=False,
+                    annotation=Annotated[
+                        bool,
+                        "If true, raises the row cap to the hard ceiling for this call.",
+                    ],
+                )
+            )
+
         new_sig = sig.replace(parameters=params)
 
         # Create executor function that will be run in thread
@@ -504,6 +597,53 @@ def create_mcp_app(settings: Settings):
 
     # Register code tools via module loader
     module_loader = td.initialize_module_loader(config)
+
+    # Load YAML-defined tools/resources/prompts up-front so make_tool_wrapper can
+    # consult per-tool YAML metadata (issue #249: row-cap bypass, narrowing_parameters)
+    # at registration time, before the Python handle_* tools are wrapped.
+    custom_object_files: list[Any] = [
+        config_dir / file for file in os.listdir(config_dir) if file.endswith("_objects.yml")
+    ]
+    if custom_object_files:
+        logger.info(
+            f"Found {len(custom_object_files)} custom object files in config directory: {[f.name for f in custom_object_files]}"
+        )
+    if module_loader and profile_name:
+        profile_yml_files = module_loader.get_required_yaml_paths()
+        custom_object_files.extend(profile_yml_files)
+        logger.info(f"Loading YAML files for profile '{profile_name}': {len(profile_yml_files)} files")
+    else:
+        tool_yml_resources = []
+        tools_pkg_root = pkg_files("teradata_mcp_server").joinpath("tools")
+        if tools_pkg_root.is_dir():
+            for subpkg in tools_pkg_root.iterdir():
+                if subpkg.is_dir():
+                    for entry in subpkg.iterdir():
+                        if entry.is_file() and entry.name.endswith(".yml"):
+                            tool_yml_resources.append(entry)
+        custom_object_files.extend(tool_yml_resources)
+        logger.info(f"Loading all YAML files (no specific profile): {len(tool_yml_resources)} files")
+
+    custom_objects: dict[str, Any] = {}
+    custom_glossary: dict[str, Any] = {}
+    for file in custom_object_files:
+        try:
+            if hasattr(file, "read_text"):
+                file_text = file.read_text(encoding="utf-8")
+            else:
+                with open(file, encoding="utf-8", errors="replace") as f:
+                    file_text = f.read()
+            loaded = yaml.safe_load(file_text)
+            if loaded:
+                custom_objects.update(loaded)
+        except Exception as e:
+            logger.error(f"Failed to load YAML from {file}: {e}")
+
+    # Populate row-cap YAML lookup with tool definitions only.
+    _yaml_objects.update(
+        {name: meta for name, meta in custom_objects.items() if isinstance(meta, dict) and meta.get("type") == "tool"}
+    )
+
     if module_loader:
         all_functions = module_loader.get_all_functions()
         registered_count = 0
@@ -605,44 +745,8 @@ def create_mcp_app(settings: Settings):
 
             mcp.tool(name=full_func_name, description=doc_string)(func)
 
-    # Load YAML-defined tools/resources/prompts from config directory
-    custom_object_files: list[Any] = [
-        config_dir / file for file in os.listdir(config_dir) if file.endswith("_objects.yml")
-    ]
-    if custom_object_files:
-        logger.info(
-            f"Found {len(custom_object_files)} custom object files in config directory: {[f.name for f in custom_object_files]}"
-        )
-    if module_loader and profile_name:
-        profile_yml_files = module_loader.get_required_yaml_paths()
-        custom_object_files.extend(profile_yml_files)
-        logger.info(f"Loading YAML files for profile '{profile_name}': {len(profile_yml_files)} files")
-    else:
-        tool_yml_resources = []
-        tools_pkg_root = pkg_files("teradata_mcp_server").joinpath("tools")
-        if tools_pkg_root.is_dir():
-            for subpkg in tools_pkg_root.iterdir():
-                if subpkg.is_dir():
-                    for entry in subpkg.iterdir():
-                        if entry.is_file() and entry.name.endswith(".yml"):
-                            tool_yml_resources.append(entry)
-        custom_object_files.extend(tool_yml_resources)
-        logger.info(f"Loading all YAML files (no specific profile): {len(tool_yml_resources)} files")
-
-    custom_objects: dict[str, Any] = {}
-    custom_glossary: dict[str, Any] = {}
-    for file in custom_object_files:
-        try:
-            if hasattr(file, "read_text"):
-                file_text = file.read_text(encoding="utf-8")
-            else:
-                with open(file, encoding="utf-8", errors="replace") as f:
-                    file_text = f.read()
-            loaded = yaml.safe_load(file_text)
-            if loaded:
-                custom_objects.update(loaded)
-        except Exception as e:
-            logger.error(f"Failed to load YAML from {file}: {e}")
+    # YAML-defined tools/resources/prompts (custom_objects, custom_glossary) were loaded
+    # earlier so make_tool_wrapper can consult per-tool YAML metadata at registration time.
 
     # Prompt helpers
     def make_custom_prompt(prompt_name: str, prompt: str, desc: str, parameters: dict | None = None):
@@ -946,6 +1050,20 @@ def create_mcp_app(settings: Settings):
             ),
         ]
 
+        # Universal row-cap escape hatch (issue #249).
+        if not is_bypassed(name, yaml_meta=_yaml_objects.get(name)):
+            cube_params.append(
+                inspect.Parameter(
+                    "get_all",
+                    kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    default=False,
+                    annotation=Annotated[
+                        bool,
+                        "If true, raises the row cap to the hard ceiling for this call.",
+                    ],
+                )
+            )
+
         # Separate required and optional custom parameters
         all_params = cube_params + parameters
         required_params = [p for p in all_params if p.default is inspect.Parameter.empty]
@@ -960,7 +1078,9 @@ def create_mcp_app(settings: Settings):
             logger.debug(f"  {param_name}: annotation={param.annotation}, default={param.default}")
 
         # Create executor function that will be run in thread
-        def executor(dimensions, measures, dim_filters="", meas_filters="", order_by="", top=None, **kwargs):
+        def executor(
+            dimensions, measures, dim_filters="", meas_filters="", order_by="", top=None, get_all=False, **kwargs
+        ):
             # Validate custom parameters
             missing = [n for n in required_custom_params if n not in kwargs]
             if missing:
@@ -978,6 +1098,7 @@ def create_mcp_app(settings: Settings):
                     top=top,
                 ),
                 tool_name=name,
+                get_all=get_all,
                 **kwargs,
             )
 
@@ -1140,6 +1261,11 @@ Returns:
             logger.info(f"[REGISTRY_HANDLER] Starting handler for tool '{tool_name}'")
             logger.info(f"[REGISTRY_HANDLER] Received kwargs: {kwargs}")
 
+            # Pop row-cap reserved kwargs (issue #249) so they don't leak into SQL building.
+            row_cap_get_all_used = kwargs.pop("_get_all_used", False)
+            for _key in ("_row_limit", "_hard_ceiling", "_narrowing_params"):
+                kwargs.pop(_key, None)
+
             # Extract tool parameters (excluding special params)
             # Note: persist is not supported for registry tools
             special_params = {"tool_name"}
@@ -1164,6 +1290,7 @@ Returns:
                 sql,  # SQL string with values already formatted
                 tool_name=tool_name or tool_name,
                 persist=False,  # Registry tools do not support persist
+                get_all=row_cap_get_all_used,  # Propagate row-cap escape hatch (issue #249)
                 # No **kwargs here - values are already in the SQL string
             )
 

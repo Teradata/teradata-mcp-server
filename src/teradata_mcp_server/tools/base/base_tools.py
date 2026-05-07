@@ -11,6 +11,11 @@ from sqlalchemy.engine import Connection, default
 from teradatasql import TeradataConnection
 
 from teradata_mcp_server.tools.utils import create_response, rows_to_json
+from teradata_mcp_server.tools.utils.row_cap import (
+    build_truncation_metadata,
+    can_inject_top,
+    wrap_with_top,
+)
 
 logger = logging.getLogger("teradata_mcp_server")
 
@@ -31,6 +36,12 @@ def handle_base_readQuery(
       ResponseType: formatted response with query results + metadata
                    (includes 'volatile_table' field in metadata if persist=True)
     """
+    # Pop reserved row-cap kwargs before they reach bindparams() (issue #249).
+    row_limit = kwargs.pop("_row_limit", None)
+    hard_ceiling = kwargs.pop("_hard_ceiling", None)
+    get_all_used = kwargs.pop("_get_all_used", False)
+    narrowing_params = kwargs.pop("_narrowing_params", None) or []
+
     logger.debug(f"Tool: handle_base_readQuery: Args: sql: {sql}, persist: {persist}, args={args!r}, kwargs={kwargs!r}")
 
     # Generate volatile table name if persisting
@@ -54,6 +65,13 @@ def handle_base_readQuery(
     # 1. Build a textual SQL statement
     if not sql:
         return create_response([], {"tool_name": tool_name or "base_readQuery", "error": "No SQL provided"})
+
+    # Row-cap injection (issue #249): wrap with SELECT TOP N+1 when safe.
+    cap_was_injected = False
+    if row_limit is not None and not persist and can_inject_top(sql):
+        sql = wrap_with_top(sql, row_limit + 1)
+        cap_was_injected = True
+
     stmt = text(sql)
 
     # 2. Bind parameters to the statement if provided.
@@ -78,6 +96,17 @@ def handle_base_readQuery(
 
     # 4. Check if this is a SHOW command (DDL extraction)
     is_show_command = sql and sql.strip().upper().startswith("SHOW ")
+
+    # Row-cap overflow detection (issue #249).
+    truncation_fired = False
+    if row_limit is not None and not persist and not is_show_command:
+        if cap_was_injected and len(raw_rows) > row_limit:
+            raw_rows = raw_rows[:row_limit]
+            truncation_fired = True
+        elif not cap_was_injected and len(raw_rows) > row_limit:
+            # Python-side trim fallback for CTEs and other non-injectable SQL.
+            raw_rows = raw_rows[:row_limit]
+            truncation_fired = True
 
     if is_show_command and raw_rows and len(raw_rows[0]) == 1:
         # This is a SHOW command - concatenate all rows into single DDL
@@ -123,6 +152,16 @@ def handle_base_readQuery(
     if is_show_command and "ddl_complete" in locals():
         metadata["ddl_size"] = len(ddl_complete)
         metadata["rows_concatenated"] = len(raw_rows)
+
+    if truncation_fired and row_limit is not None and hard_ceiling is not None:
+        metadata["truncation"] = build_truncation_metadata(
+            rows_returned=len(data),
+            row_limit=row_limit,
+            hard_ceiling=hard_ceiling,
+            get_all_used=get_all_used,
+            tool_name=tool_name or "base_readQuery",
+            narrowing_params=narrowing_params,
+        )
 
     logger.debug(f"Tool: handle_base_readQuery: metadata: {metadata}")
     return create_response(data, metadata)

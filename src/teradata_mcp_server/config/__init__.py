@@ -42,6 +42,10 @@ class Settings:
     # Tools registration and execution method
     progressive_disclosure: bool = False  # Whether to register tools dynamically for MCP access
 
+    # Row-cap on tool outputs (issue #249). Caps result-set size before rows reach the LLM.
+    default_row_limit: int = 1000
+    max_row_limit: int = 50000
+
 
 def settings_from_env() -> Settings:
     """Create Settings from environment variables only.
@@ -66,4 +70,6 @@ def settings_from_env() -> Settings:
         pool_timeout=int(os.getenv("TD_POOL_TIMEOUT", "30")),
         logging_level=os.getenv("LOGGING_LEVEL", "WARNING"),
         progressive_disclosure=os.getenv("PROGRESSIVE_DISCLOSURE", "false").lower() == "true",
+        default_row_limit=int(os.getenv("DEFAULT_ROW_LIMIT", "1000")),
+        max_row_limit=int(os.getenv("MAX_ROW_LIMIT", "50000")),
     )

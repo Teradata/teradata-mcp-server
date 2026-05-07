@@ -1,0 +1,42 @@
+# Row-cap test fixtures (issue #249).
+#
+# Loaded when CONFIG_DIR=tests/cases (set automatically by tests/run_mcp_tests.py
+# when spawning the MCP server). Defines two tools that exercise the per-tool
+# YAML override paths the unit tests cover in isolation:
+#
+#   - test_lowLimit:       row_limit: 5, max_row_limit: 15
+#   - test_bypassedFixture: bypass_row_cap: true
+#
+# Both query DBC.TablesV which always has well over 15 rows, so the cap and
+# ceiling are deterministic to assert against.
+
+test_lowLimit:
+  type: tool
+  description: "Row-cap test fixture. row_limit=5, max_row_limit=15. Lists tables in a database."
+  parameters:
+    database_name:
+      description: "Database to list tables from"
+      type_hint: str
+      default: 'DBC'
+  row_limit: 5
+  max_row_limit: 15
+  narrowing_parameters:
+    - database_name
+  sql: |
+    SELECT DataBaseName, TableName, TableKind, CommentString
+    FROM DBC.TablesV
+    WHERE DataBaseName = :database_name
+
+test_bypassedFixture:
+  type: tool
+  description: "Row-cap test fixture. bypass_row_cap: true — must skip injection and never stamp metadata.truncation."
+  parameters:
+    database_name:
+      description: "Database to list tables from"
+      type_hint: str
+      default: 'DBC'
+  bypass_row_cap: true
+  sql: |
+    SELECT DataBaseName, TableName
+    FROM DBC.TablesV
+    WHERE DataBaseName = :database_name

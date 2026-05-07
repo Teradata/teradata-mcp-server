@@ -245,9 +245,13 @@ class ContextCatalog:
         if missing:
             return False, f"Missing required parameters: {', '.join(missing)}"
 
-        # Check for unexpected parameters
+        # Check for unexpected parameters. Universal reserved kwargs (e.g. get_all
+        # from issue #249's row-cap escape hatch) are accepted on every tool.
+        reserved_universal = {"get_all"}
         unexpected = []
         for param_name in kwargs:
+            if param_name in reserved_universal:
+                continue
             if param_name not in metadata.parameters:
                 unexpected.append(param_name)
 

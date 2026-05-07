@@ -1,0 +1,172 @@
+{
+  "test_cases": {
+    "base_readQuery": [
+      {
+        "name": "limits_default_cap_fires",
+        "parameters": {
+          "sql": "SELECT DatabaseName, TableName FROM DBC.TablesV"
+        },
+        "expect": {
+          "truncation_present": true,
+          "row_limit": 1000,
+          "results_count": 1000,
+          "metadata.truncation.get_all_used": false,
+          "metadata.truncation.hint_contains": "get_all=true"
+        }
+      },
+      {
+        "name": "limits_get_all_raises_cap_envelope",
+        "parameters": {
+          "sql": "SELECT DatabaseName, TableName FROM DBC.TablesV",
+          "get_all": true
+        },
+        "expect": {
+          "results_count_max": 50000
+        }
+      },
+      {
+        "name": "limits_explicit_top_does_not_truncate",
+        "parameters": {
+          "sql": "SELECT TOP 50 DatabaseName, TableName FROM DBC.TablesV"
+        },
+        "expect": {
+          "truncation_present": false,
+          "results_count_max": 50,
+          "metadata.truncation_absent": true
+        }
+      },
+      {
+        "name": "limits_with_cte_caps_via_python_fallback",
+        "parameters": {
+          "sql": "WITH t AS (SELECT DatabaseName FROM DBC.TablesV) SELECT * FROM t"
+        },
+        "expect": {
+          "truncation_present": true,
+          "row_limit": 1000,
+          "results_count": 1000
+        }
+      },
+      {
+        "name": "limits_persist_does_not_cap",
+        "parameters": {
+          "sql": "SELECT TOP 20 DatabaseName, TableName FROM DBC.TablesV",
+          "persist": true
+        },
+        "expect": {
+          "truncation_present": false,
+          "metadata.persist": true
+        }
+      },
+      {
+        "name": "limits_show_command_bypasses_injection",
+        "parameters": {
+          "sql": "SHOW TABLE DBC.DBCInfoTbl"
+        },
+        "expect": {
+          "truncation_present": false,
+          "metadata.truncation_absent": true
+        }
+      },
+      {
+        "name": "limits_no_from_clause_bypasses_injection",
+        "parameters": {
+          "sql": "SELECT CURRENT_TIMESTAMP"
+        },
+        "expect": {
+          "truncation_present": false,
+          "results_count": 1
+        }
+      }
+    ],
+    "dba_userSqlList": [
+      {
+        "name": "limits_dba_userSqlList_envelope_only",
+        "parameters": {
+          "user_name": "DBC",
+          "no_days": 30
+        },
+        "expect": {
+          "results_count_max": 1000
+        }
+      }
+    ],
+    "dba_featureUsage": [
+      {
+        "name": "limits_dba_featureUsage_envelope_only",
+        "parameters": {
+          "start_date": "2024-01-01",
+          "end_date": "2030-01-01"
+        },
+        "expect": {
+          "results_count_max": 1000
+        }
+      }
+    ],
+    "base_tableDDL": [
+      {
+        "name": "limits_base_tableDDL_is_bypassed",
+        "parameters": {
+          "table_name": "DBCInfoTbl",
+          "database_name": "DBC"
+        },
+        "expect": {
+          "metadata.truncation_absent": true
+        }
+      }
+    ],
+    "base_columnMetadata": [
+      {
+        "name": "limits_base_columnMetadata_is_bypassed",
+        "parameters": {
+          "db_name": "DBC",
+          "object_name": "DBCInfoTbl"
+        },
+        "expect": {
+          "metadata.truncation_absent": true
+        }
+      }
+    ],
+    "test_lowLimit": [
+      {
+        "name": "yaml_row_limit_overrides_default_to_5",
+        "parameters": {
+          "database_name": "DBC"
+        },
+        "expect": {
+          "truncation_present": true,
+          "row_limit": 5,
+          "results_count": 5,
+          "metadata.truncation.hard_ceiling": 15,
+          "metadata.truncation.get_all_used": false,
+          "metadata.truncation.hint_contains": "database_name"
+        }
+      },
+      {
+        "name": "yaml_max_row_limit_caps_get_all_at_15",
+        "parameters": {
+          "database_name": "DBC",
+          "get_all": true
+        },
+        "expect": {
+          "truncation_present": true,
+          "row_limit": 15,
+          "results_count": 15,
+          "metadata.truncation.hard_ceiling": 15,
+          "metadata.truncation.get_all_used": true
+        }
+      }
+    ],
+    "test_bypassedFixture": [
+      {
+        "name": "yaml_bypass_row_cap_skips_injection",
+        "parameters": {
+          "database_name": "DBC"
+        },
+        "expect": {
+          "metadata.truncation_absent": true,
+          "results_count_min": 16
+        }
+      }
+    ]
+  }
+}

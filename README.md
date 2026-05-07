@@ -64,6 +64,8 @@ We are providing groupings of tools and associated helpful prompts to support al
   - [Plot Tools](./src/teradata_mcp_server/tools/plot/README.md)
  - **BAR** tools, prompts and resources for database backup and restore operations:
    - [BAR Tools](src/teradata_mcp_server/tools/bar/README.md) integrate AI agents with Teradata DSA (Data Stream Architecture) for comprehensive backup management across multiple storage solutions including disk files, cloud storage (AWS S3, Azure Blob, Google Cloud), and enterprise systems (NetBackup, IBM Spectrum).
+ - **Graph** tools for Directed dependency graph analysis for Teradata object lineage and impact analysis:
+   - [Graph Tools](src/teradata_mcp_server/tools/graph/README.md) to generate and analyze directed dependency graphs for Teradata object lineage and impact analysis, enabling users to visualize and understand complex relationships between database objects.
 
 ## Quick start with Claude Desktop (no installation)
 > Prefer to use other tools? Check out our Quick Starts for [VS Code/Copilot](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/server_guide/QUICK_START_VSCODE.md), [Open WebUI](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/server_guide/QUICK_START_OPEN_WEBUI.md), or dive into [simple code examples](https://github.com/Teradata/teradata-mcp-server/blob/main/examples/README.md#client-applications)!

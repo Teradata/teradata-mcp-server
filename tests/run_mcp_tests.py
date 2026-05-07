@@ -23,6 +23,99 @@ from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
 
+def _resolve_dot_path(obj, path: str):
+    """Resolve a dotted path through nested dicts. Returns ``(found, value)``."""
+    cursor = obj
+    for part in path.split("."):
+        if isinstance(cursor, dict) and part in cursor:
+            cursor = cursor[part]
+        else:
+            return False, None
+    return True, cursor
+
+
+def _check_expectations(expect: dict, results, metadata: dict) -> str | None:
+    """Apply optional ``expect:`` assertions to a test response.
+
+    Returns an error message string when any assertion fails, or None on success.
+    Supported keys:
+      - ``truncation_present``: bool — assert metadata.truncation.truncated matches
+      - ``row_limit``: int — assert metadata.truncation.row_limit equals
+      - ``results_count``: int — exact length of ``results``
+      - ``results_count_max``: int — ``len(results) <= max``
+      - ``results_count_min``: int — ``len(results) >= min``
+      - ``metadata.<dot.path>``: value — equality on a metadata dot-path
+      - ``metadata.<path>_contains``: substring match on a metadata field
+      - ``metadata.<path>_absent``: true — assert key absent
+    """
+    if not isinstance(expect, dict):
+        return None
+
+    # truncation_present
+    if "truncation_present" in expect:
+        want = bool(expect["truncation_present"])
+        truncation = (metadata or {}).get("truncation") or {}
+        actual = bool(truncation.get("truncated", False))
+        if actual is not want:
+            return f"truncation_present: expected {want}, got {actual}"
+
+    if "row_limit" in expect:
+        truncation = (metadata or {}).get("truncation") or {}
+        if truncation.get("row_limit") != expect["row_limit"]:
+            return f"row_limit: expected {expect['row_limit']}, got {truncation.get('row_limit')}"
+
+    if "results_count" in expect and (not isinstance(results, list) or len(results) != expect["results_count"]):
+        length = len(results) if isinstance(results, list) else "non-list"
+        return f"results_count: expected {expect['results_count']}, got {length}"
+
+    if (
+        "results_count_max" in expect
+        and isinstance(results, list)
+        and len(results) > expect["results_count_max"]
+    ):
+        return f"results_count_max: expected ≤ {expect['results_count_max']}, got {len(results)}"
+
+    if "results_count_min" in expect and (
+        not isinstance(results, list) or len(results) < expect["results_count_min"]
+    ):
+        length = len(results) if isinstance(results, list) else "non-list"
+        return f"results_count_min: expected ≥ {expect['results_count_min']}, got {length}"
+
+    for key, want in expect.items():
+        if key in {
+            "truncation_present",
+            "row_limit",
+            "results_count",
+            "results_count_max",
+            "results_count_min",
+        }:
+            continue
+        if not key.startswith("metadata."):
+            continue
+        path = key[len("metadata.") :]
+        if path.endswith("_absent"):
+            real_path = path[: -len("_absent")]
+            found, _ = _resolve_dot_path(metadata, real_path)
+            if found and bool(want):
+                return f"metadata.{real_path}: expected absent, but found"
+            continue
+        if path.endswith("_contains"):
+            real_path = path[: -len("_contains")]
+            found, value = _resolve_dot_path(metadata, real_path)
+            if not found:
+                return f"metadata.{real_path}: expected to contain {want!r}, but path missing"
+            if not isinstance(value, str) or str(want) not in value:
+                return f"metadata.{real_path}: expected substring {want!r}, got {value!r}"
+            continue
+        found, value = _resolve_dot_path(metadata, path)
+        if not found:
+            return f"metadata.{path}: expected {want!r}, but path missing"
+        if value != want:
+            return f"metadata.{path}: expected {want!r}, got {value!r}"
+
+    return None
+
+
 class MCPTestRunner:
     def __init__(self, test_cases_files: list[str] = ["tests/cases/core_test_cases.json"], verbose: bool = False):
         self.test_cases_files = test_cases_files if isinstance(test_cases_files, list) else [test_cases_files]
@@ -100,7 +193,10 @@ class MCPTestRunner:
                 "MCP_TRANSPORT": "stdio",
                 "PYTHONPATH": os.environ.get("PYTHONPATH", ""),
                 # Show server logs during startup for debugging
-                "LOGGING_LEVEL": "INFO" if self.verbose else "WARNING"
+                "LOGGING_LEVEL": "INFO" if self.verbose else "WARNING",
+                # Load row-cap test fixtures from tests/cases (issue #249).
+                # User-provided CONFIG_DIR wins so external test runs aren't disrupted.
+                "CONFIG_DIR": os.environ.get("CONFIG_DIR") or os.path.join(project_root, "tests", "cases"),
             }
 
             server_params = StdioServerParameters(
@@ -285,6 +381,16 @@ class MCPTestRunner:
                         results_length = len(str(results)) if results else 0
                         if results_length == 0 or (isinstance(results, list | dict) and len(results) == 0):
                             has_warning = True
+
+                        # Optional `expect:` assertions (issue #249).
+                        expect = test_case.get("expect")
+                        if expect:
+                            metadata = response_json.get("metadata") or {}
+                            failure = _check_expectations(expect, results, metadata)
+                            if failure:
+                                status = "FAIL"
+                                error_msg = failure
+                                has_warning = False
                     else:
                         status = "FAIL"
                         if isinstance(results, dict) and "error" in results:
@@ -499,7 +605,10 @@ async def main():
 
     # Default to core test cases if no files specified
     if not test_cases_files:
-        test_cases_files = ["tests/cases/core_test_cases.json"]
+        test_cases_files = [
+            "tests/cases/core_test_cases.json",
+            "tests/cases/limits_test_cases.json",
+        ]
 
     runner = MCPTestRunner(test_cases_files, verbose)
 
