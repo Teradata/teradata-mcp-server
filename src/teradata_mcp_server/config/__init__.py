@@ -42,6 +42,9 @@ class Settings:
     # Tools registration and execution method
     progressive_disclosure: bool = False  # Whether to register tools dynamically for MCP access
 
+    # Extension hooks
+    hooks_module: str | None = None  # Path to a .py file or dotted module name providing get_hooks()
+
 
 def settings_from_env() -> Settings:
     """Create Settings from environment variables only.
@@ -66,4 +69,5 @@ def settings_from_env() -> Settings:
         pool_timeout=int(os.getenv("TD_POOL_TIMEOUT", "30")),
         logging_level=os.getenv("LOGGING_LEVEL", "WARNING"),
         progressive_disclosure=os.getenv("PROGRESSIVE_DISCLOSURE", "false").lower() == "true",
+        hooks_module=os.getenv("HOOKS_MODULE") or None,
     )

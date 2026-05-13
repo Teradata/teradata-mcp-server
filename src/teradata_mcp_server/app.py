@@ -32,6 +32,8 @@ from sqlalchemy.engine import Connection
 
 from teradata_mcp_server import utils as config_utils
 from teradata_mcp_server.config import Settings
+from teradata_mcp_server.hook_loader import load_hooks
+from teradata_mcp_server.hooks import ServerHooks, ToolCallContext
 from teradata_mcp_server.middleware import RequestContextMiddleware
 from teradata_mcp_server.tools import ContextCatalog
 from teradata_mcp_server.tools.graph.graph_edge_contract import GRAPH_EDGE_CONTRACT
@@ -307,6 +309,17 @@ def create_mcp_app(settings: Settings):
     hostname = socket.gethostname()
     process_id = f"{hostname}:{os.getpid()}"
 
+    # Load optional extension hooks (no-op ServerHooks() when not configured)
+    hooks: ServerHooks = load_hooks(settings.hooks_module) if settings.hooks_module else ServerHooks()
+
+    def _fire_hook(hook, *hook_args):
+        if hook is None:
+            return
+        try:
+            hook(*hook_args)
+        except Exception as exc:
+            logger.warning("Hook %r raised: %s", getattr(hook, "__name__", hook), exc, exc_info=True)
+
     def execute_db_tool(tool, *args, **kwargs):
         """Execute a handler with a DB connection and MCP concerns.
 
@@ -329,6 +342,16 @@ def create_mcp_app(settings: Settings):
         first_param = next(iter(sig.parameters.values()))
         ann = first_param.annotation
         use_sqla = inspect.isclass(ann) and issubclass(ann, Connection)
+
+        hook_ctx = ToolCallContext(
+            tool_name=tool_name,
+            kwargs=dict(kwargs),
+            request_context=request_context,
+            engine=tdconn_local.engine,
+            profile_name=profile_name,
+            db_user=get_db_user(),
+        )
+        _fire_hook(hooks.on_tool_call, hook_ctx)
 
         try:
             if use_sqla:
@@ -381,8 +404,10 @@ def create_mcp_app(settings: Settings):
                     result = tool(raw, *args, **kwargs)
                 finally:
                     raw.close()
+            _fire_hook(hooks.on_tool_result, hook_ctx, result)
             return format_text_response(result)
         except Exception as e:
+            _fire_hook(hooks.on_tool_error, hook_ctx, e)
             logger.error(
                 f"Error in execute_db_tool: {e}", exc_info=True, extra={"session_info": {"tool_name": tool_name}}
             )
