@@ -45,6 +45,10 @@ class Settings:
     # Extension hooks
     hooks_module: str | None = None  # Path to a .py file or dotted module name providing get_hooks()
 
+    # Row limits for query results
+    default_row_limit: int = 1000   # Default max rows returned by base_readQuery (DEFAULT_ROW_LIMIT env var)
+    max_row_limit: int = 50000      # Hard ceiling; callers cannot exceed this (MAX_ROW_LIMIT env var)
+
 
 def settings_from_env() -> Settings:
     """Create Settings from environment variables only.
@@ -70,4 +74,6 @@ def settings_from_env() -> Settings:
         logging_level=os.getenv("LOGGING_LEVEL", "WARNING"),
         progressive_disclosure=os.getenv("PROGRESSIVE_DISCLOSURE", "false").lower() == "true",
         hooks_module=os.getenv("HOOKS_MODULE") or None,
+        default_row_limit=int(os.getenv("DEFAULT_ROW_LIMIT", "1000")),
+        max_row_limit=int(os.getenv("MAX_ROW_LIMIT", "50000")),
     )
