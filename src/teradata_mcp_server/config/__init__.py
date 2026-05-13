@@ -46,8 +46,8 @@ class Settings:
     hooks_module: str | None = None  # Path to a .py file or dotted module name providing get_hooks()
 
     # Row limits for query results
-    default_row_limit: int = 1000   # Default max rows returned by base_readQuery (DEFAULT_ROW_LIMIT env var)
-    max_row_limit: int = 50000      # Hard ceiling; callers cannot exceed this (MAX_ROW_LIMIT env var)
+    default_row_limit: int = 1000  # Default max rows returned by base_readQuery (DEFAULT_ROW_LIMIT env var)
+    max_row_limit: int = 50000  # Hard ceiling; callers cannot exceed this (MAX_ROW_LIMIT env var)
 
 
 def settings_from_env() -> Settings:
