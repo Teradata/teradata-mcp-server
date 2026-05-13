@@ -32,6 +32,8 @@ from sqlalchemy.engine import Connection
 
 from teradata_mcp_server import utils as config_utils
 from teradata_mcp_server.config import Settings
+from teradata_mcp_server.hook_loader import load_hooks
+from teradata_mcp_server.hooks import ServerHooks, ToolCallContext
 from teradata_mcp_server.middleware import RequestContextMiddleware
 from teradata_mcp_server.tools import ContextCatalog
 from teradata_mcp_server.tools.graph.graph_edge_contract import GRAPH_EDGE_CONTRACT
@@ -42,8 +44,6 @@ from teradata_mcp_server.tools.utils import (
     get_dynamic_function_definition,
     get_partition_col_order_col_doc_string,
 )
-from teradata_mcp_server.hook_loader import load_hooks
-from teradata_mcp_server.hooks import ServerHooks, ToolCallContext
 from teradata_mcp_server.tools.utils.factory import create_mcp_tool
 from teradata_mcp_server.tools.utils.queryband import build_queryband
 from teradata_mcp_server.utils import format_error_response, format_text_response, resolve_type_hint, setup_logging

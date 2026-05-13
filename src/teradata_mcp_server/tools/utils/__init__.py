@@ -35,7 +35,7 @@ def serialize_teradata_types(obj: Any) -> Any:
     """
     if obj is None:
         return None
-    if isinstance(obj, (date, datetime)):
+    if isinstance(obj, date | datetime):
         return obj.isoformat()
     if isinstance(obj, Decimal):
         return float(obj)
@@ -73,15 +73,15 @@ def _make_serialisable(obj: Any) -> Any:
     """
     if obj is None:
         return None
-    if isinstance(obj, (str, int, float, bool)):
+    if isinstance(obj, str | int | float | bool):
         return obj
-    if isinstance(obj, (date, datetime)):
+    if isinstance(obj, date | datetime):
         return obj.isoformat()
     if isinstance(obj, Decimal):
         return float(obj)
     if isinstance(obj, dict):
         return {k: _make_serialisable(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple)):
+    if isinstance(obj, list | tuple):
         return [_make_serialisable(item) for item in obj]
     # Fallback: cast to string (e.g. bytes, custom objects)
     return str(obj)

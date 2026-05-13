@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 
 @dataclass
@@ -9,9 +9,9 @@ class ToolCallContext:
     """Snapshot of per-invocation state passed to every server hook."""
 
     tool_name: str
-    kwargs: dict          # keyword args the tool was called with (conn/tool_name already removed)
-    request_context: object   # RequestContext from middleware; typed as object to avoid circular import
-    engine: object            # sqlalchemy.engine.Engine tied to this request
+    kwargs: dict  # keyword args the tool was called with (conn/tool_name already removed)
+    request_context: object  # RequestContext from middleware; typed as object to avoid circular import
+    engine: object  # sqlalchemy.engine.Engine tied to this request
     profile_name: str | None
     db_user: str | None
 
