@@ -15,9 +15,6 @@ from teradata_mcp_server.tools.utils import create_response, rows_to_json
 
 logger = logging.getLogger("teradata_mcp_server")
 
-_DEFAULT_ROW_LIMIT = int(os.environ.get("DEFAULT_ROW_LIMIT", "1000"))
-_MAX_ROW_LIMIT = int(os.environ.get("MAX_ROW_LIMIT", "50000"))
-
 
 # ------------------ Tool  ------------------#
 # Read query tool
@@ -113,7 +110,9 @@ def handle_base_readQuery(
     # 5. Apply row limit (skip for persist mode and SHOW commands — both have their own size controls)
     truncated = False
     if not volatile_table_name and not is_show_command:
-        effective_limit = min(row_limit if row_limit is not None else _DEFAULT_ROW_LIMIT, _MAX_ROW_LIMIT)
+        default_limit = int(os.getenv("DEFAULT_ROW_LIMIT", "1000"))
+        max_limit = int(os.getenv("MAX_ROW_LIMIT", "50000"))
+        effective_limit = min(row_limit if row_limit is not None else default_limit, max_limit)
         if len(data) > effective_limit:
             data = data[:effective_limit]
             truncated = True
