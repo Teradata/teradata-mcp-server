@@ -35,6 +35,11 @@ def handle_base_readQuery(
       persist   - Set to True to persist the results as a table and reuse it later. Recommended for large result sets.
       row_limit - Maximum rows to return (default 1000, ceiling 50000). Pass a higher value when you need more rows.
 
+    When the response metadata contains 'truncated: true', more rows exist beyond the limit. To get more data:
+      - Pass a higher row_limit (up to 50000) to retrieve more rows in the response.
+      - Use persist=true to write all rows to a volatile table and query it directly — this bypasses
+        the row limit entirely and is the recommended approach for large result sets.
+
     Returns:
       ResponseType: formatted response with query results + metadata
                    (includes 'volatile_table' field in metadata if persist=True)
