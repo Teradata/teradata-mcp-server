@@ -83,10 +83,24 @@ def handle_base_readQuery(
         result = conn.execute(text(f"select top 10 * from {volatile_table_name}"))
 
     cursor = result.cursor  # underlying DB-API cursor
-    raw_rows = cursor.fetchall() or []
 
     # 4. Check if this is a SHOW command (DDL extraction)
     is_show_command = sql and sql.strip().upper().startswith("SHOW ")
+
+    # 5. Fetch rows — use fetchmany for normal queries to avoid pulling the full
+    #    result set into Python memory before discarding most of it.
+    #    SHOW commands and persist mode bypass the cap and use fetchall.
+    truncated = False
+    if not volatile_table_name and not is_show_command:
+        default_limit = int(os.getenv("DEFAULT_ROW_LIMIT", "1000"))
+        max_limit = int(os.getenv("MAX_ROW_LIMIT", "50000"))
+        effective_limit = min(row_limit if row_limit is not None else default_limit, max_limit)
+        raw_rows = cursor.fetchmany(size=effective_limit + 1) or []
+        if len(raw_rows) > effective_limit:
+            raw_rows = raw_rows[:effective_limit]
+            truncated = True
+    else:
+        raw_rows = cursor.fetchall() or []
 
     if is_show_command and raw_rows and len(raw_rows[0]) == 1:
         # This is a SHOW command - concatenate all rows into single DDL
@@ -106,16 +120,6 @@ def handle_base_readQuery(
         columns = [
             {"name": col[0], "type": getattr(col[1], "__name__", str(col[1]))} for col in (cursor.description or [])
         ]
-
-    # 5. Apply row limit (skip for persist mode and SHOW commands — both have their own size controls)
-    truncated = False
-    if not volatile_table_name and not is_show_command:
-        default_limit = int(os.getenv("DEFAULT_ROW_LIMIT", "1000"))
-        max_limit = int(os.getenv("MAX_ROW_LIMIT", "50000"))
-        effective_limit = min(row_limit if row_limit is not None else default_limit, max_limit)
-        if len(data) > effective_limit:
-            data = data[:effective_limit]
-            truncated = True
 
     # 6. Compile the statement with literal binds for "final SQL"
     #    Fallback to DefaultDialect if conn has no `.dialect`
