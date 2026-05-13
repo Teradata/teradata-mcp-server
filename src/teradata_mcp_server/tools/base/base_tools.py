@@ -95,7 +95,7 @@ def handle_base_readQuery(
         default_limit = int(os.getenv("DEFAULT_ROW_LIMIT", "1000"))
         max_limit = int(os.getenv("MAX_ROW_LIMIT", "50000"))
         effective_limit = min(row_limit if row_limit is not None else default_limit, max_limit)
-        raw_rows = cursor.fetchmany(size=effective_limit + 1) or []
+        raw_rows = cursor.fetchmany(effective_limit + 1) or []
         if len(raw_rows) > effective_limit:
             raw_rows = raw_rows[:effective_limit]
             truncated = True
