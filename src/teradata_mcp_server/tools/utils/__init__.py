@@ -295,8 +295,12 @@ def build_tdml_tool_docstring(summary: str, func_metadata, partition_order_cols:
         lines.append(f"  {name} - {first_sentence}. {required_label}. Types: {types_str}.")
 
     for col_name in partition_order_cols:
-        lines.append(f"  {col_name}_partition_column - Partition column(s) for the {col_name} table. Optional. Types: str, list.")
-        lines.append(f"  {col_name}_order_column - Order column(s) for the {col_name} table. Optional. Types: str, list.")
+        lines.append(
+            f"  {col_name}_partition_column - Partition column(s) for the {col_name} table. Optional. Types: str, list."
+        )
+        lines.append(
+            f"  {col_name}_order_column - Order column(s) for the {col_name} table. Optional. Types: str, list."
+        )
 
     lines.append("  output_table_name - Persist result to this table. Optional. Types: str.")
     lines.append("  database_name - Database to use. Optional. Types: str.")
