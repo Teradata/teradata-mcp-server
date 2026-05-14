@@ -373,6 +373,19 @@ This section explains how the pieces fit together at runtime.
   - The wrapper delegates execution to `execute_db_tool` which:
     - Injects a DB connection (SQLAlchemy `Connection` preferred)
     - Sets QueryBand based on request context (`tools/utils/queryband.py`)
+- Dynamically registers `tdml_*` analytic function tools when teradataml is installed and a database connection is available (see below).
+
+### Dynamic teradataml Analytic Function Registration
+
+The ~89 `tdml_*` tools (e.g., `tdml_KMeans`, `tdml_XGBoost`) are not defined as `handle_*` functions. Instead, `app.py` generates and registers them at startup when `enable_analytic_functions` is true:
+
+1. **`tools/constants.py`** — `TD_ANALYTIC_FUNCS` is a `dict[str, str]` mapping each teradataml function name to a curated one-line summary (e.g., `"KMeans": "Groups observations into k clusters..."`). This dict is the authoritative list of which functions to register.
+
+2. **`tools/utils/__init__.py`** — `build_tdml_tool_docstring(summary, func_metadata, partition_order_cols)` builds the compact MCP tool description at registration time. It reads parameter names, descriptions, Required/Optional, and types directly from `func_metadata.arguments` (teradataml's live JSON store, populated from the database), combining them with the curated summary.
+
+3. **`app.py`** — Iterates `TD_ANALYTIC_FUNCS.items()`, queries the live JSON store for each function's metadata, generates a Python function string via `exec()`, and registers it with `mcp.tool()`. If a function from the dict is not present in the connected database's function list, it is skipped with a warning.
+
+**To add a new analytic function:** add one entry to `TD_ANALYTIC_FUNCS` in `tools/constants.py` with a concise one-line description. No other code changes are needed.
 
 ## Project Layout
 
@@ -394,11 +407,12 @@ teradata-mcp-server/
    │  └─ profiles.yml
    └─ tools/
       ├─ __init__.py               # Lazy module loader + explicit exports (e.g., TDConn)
+      ├─ constants.py              # TD_ANALYTIC_FUNCS dict: teradataml function name → one-line summary
       ├─ module_loader.py          # Profiles → load only needed tool modules (+ YAMLs)
       ├─ td_connect.py             # SQLAlchemy connection + auth validation helpers
       ├─ utils/
-      │  ├─ __init__.py            # JSON helpers, auth header parsing, exports queryband
-+     │  └─ queryband.py           # Build Teradata QueryBand from request context
+      │  ├─ __init__.py            # JSON helpers, auth header parsing, tdml docstring builder
+      │  └─ queryband.py           # Build Teradata QueryBand from request context
       ├─ base/ ...                 # Tool groups (base, dba, sec, qlty, rag, fs, tdvs, ...)
       └─ fs/...                    # Optional extras; imported only if profile enables them
 ```
