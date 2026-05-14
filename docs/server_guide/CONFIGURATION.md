@@ -37,6 +37,10 @@ export TD_POOL_SIZE="5"                # connection pool size
 export TD_MAX_OVERFLOW="10"            # max overflow connections
 export TD_POOL_TIMEOUT="30"            # connection timeout seconds
 
+# Optional: Query result limits
+export DEFAULT_ROW_LIMIT="1000"        # default max rows returned by base_readQuery
+export MAX_ROW_LIMIT="50000"           # hard ceiling; callers cannot exceed this
+
 # Optional: Authentication (see Security guide)
 export AUTH_MODE="none"                # or "basic"  
 export AUTH_CACHE_TTL="300"            # seconds
@@ -321,6 +325,19 @@ export TD_POOL_SIZE="5"        # Base connections
 export TD_MAX_OVERFLOW="10"    # Additional connections under load  
 export TD_POOL_TIMEOUT="30"    # Seconds to wait for connection
 ```
+
+### Query Result Limits
+
+`base_readQuery` caps results to prevent LLM token overflow. Results beyond the limit are silently dropped and the response metadata includes `"truncated": true`.
+
+```bash
+export DEFAULT_ROW_LIMIT="1000"   # Default max rows per base_readQuery call
+export MAX_ROW_LIMIT="50000"      # Hard ceiling; the row_limit parameter cannot exceed this
+```
+
+When a query is truncated, the LLM can:
+- Pass a higher `row_limit` (up to `MAX_ROW_LIMIT`) to retrieve more rows in a single response.
+- Pass `persist=true` to write the full result set to a volatile table and query it directly — this bypasses the row cap entirely and is recommended for large result sets.
 
 ### Authentication Methods
 

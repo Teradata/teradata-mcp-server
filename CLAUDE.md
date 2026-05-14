@@ -80,6 +80,8 @@ Settings dataclass in `config/__init__.py` merges CLI args, environment variable
 
 Tool handlers receive either a SQLAlchemy `Connection` or raw `TeradataConnection` as their first parameter — the wrapper in `app.py` handles injection.
 
+`base_readQuery` caps result rows to prevent LLM token overflow: default 1000 rows, hard ceiling 50000. Configurable via `DEFAULT_ROW_LIMIT` and `MAX_ROW_LIMIT` env vars. When truncated, response metadata includes `truncated: true`; callers can pass a higher `row_limit` or use `persist=true` to bypass the cap.
+
 ### Transport Modes
 
 Set via `MCP_TRANSPORT` env var or `--mcp_transport` flag:
