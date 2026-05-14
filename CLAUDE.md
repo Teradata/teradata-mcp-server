@@ -66,6 +66,15 @@ Tools are organized into domain modules under `src/teradata_mcp_server/tools/`:
 
 Profiles (defined in `config/profiles.yml`) control which modules load. The `module_loader.py` uses regex pattern matching against tool name prefixes to determine which modules to import. Available profiles: `all`, `dba`, `dataScientist`, `eda`, `bar`, `llmUser`, `tester`.
 
+### teradataml Analytic Function Tools (`tdml_*`)
+
+The ~89 `tdml_*` tools (e.g., `tdml_KMeans`, `tdml_XGBoost`) are registered dynamically in `app.py`, separate from the `handle_*` module pattern. Key files:
+
+- **`tools/constants.py`** — `TD_ANALYTIC_FUNCS`: a `dict[str, str]` mapping teradataml function name → curated one-line summary. This is the authoritative list of which functions to register. To add a new function, add one entry here.
+- **`tools/utils/__init__.py`** — `build_tdml_tool_docstring(summary, func_metadata, partition_order_cols)`: builds the compact MCP tool description at registration time by reading parameter names, descriptions, and types from the live teradataml JSON store.
+
+Tools are only registered when `enable_analytic_functions` is true, teradataml is installed, and a database connection is available. Functions missing from the connected system are skipped with a warning.
+
 ### Configuration System
 
 Layered config loading (`config_loader.py`):

@@ -268,57 +268,43 @@ def execute_analytic_function(function_name: str, tables_to_df=None, **kwargs):
     return create_response([rec._asdict() for rec in result_to_store.itertuples()], metadata)
 
 
-def convert_tdml_docstring_to_mcp_docstring(doc_string, partition_order_cols_doc_str):
-    """
-    Convert TeradataML function docstring to MCP tool docstring format.
+def _clean_python_types(raw_types: str) -> str:
+    """Extract simple type names from a Python type tuple string, removing teradataml internals."""
+    import re
 
-    PARAMETERS:
-        doc_string:
-            Required Argument.
-            Specifies the doc string for TeradataML function whose docstring needs to be converted.
-            Types: str
+    names = re.findall(r"class '(?:[\w.]+\.)?(\w+)'", raw_types)
+    cleaned = []
+    for n in names:
+        mapped = "str" if n in ("Feature", "DataFrame") else n
+        if mapped not in cleaned:
+            cleaned.append(mapped)
+    return ", ".join(cleaned) if cleaned else "str"
 
-        partition_order_cols_doc_str:
-            Required Argument.
-            Specifies a list of docstring fragments (strings) related to partition columns and order columns
-            to be joined and appended.
-            Types: list of str
 
-    RETURNS:
-        str: Converted docstring in MCP tool format.
+def build_tdml_tool_docstring(summary: str, func_metadata, partition_order_cols: list[str]) -> str:
+    """Build a compact MCP tool docstring from a curated summary and function metadata."""
+    lines = [summary, "", "Arguments:"]
 
-    RAISES:
-        None
-    """
+    for arg in func_metadata.arguments:
+        name = arg.get_lang_name()
+        desc = (arg.get_lang_description() or arg.get_sql_description() or "").strip()
+        # Keep only first sentence
+        first_sentence = desc.split(".")[0].rstrip()
+        required_label = "Required" if arg.is_required() else "Optional"
+        types_str = _clean_python_types(str(arg.get_python_type() or ""))
+        lines.append(f"  {name} - {first_sentence}. {required_label}. Types: {types_str}.")
 
-    # Replace all teradataml DataFrame with table & "data:" with "table_name".
-    doc_string = doc_string.replace("teradataml DataFrame", "table name")
-    doc_string = doc_string.replace("DataFrame", "table name")
+    for col_name in partition_order_cols:
+        lines.append(f"  {col_name}_partition_column - Partition column(s) for the {col_name} table. Optional. Types: str, list.")
+        lines.append(f"  {col_name}_order_column - Order column(s) for the {col_name} table. Optional. Types: str, list.")
 
-    # Remove every thing from generic arguments since examples are not use full.
-    # Then add output argument.
-    addon_doc_string = """
+    lines.append("  output_table_name - Persist result to this table. Optional. Types: str.")
+    lines.append("  database_name - Database to use. Optional. Types: str.")
+    lines.append("")
+    lines.append("Returns:")
+    lines.append("  list of dicts, or table name when output_table_name is set.")
 
-        output_table_name:
-            Optional Argument.
-            Specifies the name of the table to push the result.
-            Types: str
-
-        database_name:
-            Optional Argument.
-            Specifies the name of the database to use.
-            Types: str
-
-    RETURNS:
-        list of dictionaries or table.
-        When user specifies the output_table_name argument, the function
-        returns the table name where the result is pushed. Otherwise, it returns
-        a list of dictionaries containing the result.
-"""
-    base_doc = doc_string.split("**generic_arguments")[0].strip()
-    partition_order_doc = "".join(partition_order_cols_doc_str)
-    final_doc_string = base_doc + partition_order_doc + addon_doc_string
-    return final_doc_string
+    return "\n".join(lines)
 
 
 def get_anlytic_function_signature(params):
@@ -375,17 +361,5 @@ def {analytic_function}({func_args_str}):
 
 
 def get_partition_col_order_col_doc_string(col_name):
-    """
-    Get the docstring for partition_column parameter.
-    """
-    return f"""
-
-        {col_name}_partition_column:
-            Optional Argument.
-            Specifies the column(s) to partition the table mentioned in argument '{col_name}'.
-            Types: str OR list of Strings (str)
-
-        {col_name}_order_column:
-            Optional Argument.
-            Specifies the column(s) to order the data inside the table mentioned in argument '{col_name}'.
-            Types: str OR list of Strings (str)"""
+    """Returns the column name used to add partition/order params for a given input table."""
+    return col_name

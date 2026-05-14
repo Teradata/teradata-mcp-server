@@ -1,27 +1,125 @@
-# Feature Store Tools
-
+# Feature Store & Analytic Function Tools
 
 **Dependencies**
 
-Assumes Teradata >=17.20.
+Assumes Teradata >=17.20. Requires the `fs` optional extra (`uv sync --extra fs`), which installs `teradataml`.
 
-**fs** tools:
+---
 
-- reconect_to_database - reestablishes a connection the the Teradata database
-- fs_setFeatureStoreConfig - sets the feature store config for the session
-- fs_getFeatureStoreConfig - gets the feature store config for the session
-- fs_isFeatureStorePresent - confirms that a feature store has been created
-- fs_featureStoreContent - returns a summary of the feature store
-- fs_getDataDomains - lists the available domains in a feature store
-- fs_getFeatures - gets the features within the feature store
-- fs_getAvailableDatasets - lists the available datasets in the feature store
-- fs_getFeatureDataModel - returns the schema of the feature store
-- fs_getAvailableEntities - returns the entities in a domain
-- fs_createDataset - creates a data set from the feature store
+## Feature Store tools (`fs_*`)
 
+- `reconnect_to_database` - reestablishes a connection to the Teradata database
+- `fs_setFeatureStoreConfig` - sets the feature store config for the session
+- `fs_getFeatureStoreConfig` - gets the feature store config for the session
+- `fs_isFeatureStorePresent` - confirms that a feature store has been created
+- `fs_featureStoreContent` - returns a summary of the feature store
+- `fs_getDataDomains` - lists the available domains in a feature store
+- `fs_getFeatures` - gets the features within the feature store
+- `fs_getAvailableDatasets` - lists the available datasets in the feature store
+- `fs_getFeatureDataModel` - returns the schema of the feature store
+- `fs_getAvailableEntities` - returns the entities in a domain
+- `fs_createDataset` - creates a data set from the feature store
 
-**fs** prompts:
+---
 
+## teradataml Analytic Function tools (`tdml_*`)
 
+These tools are registered dynamically at server startup from the teradataml library. The full list of registered functions is maintained in [`tools/constants.py`](../constants.py). Each entry maps a teradataml function name to a one-line summary used as the MCP tool description.
+
+Tools are only registered when a database connection is available and the function exists in the connected system's teradataml version. If a function is unavailable, it is skipped with a warning.
+
+| Tool | Description |
+|------|-------------|
+| `tdml_ANOVA` | Performs one-way Analysis of Variance (ANOVA) on a dataset with two or more groups. |
+| `tdml_Apriori` | Finds association patterns and calculates statistical metrics to understand the influence of item sets on each other. |
+| `tdml_BincodeFit` | Computes bin boundaries for numeric columns to be applied by BincodeTransform(). |
+| `tdml_BincodeTransform` | Converts continuous numeric data to categorical data using bin boundaries from BincodeFit() output. |
+| `tdml_CFilter` | Calculates statistical measures of how likely each pair of items is to be purchased together. |
+| `tdml_CategoricalSummary` | Displays distinct values and their counts for each specified input column. |
+| `tdml_ChiSq` | Performs Pearson's chi-squared test for independence between two categorical variables. |
+| `tdml_ClassificationEvaluator` | Evaluates a classification model by computing confusion matrix metrics such as accuracy, precision, recall, and F1. |
+| `tdml_ColumnSummary` | Provides a quick overview of column datatypes and a summary of NULL and non-NULL counts for a given table. |
+| `tdml_ColumnTransformer` | Applies multiple transformations to input data columns in a single operation using Fit analytic function outputs. |
+| `tdml_ConvertTo` | Converts specified input columns to specified data types. |
+| `tdml_DecisionForest` | Trains an ensemble decision forest model for classification and regression predictive modeling. |
+| `tdml_FTest` | Performs an F-test where the test statistic follows an F-distribution under the null hypothesis. |
+| `tdml_FillRowId` | Adds a column of unique row identifiers to the input table. |
+| `tdml_Fit` | Determines whether specified numeric transformations can be applied to target columns and outputs parameters for Transform(). |
+| `tdml_GLM` | Trains a Generalized Linear Model (GLM) for regression and classification. |
+| `tdml_GLMPerSegment` | Trains a separate GLM model for each segment of the input data. |
+| `tdml_GetFutileColumns` | Returns names of columns that are futile — all values unique, all identical, or distinct ratio exceeds a threshold. |
+| `tdml_GetRowsWithMissingValues` | Returns rows that contain NULL values in any of the specified input columns. |
+| `tdml_GetRowsWithoutMissingValues` | Returns rows that have non-NULL values in all of the specified input columns. |
+| `tdml_Histogram` | Calculates frequency distribution of a dataset using Sturges, Scott, variable-width, or equal-width binning methods. |
+| `tdml_KMeans` | Groups observations into k clusters where each point belongs to the cluster with the nearest centroid. |
+| `tdml_KMeansPredict` | Assigns input data points to cluster centroids produced by KMeans(). |
+| `tdml_KNN` | Classifies data points based on proximity to training data points with known categories. |
+| `tdml_MovingAverage` | Computes moving average values in a series using a specified moving average type. |
+| `tdml_NERExtractor` | Performs Named Entity Recognition (NER) on input text using dictionary words or regular expression patterns. |
+| `tdml_NGramSplitter` | Tokenizes an input stream of text and outputs n-grams based on specified delimiter and reset parameters. |
+| `tdml_NPath` | Scans a set of rows looking for user-specified sequential patterns and returns rows that match. |
+| `tdml_NaiveBayesTextClassifierPredict` | Predicts text categories using a model generated by NaiveBayesTextClassifierTrainer(). |
+| `tdml_NaiveBayesTextClassifierTrainer` | Calculates conditional probabilities and prior probabilities for token-category pairs for text classification. |
+| `tdml_NonLinearCombineFit` | Computes parameters for a non-linear combination of existing features for use by NonLinearCombineTransform(). |
+| `tdml_NonLinearCombineTransform` | Generates a new feature by applying a non-linear combination formula using NonLinearCombineFit() output. |
+| `tdml_NumApply` | Applies a predefined numeric operation to specified input columns. |
+| `tdml_OneClassSVM` | Trains a linear one-class SVM model to identify outliers or novelty in a dataset. |
+| `tdml_OneClassSVMPredict` | Predicts whether input data points are outliers using a model generated by OneClassSVM(). |
+| `tdml_OneHotEncodingFit` | Identifies categorical values to be encoded and outputs parameters for OneHotEncodingTransform(). |
+| `tdml_OneHotEncodingTransform` | Encodes categorical columns as one-hot numeric vectors using OneHotEncodingFit() output. |
+| `tdml_OrdinalEncodingFit` | Identifies distinct categorical values and generates ordinal mappings for use with OrdinalEncodingTransform(). |
+| `tdml_OrdinalEncodingTransform` | Maps categorical values to ordinal integers using OrdinalEncodingFit() output. |
+| `tdml_OutlierFilterFit` | Calculates percentile bounds and median for target columns for use by OutlierFilterTransform(). |
+| `tdml_OutlierFilterTransform` | Filters rows containing outlier values using bounds from OutlierFilterFit() output. |
+| `tdml_Pack` | Packs data from multiple input columns into a single column. |
+| `tdml_Pivoting` | Pivots data from sparse format to dense format (rows to columns). |
+| `tdml_PolynomialFeaturesFit` | Computes polynomial combination parameters for existing features for use by PolynomialFeaturesTransform(). |
+| `tdml_PolynomialFeaturesTransform` | Generates polynomial feature combinations from existing features using PolynomialFeaturesFit() output. |
+| `tdml_QQNorm` | Determines whether values in input columns follow a normal distribution. |
+| `tdml_ROC` | Computes true positive rate, false positive rate, AUC, and Gini coefficient for a binary classification model. |
+| `tdml_RandomProjectionFit` | Generates a random projection matrix for use by RandomProjectionTransform(). |
+| `tdml_RandomProjectionMinComponents` | Calculates the minimum number of components required for random projection given an epsilon distortion value. |
+| `tdml_RandomProjectionTransform` | Reduces high-dimensional input data to a lower-dimensional space using RandomProjectionFit() output. |
+| `tdml_RegressionEvaluator` | Computes metrics to evaluate regression model predictions including RMSE, MAE, and R-squared. |
+| `tdml_RoundColumns` | Rounds values in specified input columns to a specified number of decimal places. |
+| `tdml_RowNormalizeFit` | Computes row-wise normalization parameters for specified columns for use by RowNormalizeTransform(). |
+| `tdml_RowNormalizeTransform` | Normalizes input columns row-wise using RowNormalizeFit() output. |
+| `tdml_SMOTE` | Generates synthetic minority class samples using SMOTE, ADASYN, Borderline-2, or SMOTE-NC algorithms. |
+| `tdml_SVM` | Trains a linear Support Vector Machine (SVM) for classification and regression. |
+| `tdml_SVMPredict` | Predicts target values or class labels on new data using a model generated by SVM(). |
+| `tdml_ScaleFit` | Computes scaling statistics for specified columns for use by ScaleTransform(). |
+| `tdml_ScaleTransform` | Scales specified columns using statistics from ScaleFit() output. |
+| `tdml_Sessionize` | Maps each click event in a user session to a unique session identifier. |
+| `tdml_SentimentExtractor` | Extracts the sentiment (positive, negative, or neutral) of each input document or sentence. |
+| `tdml_Shap` | Computes Shapley values to explain individual predictions (feature contributions) for a machine learning model. |
+| `tdml_Silhouette` | Measures the consistency of cluster assignments by computing silhouette scores for each data point. |
+| `tdml_SimpleImputeFit` | Computes imputation values (mean, median, or mode) for missing values in the input data. |
+| `tdml_SimpleImputeTransform` | Substitutes missing values in the input data using imputation values from SimpleImputeFit() output. |
+| `tdml_StrApply` | Applies a predefined string operation to specified input columns. |
+| `tdml_StringSimilarity` | Calculates similarity between two strings using Jaro, Jaro-Winkler, N-Gram, or Levenshtein distance. |
+| `tdml_TFIDF` | Computes Term Frequency (TF), Inverse Document Frequency (IDF), and TF-IDF scores for each term in a document set. |
+| `tdml_TDDecisionForestPredict` | Predicts target values or class labels using a DecisionForest() model. |
+| `tdml_TDGLMPredict` | Predicts target values or class labels for test data using a GLM() model. |
+| `tdml_TDNaiveBayesPredict` | Predicts classification labels using a model generated by NaiveBayes(). |
+| `tdml_TargetEncodingFit` | Computes target encoding values (expected value per category) for categorical columns. |
+| `tdml_TargetEncodingTransform` | Encodes categorical columns using encoding values from TargetEncodingFit() output. |
+| `tdml_TextMorph` | Generates morphological variants (morphs) of words in the input dataset. |
+| `tdml_TextParser` | Tokenizes text, removes punctuation, converts to lowercase, removes stopwords, and applies stemming or lemmatization. |
+| `tdml_TrainTestSplit` | Splits input data into training and test sets to simulate model performance on new data. |
+| `tdml_Transform` | Applies numeric transformations to input columns using parameters from Fit() output. |
+| `tdml_UnivariateStatistics` | Displays descriptive statistics (mean, min, max, stddev, etc.) for each specified numeric input column. |
+| `tdml_Unpack` | Unpacks data from a single packed column into multiple separate columns. |
+| `tdml_Unpivoting` | Unpivots data from dense format to sparse format (columns to rows). |
+| `tdml_VectorDistance` | Computes distances between target vectors and reference vectors. |
+| `tdml_WhichMax` | Returns all rows that contain the maximum value in a specified input column. |
+| `tdml_WhichMin` | Returns all rows that contain the minimum value in a specified input column. |
+| `tdml_WordEmbeddings` | Produces embedding vectors for text and computes similarity between texts. |
+| `tdml_XGBoost` | Trains an XGBoost (eXtreme Gradient Boosting) model for classification or regression. |
+| `tdml_XGBoostPredict` | Predicts target values or class labels using a model generated by XGBoost(). |
+| `tdml_ZTest` | Tests the equality of two means under the assumption that the population variances are known. |
+
+To add a new analytic function, see [How to Add a New Function](../../../../docs/developer_guide/HOW_TO_ADD_YOUR_FUNCTION.md#-adding-a-teradataml-analytic-function-tdml_).
+
+---
 
 [Return to Main README](../../../../README.md)

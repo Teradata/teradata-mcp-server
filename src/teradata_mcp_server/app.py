@@ -38,7 +38,7 @@ from teradata_mcp_server.middleware import RequestContextMiddleware
 from teradata_mcp_server.tools import ContextCatalog
 from teradata_mcp_server.tools.graph.graph_edge_contract import GRAPH_EDGE_CONTRACT
 from teradata_mcp_server.tools.utils import (
-    convert_tdml_docstring_to_mcp_docstring,
+    build_tdml_tool_docstring,
     execute_analytic_function,
     get_anlytic_function_signature,
     get_dynamic_function_definition,
@@ -587,7 +587,7 @@ def create_mcp_app(settings: Settings):
     if enable_analytic_functions:
         tdml_processed_funcs = set(tdml.analytics.json_parser.json_store._JsonStore._get_function_list()[0].keys())
 
-        for func_name in funcs:
+        for func_name, summary in funcs.items():
             # Before adding the function, check if function is existed or not.
             # Connection is not mandatory for MCP server. If connection is not there, then
             # functions can not be added.
@@ -596,30 +596,28 @@ def create_mcp_app(settings: Settings):
                 continue
 
             func_metadata = tdml.analytics.json_parser.json_store._JsonStore.get_function_metadata(func_name)
-            func_obj = getattr(tdml, func_name, None)
             func_params = func_metadata.function_params
 
             inp_data = [t.get_lang_name() for t in func_metadata.input_tables]
             # Add partition_by parameters for func parameters.
-            additional_args_docs = []
+            partition_order_cols = []
             for table in inp_data:
                 func_params[f"{table}_partition_column"] = None
                 func_params[f"{table}_order_column"] = None
-                additional_args_docs.append(get_partition_col_order_col_doc_string(table))
+                partition_order_cols.append(get_partition_col_order_col_doc_string(table))
 
             # Generate function argument string.
             func_args_str = get_anlytic_function_signature(func_params)
 
             full_func_name = "tdml_" + func_name
-            init_doc = func_obj.__init__.__doc__  # type: ignore[misc]
             func_str = get_dynamic_function_definition().format(
                 analytic_function=full_func_name,
-                doc_string=init_doc,
+                doc_string=summary,
                 func_args_str=func_args_str,
                 tables_to_df=json.dumps(inp_data),
             )
 
-            doc_string = convert_tdml_docstring_to_mcp_docstring(init_doc, additional_args_docs)
+            doc_string = build_tdml_tool_docstring(summary, func_metadata, partition_order_cols)
 
             # Execute the generated function definition in the global scope.
             # Global scope will have all other functions. So reference to other functions will work.
