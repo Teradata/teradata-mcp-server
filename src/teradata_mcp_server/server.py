@@ -65,6 +65,8 @@ def parse_args_to_settings() -> Settings:
         logging_level=(args.logging_level or env.logging_level).upper(),
         progressive_disclosure=args.progressive_disclosure or env.progressive_disclosure,
         hooks_module=args.hooks_module if args.hooks_module is not None else env.hooks_module,
+        default_row_limit=env.default_row_limit,
+        max_row_limit=env.max_row_limit,
     )
 
 

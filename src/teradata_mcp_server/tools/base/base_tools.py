@@ -1,6 +1,7 @@
 import fnmatch
 import inspect
 import logging
+import os
 import re
 import time
 from collections.abc import Callable
@@ -18,18 +19,31 @@ logger = logging.getLogger("teradata_mcp_server")
 # ------------------ Tool  ------------------#
 # Read query tool
 def handle_base_readQuery(
-    conn: Connection, sql: str | None = None, tool_name: str | None = None, persist: bool = False, *args, **kwargs
+    conn: Connection,
+    sql: str | None = None,
+    tool_name: str | None = None,
+    persist: bool = False,
+    row_limit: int | None = None,
+    *args,
+    **kwargs,
 ):
     """
     Execute a SQL query via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
 
     Arguments:
-      sql     - SQL text, with optional bind-parameter placeholders
-      persist - Set to True to persist the results as a table and reuse it later. Recommended for large result sets.
+      sql       - SQL text, with optional bind-parameter placeholders
+      persist   - Set to True to persist the results as a table and reuse it later. Recommended for large result sets.
+      row_limit - Maximum rows to return (default 1000, ceiling 50000). Pass a higher value when you need more rows.
+
+    When the response metadata contains 'truncated: true', more rows exist beyond the limit. To get more data:
+      - Pass a higher row_limit (up to 50000) to retrieve more rows in the response.
+      - Use persist=true to write all rows to a volatile table and query it directly — this bypasses
+        the row limit entirely and is the recommended approach for large result sets.
 
     Returns:
       ResponseType: formatted response with query results + metadata
                    (includes 'volatile_table' field in metadata if persist=True)
+                   (includes 'truncated' and 'row_limit' in metadata when results are capped)
     """
     logger.debug(f"Tool: handle_base_readQuery: Args: sql: {sql}, persist: {persist}, args={args!r}, kwargs={kwargs!r}")
 
@@ -74,10 +88,24 @@ def handle_base_readQuery(
         result = conn.execute(text(f"select top 10 * from {volatile_table_name}"))
 
     cursor = result.cursor  # underlying DB-API cursor
-    raw_rows = cursor.fetchall() or []
 
     # 4. Check if this is a SHOW command (DDL extraction)
     is_show_command = sql and sql.strip().upper().startswith("SHOW ")
+
+    # 5. Fetch rows — use fetchmany for normal queries to avoid pulling the full
+    #    result set into Python memory before discarding most of it.
+    #    SHOW commands and persist mode bypass the cap and use fetchall.
+    truncated = False
+    if not volatile_table_name and not is_show_command:
+        default_limit = int(os.getenv("DEFAULT_ROW_LIMIT", "1000"))
+        max_limit = int(os.getenv("MAX_ROW_LIMIT", "50000"))
+        effective_limit = min(row_limit if row_limit is not None else default_limit, max_limit)
+        raw_rows = cursor.fetchmany(effective_limit + 1) or []
+        if len(raw_rows) > effective_limit:
+            raw_rows = raw_rows[:effective_limit]
+            truncated = True
+    else:
+        raw_rows = cursor.fetchall() or []
 
     if is_show_command and raw_rows and len(raw_rows[0]) == 1:
         # This is a SHOW command - concatenate all rows into single DDL
@@ -98,19 +126,23 @@ def handle_base_readQuery(
             {"name": col[0], "type": getattr(col[1], "__name__", str(col[1]))} for col in (cursor.description or [])
         ]
 
-    # 5. Compile the statement with literal binds for "final SQL"
+    # 6. Compile the statement with literal binds for "final SQL"
     #    Fallback to DefaultDialect if conn has no `.dialect`
     dialect = getattr(conn, "dialect", default.DefaultDialect())
     compiled = stmt.compile(dialect=dialect, compile_kwargs={"literal_binds": True})
     final_sql = str(compiled)
 
-    # 5. Build metadata using the rendered SQL
+    # 7. Build metadata using the rendered SQL
     metadata = {
         "tool_name": tool_name if tool_name else "base_readQuery",
         "sql": final_sql,
         "columns": columns,
         "row_count": len(data),
     }
+
+    if truncated:
+        metadata["truncated"] = True
+        metadata["row_limit"] = effective_limit
 
     # Add volatile table name if persisted
     if volatile_table_name:

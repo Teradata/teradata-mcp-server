@@ -25,6 +25,43 @@
           "sql": "SELECT TOP 20 DatabaseName, TableName FROM DBC.TablesV WHERE DatabaseName = 'DBC'",
           "persist": true
         }
+      },
+      {
+        "name": "row_limit_default_cap",
+        "parameters": {
+          "sql": "SELECT DatabaseName, TableName FROM DBC.TablesV ORDER BY 1, 2"
+        },
+        "expect": {
+          "results_count": 1000,
+          "metadata": {
+            "truncated": true,
+            "row_limit": 1000
+          }
+        }
+      },
+      {
+        "name": "row_limit_override",
+        "parameters": {
+          "sql": "SELECT DatabaseName, TableName FROM DBC.TablesV ORDER BY 1, 2",
+          "row_limit": 2000
+        },
+        "expect": {
+          "results_count": 2000,
+          "metadata": {
+            "truncated": true,
+            "row_limit": 2000
+          }
+        }
+      },
+      {
+        "name": "row_limit_no_truncation",
+        "parameters": {
+          "sql": "SELECT TOP 5 DatabaseName FROM DBC.TablesV"
+        },
+        "expect": {
+          "results_count": 5,
+          "metadata_absent": ["truncated"]
+        }
       }
     ],
     "base_tableList": [

@@ -285,6 +285,39 @@ class MCPTestRunner:
                         results_length = len(str(results)) if results else 0
                         if results_length == 0 or (isinstance(results, list | dict) and len(results) == 0):
                             has_warning = True
+
+                        # Run expect assertions if present
+                        expect = test_case.get("expect", {})
+                        if expect and status == "PASS":
+                            assertion_errors = []
+                            response_metadata = response_json.get("metadata", {})
+
+                            # results_count: exact row count
+                            if "results_count" in expect:
+                                actual = len(results) if isinstance(results, list) else 0
+                                if actual != expect["results_count"]:
+                                    assertion_errors.append(
+                                        f"results_count: expected {expect['results_count']}, got {actual}"
+                                    )
+
+                            # metadata: key/value pairs that must match
+                            for key, val in expect.get("metadata", {}).items():
+                                actual = response_metadata.get(key)
+                                if actual != val:
+                                    assertion_errors.append(
+                                        f"metadata.{key}: expected {val!r}, got {actual!r}"
+                                    )
+
+                            # metadata_absent: keys that must not be present
+                            for key in expect.get("metadata_absent", []):
+                                if key in response_metadata:
+                                    assertion_errors.append(
+                                        f"metadata.{key} should be absent but was {response_metadata[key]!r}"
+                                    )
+
+                            if assertion_errors:
+                                status = "FAIL"
+                                error_msg = "; ".join(assertion_errors)
                     else:
                         status = "FAIL"
                         if isinstance(results, dict) and "error" in results:
