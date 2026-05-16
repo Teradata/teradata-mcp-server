@@ -4,12 +4,14 @@ import argparse
 import asyncio
 import os
 import signal
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-from teradata_mcp_server import __version__
+from teradata_mcp_server import __version__, config_loader
 from teradata_mcp_server.app import create_mcp_app
 from teradata_mcp_server.config import Settings, settings_from_env
+from teradata_mcp_server.utils import apply_profile_defaults_to_env
 
 
 def parse_args_to_settings() -> Settings:
@@ -72,6 +74,20 @@ def parse_args_to_settings() -> Settings:
 
 async def main():
     load_dotenv()
+
+    # Apply the profile's `run:` defaults to env vars before parsing,
+    # so CLI flags and pre-existing env vars still take precedence.
+    # We need --config_dir at this point so load_profiles() looks in the
+    # right place for user-supplied profiles.yml.
+    pre = argparse.ArgumentParser(add_help=False)
+    pre.add_argument("--profile", type=str)
+    pre.add_argument("--config_dir", type=str)
+    pre_args, _ = pre.parse_known_args()
+    config_dir = pre_args.config_dir or os.environ.get("CONFIG_DIR")
+    if config_dir:
+        config_loader.set_global_config_dir(Path(config_dir).resolve())
+    apply_profile_defaults_to_env(pre_args.profile or os.environ.get("PROFILE"))
+
     settings = parse_args_to_settings()
     mcp, logger = create_mcp_app(settings)
 
