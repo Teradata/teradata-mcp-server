@@ -115,6 +115,7 @@ class TDConn:
                 pool_size=pool_size,
                 max_overflow=max_overflow,
                 pool_timeout=pool_timeout,
+                pool_pre_ping=True,
             )
             logger.info(f"SQLAlchemy engine created for Teradata: {self._base_host}:{self._base_port}/{self._base_db}")
         except Exception as e:
