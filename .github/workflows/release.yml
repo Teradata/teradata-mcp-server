@@ -79,6 +79,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: test-pypi
     steps:
+      - uses: astral-sh/setup-uv@v4
+
       - uses: actions/download-artifact@v4
         with:
           name: dist
@@ -104,6 +106,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: pypi
     steps:
+      - uses: astral-sh/setup-uv@v4
+
       - uses: actions/download-artifact@v4
         with:
           name: dist
