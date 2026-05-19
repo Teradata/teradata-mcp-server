@@ -460,21 +460,93 @@ npx modelcontextprotocol/inspector
 
 ## Build, Test, and Publish
 
-We build with **uv**, test locally (wheel), then push to **TestPyPI** before PyPI.
-The examples below use the Twine utility.
+We build with **uv** and publish via a GitHub Actions release workflow. Releases are not created on every commit — a release is triggered explicitly by pushing a git tag.
 
 ### Versions
 - The CLI reads its version from package metadata (`importlib.metadata`).
 - **Bump only in `pyproject.toml`** (do not hardcode in code).
 - You **cannot overwrite** an existing version on PyPI/TestPyPI — always increment.
 
-### 1) Build artifacts
+### Automated release workflow
+
+The release workflow is defined in [`.github/workflows/release.yml`](../../.github/workflows/release.yml) and runs the following stages in order:
+
+```
+build & verify  →  create GitHub Release  →  publish TestPyPI  →  (approval)  →  publish PyPI
+```
+
+Each stage must succeed before the next starts. The `publish-pypi` job requires manual approval via the `pypi` GitHub Environment — this gives you time to verify the TestPyPI package before it goes to production.
+
+#### One-time GitHub setup
+
+> **VPN required** — you must be connected to the Teradata VPN to access the GitHub repository settings and to generate or retrieve API tokens from PyPI and TestPyPI.
+
+**Secrets** — add these in *Settings → Secrets and variables → Actions*:
+
+| Secret | Where to get it |
+|---|---|
+| `TEST_PYPI_TOKEN` | [test.pypi.org](https://test.pypi.org) → Account → API tokens |
+| `PYPI_TOKEN` | [pypi.org](https://pypi.org) → Account → API tokens |
+
+If you have previously published manually using Twine, your tokens are already stored locally in `~/.pypirc` — copy the `password` values from there rather than generating new ones.
+
+**Environments** — create two environments in *Settings → Environments*:
+- `test-pypi` — no protection rules required
+- `pypi` — add yourself (or your team) as a **Required reviewer** to enable the approval gate
+
+#### Triggering a release
+
+Releases are grouped across multiple commits. When you are ready to ship:
+
+```bash
+# 1. Bump the version in pyproject.toml, commit, and push to main as normal
+git add pyproject.toml
+git commit -m "chore: bump version to 0.2.3"
+git push
+
+# 2. Tag the commit — pushing the tag fires the release workflow
+git tag v0.2.3
+git push origin v0.2.3
+```
+
+The tag must match the version in `pyproject.toml`. The workflow reads the version from `pyproject.toml` at build time and uses it throughout.
+
+#### Approving a production release
+
+After the TestPyPI publish and smoke test succeed, the workflow pauses before publishing to production PyPI and waits for a human to approve. Here is what happens:
+
+1. GitHub sends you an **email notification** and a bell notification in the GitHub UI
+2. Open the Actions run — you will see a yellow banner: *"This workflow is waiting for a review before continuing"*
+3. Click **Review deployments**, tick the `pypi` environment checkbox, and click **Approve and deploy**
+4. The `publish-pypi` job starts and the package is published to production PyPI
+
+If something looks wrong (e.g., the TestPyPI smoke test installed the wrong version), click **Reject** instead — nothing is published to production and the run is cancelled. Fix the issue, bump the version, and start a new release.
+
+> **Note:** Only the GitHub users configured as Required reviewers on the `pypi` environment can approve. The reviewer should confirm the TestPyPI smoke test passed before approving.
+
+#### Re-running a failed publish
+
+If a publish step fails (e.g., a transient network error), use the **Run workflow** button on the [Actions tab](https://github.com/Teradata/teradata-mcp-server/actions/workflows/release.yml) to re-trigger without creating a new tag.
+
+#### What the workflow does
+
+1. **Build & Verify** — runs `uv build --no-cache`, verifies metadata with `uvx twine check`, and smoke-tests the wheel locally
+2. **Create GitHub Release** — creates a GitHub Release for the tag with auto-generated release notes and attaches the wheel and tarball as downloadable assets
+3. **Publish to TestPyPI** — uploads with `uvx twine upload --repository testpypi`, then verifies installation with `uvx`
+4. **Approval gate** — workflow pauses; reviewer approves in the GitHub UI after checking the TestPyPI package
+5. **Publish to PyPI** — uploads with `uvx twine upload`, then runs a final smoke test from production PyPI
+
+### Manual publish (fallback)
+
+If you need to publish outside of CI, the steps below replicate what the workflow does.
+
+#### 1) Build artifacts
 ```bash
 uv build --no-cache
 # Produces dist/teradata_mcp_server-<ver>-py3-none-any.whl and .tar.gz
 ```
 
-### 2) Test the wheel locally (no install)
+#### 2) Test the wheel locally (no install)
 ```bash
 # Run the installed console entry point from the wheel
 uvx ./dist/teradata_mcp_server-<ver>-py3-none-any.whl teradata_mcp_server --version
@@ -484,12 +556,12 @@ uv tool install --reinstall ./dist/teradata_mcp_server-<ver>-py3-none-any.whl
 ~/.local/bin/teradata-mcp-server --help
 ```
 
-### 3) Verify metadata/README
+#### 3) Verify metadata/README
 ```bash
 uvx twine check dist/*
 ```
 
-### 4) Publish to **TestPyPI** (dress rehearsal)
+#### 4) Publish to **TestPyPI** (dress rehearsal)
 ```bash
 # Upload
 uvx twine upload --repository testpypi dist/*
@@ -505,15 +577,15 @@ Notes:
 - `--index-strategy unsafe-best-match` lets uv take our package from TestPyPI and other deps from PyPI.
 - Use `--no-cache` to avoid stale wheels.
 
-### 5) Publish to **PyPI**
+#### 5) Publish to **PyPI**
 ```bash
 uvx twine upload dist/*
 ```
-If you see `File already exists`, it is either:
-- You haven't bumped the the version in `pyproject.toml`. Do so, rebuild, and upload again.
-- You have prior builds in the ./dist directory. Remove prior or be specify the exact version (eg. `uvx twine upload dist/*1.4.0*`)
+If you see `File already exists`, either:
+- You haven't bumped the version in `pyproject.toml`. Do so, rebuild, and upload again.
+- You have prior builds in the `./dist` directory. Remove them or specify the exact version (e.g., `uvx twine upload dist/*0.2.3*`).
 
-### 6) Post‑publish smoke test
+#### 6) Post‑publish smoke test
 ```bash
 # One‑off run
 uvx "teradata-mcp-server==<ver>" --version
