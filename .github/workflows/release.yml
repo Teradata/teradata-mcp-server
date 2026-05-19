@@ -94,11 +94,15 @@ jobs:
 
       - name: Smoke test from TestPyPI
         run: |
-          uvx --no-cache \
-            --index-url https://test.pypi.org/simple \
-            --extra-index-url https://pypi.org/simple \
-            --index-strategy unsafe-best-match \
-            "teradata-mcp-server==${{ needs.build.outputs.version }}" --version
+          for i in 1 2 3 4 5; do
+            uvx --no-cache \
+              --index-url https://test.pypi.org/simple \
+              --extra-index-url https://pypi.org/simple \
+              --index-strategy unsafe-best-match \
+              "teradata-mcp-server==${{ needs.build.outputs.version }}" --version && break
+            echo "Attempt $i failed — waiting 30s for TestPyPI to index the package..."
+            sleep 30
+          done
 
   publish-pypi:
     name: Publish to PyPI
@@ -121,4 +125,8 @@ jobs:
 
       - name: Smoke test from PyPI
         run: |
-          uvx --no-cache "teradata-mcp-server==${{ needs.build.outputs.version }}" --version
+          for i in 1 2 3 4 5; do
+            uvx --no-cache "teradata-mcp-server==${{ needs.build.outputs.version }}" --version && break
+            echo "Attempt $i failed — waiting 30s for PyPI to index the package..."
+            sleep 30
+          done
