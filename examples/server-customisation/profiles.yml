@@ -12,7 +12,7 @@ custom:
   resource:
     - cust*
   run:
-    database_uri: "teradata://${TD_USER}:${TD_PASSWORD}@demo-mcp-vikzqtnd0db0nglk.env.clearscape.teradata.com:1025"
+    database_uri: "teradata://${TD_USER}:${TD_PASSWORD}@mcp-vikzqtnd0db0nglk.env.clearscape.teradata.com:1025"
     mcp_transport: "streamable-http"
     mcp_port: 8001
 
