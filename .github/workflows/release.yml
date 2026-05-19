@@ -1,0 +1,120 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build & Verify
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Extract version from pyproject.toml
+        id: version
+        run: |
+          VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build artifacts
+        run: uv build --no-cache
+
+      - name: Verify metadata and README
+        run: uvx twine check dist/*
+
+      - name: Test wheel locally
+        run: |
+          uvx ./dist/teradata_mcp_server-${{ steps.version.outputs.version }}-py3-none-any.whl \
+            teradata_mcp_server --version
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  create-github-release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "v${{ needs.build.outputs.version }}" \
+            --generate-notes \
+            dist/*
+
+  publish-test-pypi:
+    name: Publish to TestPyPI
+    needs: [build, create-github-release]
+    runs-on: ubuntu-latest
+    environment: test-pypi
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Upload to TestPyPI
+        run: uvx twine upload --repository testpypi dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
+
+      - name: Smoke test from TestPyPI
+        run: |
+          uvx --no-cache \
+            --index-url https://test.pypi.org/simple \
+            --extra-index-url https://pypi.org/simple \
+            --index-strategy unsafe-best-match \
+            "teradata-mcp-server==${{ needs.build.outputs.version }}" --version
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [build, publish-test-pypi]
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Upload to PyPI
+        run: uvx twine upload dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+
+      - name: Smoke test from PyPI
+        run: |
+          uvx --no-cache "teradata-mcp-server==${{ needs.build.outputs.version }}" --version
