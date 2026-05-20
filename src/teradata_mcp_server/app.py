@@ -328,7 +328,6 @@ def create_mcp_app(settings: Settings):
         auth_cache=auth_cache,
         tdconn_supplier=get_tdconn,
         auth_mode=settings.auth_mode,
-        transport=settings.mcp_transport,
     )
     mcp.add_middleware(middleware)
 

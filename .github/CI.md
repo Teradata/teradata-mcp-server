@@ -10,7 +10,7 @@ The CI workflow (`.github/workflows/ci.yml`) runs on every push to `main` and on
 |-----|-------------|:-----------------:|
 | **Lint** | Runs `ruff check` and `ruff format --check` against `src/` | No |
 | **Type Check** | Runs `mypy` against `src/` (installs the `dev` extra for type stubs) | No |
-| **HTTP Transport Smoke Test** | Starts the server in `streamable-http` mode, connects via the MCP HTTP client, calls `list_tools`, and shuts down. Catches startup-time errors in HTTP-specific code paths (middleware registration, import errors) that the stdio suite cannot reach. | No |
+| **HTTP Transport Smoke Test** | Runs middleware unit tests (transport-path branching, no database) then starts the server in `streamable-http` mode, connects via the MCP HTTP client, calls `list_tools`, and shuts down. Catches startup-time errors in HTTP-specific code paths (middleware registration, import errors) that the stdio suite cannot reach. | No |
 | **Integration Tests (stdio)** | Runs the full test suite over stdio against a live Teradata database | Yes |
 | **Integration Tests (streamable-http)** | Runs the full test suite over HTTP against a live Teradata database | Yes |
 
@@ -26,6 +26,9 @@ uv run ruff format --check src/
 # Type check
 uv sync --extra dev
 uv run mypy src/
+
+# Middleware unit tests (no database required)
+uv run python tests/middleware_transport_tests.py
 
 # HTTP transport smoke test (no database required)
 uv run python tests/smoke_http.py --verbose

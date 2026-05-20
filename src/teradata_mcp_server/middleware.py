@@ -47,24 +47,23 @@ class RequestContextMiddleware(Middleware):
         auth_cache,
         tdconn_supplier: Callable[[], Any],
         auth_mode: str = "none",
-        transport: str | None = None,
         registry_load_callback: Callable[[str | None], str | None] | None = None,
     ) -> None:
         self.logger = logger
         self.auth_cache = auth_cache
         self.tdconn_supplier = tdconn_supplier
         self.auth_mode = (auth_mode or "none").lower()
-        self.transport = (transport or "stdio").lower()
         self.registry_load_callback = registry_load_callback
         self.registry_tools_loaded_ts: str | None = None
         self.logger.info(
-            f"RequestContextMiddleware initialized: transport={self.transport}, auth_mode={self.auth_mode}, registry_callback={registry_load_callback is not None}"
+            f"RequestContextMiddleware initialized: auth_mode={self.auth_mode}, registry_callback={registry_load_callback is not None}"
         )
 
     async def on_request(self, context: MiddlewareContext, call_next):
-        self.logger.info(f"on_request: Called with transport={self.transport}")
+        transport = (context.fastmcp_context.transport if context.fastmcp_context else None) or "stdio"
+        self.logger.info(f"on_request: Called with transport={transport}")
         # stdio: generate lightweight context; do not touch stdout
-        if self.transport == "stdio":
+        if transport == "stdio":
             try:
                 rc = RequestContext(
                     headers={},

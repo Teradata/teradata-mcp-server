@@ -52,6 +52,8 @@ jobs:
         with:
           python-version: "3.11"
       - run: uv sync --frozen
+      - name: Run middleware unit tests (no database required)
+        run: uv run python tests/middleware_transport_tests.py
       - name: Run HTTP smoke test (no database required)
         run: uv run python tests/smoke_http.py --verbose
 
