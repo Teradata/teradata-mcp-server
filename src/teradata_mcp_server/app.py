@@ -26,6 +26,7 @@ from typing import Annotated, Any, Optional
 
 import yaml
 from fastmcp import FastMCP
+from fastmcp.exceptions import ToolError
 from fastmcp.prompts.prompt import Message, TextContent
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field
@@ -47,7 +48,7 @@ from teradata_mcp_server.tools.utils import (
 )
 from teradata_mcp_server.tools.utils.factory import create_mcp_tool
 from teradata_mcp_server.tools.utils.queryband import build_queryband
-from teradata_mcp_server.utils import format_error_response, format_text_response, resolve_type_hint, setup_logging
+from teradata_mcp_server.utils import format_text_response, resolve_type_hint, setup_logging
 
 _TOOL_ANNOTATIONS: dict[str, ToolAnnotations] = {
     "tdvs_grant_user": ToolAnnotations(readOnlyHint=False, destructiveHint=True),
@@ -97,7 +98,7 @@ def create_mcp_app(settings: Settings):
     except ImportError:
         import tools as td  # type: ignore[no-redef]  # dev fallback
 
-    mcp = FastMCP("teradata-mcp-server")
+    mcp = FastMCP("teradata-mcp-server", mask_error_details=True)
 
     # Profiles (load via utils to honor packaged + working-dir overrides)
     profile_name = settings.profile
@@ -319,6 +320,8 @@ def create_mcp_app(settings: Settings):
 
     # Middleware (auth + request context)
     # Note: registry_load_callback will be set later after load_registry_tools is defined
+    from fastmcp.server.middleware.error_handling import ErrorHandlingMiddleware
+
     from teradata_mcp_server.tools.auth_cache import SecureAuthCache
 
     auth_cache = SecureAuthCache(ttl_seconds=settings.auth_cache_ttl)
@@ -329,6 +332,7 @@ def create_mcp_app(settings: Settings):
         tdconn_supplier=get_tdconn,
         auth_mode=settings.auth_mode,
     )
+    mcp.add_middleware(ErrorHandlingMiddleware(logger=logger, include_traceback=True))
     mcp.add_middleware(middleware)
 
     if settings.mcp_transport in ("streamable-http", "sse"):
@@ -408,9 +412,9 @@ def create_mcp_app(settings: Settings):
                         logger.debug(f"Could not set QueryBand: {qb_error}")
                         # If in Basic auth, do not run the tool without proxying
                         if request_context and str(getattr(request_context, "auth_scheme", "")).lower() == "basic":
-                            return format_error_response(
+                            raise ToolError(
                                 f"Cannot run tool '{tool_name}': failed to set QueryBand for Basic auth. Error: {qb_error}"
-                            )
+                            ) from None
                     result = tool(conn, *args, **kwargs)
             else:
                 raw = tdconn_local.engine.raw_connection()
@@ -432,20 +436,22 @@ def create_mcp_app(settings: Settings):
                     except Exception as qb_error:
                         logger.debug(f"Could not set QueryBand: {qb_error}")
                         if request_context and str(getattr(request_context, "auth_scheme", "")).lower() == "basic":
-                            return format_error_response(
+                            raise ToolError(
                                 f"Cannot run tool '{tool_name}': failed to set QueryBand for Basic auth. Error: {qb_error}"
-                            )
+                            ) from None
                     result = tool(raw, *args, **kwargs)
                 finally:
                     raw.close()
             _fire_hook(hooks.on_tool_result, hook_ctx, result)
             return format_text_response(result)
+        except ToolError:
+            raise
         except Exception as e:
             _fire_hook(hooks.on_tool_error, hook_ctx, e)
             logger.error(
                 f"Error in execute_db_tool: {e}", exc_info=True, extra={"session_info": {"tool_name": tool_name}}
             )
-            return format_error_response(str(e))
+            raise ToolError(str(e)) from None
 
     def make_tool_wrapper(func):
         """Create an MCP-facing wrapper for a handle_* function.
@@ -524,7 +530,7 @@ def create_mcp_app(settings: Settings):
                 return format_text_response(json.dumps({"status": "success", "results": results}, default=str))
             except Exception as e:
                 logger.error(f"Error in search_tool: {e}", exc_info=True)
-                return format_error_response(str(e))
+                raise ToolError(str(e)) from None
 
         # MCP tool to execute a tool in the context catalog
         @mcp.tool(name="execute_tool")
@@ -546,20 +552,20 @@ def create_mcp_app(settings: Settings):
                 # Validate tool exists
                 metadata = context_catalog.get_tool(tool_name)
                 if not metadata:
-                    return format_error_response(
-                        f"Tool '{tool_name}' not found. Use search_tool to find available tools."
-                    )
+                    raise ToolError(f"Tool '{tool_name}' not found. Use search_tool to find available tools.")
 
                 # Validate arguments
                 valid, error_msg = context_catalog.validate_arguments(tool_name, **arguments)
                 if not valid:
-                    return format_error_response(f"Invalid arguments: {error_msg}")
+                    raise ToolError(f"Invalid arguments: {error_msg}")
 
                 # Execute using existing infrastructure
                 return execute_db_tool(metadata.func, tool_name=tool_name, **arguments)
+            except ToolError:
+                raise
             except Exception as e:
                 logger.error(f"Error in execute_tool: {e}", exc_info=True)
-                return format_error_response(str(e))
+                raise ToolError(str(e)) from None
 
     # Register code tools via module loader
     module_loader = td.initialize_module_loader(config)

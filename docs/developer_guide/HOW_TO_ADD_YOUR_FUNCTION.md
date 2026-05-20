@@ -65,7 +65,7 @@ def handle_fs_myFunctionName(
 
     except Exception as e:
         logger.error(f"Error in handle_fs_myFunctionName: {e}")
-        return create_response({"error": str(e)}, {"tool_name": "fs_myFunctionName"})
+        raise
 ```
 
 ---

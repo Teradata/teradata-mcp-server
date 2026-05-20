@@ -126,7 +126,7 @@ The directory structure will follow the following conventions
 - `config.py`: `Settings` dataclass and `settings_from_env()` for centralized configuration (single source of truth; precedence is CLI > env > defaults).
 - `utils.py` (logging): structured logging setup (stdio‑safe) and JSON formatter.
 - `middleware.py`: shared `RequestContextMiddleware` that extracts per-request context; has a stdio fast-path (no headers/auth) and a full HTTP/SSE path that can enforce auth and cache.
-- MCP adapter (inlined in `app.py`): internal `execute_db_tool` (DB connection injection, QueryBand, error handling) and `make_tool_wrapper` (auto MCP wrapper for `handle_*` functions).
+- MCP adapter (inlined in `app.py`): internal `execute_db_tool` (DB connection injection, QueryBand, raises `ToolError` on failure) and `make_tool_wrapper` (auto MCP wrapper for `handle_*` functions). `ErrorHandlingMiddleware` with `mask_error_details=True` ensures raw SQL errors and stack traces are never forwarded to LLM clients.
 - `tools/utils/queryband.py`: pure helpers to build Teradata QueryBand strings from request context (protocol-agnostic).
 - `utils.py`: configuration helpers for profiles and YAML object loading.
 - `testing/`: testing framework and utilities.

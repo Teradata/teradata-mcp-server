@@ -367,6 +367,36 @@ class MCPTestRunner:
                     else:
                         response_text = str(response.content)
 
+                    # Handle expect_error: tool should have returned an MCP error response
+                    is_error_response = getattr(response, 'isError', False)
+                    expect_error = test_case.get("expect_error", False)
+                    if expect_error:
+                        if is_error_response:
+                            print(f"PASS ({duration:.2f}s)")
+                            return {
+                                "tool": tool_name,
+                                "test": test_case['name'],
+                                "status": "PASS",
+                                "duration": duration,
+                                "response_length": len(response_text),
+                                "error": None,
+                                "response_status": "error",
+                                "full_response": response_text,
+                                "has_warning": False,
+                            }
+                        else:
+                            print(f"FAIL (expected error but got success) ({duration:.2f}s)")
+                            return {
+                                "tool": tool_name,
+                                "test": test_case['name'],
+                                "status": "FAIL",
+                                "duration": duration,
+                                "response_length": len(response_text),
+                                "error": "Expected error response but got success",
+                                "response_status": "unexpected_success",
+                                "full_response": response_text,
+                            }
+
                     # Parse JSON response
                     response_json = json.loads(response_text)
 
