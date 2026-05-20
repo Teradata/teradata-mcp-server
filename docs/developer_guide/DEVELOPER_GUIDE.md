@@ -38,13 +38,33 @@ npx modelcontextprotocol/inspector uv run teradata-mcp-server
 
 ### 5) Run tests
 
-Always run tests before submitting a PR:
+Always run the full pre-push checklist before submitting a PR. Run steps in order — the fast checks come first so you fail early.
 
 ```bash
-# core tests
-python tests/run_mcp_tests.py "uv run teradata-mcp-server"
+# 1. Lint (no database required)
+uv run ruff check src/
+uv run ruff format --check src/
+
+# 2. Type check (no database required)
+uv sync --extra dev
+uv run mypy src/
+
+# 3. HTTP transport smoke test (no database required)
+#    Catches startup-time errors in HTTP-specific code paths (middleware,
+#    imports, constructor errors) that the stdio suite cannot reach.
+uv run python tests/smoke_http.py --verbose
+
+# 4. Integration tests — stdio (requires DATABASE_URI)
+export DATABASE_URI="teradata://user:pass@host:1025/database"
+uv run python tests/run_mcp_tests.py "uv run teradata-mcp-server"
+
+# 5. Integration tests — streamable-http (requires DATABASE_URI)
+uv run python tests/run_mcp_tests.py "uv run teradata-mcp-server" --transport streamable-http
 ```
-Most users use the MCP server with Claude, stdio, so always test Claude's behaviour with your code or build before pushing it. 
+
+Steps 1–3 have no database dependency and are quick — run them on every change. Steps 4–5 require VPN and credentials; run them when you have changed tool handlers, middleware, or connection logic.
+
+Most users use the MCP server with Claude over stdio, so always test Claude's behaviour with your code or build before pushing it.
 
 Example configurations:
 ```json

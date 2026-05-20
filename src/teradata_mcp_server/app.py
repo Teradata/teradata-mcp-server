@@ -332,6 +332,12 @@ def create_mcp_app(settings: Settings):
     )
     mcp.add_middleware(middleware)
 
+    if settings.mcp_transport in ("streamable-http", "sse"):
+        from fastmcp.server.middleware.ping import PingMiddleware
+
+        mcp.add_middleware(PingMiddleware(interval_ms=settings.ping_interval * 1000))
+        logger.info(f"PingMiddleware registered (interval={settings.ping_interval}s)")
+
     # Adapters (inlined for simplicity)
     import socket
 

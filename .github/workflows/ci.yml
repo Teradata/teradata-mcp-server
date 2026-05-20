@@ -40,8 +40,23 @@ jobs:
       - run: uv sync --frozen --extra dev
       - run: uv run mypy src/
 
-  test:
-    name: Integration Tests
+  smoke-http:
+    name: HTTP Transport Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: uv sync --frozen
+      - name: Run HTTP smoke test (no database required)
+        run: uv run python tests/smoke_http.py --verbose
+
+  test-stdio:
+    name: Integration Tests (stdio)
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
@@ -53,7 +68,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: uv sync --frozen
-      - name: Run integration tests
+      - name: Run stdio integration tests
         if: ${{ env.DATABASE_URI != '' }}
         env:
           DATABASE_URI: ${{ secrets.DATABASE_URI }}
@@ -62,4 +77,28 @@ jobs:
         if: ${{ env.DATABASE_URI == '' }}
         env:
           DATABASE_URI: ${{ secrets.DATABASE_URI }}
-        run: echo "::warning::DATABASE_URI secret is not configured — integration tests were skipped. See .github/README.md for setup instructions."
+        run: echo "::warning::DATABASE_URI secret is not configured — stdio integration tests were skipped. See .github/CI.md for setup instructions."
+
+  test-http:
+    name: Integration Tests (streamable-http)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: uv sync --frozen
+      - name: Run HTTP integration tests
+        if: ${{ env.DATABASE_URI != '' }}
+        env:
+          DATABASE_URI: ${{ secrets.DATABASE_URI }}
+        run: uv run python tests/run_mcp_tests.py "uv run teradata-mcp-server" --transport streamable-http
+      - name: Warn if DATABASE_URI not configured
+        if: ${{ env.DATABASE_URI == '' }}
+        env:
+          DATABASE_URI: ${{ secrets.DATABASE_URI }}
+        run: echo "::warning::DATABASE_URI secret is not configured — HTTP integration tests were skipped. See .github/CI.md for setup instructions."

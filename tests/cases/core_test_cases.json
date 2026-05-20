@@ -206,6 +206,13 @@
           "top_n": 10,
           "exclude_system": "Y"
         }
+      },
+      {
+        "name": "database_and_table",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "Tables"
+        }
       }
     ],
     "dba_databaseVersion": [

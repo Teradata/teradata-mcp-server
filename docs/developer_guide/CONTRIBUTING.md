@@ -7,7 +7,7 @@ Make sure you have setup your environment based on the Developer Guide in this r
 ## Development Guidelines
 - Always engage on the discussion board or create an issue before creating a PR. 
 - All PRs must have at least one issue associated.
-- Run testing before PR, and copy/paste the test report status in the PR. You can simply run the mandatory test tools with `python tests/run_mcp_tests.py "uv run teradata-mcp-server"`. For more information see [our testing guide](/tests/README.md)
+- Run the full pre-push checklist before opening a PR, and copy/paste the test report output in the PR: lint (`uv run ruff check src/`), type check (`uv run mypy src/`), HTTP smoke test (`uv run python tests/smoke_http.py`), and integration tests over both stdio and HTTP (`uv run python tests/run_mcp_tests.py "uv run teradata-mcp-server"` and `... --transport streamable-http`). See the [Developer Guide](./DEVELOPER_GUIDE.md) for the full ordered checklist.
 - Create a new test case if you add a new tool. For more information see [our testing guide](/tests/README.md)
 - All code must be reviewed via a pull request. Before anything can be merged, it must be reviewed by at least 2 others. [Contributing to a project step by step instuctions](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project)
 - Squash commits into a single commit for your PR. We want to keep a clean git history.
