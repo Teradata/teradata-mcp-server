@@ -27,6 +27,7 @@ from typing import Annotated, Any, Optional
 import yaml
 from fastmcp import FastMCP
 from fastmcp.prompts.prompt import Message, TextContent
+from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection
 
@@ -47,6 +48,34 @@ from teradata_mcp_server.tools.utils import (
 from teradata_mcp_server.tools.utils.factory import create_mcp_tool
 from teradata_mcp_server.tools.utils.queryband import build_queryband
 from teradata_mcp_server.utils import format_error_response, format_text_response, resolve_type_hint, setup_logging
+
+_TOOL_ANNOTATIONS: dict[str, ToolAnnotations] = {
+    "tdvs_grant_user": ToolAnnotations(readOnlyHint=False, destructiveHint=True),
+    "tdvs_revoke_user": ToolAnnotations(readOnlyHint=False, destructiveHint=True),
+}
+
+_PREFIX_ANNOTATIONS: dict[str, ToolAnnotations] = {
+    "base_":  ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+    "dba_":   ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+    "sec_":   ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+    "rag_":   ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+    "qlty_":  ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+    "graph_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+    "sql_":   ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+    "plot_":  ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+    "tdvs_":  ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+    "bar_":   ToolAnnotations(readOnlyHint=False, destructiveHint=True),
+    "tdml_":  ToolAnnotations(readOnlyHint=False, idempotentHint=True),
+}
+
+
+def _annotations_for(tool_name: str) -> ToolAnnotations | None:
+    if tool_name in _TOOL_ANNOTATIONS:
+        return _TOOL_ANNOTATIONS[tool_name]
+    for prefix, ann in _PREFIX_ANNOTATIONS.items():
+        if tool_name.startswith(prefix):
+            return ann
+    return None
 
 
 def create_mcp_app(settings: Settings):
@@ -565,12 +594,12 @@ def create_mcp_app(settings: Settings):
                 # Always register base_readQuery as a direct MCP tool (core tool)
                 if tool_name == "base_readQuery":
                     wrapped = make_tool_wrapper(func)
-                    mcp.tool(name=tool_name, description=wrapped.__doc__)(wrapped)
+                    mcp.tool(name=tool_name, description=wrapped.__doc__, annotations=_annotations_for(tool_name))(wrapped)
                     logger.info(f"Registered core tool as direct MCP tool: {tool_name}")
             else:
                 # Static mode: register all tools as MCP tools
                 wrapped = make_tool_wrapper(func)
-                mcp.tool(name=tool_name, description=wrapped.__doc__)(wrapped)
+                mcp.tool(name=tool_name, description=wrapped.__doc__, annotations=_annotations_for(tool_name))(wrapped)
                 registered_count += 1
                 logger.debug(f"Registered MCP tool: {tool_name}")
 
@@ -626,7 +655,7 @@ def create_mcp_app(settings: Settings):
             # Register the function as a tool in MCP server.
             func = globals()[full_func_name]
 
-            mcp.tool(name=full_func_name, description=doc_string)(func)
+            mcp.tool(name=full_func_name, description=doc_string, annotations=_annotations_for(full_func_name))(func)
 
     # Load YAML-defined tools/resources/prompts from config directory
     custom_object_files: list[Any] = [
@@ -1051,7 +1080,7 @@ Returns:
             tool_name="get_cube_" + name,
             tool_description=doc_string,
         )
-        return mcp.tool(name=name, description=doc_string)(tool_func)
+        return mcp.tool(name=name, description=doc_string, annotations=_annotations_for(name))(tool_func)
 
     # Register custom objects
     custom_terms: list[tuple[str, Any, str]] = []
@@ -1072,7 +1101,7 @@ Returns:
             else:
                 # Static mode: wrap and register as MCP tool
                 wrapped = make_tool_wrapper(handler)
-                mcp.tool(name=name, description=wrapped.__doc__)(wrapped)
+                mcp.tool(name=name, description=wrapped.__doc__, annotations=_annotations_for(name))(wrapped)
                 logger.info(f"Registered custom YAML tool as MCP tool: {name}")
 
         elif obj_type == "prompt" and any(re.match(pattern, name) for pattern in config.get("prompt", [])):
@@ -1258,7 +1287,7 @@ Returns:
                 else:
                     # Static mode: wrap and register as MCP tool
                     wrapped = make_tool_wrapper(handler)
-                    mcp.tool(name=tool_name, description=wrapped.__doc__)(wrapped)
+                    mcp.tool(name=tool_name, description=wrapped.__doc__, annotations=_annotations_for(tool_name))(wrapped)
                     logger.info(
                         f"[REGISTRY] Registered as MCP tool: {tool_name} (type: {tool_def['object_type']}, object: {tool_def['db_object']}, registered: {tool_def.get('registered_ts')})"
                     )
