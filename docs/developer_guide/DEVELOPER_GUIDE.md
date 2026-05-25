@@ -393,17 +393,17 @@ This section explains how the pieces fit together at runtime.
   - The wrapper delegates execution to `execute_db_tool` which:
     - Injects a DB connection (SQLAlchemy `Connection` preferred)
     - Sets QueryBand based on request context (`tools/utils/queryband.py`)
-- Dynamically registers `tdml_*` analytic function tools when teradataml is installed and a database connection is available (see below).
+- Dynamically registers `tdml_*` analytic function tools via the `teradata_lifespan` context manager, after the database connection and teradataml context are confirmed (see below).
 
 ### Dynamic teradataml Analytic Function Registration
 
-The ~89 `tdml_*` tools (e.g., `tdml_KMeans`, `tdml_XGBoost`) are not defined as `handle_*` functions. Instead, `app.py` generates and registers them at startup when `enable_analytic_functions` is true:
+The ~89 `tdml_*` tools (e.g., `tdml_KMeans`, `tdml_XGBoost`) are not defined as `handle_*` functions. Instead, `app.py` generates and registers them inside the `teradata_lifespan` async context manager at server startup, after the teradataml context is established:
 
 1. **`tools/constants.py`** — `TD_ANALYTIC_FUNCS` is a `dict[str, str]` mapping each teradataml function name to a curated one-line summary (e.g., `"KMeans": "Groups observations into k clusters..."`). This dict is the authoritative list of which functions to register.
 
 2. **`tools/utils/__init__.py`** — `build_tdml_tool_docstring(summary, func_metadata, partition_order_cols)` builds the compact MCP tool description at registration time. It reads parameter names, descriptions, Required/Optional, and types directly from `func_metadata.arguments` (teradataml's live JSON store, populated from the database), combining them with the curated summary.
 
-3. **`app.py`** — Iterates `TD_ANALYTIC_FUNCS.items()`, queries the live JSON store for each function's metadata, generates a Python function string via `exec()`, and registers it with `mcp.tool()`. If a function from the dict is not present in the connected database's function list, it is skipped with a warning.
+3. **`app.py` (`teradata_lifespan`)** — After confirming the teradataml context is available, iterates `TD_ANALYTIC_FUNCS.items()`, queries the live JSON store for each function's metadata, generates a Python function string via `exec()`, and registers it with `server.tool()`. If a function from the dict is not present in the connected database's function list, it is skipped with a warning. Registration happens once at startup before any client connections are accepted.
 
 **To add a new analytic function:** add one entry to `TD_ANALYTIC_FUNCS` in `tools/constants.py` with a concise one-line description. No other code changes are needed.
 
