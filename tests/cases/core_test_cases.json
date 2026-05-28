@@ -20,6 +20,13 @@
         }
       },
       {
+        "name": "invalid_sql_returns_masked_error",
+        "parameters": {
+          "sql": "SELECT * FROM nonexistent_table_xyz_mask_test_12345"
+        },
+        "expect_error": true
+      },
+      {
         "name": "persist_result_as_volatile_table",
         "parameters": {
           "sql": "SELECT TOP 20 DatabaseName, TableName FROM DBC.TablesV WHERE DatabaseName = 'DBC'",
@@ -205,6 +212,13 @@
         "parameters": {
           "top_n": 10,
           "exclude_system": "Y"
+        }
+      },
+      {
+        "name": "database_and_table",
+        "parameters": {
+          "database_name": "DBC",
+          "table_name": "Tables"
         }
       }
     ],

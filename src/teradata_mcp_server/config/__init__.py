@@ -22,6 +22,7 @@ class Settings:
     mcp_host: str = "localhost"
     mcp_port: int = 8001
     mcp_path: str = "/mcp/"
+    ping_interval: int = 30  # keep-alive ping interval (seconds) for streamable-http and sse
 
     # Auth
     auth_mode: str = "none"  # none | basic
@@ -62,6 +63,7 @@ def settings_from_env() -> Settings:
         mcp_host=os.getenv("MCP_HOST", "localhost"),
         mcp_port=int(os.getenv("MCP_PORT", "8001")),
         mcp_path=os.getenv("MCP_PATH", "/mcp/"),
+        ping_interval=int(os.getenv("MCP_PING_INTERVAL", "30")),
         auth_mode=os.getenv("AUTH_MODE", "none").lower(),
         auth_cache_ttl=int(os.getenv("AUTH_CACHE_TTL", "300")),
         logmech=os.getenv("LOGMECH", "TD2"),

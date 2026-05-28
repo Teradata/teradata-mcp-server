@@ -1,0 +1,30 @@
+{
+  "test_cases": {
+    "sales_top_customers": [
+      {
+        "name": "default_top_customers",
+        "parameters": {}
+      }
+    ],
+    "sales_customer_profile": [
+      {
+        "name": "sample_customer",
+        "parameters": {
+          "customer_key": "1"
+        }
+      }
+    ],
+    "get_cube_cust_cube_db_space_metrics": [
+      {
+        "name": "cube_space_metrics",
+        "parameters": {}
+      }
+    ],
+    "get_cube_sales_cube": [
+      {
+        "name": "sales_cube_data",
+        "parameters": {}
+      }
+    ]
+  }
+}

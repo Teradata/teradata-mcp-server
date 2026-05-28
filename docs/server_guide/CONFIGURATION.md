@@ -28,6 +28,7 @@ export DATABASE_URI="teradata://username:password@host:1025/database"
 export MCP_TRANSPORT="stdio"           # or "streamable-http"
 export MCP_HOST="localhost"            # for HTTP transport
 export MCP_PORT="8001"                 # for HTTP transport
+export MCP_PING_INTERVAL="30"         # keep-alive ping interval (seconds) for streamable-http and sse transports
 export PROFILE="all"                   # tool profile to load
 export LOGGING_LEVEL="WARNING"         # DEBUG, INFO, WARNING, ERROR
 
@@ -292,6 +293,16 @@ For specialized streaming applications:
 ```bash
 teradata-mcp-server --mcp_transport sse --mcp_port 8001
 ```
+
+### Keep-Alive (HTTP/SSE transports)
+
+Load balancers and reverse proxies (nginx, AWS ALB) close idle connections after a fixed timeout. For long-running Teradata queries over `streamable-http` or `sse`, the server sends periodic ping messages to keep the connection alive.
+
+```bash
+export MCP_PING_INTERVAL="30"   # seconds between keep-alive pings (default: 30)
+```
+
+This has no effect on `stdio` transport.
 
 ## 🔒 Authentication Configuration
 
