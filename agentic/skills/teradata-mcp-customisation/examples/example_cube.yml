@@ -1,0 +1,95 @@
+# ============================================================================
+# Example cube — "database space" semantic layer over DBC.AllSpaceV
+# ============================================================================
+#
+# Demonstrates:
+#   - flat denormalised base SQL with public-named alias for dimensions and
+#     _v-suffixed alias for measure source columns
+#   - domain pinned in base WHERE (TableName = 'All' for db-level rows,
+#     exclude system schemas the user can't manage)
+#   - aggregate measure expressions, ratio with NULLIFZERO, share-of-total
+#     via SUM(...) OVER ()
+#   - no custom parameters — the auto-added dim_filters / meas_filters /
+#     order_by / top is enough for most ad-hoc questions
+# ============================================================================
+
+dbc_space_cube:
+  type: cube
+  description: |
+    Database-level storage cube. One row per (database, owner, account) with
+    measures derived from DBC.AllSpaceV's database-grain rows (TableName =
+    'All'). Use this for "who is using the space", "which databases are
+    near their cap", "share of total perm" questions. For per-table
+    breakdown within one database, use dbc_top_tables_by_size instead.
+
+    Built-in scope: excludes the DBC, TDWM, and SystemFe administrative
+    schemas, which would otherwise dominate every result.
+  sql: |
+    SELECT
+      s.DataBaseName       AS database_name,
+      d.OwnerName          AS owner_name,
+      d.AccountName        AS account_name,
+      s.CurrentPerm        AS current_perm_v,
+      s.PeakPerm           AS peak_perm_v,
+      s.MaxPerm            AS max_perm_v,
+      s.CurrentSpool       AS current_spool_v,
+      s.PeakSpool          AS peak_spool_v,
+      s.MaxSpool           AS max_spool_v
+    FROM DBC.AllSpaceV s
+    JOIN DBC.DatabasesV d ON d.DatabaseName = s.DataBaseName
+    WHERE s.TableName = 'All'
+      AND s.DataBaseName NOT IN ('DBC', 'TDWM', 'SystemFe')
+  dimensions:
+    database_name:
+      description: "Database / schema name (DBC.AllSpaceV.DataBaseName)."
+      expression: database_name
+    owner_name:
+      description: "Database owner / creator (DBC.DatabasesV.OwnerName)."
+      expression: owner_name
+    account_name:
+      description: "Account string used for workload accounting."
+      expression: account_name
+  measures:
+    current_perm_bytes:
+      description: "Current permanent space in use across all AMPs, bytes."
+      expression: "SUM(current_perm_v)"
+    current_perm_gb:
+      description: "Current permanent space in use, GiB."
+      expression: "CAST(SUM(current_perm_v) / 1073741824.0 AS DECIMAL(18,2))"
+    peak_perm_bytes:
+      description: "Peak permanent space observed since last reset, bytes."
+      expression: "SUM(peak_perm_v)"
+    max_perm_bytes:
+      description: "Maximum permanent space granted to the database, bytes."
+      expression: "SUM(max_perm_v)"
+    perm_utilisation_pct:
+      description: |
+        Current perm as % of granted max. NULL when max=0 (uncapped
+        databases). Above ~85% indicates a database that should be
+        reviewed.
+      expression: "CAST(SUM(current_perm_v) * 100.0 / NULLIFZERO(SUM(max_perm_v)) AS DECIMAL(10,2))"
+    spool_peak_bytes:
+      description: "Peak spool consumed by users charged to this database, bytes."
+      expression: "SUM(peak_spool_v)"
+    share_of_total_perm_pct:
+      description: |
+        This group's share of total CurrentPerm across the result set, %.
+        Useful for ranking which database, owner, or account is using
+        most of the space in scope.
+      expression: "CAST(SUM(current_perm_v) * 100.0 / NULLIFZERO(SUM(SUM(current_perm_v)) OVER ()) AS DECIMAL(10,2))"
+
+# ----------------------------------------------------------------------------
+# Example calls (what the LLM will generate against the auto-built tool):
+#
+#   dimensions    = "database_name"
+#   measures      = "current_perm_gb, perm_utilisation_pct, share_of_total_perm_pct"
+#   dim_filters   = "owner_name = 'DBADMIN'"
+#   meas_filters  = "perm_utilisation_pct > 80"
+#   order_by      = "current_perm_gb DESC"
+#   top           = 20
+#
+# Note:
+#   - dim_filters references owner_name (a column emitted by base SQL).
+#   - meas_filters references perm_utilisation_pct (a measure ALIAS), not
+#     its SUM() expression — see reference/cube-mechanics.md §2.
+# ----------------------------------------------------------------------------

@@ -1,0 +1,46 @@
+# ============================================================================
+# Example profiles.yml — exposes the dbc_* example objects, plus a "super"
+# profile that adds read-only base tools and qlty for free-form exploration.
+# ============================================================================
+#
+# Demonstrates:
+#   - one profile per audience, named after the persona / use case
+#   - regex selectors with anchored prefix matches
+#   - reuse of the upstream "eda" tool pattern (no writeQuery / dynamicQuery)
+#   - run: block to bind a profile to a specific transport / port
+#   - env-var substitution in the database URI so credentials stay out of
+#     this file
+# ============================================================================
+
+# Curated business profile — only the DBC semantic layer. Suitable for an
+# end-user chat where you want the LLM to call cubes, not write SQL.
+dbc_demo:
+  tool:
+    - ^dbc_top_tables_by_size$
+    - ^dbc_space_cube$
+  prompt:
+    - ^dbc_dba_prompt$
+  resource:
+    - ^dbc_glossary$
+  run:
+    database_uri: "teradata://${TD_USER}:${TD_PASSWORD}@${TD_HOST}:1025"
+    mcp_transport: "streamable-http"
+    mcp_port: 8010
+
+# Super profile — semantic layer + read-only base tools + data-quality
+# tools. Suitable for analysts who want to free-form explore alongside the
+# curated cubes.
+dbc_demo_super:
+  tool:
+    - ^dbc_.*
+    - "base_(?!(writeQuery|dynamicQuery)$).*"
+    - qlty_.*
+    - ^sec_userDbPermissions$
+  prompt:
+    - ^dbc_.*
+  resource:
+    - ^dbc_.*
+  run:
+    database_uri: "teradata://${TD_USER}:${TD_PASSWORD}@${TD_HOST}:1025"
+    mcp_transport: "streamable-http"
+    mcp_port: 8011

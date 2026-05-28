@@ -1,0 +1,55 @@
+# ============================================================================
+# Example glossary — Teradata storage / workload terms
+# ============================================================================
+#
+# Demonstrates:
+#   - one glossary object defining many terms
+#   - synonyms list (optional)
+#   - multi-line definitions via YAML block scalar
+#
+# Reminder: glossary objects are selected by the profile's `resource:`
+# pattern list, NOT `tool:`. They surface as MCP resources, not tools.
+# ============================================================================
+
+dbc_glossary:
+  type: glossary
+
+  permspace:
+    definition: |
+      Permanent table storage granted to a database. Measured in bytes per
+      AMP, summed across AMPs in DBC.AllSpaceV. A database's CurrentPerm
+      grows as users insert into its tables; PeakPerm tracks the high-water
+      mark since the counters were last reset.
+    synonyms:
+      - perm
+      - permanent space
+      - currentperm
+
+  spool:
+    definition: |
+      Temporary intermediate storage used by Teradata query execution. Each
+      user / account has a spool quota; running out aborts the query with
+      a 2646 error. Spool is charged to the requesting user, not the
+      database where the data lives.
+    synonyms:
+      - spool space
+      - sortspool
+
+  skew_factor:
+    definition: |
+      Data distribution skew across AMPs, computed as
+      (max_amp_size - avg_amp_size) / max_amp_size * 100. Above ~30%
+      usually indicates a poor primary-index choice that should be
+      reviewed; above ~60% will cause out-of-spool errors on joins.
+    synonyms:
+      - skew
+      - amp skew
+
+  account_string:
+    definition: |
+      A short identifier (DBC.DatabasesV.AccountName) used to group
+      sessions for workload management and accounting. Multiple users can
+      share an account string; charge-back reports aggregate by account.
+    synonyms:
+      - account
+      - account name
