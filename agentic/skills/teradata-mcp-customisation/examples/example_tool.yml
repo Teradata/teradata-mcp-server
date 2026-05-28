@@ -6,7 +6,8 @@
 #
 # Demonstrates:
 #   - identifier interpolation via {database_name}
-#   - value bind via :n
+#   - value bind via :n (in WHERE, not TOP — see parameter-substitution.md)
+#   - ROW_NUMBER() pattern to limit rows safely (TOP :n is a Teradata parse error)
 #   - parameter defaults (both args optional)
 #   - description fields that surface to the LLM
 # ============================================================================
@@ -28,14 +29,15 @@ dbc_top_tables_by_size:
       type_hint: int
       default: 10
   sql: |
-    SELECT TOP :n
+    SELECT
       TableName                                AS table_name,
       SUM(CurrentPerm)                         AS current_perm_bytes,
       SUM(PeakPerm)                            AS peak_perm_bytes,
       CAST(SUM(CurrentPerm) / 1024.0 / 1024.0
-           AS DECIMAL(18,2))                   AS current_perm_mb
+            AS DECIMAL(18,2))                   AS current_perm_mb
     FROM DBC.AllSpaceV
-    WHERE DataBaseName = '{database_name}'
+    WHERE DataBaseName = :database_name
       AND TableName   <> 'All'
     GROUP BY TableName
+    QUALIFY ROW_NUMBER() OVER (ORDER BY SUM(CurrentPerm) DESC) <= :n
     ORDER BY current_perm_bytes DESC
