@@ -68,18 +68,18 @@ Allowed and common: identifiers via `{…}`, values via `:…`.
 top_n_by_size:
   type: tool
   sql: |
-    SELECT DataBaseName, SUM(CurrentPerm) AS perm
-    FROM (
-      SELECT
-        ROW_NUMBER() OVER (ORDER BY SUM(CurrentPerm) DESC) AS rn,
-        DataBaseName,
-        SUM(CurrentPerm) AS perm
-      FROM {database_name}.AllSpaceV
-      WHERE TableName = 'All'
-      GROUP BY DataBaseName
-    ) t
-    WHERE rn <= :n
-    ORDER BY perm DESC
+    SELECT
+      TableName                                AS table_name,
+      SUM(CurrentPerm)                         AS current_perm_bytes,
+      SUM(PeakPerm)                            AS peak_perm_bytes,
+      CAST(SUM(CurrentPerm) / 1024.0 / 1024.0
+            AS DECIMAL(18,2))                   AS current_perm_mb
+    FROM DBC.AllSpaceV
+    WHERE DataBaseName = :database_name
+      AND TableName   <> 'All'
+    GROUP BY TableName
+    QUALIFY ROW_NUMBER() OVER (ORDER BY SUM(CurrentPerm) DESC) <= :n
+    ORDER BY current_perm_bytes DESC
   parameters:
     database_name: { type_hint: str, default: "DBC" }
     n:             { type_hint: int, default: 10 }

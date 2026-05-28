@@ -29,19 +29,15 @@ dbc_top_tables_by_size:
       type_hint: int
       default: 10
   sql: |
-    SELECT table_name, current_perm_bytes, peak_perm_bytes, current_perm_mb
-    FROM (
-      SELECT
-        ROW_NUMBER() OVER (ORDER BY SUM(CurrentPerm) DESC) AS rn,
-        TableName                                AS table_name,
-        SUM(CurrentPerm)                         AS current_perm_bytes,
-        SUM(PeakPerm)                            AS peak_perm_bytes,
-        CAST(SUM(CurrentPerm) / 1024.0 / 1024.0
-             AS DECIMAL(18,2))                   AS current_perm_mb
-      FROM DBC.AllSpaceV
-      WHERE DataBaseName = '{database_name}'
-        AND TableName   <> 'All'
-      GROUP BY TableName
-    ) t
-    WHERE rn <= :n
+    SELECT
+      TableName                                AS table_name,
+      SUM(CurrentPerm)                         AS current_perm_bytes,
+      SUM(PeakPerm)                            AS peak_perm_bytes,
+      CAST(SUM(CurrentPerm) / 1024.0 / 1024.0
+            AS DECIMAL(18,2))                   AS current_perm_mb
+    FROM DBC.AllSpaceV
+    WHERE DataBaseName = :database_name
+      AND TableName   <> 'All'
+    GROUP BY TableName
+    QUALIFY ROW_NUMBER() OVER (ORDER BY SUM(CurrentPerm) DESC) <= :n
     ORDER BY current_perm_bytes DESC
