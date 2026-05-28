@@ -68,15 +68,32 @@ Allowed and common: identifiers via `{…}`, values via `:…`.
 top_n_by_size:
   type: tool
   sql: |
-    SELECT TOP :n DataBaseName, SUM(CurrentPerm) AS perm
-    FROM {database_name}.AllSpaceV
-    WHERE TableName = 'All'
-    GROUP BY DataBaseName
+    SELECT DataBaseName, SUM(CurrentPerm) AS perm
+    FROM (
+      SELECT
+        ROW_NUMBER() OVER (ORDER BY SUM(CurrentPerm) DESC) AS rn,
+        DataBaseName,
+        SUM(CurrentPerm) AS perm
+      FROM {database_name}.AllSpaceV
+      WHERE TableName = 'All'
+      GROUP BY DataBaseName
+    ) t
+    WHERE rn <= :n
     ORDER BY perm DESC
   parameters:
     database_name: { type_hint: str, default: "DBC" }
     n:             { type_hint: int, default: 10 }
 ```
+
+> **Never use `TOP N` with a parameter — use `ROW_NUMBER()` instead.**  
+> `TOP :n` fails because Teradata's parser requires a literal integer immediately after
+> the `TOP` keyword, before bind-parameter substitution occurs (error 3707:
+> *"expected something like an integer … between the 'TOP' keyword and '?'"*).  
+> `TOP {n}` avoids the parse error (Python string-substitution produces a literal), but
+> it bypasses the prepared-statement layer entirely, which is fragile and injection-prone.  
+> The correct pattern is a derived-table with `ROW_NUMBER() OVER (ORDER BY …)` and
+> `WHERE rn <= :n` in the outer query — `:n` is then a normal value bind that works safely.
+> The same applies to `SAMPLE :n`.
 
 ## `type_hint` values
 
