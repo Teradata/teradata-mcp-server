@@ -1,0 +1,41 @@
+# ============================================================================
+# Example custom tool — uses DBC system views so it works on any Teradata
+# system without setup. Lists the N largest tables in a given database by
+# current permanent space.
+# ============================================================================
+#
+# Demonstrates:
+#   - identifier interpolation via {database_name}
+#   - value bind via :n
+#   - parameter defaults (both args optional)
+#   - description fields that surface to the LLM
+# ============================================================================
+
+dbc_top_tables_by_size:
+  type: tool
+  description: |
+    List the top-N largest tables in a Teradata database, ranked by current
+    permanent space (bytes). Reads DBC.AllSpaceV. Use this for quick "what
+    is filling up this schema" questions; for trend / peak analysis use the
+    dbc_space_cube instead.
+  parameters:
+    database_name:
+      description: "Database / schema to inspect. Default DBC (system catalog)."
+      type_hint: str
+      default: "DBC"
+    n:
+      description: "How many tables to return (default 10)."
+      type_hint: int
+      default: 10
+  sql: |
+    SELECT TOP :n
+      TableName                                AS table_name,
+      SUM(CurrentPerm)                         AS current_perm_bytes,
+      SUM(PeakPerm)                            AS peak_perm_bytes,
+      CAST(SUM(CurrentPerm) / 1024.0 / 1024.0
+           AS DECIMAL(18,2))                   AS current_perm_mb
+    FROM DBC.AllSpaceV
+    WHERE DataBaseName = '{database_name}'
+      AND TableName   <> 'All'
+    GROUP BY TableName
+    ORDER BY current_perm_bytes DESC
