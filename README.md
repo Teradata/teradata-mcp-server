@@ -53,9 +53,9 @@ Add this to `claude_desktop_config.json` (Settings > Developer > Edit Config):
 
 | **Use Case** | **Capabilities** | **Tools** |
 |---|---|---|
-| **Query & Analyze** | Explore tables, profile data, explain results, visualize patterns—no SQL needed | base, dba, qlty, plot |
-| **AI & RAG Pipelines** | Semantic search, retrieval-augmented generation, vector storage | rag, tdvs, fs |
-| **Database Admin** | Manage security, monitor capacity, automate backups | dba, sec, bar |
+| **Query & Analyze** | Explore tables, profile data, explain results, visualize patterns—no SQL needed | [base](src/teradata_mcp_server/tools/base/README.md), [dba](src/teradata_mcp_server/tools/dba/README.md), [qlty](src/teradata_mcp_server/tools/qlty/README.md), [plot](src/teradata_mcp_server/tools/plot/README.md) |
+| **AI & RAG Pipelines** | Semantic search, retrieval-augmented generation, vector storage | [rag](src/teradata_mcp_server/tools/rag/README.md), [tdvs](src/teradata_mcp_server/tools/tdvs/README.md), [fs](src/teradata_mcp_server/tools/fs/README.md) |
+| **Database Admin** | Manage security, monitor capacity, automate backups | [dba](src/teradata_mcp_server/tools/dba/README.md), [sec](src/teradata_mcp_server/tools/sec/README.md), [bar](src/teradata_mcp_server/tools/bar/README.md) |
 | **Custom Logic** | Define domain tools, metrics, and semantic layers in YAML | Customization (no code required) |
 
 ## What's New (Latest Release)
@@ -64,6 +64,26 @@ Add this to `claude_desktop_config.json` (Settings > Developer > Edit Config):
 - **Hooks Capability** — Intercept tool calls for custom monitoring, audit, or rate-limiting
 - **Row Limit Protection** — Configurable caps (`DEFAULT_ROW_LIMIT`, `MAX_ROW_LIMIT`) prevent LLM token overflow
 - **Enhanced Security** — VX views for fine-grained row-level access control
+
+## Tool Modules
+
+Each tool module has detailed documentation explaining available tools and their capabilities:
+
+| Module | Purpose |
+|---|---|
+| [base](src/teradata_mcp_server/tools/base/README.md) | Query and navigate Teradata databases |
+| [dba](src/teradata_mcp_server/tools/dba/README.md) | Database administration and monitoring |
+| [sec](src/teradata_mcp_server/tools/sec/README.md) | Security and permission management |
+| [rag](src/teradata_mcp_server/tools/rag/README.md) | Retrieval-augmented generation workflows |
+| [qlty](src/teradata_mcp_server/tools/qlty/README.md) | Data quality and exploratory data analysis |
+| [tdvs](src/teradata_mcp_server/tools/tdvs/README.md) | Vector store operations and semantic search |
+| [fs](src/teradata_mcp_server/tools/fs/README.md) | Feature store and analytic functions |
+| [bar](src/teradata_mcp_server/tools/bar/README.md) | Backup and restore operations |
+| [plot](src/teradata_mcp_server/tools/plot/README.md) | Data visualization and charting |
+| [chat](src/teradata_mcp_server/tools/chat/README.md) | Chat completion and conversational AI |
+| [graph](src/teradata_mcp_server/tools/graph/README.md) | Dependency and lineage analysis |
+| [sql_opt](src/teradata_mcp_server/tools/sql_opt/README.md) | SQL optimization and analysis |
+| [tmpl](src/teradata_mcp_server/tools/tmpl/README.md) | Template tools |
 
 ## Extend & Deploy
 
