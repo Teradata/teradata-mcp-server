@@ -8,7 +8,7 @@ base_databaseList:
       default: 'user'
   sql: |
     SELECT DataBaseName, DECODE(DBKind, 'U', 'User', 'D', 'DataBase') AS DBType, CommentString
-    FROM dbc.DatabasesV dv
+    FROM dbc.DatabasesVX dv
     WHERE OwnerName <> 'PDCRADM'
     AND (:scope = 'all' OR (
         DataBaseName NOT IN (
@@ -34,7 +34,7 @@ base_tableList:
       default: ''
   sql: |
     SELECT DatabaseName, TableName
-    FROM dbc.TablesV tv
+    FROM dbc.TablesVX tv
     WHERE tv.TableKind IN ('T','V', 'O', 'Q')
     AND (:database_name = '' OR UPPER(tv.DatabaseName) = UPPER(:database_name));
 

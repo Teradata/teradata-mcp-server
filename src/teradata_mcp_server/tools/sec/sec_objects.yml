@@ -13,7 +13,7 @@ sec_userDbPermissions:
         AccessRight,
         GrantAuthority,
         GrantorName
-    FROM DBC.AllRightsV
+    FROM DBC.AllRightsVX
     WHERE UserName = :user_name
     ORDER BY DatabaseName, TableName, AccessRight;
 
@@ -112,7 +112,7 @@ sec_userRoles:
         Rm.WhenGranted,
         Rm.DefaultRole,
         Rm.WithAdmin
-    FROM DBC.RoleInfoV r
-    JOIN DBC.RoleMembersV Rm
+    FROM DBC.RoleInfoVX r
+    JOIN DBC.RoleMembersVX Rm
     ON r.RoleName = Rm.RoleName
     WHERE r.RoleName LIKE '%' || :user_name || '%' (NOT CASESPECIFIC);
