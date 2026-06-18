@@ -56,8 +56,7 @@ Add this to `claude_desktop_config.json` (Settings > Developer > Edit Config):
 | **Query & Analyze** | Explore tables, profile data, explain results, visualize patterns—no SQL needed | [base](src/teradata_mcp_server/tools/base/README.md), [dba](src/teradata_mcp_server/tools/dba/README.md), [qlty](src/teradata_mcp_server/tools/qlty/README.md), [plot](src/teradata_mcp_server/tools/plot/README.md) |
 | **AI & RAG Pipelines** | Semantic search, retrieval-augmented generation, vector storage | [rag](src/teradata_mcp_server/tools/rag/README.md), [tdvs](src/teradata_mcp_server/tools/tdvs/README.md), [fs](src/teradata_mcp_server/tools/fs/README.md) |
 | **Database Admin** | Manage security, monitor capacity, automate backups | [dba](src/teradata_mcp_server/tools/dba/README.md), [sec](src/teradata_mcp_server/tools/sec/README.md), [bar](src/teradata_mcp_server/tools/bar/README.md) |
-
-| **Custom Logic** | Define domain tools, metrics, and semantic layers in YAML | Customization (no code required) |
+| **Custom Logic** | Define domain tools, metrics, and semantic layers in YAML | [Learn more →](docs/server_guide/CUSTOMIZING.md) |
 
 ## What's New (Latest Release)
 
