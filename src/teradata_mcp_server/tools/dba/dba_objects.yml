@@ -23,7 +23,7 @@ dba_tableSpace:
         SUM(a.CurrentPerm) AS CurrentPerm1, SUM(a.PeakPerm) AS PeakPerm,
         CAST((100-(AVG(a.CURRENTPERM)/MAX(NULLIFZERO(a.CURRENTPERM))*100)) AS DECIMAL(5,2)) AS SkewPct
     FROM DBC.AllSpaceV a
-    LEFT JOIN DBC.TablesV t ON a.DatabaseName = t.DatabaseName AND a.TableName = t.TableName
+    LEFT JOIN DBC.TablesVX t ON a.DatabaseName = t.DatabaseName AND a.TableName = t.TableName
     WHERE (:database_name = '' OR a.DatabaseName = :database_name)
     AND (:table_name = '' OR a.TableName = :table_name)
     AND (:exclude_system <> 'Y' OR (
@@ -101,7 +101,7 @@ dba_databaseSpace:
         CAST(SUM(CurrentPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceUsed_GB,
         CAST((SUM(MaxPerm) - SUM(CurrentPerm))/1024/1024/1024 AS DECIMAL(10,2)) AS FreeSpace_GB,
         CAST((SUM(CurrentPerm) * 100.0 / NULLIF(SUM(MaxPerm),0)) AS DECIMAL(10,2)) AS PercentUsed
-    FROM DBC.DiskSpaceV
+    FROM DBC.DiskSpaceVX
     WHERE MaxPerm > 0
     AND (:database_name = '' OR DatabaseName = :database_name)
     GROUP BY 1
@@ -387,18 +387,18 @@ dba_sessionInfo:
         UserName,
         AccountName,
         SessionNo,
-        DefaultDataBase, 
+        DefaultDataBase,
         LogonDate,
         LogonTime,
-        LogonSource, 
+        LogonSource,
         LogonAcct,
-        CurrentRole, 
+        CurrentRole,
         QueryBand,
-        ClientIpAddress, 
+        ClientIpAddress,
         ClientProgramName,
         ClientSystemUserId,
         ClientInterfaceVersion
-    FROM DBC.SessionInfoV
+    FROM DBC.SessionInfoVX
     WHERE UserName = :user_name (NOT CASESPECIFIC) or :user_name='*';
   parameters:
     user_name:

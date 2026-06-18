@@ -255,7 +255,7 @@ def create_mcp_app(settings: Settings):
                                 current_user = username_row[0]
                                 check_permission_sql = text(f"""
                                     SELECT 1
-                                    FROM DBC.AllRightsV
+                                    FROM DBC.AllRightsVX
                                     WHERE UPPER(UserName) = UPPER('{current_user}')
                                     AND UPPER(DatabaseName) = UPPER('{function_db}')
                                     AND (

@@ -1315,7 +1315,7 @@ def _get_objects(conn: TeradataConnection, db_name: str, table_kind: str | None 
     """
     Retrieve all qualifying objects (tables, views, functions) from a database.
 
-    Queries DBC.TablesV filtered by TableKind. Defaults to
+    Queries DBC.TablesVX filtered by TableKind. Defaults to
     ('T','O','Q','V') — tables, NoPI tables, queue tables, and views.
 
     Resolution paths used downstream by _process_one:
@@ -1350,7 +1350,7 @@ def _get_objects(conn: TeradataConnection, db_name: str, table_kind: str | None 
             tv.DatabaseName  AS DatabaseName
            ,tv.TableName     AS ObjectName
            ,tv.TableKind     AS TableKind
-        FROM DBC.TablesV AS tv
+        FROM DBC.TablesVX AS tv
         WHERE tv.DatabaseName = ?
           AND tv.TableKind IN ({placeholders})
         ORDER BY tv.TableName
@@ -1370,7 +1370,7 @@ def _get_objects(conn: TeradataConnection, db_name: str, table_kind: str | None 
 
 def _get_table_kind(conn: TeradataConnection, db_name: str, object_name: str) -> str | None:
     """
-    Look up the TableKind for a single object in DBC.TablesV.
+    Look up the TableKind for a single object in DBC.TablesVX.
 
     Args:
         conn:        TeradataConnection (injected by MCP server).
@@ -1382,7 +1382,7 @@ def _get_table_kind(conn: TeradataConnection, db_name: str, object_name: str) ->
     """
     sql = """
         SELECT tv.TableKind
-        FROM DBC.TablesV AS tv
+        FROM DBC.TablesVX AS tv
         WHERE tv.DatabaseName = ?
           AND tv.TableName    = ?
     """
