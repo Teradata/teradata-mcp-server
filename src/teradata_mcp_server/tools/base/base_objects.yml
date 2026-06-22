@@ -1,6 +1,6 @@
 base_databaseList:
   type: tool
-  description: "Lists databases in the Teradata System."
+  description: "List all databases or schemas available in the Teradata system. ONLY call when the user explicitly asks which databases or schemas exist on the system. Do NOT call this tool as a preliminary step toward listing tables — if the user asks about tables without naming a database, ask them which database they mean rather than discovering databases first."
   parameters:
     scope:
       description: "Filter scope: 'user' returns only user-created databases (excludes system databases), 'all' returns every database."
@@ -26,12 +26,11 @@ base_databaseList:
 
 base_tableList:
   type: tool
-  description: "Lists all tables and views in a database."
+  description: "List all tables and views within a specific Teradata database or schema. ONLY call this tool when the user has explicitly named a specific database in their message. If no database name appears in the user's request, do NOT call this tool — instead ask a clarifying question to find out which database they mean. Never pass an empty database name. Do NOT use when the user is asking which databases exist on the system — use base_databaseList for that."
   parameters:
     database_name:
-      description: "Database name. Leave empty for all databases."
+      description: "Database name"
       type_hint: str
-      default: ''
   sql: |
     SELECT DatabaseName, TableName
     FROM dbc.TablesVX tv
@@ -40,7 +39,7 @@ base_tableList:
 
 base_tableDDL:
   type: tool
-  description: "Displays the DDL definition of a table."
+  description: "Return the CREATE TABLE DDL statement for a Teradata table, showing its full schema definition including column types, constraints, primary indexes, and keys. Use when the user wants the CREATE statement, the table definition, or needs to see how the table was built. If the user has not specified both a table name AND a database name, ask for clarification before calling — do not guess or use an empty database name. To save DDL to a file on disk, use base_saveDDL instead. For just column names and types, use base_columnDescription instead."
   parameters:
     table_name:
       description: "Table name"
@@ -54,7 +53,7 @@ base_tableDDL:
 
 base_columnDescription:
   type: tool
-  description: "Shows detailed column information about a database table or view."
+  description: "List the column names, data types, and basic attributes for a single Teradata table or view. Use for straightforward questions like 'what columns does this table have?' or 'what are the fields and their types?'. For precise Teradata-specific type codes, character sets, decimal precision, index details, or bulk metadata across many objects, use base_columnMetadata instead."
   parameters:
     database_name:
       description: "Database name. Defaults to '%' (all databases)."
@@ -117,7 +116,7 @@ base_columnDescription:
 
 base_tablePreview:
   type: tool
-  description: "Returns a data sample (top 5 rows) and inferred structure from a database table or view."
+  description: "Return a quick sample of the first few rows from a Teradata table or view so the user can see what data looks like, with no SQL required. Use this tool when the user wants to explore or peek at a table's contents without specifying conditions or writing a query. Do NOT use when the user provides a WHERE clause, filter, or explicit SQL statement — use base_readQuery for that."
   parameters:
     table_name:
       description: "Table or view name"
@@ -131,7 +130,7 @@ base_tablePreview:
 
 base_tableAffinity:
   type: tool
-  description: "Get tables commonly used together by database users, helpful to infer relationships between tables."
+  description: "Identify which tables in a database tend to co-occur together in the same SQL queries, revealing natural JOIN relationships and data affinity patterns. Use when the user asks which tables are queried together, what tables are related to a specific table, or what tables are commonly used in the same workflows. For access frequency, query counts, or per-user access statistics, use base_tableUsage instead."
   parameters:
     database_name:
       description: "Database name"
@@ -173,7 +172,7 @@ base_tableAffinity:
 
 base_tableUsage:
   type: tool
-  description: "Measure the usage of tables and views by users in a schema, helpful to infer what database objects are most actively used."
+  description: "Report access frequency and per-user query patterns for tables and views in a Teradata database, showing which objects are most actively queried and by whom. Use when the user asks how often tables are accessed, which tables are most popular, or which users are running queries against a database. For discovering which tables appear together in the same queries, use base_tableAffinity instead."
   parameters:
     database_name:
       description: "Database name. Leave empty for all databases."

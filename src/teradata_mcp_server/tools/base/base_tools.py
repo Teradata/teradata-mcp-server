@@ -28,7 +28,7 @@ def handle_base_readQuery(
     **kwargs,
 ):
     """
-    Execute a SQL query via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
+    Execute a user-provided SQL query against Teradata and return the results. Use this tool ONLY when the user supplies an explicit SQL statement or a request that includes filter conditions (WHERE clause, aggregations, JOINs, etc.). Do NOT use for simply browsing or sampling rows from a table — use base_tablePreview for that. Requires the sql parameter containing the full SQL text.
 
     Arguments:
       sql       - SQL text, with optional bind-parameter placeholders
@@ -208,11 +208,7 @@ def handle_base_saveDDL(
     **kwargs,
 ):
     """
-    Extracts the complete DDL of a Teradata object and saves it to a .sql file.
-
-    This tool solves the token limit problem by executing the extraction and file save
-    operation directly on the server side, without needing to pass large DDL content
-    through the response.
+    Extract the DDL for a Teradata table, view, or stored procedure and SAVE it as a .sql file on disk. Use this tool ONLY when the user explicitly wants to export, write, download, or persist DDL to a file. Do NOT use simply to display or view DDL in the conversation — use base_tableDDL to display DDL without saving.
 
     Arguments:
       database_name - Database name (e.g., 'MKTG_USR')
@@ -487,9 +483,7 @@ def handle_base_columnMetadata(
     **kwargs,
 ):
     """
-    Retrieves detailed column metadata for Teradata tables, views, and
-    functions. Returns data types, character sets, case specificity,
-    precision, scale, and format strings for each column.
+    Retrieve detailed technical column metadata for Teradata tables and views, including exact Teradata type codes, character sets (LATIN/UNICODE), decimal precision, scale, nullability, and index classification. Use when the user needs precise Teradata-specific column information, not just basic column names and types. For a simple list of columns and types for a single object, use base_columnDescription instead. Supports bulk retrieval across many objects with payload and time budgets.
 
     Resolution paths:
         Tables (T, O, Q) — DBC.ColumnsVX + DBC.IndicesVX. No HELP COLUMN.
@@ -499,7 +493,7 @@ def handle_base_columnMetadata(
     Uses the native TeradataConnection cursor pattern, consistent with all
     other tools in this module.
 
-    Use this tool instead of base_columnDescription when you need:
+    Technical capabilities:
     - Exact Teradata type codes and their SQL type string equivalents
     - Character set information (LATIN, UNICODE, etc.)
     - Decimal precision and scale
