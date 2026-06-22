@@ -28,7 +28,7 @@ def handle_base_readQuery(
     **kwargs,
 ):
     """
-    Execute a user-provided SQL query against Teradata and return the results. Use this tool ONLY when the user supplies an explicit SQL statement or a request that includes filter conditions (WHERE clause, aggregations, JOINs, etc.). Do NOT use for simply browsing or sampling rows from a table — use base_tablePreview for that. Requires the sql parameter containing the full SQL text.
+    Execute a user-provided SQL query against Teradata and return the results. Use this tool ONLY when the user supplies an explicit SQL statement or a request that includes filter conditions (WHERE clause, aggregations, JOINs, etc.). Do NOT use for simply browsing or sampling rows from a table — use base_tablePreview for that. The sql parameter is required and must contain the full SQL text.
 
     Arguments:
       sql       - SQL text, with optional bind-parameter placeholders

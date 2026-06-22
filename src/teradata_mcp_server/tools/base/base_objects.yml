@@ -26,11 +26,12 @@ base_databaseList:
 
 base_tableList:
   type: tool
-  description: "List all tables and views within a specific Teradata database or schema. ONLY call this tool when the user has explicitly named a specific database in their message. If no database name appears in the user's request, do NOT call this tool — instead ask a clarifying question to find out which database they mean. Never pass an empty database name. Do NOT use when the user is asking which databases exist on the system — use base_databaseList for that."
+  description: "List all tables and views within a specific Teradata database or schema. Pass a specific database name to list tables in that database only. Omit or leave empty to list tables from all databases. If the user does not name a database and you want to list tables from a single database, ask a clarifying question instead of returning results from all databases."
   parameters:
     database_name:
-      description: "Database name"
+      description: "Database name. Leave empty to list tables from all databases."
       type_hint: str
+      default: ''
   sql: |
     SELECT DatabaseName, TableName
     FROM dbc.TablesVX tv
@@ -47,7 +48,6 @@ base_tableDDL:
     database_name:
       description: "Database name"
       type_hint: str
-      default: ''
   sql: |
     SHOW TABLE {table_ref}
 
