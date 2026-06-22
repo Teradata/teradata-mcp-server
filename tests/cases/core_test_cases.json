@@ -171,10 +171,6 @@
         "parameters": {
           "database_name": "DBC"
         }
-      },
-      {
-        "name": "all_database_space",
-        "parameters": {}
       }
     ],
     "dba_tableSpace": [
@@ -186,32 +182,9 @@
         }
       },
       {
-        "name": "all_tables",
-        "parameters": {}
-      },
-      {
         "name": "database_only",
         "parameters": {
           "database_name": "DBC"
-        }
-      },
-      {
-        "name": "table_name_only",
-        "parameters": {
-          "table_name": "TVM"
-        }
-      },
-      {
-        "name": "top_n_tables",
-        "parameters": {
-          "top_n": 10
-        }
-      },
-      {
-        "name": "exclude_system_tables",
-        "parameters": {
-          "top_n": 10,
-          "exclude_system": "Y"
         }
       },
       {
@@ -338,10 +311,6 @@
         }
       },
       {
-        "name": "all_table_impact",
-        "parameters": {}
-      },
-      {
         "name": "database_table_impact",
         "parameters": {
           "database_name": "data_scientist"
@@ -363,16 +332,6 @@
         "parameters": {
           "user_name": "DBC",
           "no_days": 7
-        }
-      },
-      {
-        "name": "all_users_sql",
-        "parameters": {}
-      },
-      {
-        "name": "all_users_sql_30_days",
-        "parameters": {
-          "no_days": 30
         }
       }
     ],
