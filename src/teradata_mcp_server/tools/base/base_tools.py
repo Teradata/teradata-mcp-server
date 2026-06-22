@@ -28,7 +28,7 @@ def handle_base_readQuery(
     **kwargs,
 ):
     """
-    Execute a SQL query via SQLAlchemy, bind parameters if provided (prepared SQL), and return the fully rendered SQL (with literals) in metadata.
+    Execute a user-provided SQL query against Teradata and return the results. Use this tool ONLY when the user supplies an explicit SQL statement or a request that includes filter conditions (WHERE clause, aggregations, JOINs, etc.). Do NOT use for simply browsing or sampling rows from a table — use base_tablePreview for that. The sql parameter is required and must contain the full SQL text.
 
     Arguments:
       sql       - SQL text, with optional bind-parameter placeholders
@@ -201,22 +201,18 @@ def util_base_dynamicQuery(conn: TeradataConnection, sql_generator: Callable[...
 def handle_base_saveDDL(
     conn: TeradataConnection,
     database_name: str,
-    object_name: str,
+    table_name: str,
     object_type: str = "PROCEDURE",
     output_dir: str = "./ddls_extracted",
     *args,
     **kwargs,
 ):
     """
-    Extracts the complete DDL of a Teradata object and saves it to a .sql file.
-
-    This tool solves the token limit problem by executing the extraction and file save
-    operation directly on the server side, without needing to pass large DDL content
-    through the response.
+    Extract the DDL for a Teradata table, view, or stored procedure and SAVE it as a .sql file on disk. Use this tool ONLY when the user explicitly wants to export, write, download, or persist DDL to a file. Do NOT use simply to display or view DDL in the conversation — use base_tableDDL to display DDL without saving.
 
     Arguments:
       database_name - Database name (e.g., 'MKTG_USR')
-      object_name - Object name (e.g., 'SP_LOAD_VARIABLES_ARGUMENTARIO_IAG_FICHA_CLIENTE')
+      table_name - Object name (e.g., 'SP_LOAD_VARIABLES_ARGUMENTARIO_IAG_FICHA_CLIENTE'). Accepts comma-separated values for bulk retrieval.
       object_type - Type of object: 'PROCEDURE', 'TABLE', 'VIEW' (default: 'PROCEDURE')
       output_dir - Directory where to save the DDL file (default: './ddls_extracted')
 
@@ -229,7 +225,7 @@ def handle_base_saveDDL(
 
     logger.debug(
         f"Tool: handle_base_saveDDL: Args: database_name={database_name}, "
-        f"object_name={object_name}, object_type={object_type}, output_dir={output_dir}"
+        f"table_name={table_name}, object_type={object_type}, output_dir={output_dir}"
     )
 
     # Validate object type
@@ -242,11 +238,11 @@ def handle_base_saveDDL(
 
     # Build the SHOW command
     show_commands = {
-        "PROCEDURE": f"SHOW PROCEDURE {database_name}.{object_name}",
-        "TABLE": f"SHOW TABLE {database_name}.{object_name}",
-        "VIEW": f"SHOW VIEW {database_name}.{object_name}",
-        "MACRO": f"SHOW MACRO {database_name}.{object_name}",
-        "FUNCTION": f"SHOW FUNCTION {database_name}.{object_name}",
+        "PROCEDURE": f"SHOW PROCEDURE {database_name}.{table_name}",
+        "TABLE": f"SHOW TABLE {database_name}.{table_name}",
+        "VIEW": f"SHOW VIEW {database_name}.{table_name}",
+        "MACRO": f"SHOW MACRO {database_name}.{table_name}",
+        "FUNCTION": f"SHOW FUNCTION {database_name}.{table_name}",
     }
 
     sql = show_commands[object_type_upper]
@@ -259,7 +255,7 @@ def handle_base_saveDDL(
             raw_rows = rows.fetchall()
 
             if not raw_rows:
-                error_msg = f"No DDL found for {object_type} {database_name}.{object_name}"
+                error_msg = f"No DDL found for {object_type} {database_name}.{table_name}"
                 logger.warning(error_msg)
                 return create_response([{"error": error_msg}], {"tool_name": "base_saveDDL", "status": "not_found"})
 
@@ -281,7 +277,7 @@ def handle_base_saveDDL(
 
             # Generate filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"{object_name}_DDL.sql"
+            filename = f"{table_name}_DDL.sql"
             filepath = output_path / filename
 
             # Prepare file header with metadata
@@ -290,7 +286,7 @@ def handle_base_saveDDL(
  * Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
  * Type: {object_type_upper}
  * Database: {database_name}
- * Object: {object_name}
+ * Object: {table_name}
  * Size: {ddl_size} characters
  */
 
@@ -316,7 +312,7 @@ def handle_base_saveDDL(
                     "rows_concatenated": len(raw_rows),
                     "object_type": object_type_upper,
                     "database": database_name,
-                    "object": object_name,
+                    "object": table_name,
                 }
             ]
 
@@ -475,7 +471,7 @@ DEFAULT_MAX_WORKERS = 8
 # Column metadata tool
 def handle_base_columnMetadata(
     conn: TeradataConnection,
-    db_name: str,
+    database_name: str,
     object_name: str | None = None,
     table_kind: str | None = None,
     max_workers: int | None = None,
@@ -487,9 +483,7 @@ def handle_base_columnMetadata(
     **kwargs,
 ):
     """
-    Retrieves detailed column metadata for Teradata tables, views, and
-    functions. Returns data types, character sets, case specificity,
-    precision, scale, and format strings for each column.
+    Retrieve detailed technical column metadata for Teradata tables and views, including exact Teradata type codes, character sets (LATIN/UNICODE), decimal precision, scale, nullability, and index classification. Use when the user needs precise Teradata-specific column information, not just basic column names and types. For a simple list of columns and types for a single object, use base_columnDescription instead. Supports bulk retrieval across many objects with payload and time budgets.
 
     Resolution paths:
         Tables (T, O, Q) — DBC.ColumnsVX + DBC.IndicesVX. No HELP COLUMN.
@@ -499,7 +493,7 @@ def handle_base_columnMetadata(
     Uses the native TeradataConnection cursor pattern, consistent with all
     other tools in this module.
 
-    Use this tool instead of base_columnDescription when you need:
+    Technical capabilities:
     - Exact Teradata type codes and their SQL type string equivalents
     - Character set information (LATIN, UNICODE, etc.)
     - Decimal precision and scale
@@ -556,12 +550,12 @@ def handle_base_columnMetadata(
 
     CONTINUATION PATTERN (automatic pagination):
         # Call 1 — starts processing, time or payload budget fills up
-        result1 = base_columnMetadata(db_name='DBC', table_kind='V', ...)
+        result1 = base_columnMetadata(database_name='DBC', table_kind='V', ...)
         # metadata contains: remaining_objects='ViewX,ViewY,...'
 
         # Call 2 — pass remaining_objects as object_name
         result2 = base_columnMetadata(
-            db_name='DBC',
+            database_name='DBC',
             object_name='ViewX,ViewY,...',  # from result1 metadata
             ...
         )
@@ -569,7 +563,7 @@ def handle_base_columnMetadata(
 
     Typical call for a large database:
         base_columnMetadata(
-            db_name='DBC',
+            database_name='DBC',
             table_kind='V',
             exclude_objects='ResUsage%,%ResUsage%',
             fields='ColumnName,ColumnType,ColumnLength,CharType,
@@ -581,7 +575,7 @@ def handle_base_columnMetadata(
 
     Arguments:
         conn                  - TeradataConnection (injected by MCP server)
-        db_name               - Name of the Teradata database to inspect
+        database_name         - Name of the Teradata database to inspect
         object_name           - Optional: specific object name, or a CSV of
                                 names. Also used for continuation: pass the
                                 ``remaining_objects`` value from a previous
@@ -671,7 +665,7 @@ def handle_base_columnMetadata(
         # ------------------------------------------------------------------
         v_step_no = "010"
         logger.debug(
-            f"{C_MODULE}:{v_step_no} Resolving objects for db_name={db_name}, "
+            f"{C_MODULE}:{v_step_no} Resolving objects for database_name={database_name}, "
             f"object_name={object_name}, exclude_objects={exclude_objects}"
         )
 
@@ -680,18 +674,18 @@ def handle_base_columnMetadata(
             names = [n.strip() for n in object_name.split(",") if n.strip()]
             obj_infos = []
             for name in names:
-                kind = _get_table_kind(conn, db_name, name)
+                kind = _get_table_kind(conn, database_name, name)
                 if kind:
                     obj_infos.append({"ObjectName": name, "TableKind": kind})
                 else:
                     logger.warning(
-                        f"{C_MODULE}:{v_step_no} Object '{name}' not found in database '{db_name}' — skipping"
+                        f"{C_MODULE}:{v_step_no} Object '{name}' not found in database '{database_name}' — skipping"
                     )
             if not obj_infos:
-                raise ValueError(f"None of the specified objects found in '{db_name}'")
+                raise ValueError(f"None of the specified objects found in '{database_name}'")
         else:
             # Retrieve all qualifying objects in the database
-            obj_infos = _get_objects(conn, db_name, table_kind=table_kind)
+            obj_infos = _get_objects(conn, database_name, table_kind=table_kind)
 
         logger.debug(f"{C_MODULE}:{v_step_no} Found {len(obj_infos)} object(s) to process")
 
@@ -768,9 +762,9 @@ def handle_base_columnMetadata(
             results = []
             try:
                 if kind == "V":
-                    cols = _help_column_view(conn, db_name, obj, logger)
+                    cols = _help_column_view(conn, database_name, obj, logger)
                 else:
-                    cols = _dbc_columns_table(conn, db_name, obj)
+                    cols = _dbc_columns_table(conn, database_name, obj)
 
                 for col in cols:
                     # Skip type-building for error/status records — these have
@@ -791,7 +785,7 @@ def handle_base_columnMetadata(
                     results.append(col)
 
             except Exception as obj_ex:
-                logger.warning(f'{C_MODULE}:{v_step_no} Skipping {db_name}."{obj}" (TableKind={kind}): {obj_ex}')
+                logger.warning(f'{C_MODULE}:{v_step_no} Skipping {database_name}."{obj}" (TableKind={kind}): {obj_ex}')
                 results.append(
                     {
                         "ObjectName": obj,
@@ -884,7 +878,7 @@ def handle_base_columnMetadata(
 
         metadata = {
             "tool_name": C_MODULE,
-            "database": db_name,
+            "database": database_name,
             "object_count": len(processed_objects),
             "column_count": len(data),
             "payload_kb": accumulated_bytes // 1024,
@@ -916,7 +910,7 @@ def handle_base_columnMetadata(
         logger.error(f"{C_MODULE}:{v_step_no} Error: {e}")
         return create_response(
             [{"error": str(e)}],
-            {"tool_name": C_MODULE, "database": db_name},
+            {"tool_name": C_MODULE, "database": database_name},
         )
 
 
@@ -996,7 +990,7 @@ def _standardise_helpcol_row(row: dict) -> dict:
 
 def _columnsVX_fallback(
     conn: TeradataConnection,
-    db_name: str,
+    database_name: str,
     object_name: str,
     logger: logging.Logger,
 ) -> list:
@@ -1021,9 +1015,9 @@ def _columnsVX_fallback(
     Each returned row includes metadata_source='DBC.ColumnsVX' to signal this.
 
     Args:
-        conn:        TeradataConnection (injected by MCP server).
-        db_name:     Target database name.
-        object_name: The view name.
+        conn:           TeradataConnection (injected by MCP server).
+        database_name:  Target database name.
+        object_name:    The view name.
         logger:      Logger instance for error reporting.
 
     Returns:
@@ -1052,7 +1046,7 @@ def _columnsVX_fallback(
     """
     try:
         with conn.cursor() as cur:
-            cur.execute(sql, [db_name, object_name])
+            cur.execute(sql, [database_name, object_name])
             rows = cur.fetchall()
             data = rows_to_json(cur.description, rows)
 
@@ -1082,7 +1076,7 @@ def _columnsVX_fallback(
             return results
 
     except Exception as ex:
-        logger.error(f'{C_MODULE}: DBC.ColumnsVX fallback failed for {db_name}."{object_name}" — {ex}')
+        logger.error(f'{C_MODULE}: DBC.ColumnsVX fallback failed for {database_name}."{object_name}" — {ex}')
         return [
             {
                 "ObjectName": object_name,
@@ -1311,7 +1305,7 @@ def _build_charset_string(col: dict) -> str | None:
     return CHARSET_MAP.get(char_type)
 
 
-def _get_objects(conn: TeradataConnection, db_name: str, table_kind: str | None = None) -> list[dict[str, str]]:
+def _get_objects(conn: TeradataConnection, database_name: str, table_kind: str | None = None) -> list[dict[str, str]]:
     """
     Retrieve all qualifying objects (tables, views, functions) from a database.
 
@@ -1335,9 +1329,9 @@ def _get_objects(conn: TeradataConnection, db_name: str, table_kind: str | None 
     Other:              TableKind 'C' (table operator), 'U' (type), 'H' (method)
 
     Args:
-        conn:       TeradataConnection (injected by MCP server).
-        db_name:    Target database name.
-        table_kind: Optional CSV of TableKind codes, e.g. 'V' or 'T,V'.
+        conn:           TeradataConnection (injected by MCP server).
+        database_name:  Target database name.
+        table_kind:     Optional CSV of TableKind codes, e.g. 'V' or 'T,V'.
 
     Returns:
         list[dict]: Each dict contains DatabaseName, ObjectName, TableKind.
@@ -1356,7 +1350,7 @@ def _get_objects(conn: TeradataConnection, db_name: str, table_kind: str | None 
         ORDER BY tv.TableName
     """
     with conn.cursor() as cur:
-        cur.execute(sql, [db_name] + kinds)
+        cur.execute(sql, [database_name] + kinds)
         rows = cur.fetchall()
         return [
             {
@@ -1368,14 +1362,14 @@ def _get_objects(conn: TeradataConnection, db_name: str, table_kind: str | None 
         ]
 
 
-def _get_table_kind(conn: TeradataConnection, db_name: str, object_name: str) -> str | None:
+def _get_table_kind(conn: TeradataConnection, database_name: str, object_name: str) -> str | None:
     """
     Look up the TableKind for a single object in DBC.TablesVX.
 
     Args:
-        conn:        TeradataConnection (injected by MCP server).
-        db_name:     Target database name.
-        object_name: The specific object to look up.
+        conn:           TeradataConnection (injected by MCP server).
+        database_name:  Target database name.
+        object_name:    The specific object to look up.
 
     Returns:
         str or None: The TableKind code, or None if the object does not exist.
@@ -1387,12 +1381,12 @@ def _get_table_kind(conn: TeradataConnection, db_name: str, object_name: str) ->
           AND tv.TableName    = ?
     """
     with conn.cursor() as cur:
-        cur.execute(sql, [db_name, object_name])
+        cur.execute(sql, [database_name, object_name])
         row = cur.fetchone()
         return row[0].strip() if row else None
 
 
-def _dbc_columns_table(conn: TeradataConnection, db_name: str, object_name: str) -> list:
+def _dbc_columns_table(conn: TeradataConnection, database_name: str, object_name: str) -> list:
     """
     Retrieve column metadata for a table (T, O, Q) from DBC.ColumnsVX,
     supplemented with index classification from DBC.IndicesVX.
@@ -1427,9 +1421,9 @@ def _dbc_columns_table(conn: TeradataConnection, db_name: str, object_name: str)
     index type, the first encountered entry is retained.
 
     Args:
-        conn:        TeradataConnection (injected by MCP server).
-        db_name:     Target database name.
-        object_name: The table name (TableKind T, O, or Q).
+        conn:           TeradataConnection (injected by MCP server).
+        database_name:  Target database name.
+        object_name:    The table name (TableKind T, O, or Q).
 
     Returns:
         list[dict]: Normalised column metadata rows, each containing
@@ -1482,12 +1476,12 @@ def _dbc_columns_table(conn: TeradataConnection, db_name: str, object_name: str)
 
     with conn.cursor() as cur:
         # Fetch column metadata
-        cur.execute(col_sql, [db_name, object_name])
+        cur.execute(col_sql, [database_name, object_name])
         col_rows = cur.fetchall()
         col_data = rows_to_json(cur.description, col_rows)
 
         # Fetch index participation
-        cur.execute(idx_sql, [db_name, object_name])
+        cur.execute(idx_sql, [database_name, object_name])
         idx_rows = cur.fetchall()
         idx_data = rows_to_json(cur.description, idx_rows)
 
@@ -1544,7 +1538,7 @@ def _dbc_columns_table(conn: TeradataConnection, db_name: str, object_name: str)
 
 def _help_column_view(
     conn: TeradataConnection,
-    db_name: str,
+    database_name: str,
     object_name: str,
     logger: logging.Logger,
 ) -> list:
@@ -1571,10 +1565,10 @@ def _help_column_view(
     exception and returns a BROKEN_VIEW status record instead of raising.
 
     Args:
-        conn:        TeradataConnection (injected by MCP server).
-        db_name:     Target database name.
-        object_name: The view name.
-        logger:      Logger instance for error reporting.
+        conn:           TeradataConnection (injected by MCP server).
+        database_name:  Target database name.
+        object_name:    The view name.
+        logger:         Logger instance for error reporting.
 
     Returns:
         list[dict]: Normalised column metadata rows, or a single
@@ -1584,7 +1578,7 @@ def _help_column_view(
         HELP COLUMN dt01.*
         FROM (
             SELECT obj.*
-            FROM "{db_name}"."{object_name}" AS obj
+            FROM "{database_name}"."{object_name}" AS obj
             WHERE 1 = 0
         ) AS dt01
     """
@@ -1603,14 +1597,14 @@ def _help_column_view(
         # Fall back to DBC.ColumnsVX (backward-compatible path).
         if TD_ERR_NO_SELECT_ACCESS in ex_str:
             logger.warning(
-                f'{C_MODULE}: No SELECT privilege on {db_name}."{object_name}" '
+                f'{C_MODULE}: No SELECT privilege on {database_name}."{object_name}" '
                 f"— falling back to DBC.ColumnsVX (reduced type fidelity for "
                 f"expression-derived columns)"
             )
-            return _columnsVX_fallback(conn, db_name, object_name, logger)
+            return _columnsVX_fallback(conn, database_name, object_name, logger)
 
         # -- All other errors: treat as a broken/invalid view.
-        logger.error(f'{C_MODULE}: Broken view detected: {db_name}."{object_name}" - {ex}')
+        logger.error(f'{C_MODULE}: Broken view detected: {database_name}."{object_name}" - {ex}')
         return [
             {
                 "ObjectName": object_name,

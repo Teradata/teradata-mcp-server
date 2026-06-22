@@ -1,9 +1,9 @@
 qlty_missingValues:
   type: tool
-  description: "Get the column names that have missing values in a table."
+  description: "List the column names that contain NULL or missing values in a table. Returns a column-level summary showing WHICH columns have missing data. Use when the user asks which columns have nulls, which fields have missing data, or how many nulls exist per column. Do NOT use to retrieve the actual data rows — use qlty_rowsWithMissingValues to get the specific records where a column is null."
   parameters:
     database_name:
-      description: "Name of the database (optional, omit if table_name is fully qualified)"
+      description: "Name of the database (optional)"
       type_hint: str
       default: ''
     table_name:
@@ -14,10 +14,10 @@ qlty_missingValues:
 
 qlty_negativeValues:
   type: tool
-  description: "Get the column names that have negative values in a table."
+  description: "Identify which numeric columns in a table contain negative values. Use when the user asks about negative numbers, values below zero, or columns with anomalous negative entries. Returns the list of affected column names."
   parameters:
     database_name:
-      description: "Name of the database (optional, omit if table_name is fully qualified)"
+      description: "Name of the database (optional)"
       type_hint: str
       default: ''
     table_name:
@@ -28,10 +28,10 @@ qlty_negativeValues:
 
 qlty_distinctCategories:
   type: tool
-  description: "Get the distinct categories from a column in a table."
+  description: "Get the unique (distinct) values present in a specific column of a table. Use when the user asks what unique values, categories, or entries exist in a named column. Requires both a table name and a column name — if no column name is specified, ask for clarification before calling."
   parameters:
     database_name:
-      description: "Name of the database (optional, omit if table_name is fully qualified)"
+      description: "Name of the database (optional)"
       type_hint: str
       default: ''
     table_name:
@@ -45,10 +45,10 @@ qlty_distinctCategories:
 
 qlty_standardDeviation:
   type: tool
-  description: "Get the mean and standard deviation for a column in a table."
+  description: "Calculate the mean (average) and standard deviation for a single numeric column. Use when the user asks specifically for standard deviation, the spread of values, or just mean and variability. For a fuller statistical profile including min, max, quartiles, and percentiles, use qlty_univariateStatistics instead."
   parameters:
     database_name:
-      description: "Name of the database (optional, omit if table_name is fully qualified)"
+      description: "Name of the database (optional)"
       type_hint: str
       default: ''
     table_name:
@@ -62,10 +62,10 @@ qlty_standardDeviation:
 
 qlty_columnSummary:
   type: tool
-  description: "Get column summary statistics for all columns in a table."
+  description: "Get summary statistics for ALL columns in a table in a single call. Use when the user asks for an overview, profile, or summary of every field in a table. For detailed statistics on a SINGLE specific column (min, max, percentiles), use qlty_univariateStatistics instead."
   parameters:
     database_name:
-      description: "Name of the database (optional, omit if table_name is fully qualified)"
+      description: "Name of the database (optional)"
       type_hint: str
       default: ''
     table_name:
@@ -76,10 +76,10 @@ qlty_columnSummary:
 
 qlty_univariateStatistics:
   type: tool
-  description: "Get full univariate statistics for a column in a table."
+  description: "Calculate full univariate statistics for a single numeric column including min, max, mean, standard deviation, quartiles, and percentiles. Use when the user asks for a complete or comprehensive statistical breakdown of one specific column. For just mean and standard deviation, use qlty_standardDeviation. For statistics across ALL columns in a table at once, use qlty_columnSummary."
   parameters:
     database_name:
-      description: "Name of the database (optional, omit if table_name is fully qualified)"
+      description: "Name of the database (optional)"
       type_hint: str
       default: ''
     table_name:
@@ -93,10 +93,10 @@ qlty_univariateStatistics:
 
 qlty_rowsWithMissingValues:
   type: tool
-  description: "Get the rows that have missing values in a specific column of a table."
+  description: "Retrieve the actual data rows where a specific column is NULL or missing. Returns the records themselves, not a column summary. Use when the user wants to SEE or FETCH the rows with missing values in a named column. Do NOT write a SQL query with base_readQuery for this — always use this tool when the request is about rows with null values. Do NOT use for a column-level summary of which columns have nulls — use qlty_missingValues for that."
   parameters:
     database_name:
-      description: "Name of the database (optional, omit if table_name is fully qualified)"
+      description: "Name of the database (optional)"
       type_hint: str
       default: ''
     table_name:
