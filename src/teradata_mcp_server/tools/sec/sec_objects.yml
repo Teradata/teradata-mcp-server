@@ -1,6 +1,6 @@
 sec_userDbPermissions:
   type: tool
-  description: "Get permissions for a user across all databases."
+  description: "List the database-level access permissions (SELECT, INSERT, UPDATE, DELETE, etc.) granted directly to a specific Teradata user across all databases. Use when the user asks what a named user can DO in each database — their access rights, grants, or privileges on database objects. Do NOT use to see what roles a user has — use sec_userRoles for that. Requires a user name."
   parameters:
     user_name:
       description: "User name to analyze."
@@ -19,7 +19,7 @@ sec_userDbPermissions:
 
 sec_rolePermissions:
   type: tool
-  description: "Get permissions for a role."
+  description: "List the database-level permissions granted to a named Teradata role. Use when the user asks what access rights a ROLE has, what a role is allowed to do, or what permissions have been granted to a role. Do NOT confuse with user-level queries — use sec_userDbPermissions for a user's direct permissions or sec_userRoles for a user's role membership. Requires a role name."
   parameters:
     role_name:
       description: "Role name to analyze."
@@ -98,7 +98,7 @@ sec_rolePermissions:
 
 sec_userRoles:
   type: tool
-  description: "Get roles assigned to a user."
+  description: "List the roles currently assigned to a specific Teradata user account. Use when the user asks which roles a named user HAS, belongs to, or has been assigned. Do NOT use to see the permissions of those roles — use sec_rolePermissions for that. Do NOT use to see a user's direct database privileges — use sec_userDbPermissions for that. Requires a user name."
   parameters:
     user_name:
       description: "User name to analyze."
