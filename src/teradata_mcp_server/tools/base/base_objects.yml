@@ -59,7 +59,7 @@ base_columnDescription:
       description: "Database name. Defaults to '%' (all databases)."
       type_hint: str
       default: '%'
-    obj_name:
+    table_name:
       description: "Table or view name. Defaults to '%' (all tables)."
       type_hint: str
       default: '%'
@@ -111,7 +111,7 @@ base_columnDescription:
         WHEN '??' THEN 'STGEOMETRY''ANY_TYPE'
         END AS CType
     FROM DBC.ColumnsVX
-    WHERE UPPER(tableName) LIKE UPPER(:obj_name)
+    WHERE UPPER(tableName) LIKE UPPER(:table_name)
     AND UPPER(DatabaseName) LIKE UPPER(:database_name);
 
 base_tablePreview:
