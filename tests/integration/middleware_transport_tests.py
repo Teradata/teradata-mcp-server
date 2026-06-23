@@ -7,7 +7,7 @@ and correctly routes to the stdio fast-path or the HTTP header-extraction path.
 No database or running server required.
 
 Usage:
-    uv run python tests/middleware_transport_tests.py
+    uv run python tests/integration/middleware_transport_tests.py
 """
 
 import asyncio

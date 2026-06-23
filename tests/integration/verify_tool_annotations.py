@@ -4,7 +4,7 @@ Runs without a live Teradata connection — list_tools is answered from server
 metadata before any database query is made.
 
 Usage:
-    uv run python tests/verify_tool_annotations.py
+    uv run python tests/integration/verify_tool_annotations.py
 """
 
 import asyncio

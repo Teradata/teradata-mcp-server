@@ -1,11 +1,11 @@
 {
   "scripts": {
     "pre_test": {
-      "command": "python tests/scripts/plot_setup.py --action setup",
+      "command": "python tests/integration/scripts/plot_setup.py --action setup",
       "description": "Setup Plot test environment"
     },
     "post_test": {
-      "command": "python tests/scripts/plot_setup.py --action cleanup",
+      "command": "python tests/integration/scripts/plot_setup.py --action cleanup",
       "description": "Teardown Plot test environment"
     }
   },
