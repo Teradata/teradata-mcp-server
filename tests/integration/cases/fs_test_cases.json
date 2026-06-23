@@ -1,11 +1,11 @@
 {
   "scripts": {
     "pre_test": {
-      "command": "python tests/scripts/efs_setup.py --action setup",
+      "command": "python tests/integration/scripts/efs_setup.py --action setup",
       "description": "Setup Feature Store test environment"
     },
     "post_test": {
-      "command": "python tests/scripts/efs_setup.py --action cleanup", 
+      "command": "python tests/integration/scripts/efs_setup.py --action cleanup", 
       "description": "Display SQL commands to cleanup Feature Store test environment"
     }
   },

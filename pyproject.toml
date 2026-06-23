@@ -124,7 +124,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "*/__init__.py" = ["F403", "F401"]  # Allow wildcard imports and unused imports in __init__.py
-"tests/*" = ["F401", "F403", "PLR0913"]  # More lenient for test files
+"tests/**" = ["F401", "F403", "PLR0913"]  # More lenient for test files
 
 [tool.ruff.lint.isort]
 known-first-party = ["teradata_mcp_server"]

@@ -11,10 +11,10 @@ registration, import errors, constructor errors) that the stdio-based test suite
 cannot reach.
 
 Usage:
-    python tests/smoke_http.py
-    python tests/smoke_http.py --verbose
-    python tests/smoke_http.py --ping-interval 10
-    python tests/smoke_http.py --server-cmd "docker run ..."
+    python tests/integration/smoke_http.py
+    python tests/integration/smoke_http.py --verbose
+    python tests/integration/smoke_http.py --ping-interval 10
+    python tests/integration/smoke_http.py --server-cmd "docker run ..."
 """
 
 import argparse

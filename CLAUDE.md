@@ -33,7 +33,7 @@ uv run mypy src/
 
 # Run tests (requires a live Teradata connection)
 export DATABASE_URI="teradata://user:pass@host:1025/database"
-uv run python tests/run_mcp_tests.py "uv run teradata-mcp-server"
+uv run python tests/integration/run_mcp_tests.py "uv run teradata-mcp-server"
 
 # Docker
 docker compose up teradata-mcp-server
@@ -104,7 +104,7 @@ For stdio transport, logs go to file only (to avoid polluting MCP stdout). Log l
 
 ### Testing
 
-Tests require a live Teradata database. Test cases are JSON files in `tests/cases/` (e.g., `core_test_cases.json`). The test runner (`tests/run_mcp_tests.py`) dynamically discovers available tools and only runs matching test cases. Results are saved as timestamped JSON in `var/test-reports/`.
+Tests require a live Teradata database. Test cases are JSON files in `tests/integration/cases/` (e.g., `core_test_cases.json`). The test runner (`tests/integration/run_mcp_tests.py`) dynamically discovers available tools and only runs matching test cases. Results are saved as timestamped JSON in `var/test-reports/`.
 
 ## Code Conventions
 

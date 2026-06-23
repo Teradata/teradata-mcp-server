@@ -28,18 +28,18 @@ uv sync --extra dev
 uv run mypy src/
 
 # Middleware unit tests (no database required)
-uv run python tests/middleware_transport_tests.py
+uv run python tests/integration/middleware_transport_tests.py
 
 # HTTP transport smoke test (no database required)
-uv run python tests/smoke_http.py --verbose
+uv run python tests/integration/smoke_http.py --verbose
 
 # Integration tests — stdio (requires a live Teradata connection)
 export DATABASE_URI="teradata://user:pass@host:1025/database"
-uv run python tests/run_mcp_tests.py "uv run teradata-mcp-server"
+uv run python tests/integration/run_mcp_tests.py "uv run teradata-mcp-server"
 
 # Integration tests — streamable-http (requires a live Teradata connection)
 export DATABASE_URI="teradata://user:pass@host:1025/database"
-uv run python tests/run_mcp_tests.py "uv run teradata-mcp-server" --transport streamable-http
+uv run python tests/integration/run_mcp_tests.py "uv run teradata-mcp-server" --transport streamable-http
 ```
 
 ### Configuring the `DATABASE_URI` Secret

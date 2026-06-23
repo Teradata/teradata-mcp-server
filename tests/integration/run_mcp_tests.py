@@ -17,6 +17,10 @@ import sys
 import time
 from contextlib import AsyncExitStack
 from datetime import datetime
+from pathlib import Path
+
+_INTEGRATION_DIR = Path(__file__).resolve().parent
+_DEFAULT_CASES_FILE = str(_INTEGRATION_DIR / "cases" / "core_test_cases.json")
 
 # MCP client imports
 from mcp.client.session import ClientSession
@@ -25,7 +29,9 @@ from mcp.client.streamable_http import streamablehttp_client
 
 
 class MCPTestRunner:
-    def __init__(self, test_cases_files: list[str] = ["tests/cases/core_test_cases.json"], verbose: bool = False):
+    def __init__(self, test_cases_files: list[str] | None = None, verbose: bool = False):
+        if test_cases_files is None:
+            test_cases_files = [_DEFAULT_CASES_FILE]
         self.test_cases_files = test_cases_files if isinstance(test_cases_files, list) else [test_cases_files]
         self.test_cases: dict[str, list[dict]] = {}
         self.scripts: dict[str, dict] = {"pre_test": [], "post_test": []}
@@ -651,12 +657,12 @@ class MCPTestRunner:
 async def main():
     """Main entry point."""
     if len(sys.argv) < 2:
-        print("Usage: python tests/run_mcp_tests.py <server_command> [test_cases_file ...] [--transport streamable-http] [--verbose]")
+        print("Usage: python tests/integration/run_mcp_tests.py <server_command> [test_cases_file ...] [--transport streamable-http] [--verbose]")
         print("Examples:")
-        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server'")
-        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server' tests/cases/core_test_cases.json")
-        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server' --transport streamable-http")
-        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server' tests/cases/core_test_cases.json --transport streamable-http")
+        print("  python tests/integration/run_mcp_tests.py 'uv run teradata-mcp-server'")
+        print("  python tests/integration/run_mcp_tests.py 'uv run teradata-mcp-server' tests/integration/cases/core_test_cases.json")
+        print("  python tests/integration/run_mcp_tests.py 'uv run teradata-mcp-server' --transport streamable-http")
+        print("  python tests/integration/run_mcp_tests.py 'uv run teradata-mcp-server' tests/integration/cases/core_test_cases.json --transport streamable-http")
         sys.exit(1)
 
     server_command = sys.argv[1].split()
@@ -681,7 +687,7 @@ async def main():
 
     # Default to core test cases if no files specified
     if not test_cases_files:
-        test_cases_files = ["tests/cases/core_test_cases.json"]
+        test_cases_files = [_DEFAULT_CASES_FILE]
 
     runner = MCPTestRunner(test_cases_files, verbose)
 

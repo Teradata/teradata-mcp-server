@@ -52,14 +52,14 @@ uv run mypy src/
 # 3. HTTP transport smoke test (no database required)
 #    Catches startup-time errors in HTTP-specific code paths (middleware,
 #    imports, constructor errors) that the stdio suite cannot reach.
-uv run python tests/smoke_http.py --verbose
+uv run python tests/integration/smoke_http.py --verbose
 
 # 4. Integration tests — stdio (requires DATABASE_URI)
 export DATABASE_URI="teradata://user:pass@host:1025/database"
-uv run python tests/run_mcp_tests.py "uv run teradata-mcp-server"
+uv run python tests/integration/run_mcp_tests.py "uv run teradata-mcp-server"
 
 # 5. Integration tests — streamable-http (requires DATABASE_URI)
-uv run python tests/run_mcp_tests.py "uv run teradata-mcp-server" --transport streamable-http
+uv run python tests/integration/run_mcp_tests.py "uv run teradata-mcp-server" --transport streamable-http
 ```
 
 Steps 1–3 have no database dependency and are quick — run them on every change. Steps 4–5 require VPN and credentials; run them when you have changed tool handlers, middleware, or connection logic.
@@ -650,18 +650,18 @@ Use the provided testing tool to run tests, add tests if you add a new tool.
 
 We have a "core" test suite for all the core tools provided with this server, separate ones for the add-ons (eg. Enterprise Feature Store, Enterprise Vector Store) and you can add more for your custom tools.
 
-See guidelines and details in [our testing guide](/tests/README.md)
+See guidelines and details in [our testing guide](/tests/integration/README.md)
 
 Run testing before PR, and copy/paste the test report status in the PR. 
 
 **Development testing:**
 ```bash
-python tests/run_mcp_tests.py "uv run teradata-mcp-server"
+python tests/integration/run_mcp_tests.py "uv run teradata-mcp-server"
 ```
 
 **Installed package testing:**
 ```bash
-python tests/run_mcp_tests.py "teradata-mcp-server"
+python tests/integration/run_mcp_tests.py "teradata-mcp-server"
 ```
 
 <br><br><br>
