@@ -1,0 +1,460 @@
+{
+  "module": "base",
+  "cases": [
+    {
+      "id": "base_readQuery_happy",
+      "type": "happy_path",
+      "description": "Execute a SQL query against the evals employees table",
+      "input": "Run this query: SELECT name, department, salary FROM {EVALS_DATABASE}.evals_employees WHERE department = 'Sales'",
+      "expected_tools": [
+        {
+          "name": "base_readQuery",
+          "params": {
+            "sql": "SELECT name, department, salary FROM {EVALS_DATABASE}.evals_employees WHERE department = 'Sales'"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_readQuery_ambiguous_vs_tablePreview",
+      "type": "ambiguous_selection",
+      "description": "Prompt with a WHERE clause should use base_readQuery, not base_tablePreview",
+      "input": "Get me all orders from {EVALS_DATABASE}.evals_orders where the amount is greater than 500",
+      "expected_tools": [
+        {
+          "name": "base_readQuery",
+          "params": {
+            "sql": "SELECT * FROM {EVALS_DATABASE}.evals_orders WHERE amount > 500"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_readQuery_missing_sql",
+      "type": "missing_parameter",
+      "description": "Agent must ask for clarification when no SQL or table is given",
+      "input": "Query the database for me",
+      "expected_tools": []
+    },
+    {
+      "id": "base_tableList_happy",
+      "type": "happy_path",
+      "description": "List tables in the evals database",
+      "input": "What tables are in the {EVALS_DATABASE} database?",
+      "expected_tools": [
+        {
+          "name": "base_tableList",
+          "params": {
+            "database_name": "{EVALS_DATABASE}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_tableList_missing_database",
+      "type": "missing_parameter",
+      "description": "User asks for tables without specifying a database",
+      "input": "Show me what tables are available",
+      "expected_tools": []
+    },
+    {
+      "id": "base_tableDDL_happy",
+      "type": "happy_path",
+      "description": "Retrieve DDL for the evals employees table",
+      "input": "Show me the CREATE statement for evals_employees in the {EVALS_DATABASE} database",
+      "expected_tools": [
+        {
+          "name": "base_tableDDL",
+          "params": {
+            "database_name": "{EVALS_DATABASE}",
+            "table_name": "evals_employees"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_tableDDL_ambiguous_vs_columnMetadata",
+      "type": "ambiguous_selection",
+      "description": "Asking for full structure including constraints should prefer base_tableDDL",
+      "input": "Describe the full structure of {EVALS_DATABASE}.evals_employees including any constraints and indexes",
+      "expected_tools": [
+        {
+          "name": "base_tableDDL",
+          "params": {
+            "database_name": "{EVALS_DATABASE}",
+            "table_name": "evals_employees"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_columnMetadata_happy",
+      "type": "happy_path",
+      "description": "Get precise Teradata type codes, character sets, and precision for columns in evals_orders",
+      "input": "Give me the exact Teradata type codes, character set, and decimal precision for every column in {EVALS_DATABASE}.evals_orders",
+      "expected_tools": [
+        {
+          "name": "base_columnMetadata",
+          "params": {
+            "database_name": "{EVALS_DATABASE}",
+            "object_name": "evals_orders"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_columnMetadata_ambiguous_vs_tableDDL",
+      "type": "ambiguous_selection",
+      "description": "Asking for technical Teradata column precision metadata should prefer base_columnMetadata over base_tableDDL",
+      "input": "I need the UNICODE vs LATIN character set and nullability for every column in {EVALS_DATABASE}.evals_employees",
+      "expected_tools": [
+        {
+          "name": "base_columnMetadata",
+          "params": {
+            "database_name": "{EVALS_DATABASE}",
+            "object_name": "evals_employees"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_tablePreview_happy",
+      "type": "happy_path",
+      "description": "Preview a sample of rows from the evals orders table",
+      "input": "Give me a quick preview of what's in {EVALS_DATABASE}.evals_orders",
+      "expected_tools": [
+        {
+          "name": "base_tablePreview",
+          "params": {
+            "database_name": "{EVALS_DATABASE}",
+            "table_name": "evals_orders"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_tablePreview_ambiguous_vs_readQuery",
+      "type": "ambiguous_selection",
+      "description": "A simple 'show me a few rows' without a WHERE clause should use base_tablePreview",
+      "input": "Show me a few rows from {EVALS_DATABASE}.evals_orders",
+      "expected_tools": [
+        {
+          "name": "base_tablePreview",
+          "params": {
+            "database_name": "{EVALS_DATABASE}",
+            "table_name": "evals_orders"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_databaseList_happy",
+      "type": "happy_path",
+      "description": "List all accessible databases",
+      "input": "What databases do I have access to?",
+      "expected_tools": [
+        {
+          "name": "base_databaseList",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "base_tableList_ambiguous_vs_databaseList",
+      "type": "ambiguous_selection",
+      "description": "Listing tables inside one database should prefer base_tableList, not base_databaseList",
+      "input": "What tables exist inside the {EVALS_DATABASE} database?",
+      "expected_tools": [
+        {
+          "name": "base_tableList",
+          "params": {
+            "database_name": "{EVALS_DATABASE}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_databaseList_ambiguous_vs_tableList",
+      "type": "ambiguous_selection",
+      "description": "Listing accessible databases should prefer base_databaseList, not base_tableList",
+      "input": "Which databases am I allowed to connect to on this system?",
+      "expected_tools": [
+        {
+          "name": "base_databaseList",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "base_saveDDL_ambiguous_vs_tableDDL",
+      "type": "ambiguous_selection",
+      "description": "Persisting DDL to a file should prefer base_saveDDL, not base_tableDDL",
+      "input": "Export the DDL for {EVALS_DATABASE}.evals_orders to a file on disk",
+      "expected_tools": [
+        {
+          "name": "base_saveDDL",
+          "params": {
+            "database_name": "{EVALS_DATABASE}",
+            "table_name": "evals_orders"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_tableAffinity_ambiguous_vs_tableUsage",
+      "type": "ambiguous_selection",
+      "description": "Finding tables co-queried with a specific table should prefer base_tableAffinity, not base_tableUsage",
+      "input": "Which tables in {EVALS_DATABASE} tend to appear in the same queries as evals_employees?",
+      "expected_tools": [
+        {
+          "name": "base_tableAffinity",
+          "params": {
+            "database_name": "{EVALS_DATABASE}",
+            "table_name": "evals_employees"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_tableUsage_ambiguous_vs_tableAffinity",
+      "type": "ambiguous_selection",
+      "description": "Access frequency for tables in a database should prefer base_tableUsage, not base_tableAffinity",
+      "input": "Who has been reading tables in {EVALS_DATABASE} lately and how often?",
+      "expected_tools": [
+        {
+          "name": "base_tableUsage",
+          "params": {
+            "database_name": "{EVALS_DATABASE}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_saveDDL_happy",
+      "type": "happy_path",
+      "description": "Save DDL for the evals employees table to a file",
+      "input": "Save the DDL for evals_employees in {EVALS_DATABASE} to a file",
+      "expected_tools": [
+        {
+          "name": "base_saveDDL",
+          "params": {
+            "database_name": "{EVALS_DATABASE}",
+            "table_name": "evals_employees"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_tableAffinity_happy",
+      "type": "happy_path",
+      "description": "Find tables commonly queried together with evals_orders",
+      "input": "Which tables in {EVALS_DATABASE} are most often queried together with evals_orders?",
+      "expected_tools": [
+        {
+          "name": "base_tableAffinity",
+          "params": {
+            "database_name": "{EVALS_DATABASE}",
+            "table_name": "evals_orders"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_tableUsage_happy",
+      "type": "happy_path",
+      "description": "Check usage metrics for the evals database",
+      "input": "How frequently are the tables in {EVALS_DATABASE} being accessed and by whom?",
+      "expected_tools": [
+        {
+          "name": "base_tableUsage",
+          "params": {
+            "database_name": "{EVALS_DATABASE}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_multi_tool_list_then_preview",
+      "type": "multi_tool",
+      "description": "List tables in evals database then preview one",
+      "input": "List all tables in {EVALS_DATABASE}, then show me a preview of evals_employees",
+      "expected_tools": [
+        {
+          "name": "base_tableList",
+          "params": {
+            "database_name": "{EVALS_DATABASE}"
+          }
+        },
+        {
+          "name": "base_tablePreview",
+          "params": {
+            "database_name": "{EVALS_DATABASE}",
+            "table_name": "evals_employees"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_multi_tool_ddl_then_columns",
+      "type": "multi_tool",
+      "description": "Get DDL then drill into column detail for the same table",
+      "input": "First show me the DDL for {EVALS_DATABASE}.evals_orders, then give me the detailed column metadata",
+      "expected_tools": [
+        {
+          "name": "base_tableDDL",
+          "params": {
+            "database_name": "{EVALS_DATABASE}",
+            "table_name": "evals_orders"
+          }
+        },
+        {
+          "name": "base_columnMetadata",
+          "params": {
+            "database_name": "{EVALS_DATABASE}",
+            "object_name": "evals_orders"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_tableDDL_missing_table",
+      "type": "missing_parameter",
+      "description": "Agent must ask for database name when only table is provided",
+      "input": "Show me the CREATE statement for evals_employees",
+      "expected_tools": []
+    },
+    {
+      "id": "base_tablePreview_missing_table",
+      "type": "missing_parameter",
+      "description": "Agent must ask which table to preview",
+      "input": "Preview some rows",
+      "expected_tools": []
+    },
+    {
+      "id": "base_saveDDL_missing_table",
+      "type": "missing_parameter",
+      "description": "Agent must ask which table to save DDL for",
+      "input": "Save the DDL to a file",
+      "expected_tools": []
+    },
+    {
+      "id": "base_tablePreview_clarify_then_call",
+      "type": "missing_parameter",
+      "description": "Agent asks which table to preview, then calls base_tablePreview after user clarifies",
+      "turns": [
+        {
+          "input": "Preview some rows for me",
+          "expect": "clarification"
+        },
+        {
+          "input": "Preview rows from {EVALS_DATABASE}.evals_employees",
+          "expected_tools": [
+            {
+              "name": "base_tablePreview",
+              "params": {
+                "database_name": "{EVALS_DATABASE}",
+                "table_name": "evals_employees"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "base_tableList_clarify_then_call",
+      "type": "missing_parameter",
+      "description": "Agent asks which database, then calls base_tableList after user clarifies",
+      "turns": [
+        {
+          "input": "Show me what tables are available",
+          "expect": "clarification"
+        },
+        {
+          "input": "List tables in the {EVALS_DATABASE} database",
+          "expected_tools": [
+            {
+              "name": "base_tableList",
+              "params": {
+                "database_name": "{EVALS_DATABASE}"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "base_readQuery_clarify_then_call",
+      "type": "missing_parameter",
+      "description": "Agent asks for SQL, then calls base_readQuery after user provides the query",
+      "turns": [
+        {
+          "input": "Run a query for me",
+          "expect": "clarification"
+        },
+        {
+          "input": "Run: SELECT name, department FROM {EVALS_DATABASE}.evals_employees WHERE department = 'Sales'",
+          "expected_tools": [
+            {
+              "name": "base_readQuery",
+              "params": {
+                "sql": "SELECT name, department FROM {EVALS_DATABASE}.evals_employees WHERE department = 'Sales'"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "base_columnDescription_happy",
+      "type": "happy_path",
+      "description": "Show basic column info for the evals employees table",
+      "input": "Show me the columns in {EVALS_DATABASE}.evals_employees",
+      "expected_tools": [
+        {
+          "name": "base_columnDescription",
+          "params": {
+            "database_name": "{EVALS_DATABASE}",
+            "table_name": "evals_employees"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_columnDescription_ambiguous_vs_columnMetadata",
+      "type": "ambiguous_selection",
+      "description": "A simple 'what columns does this table have' question should prefer base_columnDescription",
+      "input": "What are the column names and types in {EVALS_DATABASE}.evals_orders?",
+      "expected_tools": [
+        {
+          "name": "base_columnDescription",
+          "params": {
+            "database_name": "{EVALS_DATABASE}",
+            "table_name": "evals_orders"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_columnMetadata_ambiguous_vs_columnDescription",
+      "type": "ambiguous_selection",
+      "description": "Asking for precise Teradata type codes and character sets should prefer base_columnMetadata",
+      "input": "Give me the exact Teradata type codes, character sets, and precision details for every column in {EVALS_DATABASE}.evals_employees",
+      "expected_tools": [
+        {
+          "name": "base_columnMetadata",
+          "params": {
+            "database_name": "{EVALS_DATABASE}",
+            "object_name": "evals_employees"
+          }
+        }
+      ]
+    },
+    {
+      "id": "base_unknown_tool_missing",
+      "type": "missing_parameter",
+      "description": "User asks to do something no tool supports — agent should explain and ask for clarification",
+      "input": "Automatically tune my Teradata database indexes and rebalance the AMPs",
+      "expected_tools": []
+    }
+  ]
+}

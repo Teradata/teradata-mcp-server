@@ -1,6 +1,8 @@
 __pycache__/
 logs/
 working/
+results/
+.mypy_cache/
 .env
 .DS_Store
 .vscode/
@@ -18,4 +20,7 @@ test_*.py
 .planning/
 .ruff_cache/
 Start_MCP_Server.bat
+.deepeval/
+.pytest_cache/
+
 

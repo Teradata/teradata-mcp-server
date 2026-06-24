@@ -1,0 +1,19 @@
+{
+  "module": "chat",
+  "cases": [
+    {
+      "id": "chat_completeChat_missing_message",
+      "type": "missing_parameter",
+      "description": "User invokes chat without providing a message",
+      "input": "Can you use the chat completion tool for me?",
+      "expected_tools": []
+    },
+    {
+      "id": "chat_unknown_tool_missing",
+      "type": "missing_parameter",
+      "description": "User asks for a non‑existent chat tool",
+      "input": "Talk to the assistant about budgeting",
+      "expected_tools": []
+    }
+  ]
+}
