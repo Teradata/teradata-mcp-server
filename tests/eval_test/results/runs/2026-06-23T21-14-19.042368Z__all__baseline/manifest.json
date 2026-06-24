@@ -1,0 +1,22 @@
+{
+  "run_id": "2026-06-23T21-14-19.042368Z__all__baseline",
+  "started_at": "2026-06-23T21:14:19.042368+00:00",
+  "module_filter": "all",
+  "case_type_filter": "all",
+  "run_label": null,
+  "description_mode": "mcp_server",
+  "description_overrides_file": null,
+  "description_override_count": 0,
+  "agent_model_id": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+  "judge_model_id": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+  "evals_database": "demo_user",
+  "total": 106,
+  "passed": 103,
+  "failed": 3,
+  "artifacts": {
+    "summary_md": "summary.md",
+    "summary_json": "summary.json",
+    "manifest": "manifest.json",
+    "suggested_overrides": "suggested_overrides.json"
+  }
+}

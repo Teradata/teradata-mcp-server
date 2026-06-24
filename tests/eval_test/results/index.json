@@ -1,0 +1,46 @@
+{
+  "runs": [
+    {
+      "run_id": "2026-06-24T00-06-59.222908Z__base__baseline",
+      "started_at": "2026-06-24T00:06:59.222908+00:00",
+      "module_filter": "base",
+      "case_type_filter": "all",
+      "run_label": null,
+      "description_mode": "mcp_server",
+      "passed": 0,
+      "failed": 32,
+      "total": 32,
+      "run_dir": "runs/2026-06-24T00-06-59.222908Z__base__baseline",
+      "summary_json": "runs/2026-06-24T00-06-59.222908Z__base__baseline/summary.json",
+      "summary_md": "runs/2026-06-24T00-06-59.222908Z__base__baseline/summary.md"
+    },
+    {
+      "run_id": "2026-06-24T00-05-13.720459Z__base__baseline",
+      "started_at": "2026-06-24T00:05:13.720459+00:00",
+      "module_filter": "base",
+      "case_type_filter": "all",
+      "run_label": null,
+      "description_mode": "mcp_server",
+      "passed": 0,
+      "failed": 32,
+      "total": 32,
+      "run_dir": "runs/2026-06-24T00-05-13.720459Z__base__baseline",
+      "summary_json": "runs/2026-06-24T00-05-13.720459Z__base__baseline/summary.json",
+      "summary_md": "runs/2026-06-24T00-05-13.720459Z__base__baseline/summary.md"
+    },
+    {
+      "run_id": "2026-06-23T21-14-19.042368Z__all__baseline",
+      "started_at": "2026-06-23T21:14:19.042368+00:00",
+      "module_filter": "all",
+      "case_type_filter": "all",
+      "run_label": null,
+      "description_mode": "mcp_server",
+      "passed": 103,
+      "failed": 3,
+      "total": 106,
+      "run_dir": "runs/2026-06-23T21-14-19.042368Z__all__baseline",
+      "summary_json": "runs/2026-06-23T21-14-19.042368Z__all__baseline/summary.json",
+      "summary_md": "runs/2026-06-23T21-14-19.042368Z__all__baseline/summary.md"
+    }
+  ]
+}

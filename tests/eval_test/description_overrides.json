@@ -1,0 +1,4 @@
+{
+  "_comment": "Dev-space description overrides. Gitignored. Edit freely, then promote to MCP server.",
+  "base_tableList": "Lists all tables and views within a specific Teradata database or schema. The database_name parameter is REQUIRED and must contain an explicit database name provided by the user \u2014 you must NOT call this tool with an empty string or without a database name. If the user asks to see tables but does not specify which database, ask them to clarify which database they want to list tables from before calling this tool. Use base_databaseList instead if the user is asking which databases exist on the system."
+}

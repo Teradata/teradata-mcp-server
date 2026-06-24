@@ -1,0 +1,3209 @@
+{
+  "run_id": "2026-06-23T21-14-19.042368Z__all__baseline",
+  "started_at": "2026-06-23T21:14:19.042368+00:00",
+  "module_filter": "all",
+  "case_type_filter": "all",
+  "run_label": null,
+  "agent_model_id": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+  "judge_model_id": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+  "evals_database": "demo_user",
+  "description_mode": "mcp_server",
+  "description_overrides_file": null,
+  "description_override_count": 0,
+  "total": 106,
+  "passed": 103,
+  "failed": 3,
+  "cases": [
+    {
+      "case_id": "base_readQuery_happy",
+      "case_type": "happy_path",
+      "description": "Execute a SQL query against the evals employees table",
+      "input": "Run this query: SELECT name, department, salary FROM demo_user.evals_employees WHERE department = 'Sales'",
+      "expected_tools": [
+        {
+          "name": "base_readQuery",
+          "params": {
+            "sql": "SELECT name, department, salary FROM demo_user.evals_employees WHERE department = 'Sales'"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_readQuery",
+          "params": {
+            "sql": "SELECT name, department, salary FROM demo_user.evals_employees WHERE department = 'Sales'"
+          }
+        }
+      ],
+      "actual_output": "Here are the results from the query:\n\n| Name | Department | Salary |\n|------|-----------|--------|\n| Bob Smith | Sales | $72,000 |\n| Frank Lee | Sales | $69,500 |\n\nThe query returned **2 employees** in the Sales department. Bob Smith has the highest salary at $72,000, followed by Frank Lee at $69,500.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_readQuery_ambiguous_vs_tablePreview",
+      "case_type": "ambiguous_selection",
+      "description": "Prompt with a WHERE clause should use base_readQuery, not base_tablePreview",
+      "input": "Get me all orders from demo_user.evals_orders where the amount is greater than 500",
+      "expected_tools": [
+        {
+          "name": "base_readQuery",
+          "params": {
+            "sql": "SELECT * FROM demo_user.evals_orders WHERE amount > 500"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_readQuery",
+          "params": {
+            "sql": "SELECT * FROM demo_user.evals_orders WHERE amount > 500"
+          }
+        }
+      ],
+      "actual_output": "I found **8 orders** from demo_user.evals_orders where the amount is greater than 500:\n\n| Order ID | Customer Name | Order Date | Ship Date | Amount | Product Category | Quantity |\n|----------|--------------|------------|-----------|---------|-----------------|----------|\n| 1009 | Iota Inc | 2024-05-08 | - | $1,780.00 | Electronics | 1 |\n| 1005 | Epsilon LLC | 2024-03-01 | 2024-03-04 | $560.00 | Books | 8 |\n| 1010 | Kappa Ltd | 2024-05-25 | 2024-05-28 | $4,200.00 | Sports | 7 |\n| 1007 | Eta Group | 2024-04-02 | 2024-04-06 | $2,100.00 | Sports | 4 |\n| 1001 | Acme Corp | 2024-01-05 | 2024-01-08 | $1,250.00 | Electronics | 3 |\n| 1008 | Theta Corp | 2024-04-20 | 2024-04-23 | $930.00 | Food | 6 |\n| 1004 | Delta Co | 2024-02-17 | 2024-02-20 | $3,400.00 | Electronics | 2 |\n| 1003 | Gamma Inc | 2024-02-03 | - | $875.50 | Food | 5 |\n\nThe highest value order is from **Kappa Ltd** at $4,200.00, and the orders range from $560.00 to $4,200.00.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_readQuery_missing_sql",
+      "case_type": "missing_parameter",
+      "description": "Agent must ask for clarification when no SQL or table is given",
+      "input": "Query the database for me",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I'd be happy to help you query the database! However, I need a bit more information to proceed:\n\n1. **What would you like to query?** For example:\n   - A specific table (e.g., \"show me data from the sales table\")\n   - List available databases or tables\n   - Get information about table structure/columns\n   - Run a specific SQL query you have in mind\n   - View sample data from a table\n   - Get statistics or summaries\n\n2. **Which database and/or table** are you interested in? (if you know the names)\n\nCould you provide more details about what you'd like to see or accomplish?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableList_happy",
+      "case_type": "happy_path",
+      "description": "List tables in the evals database",
+      "input": "What tables are in the demo_user database?",
+      "expected_tools": [
+        {
+          "name": "base_tableList",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_tableList",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "actual_output": "The **demo_user** database contains **2 tables**:\n\n1. **evals_orders**\n2. **evals_employees**\n\nWould you like to see more details about either of these tables, such as their columns, sample data, or structure?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableList_missing_database",
+      "case_type": "missing_parameter",
+      "description": "User asks for tables without specifying a database",
+      "input": "Show me what tables are available",
+      "expected_tools": [],
+      "passed": false,
+      "failure_stage": "deterministic",
+      "failure_detail": "expected no tool calls for missing_parameter case, got ['base_tableList']",
+      "actual_tools": [
+        {
+          "name": "base_tableList",
+          "params": {
+            "database_name": ""
+          }
+        }
+      ],
+      "actual_output": "I can see the system has many tables available. The results show tables across multiple databases. Here's a summary of what I found:\n\n**Main Databases with Tables:**\n- **DBC** - System database with metadata tables (InDoubtLog, StatsTbl, QryLog, DBCInfo, etc.)\n- **TD_SYSFNLIB** - System function library\n- **SYSLIB** - System library\n- **TD_SERVER_DB** - Server database\n- **SQLJ** - SQL/Java support\n- **TD_SYSGPL** - System GPL (General Purpose Library)\n- **SystemFe** - System functions\n- **SYSSPATIAL** - Spatial database functions\n- **SYSUDTLIB** - User-defined types library\n- **SYSBAR** - System backup and recovery\n- **TD_SYSXML** - XML functions\n- **TDMaps** - Map functions\n- **Crashdumps** - System crash dump storage\n\nThe list shows **hundreds of system tables and views** primarily from the DBC (Data Base Control) system database, which contains metadata about databases, tables, users, permissions, query logs, and system configuration.\n\nWould you like me to:\n1. Show tables from a specific database?\n2. Filter to show only user databases (excluding system databases)?\n3. Show details about a specific table?",
+      "metric_reasons": [],
+      "recommendation": "The prompt deliberately omits required information: \"Show me what tables are available\". The agent called `base_tableList` instead of asking for clarification. Recommendation: review whether those tool descriptions invite calls without full context, and keep the eval prompt vague enough that asking is the only reasonable response.",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableDDL_happy",
+      "case_type": "happy_path",
+      "description": "Retrieve DDL for the evals employees table",
+      "input": "Show me the CREATE statement for evals_employees in the demo_user database",
+      "expected_tools": [
+        {
+          "name": "base_tableDDL",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_tableDDL",
+          "params": {
+            "table_name": "evals_employees",
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "actual_output": "Here's the CREATE statement for the `evals_employees` table in the `demo_user` database:\n\n```sql\nCREATE SET TABLE demo_user.evals_employees ,FALLBACK ,\n     NO BEFORE JOURNAL,\n     NO AFTER JOURNAL,\n     CHECKSUM = DEFAULT,\n     DEFAULT MERGEBLOCKRATIO,\n     MAP = TD_MAP1\n     (\n      employee_id INTEGER NOT NULL,\n      name VARCHAR(100) CHARACTER SET LATIN NOT CASESPECIFIC NOT NULL,\n      department VARCHAR(50) CHARACTER SET LATIN NOT CASESPECIFIC NOT NULL,\n      salary DECIMAL(10,2),\n      region VARCHAR(50) CHARACTER SET LATIN NOT CASESPECIFIC NOT NULL,\n      hire_date DATE FORMAT 'YY/MM/DD' NOT NULL,\n      manager_id INTEGER, \nPRIMARY KEY ( employee_id ));\n```\n\nThis table contains employee information with:\n- **employee_id** (INTEGER) - Primary key\n- **name** (VARCHAR 100) - Employee name\n- **department** (VARCHAR 50) - Department name\n- **salary** (DECIMAL 10,2) - Salary amount\n- **region** (VARCHAR 50) - Geographic region\n- **hire_date** (DATE) - Date of hire\n- **manager_id** (INTEGER) - Reference to manager\n\nThe table is configured with FALLBACK for data protection and has no journal logging enabled.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableDDL_ambiguous_vs_columnMetadata",
+      "case_type": "ambiguous_selection",
+      "description": "Asking for full structure including constraints should prefer base_tableDDL",
+      "input": "Describe the full structure of demo_user.evals_employees including any constraints and indexes",
+      "expected_tools": [
+        {
+          "name": "base_tableDDL",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_tableDDL",
+          "params": {
+            "table_name": "evals_employees",
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "actual_output": "## Full Structure of `demo_user.evals_employees`\n\nHere's the complete DDL for the table:\n\n```sql\nCREATE SET TABLE demo_user.evals_employees ,FALLBACK ,\n     NO BEFORE JOURNAL,\n     NO AFTER JOURNAL,\n     CHECKSUM = DEFAULT,\n     DEFAULT MERGEBLOCKRATIO,\n     MAP = TD_MAP1\n     (\n      employee_id INTEGER NOT NULL,\n      name VARCHAR(100) CHARACTER SET LATIN NOT CASESPECIFIC NOT NULL,\n      department VARCHAR(50) CHARACTER SET LATIN NOT CASESPECIFIC NOT NULL,\n      salary DECIMAL(10,2),\n      region VARCHAR(50) CHARACTER SET LATIN NOT CASESPECIFIC NOT NULL,\n      hire_date DATE FORMAT 'YY/MM/DD' NOT NULL,\n      manager_id INTEGER, \nPRIMARY KEY ( employee_id ))\n;\n```\n\n### **Columns:**\n\n| Column | Data Type | Constraints |\n|--------|-----------|-------------|\n| **employee_id** | INTEGER | NOT NULL, PRIMARY KEY |\n| **name** | VARCHAR(100) LATIN | NOT NULL, NOT CASESPECIFIC |\n| **department** | VARCHAR(50) LATIN | NOT NULL, NOT CASESPECIFIC |\n| **salary** | DECIMAL(10,2) | Nullable |\n| **region** | VARCHAR(50) LATIN | NOT NULL, NOT CASESPECIFIC |\n| **hire_date** | DATE | NOT NULL, Format: 'YY/MM/DD' |\n| **manager_id** | INTEGER | Nullable |\n\n### **Constraints:**\n- **PRIMARY KEY**: `employee_id` - Ensures unique employee identification\n\n### **Indexes:**\n- The PRIMARY KEY on `employee_id` implicitly creates a Unique Primary Index (UPI)\n\n### **Table Attributes:**\n- **SET TABLE**: Duplicate rows are not allowed\n- **FALLBACK**: Data is protected with fallback copies\n- **NO BEFORE JOURNAL**: No before-image journaling\n- **NO AFTER JOURNAL**: No after-image journaling\n- **CHECKSUM = DEFAULT**: Uses default checksum validation\n- **DEFAULT MERGEBLOCKRATIO**: Uses system default for block merging\n- **MAP = TD_MAP1**: Uses TD_MAP1 for data distribution\n\nThis table appears to be designed for employee management with hierarchical relationships (via `manager_id`) and includes demographic and compensation information.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_columnMetadata_happy",
+      "case_type": "happy_path",
+      "description": "Get precise Teradata type codes, character sets, and precision for columns in evals_orders",
+      "input": "Give me the exact Teradata type codes, character set, and decimal precision for every column in demo_user.evals_orders",
+      "expected_tools": [
+        {
+          "name": "base_columnMetadata",
+          "params": {
+            "database_name": "demo_user",
+            "object_name": "evals_orders"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_columnMetadata",
+          "params": {
+            "database_name": "demo_user",
+            "object_name": "evals_orders"
+          }
+        }
+      ],
+      "actual_output": "Here are the exact Teradata type codes, character sets, and precision details for every column in **demo_user.evals_orders**:\n\n| Column Name | Type Code | Column Type | Character Set | Length | Decimal Precision | Nullable | Index Type |\n|-------------|-----------|-------------|---------------|---------|-------------------|----------|------------|\n| **order_id** | I | INTEGER | - | 4 bytes | - | N | USI (Unique Secondary Index) |\n| **customer_name** | CV | VARCHAR(100) LATIN | LATIN | 100 | - | N | - |\n| **order_date** | DA | DATE | - | 4 bytes | - | N | - |\n| **ship_date** | DA | DATE | - | 4 bytes | - | Y | - |\n| **amount** | D | DOUBLE PRECISION | - | 8 bytes | 10 total digits, 2 fractional | N | - |\n| **product_category** | CV | VARCHAR(50) LATIN | LATIN | 50 | - | N | - |\n| **quantity** | I | INTEGER | - | 4 bytes | - | N | - |\n\n**Key Details:**\n- **Type Codes**: I = Integer, CV = Variable Character, DA = Date, D = Double Precision (Float)\n- **Character Sets**: Both VARCHAR columns use LATIN character set (CharType = 1)\n- **Decimal Precision**: The `amount` column (type D) has 10 total digits with 2 fractional digits\n- **Indexes**: `order_id` has a Unique Secondary Index (USI)\n- **Nullability**: Only `ship_date` allows NULL values; all other columns are NOT NULL",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_columnMetadata_ambiguous_vs_tableDDL",
+      "case_type": "ambiguous_selection",
+      "description": "Asking for technical Teradata column precision metadata should prefer base_columnMetadata over base_tableDDL",
+      "input": "I need the UNICODE vs LATIN character set and nullability for every column in demo_user.evals_employees",
+      "expected_tools": [
+        {
+          "name": "base_columnMetadata",
+          "params": {
+            "database_name": "demo_user",
+            "object_name": "evals_employees"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_columnMetadata",
+          "params": {
+            "database_name": "demo_user",
+            "object_name": "evals_employees",
+            "fields": "ColumnName,ColumnType,Nullable,CharType"
+          }
+        }
+      ],
+      "actual_output": "Perfect! Here's the character set and nullability information for every column in **demo_user.evals_employees**:\n\n| Column Name | Data Type | Character Set | Nullable |\n|------------|-----------|---------------|----------|\n| **employee_id** | INTEGER | N/A (numeric) | **No** (NOT NULL) |\n| **name** | VARCHAR(100) | **LATIN** | **No** (NOT NULL) |\n| **department** | VARCHAR(50) | **LATIN** | **No** (NOT NULL) |\n| **salary** | DOUBLE PRECISION | N/A (numeric) | **Yes** (NULLABLE) |\n| **region** | VARCHAR(50) | **LATIN** | **No** (NOT NULL) |\n| **hire_date** | DATE | N/A (date) | **No** (NOT NULL) |\n| **manager_id** | INTEGER | N/A (numeric) | **Yes** (NULLABLE) |\n\n**Summary:**\n- **All character columns use LATIN character set** (no UNICODE columns found)\n- **Character columns:** name, department, region (all LATIN)\n- **Nullable columns:** salary, manager_id (2 columns)\n- **NOT NULL columns:** employee_id, name, department, region, hire_date (5 columns)",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tablePreview_happy",
+      "case_type": "happy_path",
+      "description": "Preview a sample of rows from the evals orders table",
+      "input": "Give me a quick preview of what's in demo_user.evals_orders",
+      "expected_tools": [
+        {
+          "name": "base_tablePreview",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_tablePreview",
+          "params": {
+            "table_name": "evals_orders",
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "actual_output": "Here's a quick preview of the **demo_user.evals_orders** table:\n\n| order_id | customer_name | order_date | ship_date | amount | product_category | quantity |\n|----------|---------------|------------|-----------|---------|------------------|----------|\n| 1009 | Iota Inc | 2024-05-08 | null | 1780.0 | Electronics | 1 |\n| 1002 | Beta Ltd | 2024-01-12 | 2024-01-15 | -200.0 | Clothing | 1 |\n| 1010 | Kappa Ltd | 2024-05-25 | 2024-05-28 | 4200.0 | Sports | 7 |\n| 1008 | Theta Corp | 2024-04-20 | 2024-04-23 | 930.0 | Food | 6 |\n| 1007 | Eta Group | 2024-04-02 | 2024-04-06 | 2100.0 | Sports | 4 |\n\n**Table Structure:**\n- **order_id** (int) - Order identifier\n- **customer_name** (str) - Customer name\n- **order_date** (date) - Date order was placed\n- **ship_date** (date) - Date order was shipped (some null values)\n- **amount** (Decimal) - Order amount (note: some negative values present)\n- **product_category** (str) - Product category (Electronics, Clothing, Sports, Food, etc.)\n- **quantity** (int) - Order quantity\n\nThe table contains order transaction data with categories like Electronics, Clothing, Sports, and Food. I notice there are some null ship dates and at least one negative amount value (-200.0).",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tablePreview_ambiguous_vs_readQuery",
+      "case_type": "ambiguous_selection",
+      "description": "A simple 'show me a few rows' without a WHERE clause should use base_tablePreview",
+      "input": "Show me a few rows from demo_user.evals_orders",
+      "expected_tools": [
+        {
+          "name": "base_tablePreview",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_tablePreview",
+          "params": {
+            "table_name": "evals_orders",
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "actual_output": "Here are a few sample rows from the **demo_user.evals_orders** table:\n\n| order_id | customer_name | order_date | ship_date  | amount   | product_category | quantity |\n|----------|---------------|------------|------------|----------|------------------|----------|\n| 1002     | Beta Ltd      | 2024-01-12 | 2024-01-15 | -200.0   | Clothing         | 1        |\n| 1005     | Epsilon LLC   | 2024-01-12 | 2024-03-04 | 560.0    | Books            | 8        |\n| 1010     | Kappa Ltd     | 2024-05-25 | 2024-05-28 | 4200.0   | Sports           | 7        |\n| 1008     | Theta Corp    | 2024-04-20 | 2024-04-23 | 930.0    | Food             | 6        |\n| 1006     | Zeta Partners | 2024-03-15 | *null*     | -150.0   | Clothing         | 1        |\n\nThe table contains order information with columns for order ID, customer name, order and ship dates, amount, product category, and quantity. I notice there are some negative amounts and one missing ship_date value in this sample.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_databaseList_happy",
+      "case_type": "happy_path",
+      "description": "List all accessible databases",
+      "input": "What databases do I have access to?",
+      "expected_tools": [
+        {
+          "name": "base_databaseList",
+          "params": {}
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_databaseList",
+          "params": {
+            "scope": "user"
+          }
+        }
+      ],
+      "actual_output": "You have access to **10 databases** on this Teradata system:\n\n| Database Name | Type | Description |\n|--------------|------|-------------|\n| **TD_SYSXML** | DataBase | - |\n| **gs_tables_db** | DataBase | - |\n| **mldb** | User | - |\n| **HEALTHCARE_DEMO** | DataBase | - |\n| **modelops** | DataBase | - |\n| **td_tapidb** | User | - |\n| **GLOBAL_FUNCTIONS** | DataBase | - |\n| **DELTA_DEMO** | DataBase | - |\n| **demo_user** | User | Logon ID for the end user to run demonstrations |\n| **TD_SYSAI** | DataBase | - |\n\nThe databases include:\n- **User databases**: `mldb`, `td_tapidb`, and `demo_user` (user accounts with database space)\n- **Application databases**: `HEALTHCARE_DEMO`, `DELTA_DEMO`, `modelops`, `gs_tables_db`\n- **System/function databases**: `TD_SYSXML`, `TD_SYSAI`, `GLOBAL_FUNCTIONS`\n\nWould you like to explore the tables in any of these databases?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableList_ambiguous_vs_databaseList",
+      "case_type": "ambiguous_selection",
+      "description": "Listing tables inside one database should prefer base_tableList, not base_databaseList",
+      "input": "What tables exist inside the demo_user database?",
+      "expected_tools": [
+        {
+          "name": "base_tableList",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_tableList",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "actual_output": "The **demo_user** database contains **2 tables**:\n\n1. **evals_orders**\n2. **evals_employees**\n\nWould you like to see more details about either of these tables, such as their column definitions or sample data?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_databaseList_ambiguous_vs_tableList",
+      "case_type": "ambiguous_selection",
+      "description": "Listing accessible databases should prefer base_databaseList, not base_tableList",
+      "input": "Which databases am I allowed to connect to on this system?",
+      "expected_tools": [
+        {
+          "name": "base_databaseList",
+          "params": {}
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_databaseList",
+          "params": {
+            "scope": "user"
+          }
+        }
+      ],
+      "actual_output": "Based on the query results, you have access to **10 databases** on this Teradata system:\n\n## User Databases (User type):\n1. **mldb** - Machine Learning Database\n2. **td_tapidb** - Teradata API Database  \n3. **demo_user** - Logon ID for end users to run demonstrations\n\n## Standard Databases (Database type):\n4. **TD_SYSXML** - Teradata System XML database\n5. **gs_tables_db** - Golden Standard tables database\n6. **HEALTHCARE_DEMO** - Healthcare demonstration database\n7. **modelops** - Model Operations database\n8. **GLOBAL_FUNCTIONS** - Global functions database\n9. **DELTA_DEMO** - Delta demonstration database\n10. **TD_SYSAI** - Teradata System AI database\n\nThe databases include a mix of system databases (TD_SYSXML, TD_SYSAI, GLOBAL_FUNCTIONS), machine learning and analytics databases (mldb, modelops), and demonstration databases (HEALTHCARE_DEMO, DELTA_DEMO, demo_user). You can connect to any of these databases based on your access permissions.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_saveDDL_ambiguous_vs_tableDDL",
+      "case_type": "ambiguous_selection",
+      "description": "Persisting DDL to a file should prefer base_saveDDL, not base_tableDDL",
+      "input": "Export the DDL for demo_user.evals_orders to a file on disk",
+      "expected_tools": [
+        {
+          "name": "base_saveDDL",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_saveDDL",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders",
+            "object_type": "TABLE"
+          }
+        }
+      ],
+      "actual_output": "Perfect! The DDL for `demo_user.evals_orders` has been successfully exported to disk.\n\n**File Details:**\n- **Location**: `/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/ddls_extracted/evals_orders_DDL.sql`\n- **File size**: 721 bytes\n- **DDL size**: 563 characters\n- **Object type**: TABLE\n\nThe DDL file has been saved and is ready to use.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableAffinity_ambiguous_vs_tableUsage",
+      "case_type": "ambiguous_selection",
+      "description": "Finding tables co-queried with a specific table should prefer base_tableAffinity, not base_tableUsage",
+      "input": "Which tables in demo_user tend to appear in the same queries as evals_employees?",
+      "expected_tools": [
+        {
+          "name": "base_tableAffinity",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_tableAffinity",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees"
+          }
+        }
+      ],
+      "actual_output": "Based on the analysis of query logs, **no tables have been found that appear in the same queries as `evals_employees`** in the `demo_user` database.\n\nThis could mean:\n- The `evals_employees` table hasn't been queried recently alongside other tables\n- Query logging may not have captured JOIN operations with this table\n- The table might be queried in isolation without JOINs to other tables\n- There may be insufficient query history in the system logs (DBC.DBQLObjTbl)\n\nIf you'd like, I can:\n1. Check if the `evals_employees` table exists and preview its structure\n2. Look at overall table usage in the `demo_user` database\n3. Examine what queries have been run against `evals_employees` specifically\n\nWould any of these help?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableUsage_ambiguous_vs_tableAffinity",
+      "case_type": "ambiguous_selection",
+      "description": "Access frequency for tables in a database should prefer base_tableUsage, not base_tableAffinity",
+      "input": "Who has been reading tables in demo_user lately and how often?",
+      "expected_tools": [
+        {
+          "name": "base_tableUsage",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_tableUsage",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "actual_output": "Based on the table usage data for the **demo_user** database, here's what I found:\n\n## Recent Table Access Activity\n\nTwo tables in demo_user have been actively queried recently:\n\n### 1. **EVALS_ORDERS** (Most Popular)\n- **Query Count**: 96 queries\n- **Usage Share**: 63% of all queries\n- **Usage Frequency**: High\n- **Activity Window**: First queried 4 days ago, last queried today (0 days ago)\n\n### 2. **EVALS_EMPLOYEES**\n- **Query Count**: 55 queries\n- **Usage Share**: 36% of all queries\n- **Usage Frequency**: High\n- **Activity Window**: First queried 4 days ago, last queried today (0 days ago)\n\n## Summary\nBoth tables show **high usage frequency** with consistent access over the past 4 days, including activity today. The EVALS_ORDERS table is being accessed almost twice as frequently as EVALS_EMPLOYEES.\n\nWould you like to see more details, such as:\n- Which specific users have been running these queries?\n- What types of SQL statements are being executed?\n- Access patterns by time of day?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_saveDDL_happy",
+      "case_type": "happy_path",
+      "description": "Save DDL for the evals employees table to a file",
+      "input": "Save the DDL for evals_employees in demo_user to a file",
+      "expected_tools": [
+        {
+          "name": "base_saveDDL",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_saveDDL",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees",
+            "object_type": "TABLE"
+          }
+        }
+      ],
+      "actual_output": "Perfect! The DDL for the `evals_employees` table has been successfully saved to a file.\n\n**File Details:**\n- **Location**: `/Users/Daniel.Tehan/Code/MCP/teradata-mcp-server/ddls_extracted/evals_employees_DDL.sql`\n- **File size**: 736 bytes\n- **DDL content size**: 572 characters\n\nThe DDL file contains the complete CREATE TABLE statement for the `evals_employees` table from the `demo_user` database.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableAffinity_happy",
+      "case_type": "happy_path",
+      "description": "Find tables commonly queried together with evals_orders",
+      "input": "Which tables in demo_user are most often queried together with evals_orders?",
+      "expected_tools": [
+        {
+          "name": "base_tableAffinity",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_tableAffinity",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        }
+      ],
+      "actual_output": "The query found no tables that are commonly queried together with `evals_orders` in the `demo_user` database. This could mean one of the following:\n\n1. **The table `evals_orders` hasn't been queried recently** - or at least not in queries that also referenced other tables\n2. **Query logging may not capture this table's usage** - the DBQLObjTbl system table only contains data if query logging is enabled and has captured queries involving this table\n3. **The table is queried in isolation** - queries may be selecting from `evals_orders` alone without JOINing to other tables\n\nTo investigate further, I can:\n- Check if the table exists and get its structure\n- Look at overall table usage patterns in the demo_user database\n- Check recent SQL queries that have accessed this table\n\nWould you like me to investigate any of these options?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableUsage_happy",
+      "case_type": "happy_path",
+      "description": "Check usage metrics for the evals database",
+      "input": "How frequently are the tables in demo_user being accessed and by whom?",
+      "expected_tools": [
+        {
+          "name": "base_tableUsage",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_tableUsage",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "actual_output": "Based on the access patterns for tables in the **demo_user** database, here's what I found:\n\n## Table Access Frequency Summary\n\n| Table Name | Query Count | % of Total | Usage Frequency | First Query | Last Query |\n|------------|------------|------------|-----------------|-------------|------------|\n| **EVALS_ORDERS** | 96 | 63% | High | 4 days ago | Today |\n| **EVALS_EMPLOYEES** | 55 | 36% | High | 4 days ago | Today |\n\n### Key Insights:\n\n1. **EVALS_ORDERS** is the most heavily accessed table, accounting for **63% of all queries** against the demo_user database with 96 total queries.\n\n2. **EVALS_EMPLOYEES** is also frequently accessed, representing **36% of queries** with 55 total queries.\n\n3. Both tables show **High usage frequency** and have been actively queried within the last 4 days, with the most recent access being today.\n\n4. These two tables represent **100% of the tracked query activity** in the demo_user database during the monitoring period.\n\nThe data shows consistent, ongoing usage of both tables, suggesting they are core tables for active business operations or analysis. Would you like me to drill down further to see which specific users are accessing these tables, or analyze the types of queries being run against them?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_multi_tool_list_then_preview",
+      "case_type": "multi_tool",
+      "description": "List tables in evals database then preview one",
+      "input": "List all tables in demo_user, then show me a preview of evals_employees",
+      "expected_tools": [
+        {
+          "name": "base_tableList",
+          "params": {
+            "database_name": "demo_user"
+          }
+        },
+        {
+          "name": "base_tablePreview",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_tableList",
+          "params": {
+            "database_name": "demo_user"
+          }
+        },
+        {
+          "name": "base_tablePreview",
+          "params": {
+            "table_name": "evals_employees",
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "actual_output": "## Tables in demo_user Database\n\nThe **demo_user** database contains **2 tables**:\n\n1. **evals_orders**\n2. **evals_employees**\n\n---\n\n## Preview of evals_employees Table\n\nHere's a sample of 5 rows from the **evals_employees** table:\n\n| employee_id | name          | department  | salary    | region | hire_date  | manager_id |\n|-------------|---------------|-------------|-----------|--------|------------|------------|\n| 10          | Jack Wilson   | Engineering | 88,000.00 | South  | 2016-08-22 | 5          |\n| 4           | David Brown   | Finance     | 85,000.00 | West   | 2021-01-10 | 1          |\n| 5           | Eva Martinez  | Engineering | 102,000.00| North  | 2017-06-05 | 1          |\n| 3           | Carol White   | HR          | 68,000.00 | East   | 2018-11-20 | 1          |\n| 7           | Grace Kim     | Marketing   | 77,000.00 | East   | 2020-09-30 | 1          |\n\nThe table contains employee information with the following columns:\n- **employee_id**: Employee identifier\n- **name**: Employee name\n- **department**: Department (Engineering, Finance, HR, Marketing)\n- **salary**: Employee salary\n- **region**: Geographic region (North, South, East, West)\n- **hire_date**: Date when the employee was hired\n- **manager_id**: ID of the employee's manager",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_multi_tool_ddl_then_columns",
+      "case_type": "multi_tool",
+      "description": "Get DDL then drill into column detail for the same table",
+      "input": "First show me the DDL for demo_user.evals_orders, then give me the detailed column metadata",
+      "expected_tools": [
+        {
+          "name": "base_tableDDL",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        },
+        {
+          "name": "base_columnMetadata",
+          "params": {
+            "database_name": "demo_user",
+            "object_name": "evals_orders"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_tableDDL",
+          "params": {
+            "table_name": "evals_orders",
+            "database_name": "demo_user"
+          }
+        },
+        {
+          "name": "base_columnMetadata",
+          "params": {
+            "database_name": "demo_user",
+            "object_name": "evals_orders"
+          }
+        }
+      ],
+      "actual_output": "## DDL for demo_user.evals_orders\n\n```sql\nCREATE SET TABLE demo_user.evals_orders ,FALLBACK ,\n     NO BEFORE JOURNAL,\n     NO AFTER JOURNAL,\n     CHECKSUM = DEFAULT,\n     DEFAULT MERGEBLOCKRATIO,\n     MAP = TD_MAP1\n     (\n      order_id INTEGER NOT NULL,\n      customer_name VARCHAR(100) CHARACTER SET LATIN NOT CASESPECIFIC NOT NULL,\n      order_date DATE FORMAT 'YY/MM/DD' NOT NULL,\n      ship_date DATE FORMAT 'YY/MM/DD',\n      amount DECIMAL(10,2) NOT NULL,\n      product_category VARCHAR(50) CHARACTER SET LATIN NOT CASESPECIFIC NOT NULL,\n      quantity INTEGER NOT NULL, \nPRIMARY KEY ( order_id ))\n;\n```\n\n## Detailed Column Metadata\n\n| Column Name | Type | Length | Nullable | Character Set | Decimal (Total, Fractional) | Format | Index Type | Case Specificity | Default Value |\n|-------------|------|--------|----------|---------------|----------------------------|--------|------------|------------------|---------------|\n| **order_id** | INTEGER | 4 | No | - | - | -(10)9 | **USI** | NOT CASESPECIFIC | null |\n| **customer_name** | VARCHAR(100) LATIN | 100 | No | LATIN | - | X(100) | - | NOT CASESPECIFIC | null |\n| **order_date** | DATE | 4 | No | - | - | YY/MM/DD | - | NOT CASESPECIFIC | null |\n| **ship_date** | DATE | 4 | **Yes** | - | - | YY/MM/DD | - | NOT CASESPECIFIC | null |\n| **amount** | DOUBLE PRECISION | 8 | No | - | (10, 2) | ---------.99 | - | NOT CASESPECIFIC | null |\n| **product_category** | VARCHAR(50) LATIN | 50 | No | LATIN | - | X(50) | - | NOT CASESPECIFIC | null |\n| **quantity** | INTEGER | 4 | No | - | - | -(10)9 | - | NOT CASESPECIFIC | null |\n\n### Key Findings:\n- **Primary Key**: `order_id` with a Unique Secondary Index (USI)\n- **Total Columns**: 7\n- **Nullable Columns**: Only `ship_date` allows NULL values\n- **Character Columns**: `customer_name` and `product_category` use LATIN character set\n- **Numeric Columns**: `order_id`, `quantity` (INTEGER), and `amount` (DECIMAL with 10 total digits, 2 fractional)\n- **Date Columns**: `order_date` and `ship_date` (both formatted as YY/MM/DD)",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableDDL_missing_table",
+      "case_type": "missing_parameter",
+      "description": "Agent must ask for database name when only table is provided",
+      "input": "Show me the CREATE statement for evals_employees",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I need both the table name and database name to retrieve the CREATE statement. You've provided the table name \"evals_employees\", but which database does this table belong to?\n\nCould you please provide the database name?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tablePreview_missing_table",
+      "case_type": "missing_parameter",
+      "description": "Agent must ask which table to preview",
+      "input": "Preview some rows",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I'd be happy to help you preview some rows from a table! However, I need to know which table you'd like to see.\n\nCould you please provide:\n1. **Table name** - The name of the table you want to preview\n2. **Database name** (optional) - The database where the table is located\n\nFor example: \"Preview rows from customer_data in the sales database\" or just \"Preview the orders table\"",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_saveDDL_missing_table",
+      "case_type": "missing_parameter",
+      "description": "Agent must ask which table to save DDL for",
+      "input": "Save the DDL to a file",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I'd be happy to help you save DDL to a file! However, I need some information first:\n\n1. **Database name** - Which database contains the object?\n2. **Object name** - Which table, view, or stored procedure do you want to extract DDL for?\n3. **Object type** - Is it a TABLE, VIEW, or PROCEDURE? (default is PROCEDURE)\n4. **Output directory** (optional) - Where should the file be saved? (default is './ddls_extracted')\n\nPlease provide at least the database name and object name so I can save the DDL for you.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tablePreview_clarify_then_call",
+      "case_type": "missing_parameter",
+      "description": "Agent asks which table to preview, then calls base_tablePreview after user clarifies",
+      "input": "Turn 1: Preview some rows for me | Turn 2: Preview rows from demo_user.evals_employees",
+      "expected_tools": [
+        {
+          "name": "base_tablePreview",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_tablePreview",
+          "params": {
+            "table_name": "evals_employees",
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "actual_output": "Here's a preview of the **demo_user.evals_employees** table:\n\n| employee_id | name           | department   | salary   | region | hire_date  | manager_id |\n|-------------|----------------|--------------|----------|--------|------------|------------|\n| 9           | Isla Thompson  | HR           | *null*   | North  | 2023-02-14 | 3          |\n| 7           | Grace Kim      | Marketing    | 77000.0  | East   | 2020-09-30 | 1          |\n| 4           | David Brown    | Finance      | 85000.0  | West   | 2021-01-10 | 1          |\n| 6           | Frank Lee      | Sales        | 69500.0  | South  | 2022-04-18 | 2          |\n| 10          | Jack Wilson    | Engineering  | 88000.0  | South  | 2016-08-22 | 5          |\n\n**Table Overview:**\n- **7 columns**: employee_id, name, department, salary, region, hire_date, manager_id\n- Contains employee information including their department, salary, region, and hire dates\n- Note: Isla Thompson (employee_id 9) has a null salary value\n- The table appears to track employees across different departments (HR, Marketing, Finance, Sales, Engineering) and regions\n\nWould you like to see more rows or perform any analysis on this data?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": [
+        {
+          "turn": 1,
+          "input": "Preview some rows for me",
+          "mode": "clarification",
+          "passed": true,
+          "actual_tools": []
+        },
+        {
+          "turn": 2,
+          "input": "Preview rows from demo_user.evals_employees",
+          "mode": "tool",
+          "passed": true,
+          "actual_tools": [
+            {
+              "name": "base_tablePreview",
+              "params": {
+                "table_name": "evals_employees",
+                "database_name": "demo_user"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "base_tableList_clarify_then_call",
+      "case_type": "missing_parameter",
+      "description": "Agent asks which database, then calls base_tableList after user clarifies",
+      "input": "Turn 1: Show me what tables are available | Turn 2: List tables in the demo_user database",
+      "expected_tools": [],
+      "passed": false,
+      "failure_stage": "deterministic",
+      "failure_detail": "turn 1: expected no tool calls for missing_parameter case, got ['base_tableList']",
+      "actual_tools": [
+        {
+          "name": "base_tableList",
+          "params": {
+            "database_name": ""
+          }
+        }
+      ],
+      "actual_output": "I can see there are tables available in the system. The results show many tables from the **DBC** database (which is the Teradata Data Dictionary/system catalog). \n\nWould you like me to:\n1. **Filter by a specific database** - If you're looking for user/application tables rather than system tables, please tell me which database to show\n2. **Show only user databases** - I can list the available databases first so you can pick one\n3. **Continue showing all tables** - though the full list is quite long\n\nMost users are typically interested in their own application databases rather than the DBC system tables. Which would you prefer?",
+      "metric_reasons": [],
+      "recommendation": "The prompt deliberately omits required information: \"(multi-turn \u2014 see turn details)\". The agent called `base_tableList` instead of asking for clarification. Recommendation: review whether those tool descriptions invite calls without full context, and keep the eval prompt vague enough that asking is the only reasonable response.",
+      "turn_details": [
+        {
+          "turn": 1,
+          "input": "Show me what tables are available",
+          "mode": "clarification",
+          "passed": false,
+          "failure_stage": "deterministic",
+          "failure_detail": "expected no tool calls for missing_parameter case, got ['base_tableList']",
+          "actual_tools": [
+            {
+              "name": "base_tableList",
+              "params": {
+                "database_name": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "base_readQuery_clarify_then_call",
+      "case_type": "missing_parameter",
+      "description": "Agent asks for SQL, then calls base_readQuery after user provides the query",
+      "input": "Turn 1: Run a query for me | Turn 2: Run: SELECT name, department FROM demo_user.evals_employees WHERE department = 'Sales'",
+      "expected_tools": [
+        {
+          "name": "base_readQuery",
+          "params": {
+            "sql": "SELECT name, department FROM demo_user.evals_employees WHERE department = 'Sales'"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_readQuery",
+          "params": {
+            "sql": "SELECT name, department FROM demo_user.evals_employees WHERE department = 'Sales'"
+          }
+        }
+      ],
+      "actual_output": "Great! Here are the results from your query:\n\n**Employees in the Sales Department:**\n\n| Name | Department |\n|------|------------|\n| Bob Smith | Sales |\n| Frank Lee | Sales |\n\n**Summary:** Found 2 employees in the Sales department.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": [
+        {
+          "turn": 1,
+          "input": "Run a query for me",
+          "mode": "clarification",
+          "passed": true,
+          "actual_tools": []
+        },
+        {
+          "turn": 2,
+          "input": "Run: SELECT name, department FROM demo_user.evals_employees WHERE department = 'Sales'",
+          "mode": "tool",
+          "passed": true,
+          "actual_tools": [
+            {
+              "name": "base_readQuery",
+              "params": {
+                "sql": "SELECT name, department FROM demo_user.evals_employees WHERE department = 'Sales'"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "base_columnDescription_happy",
+      "case_type": "happy_path",
+      "description": "Show basic column info for the evals employees table",
+      "input": "Show me the columns in demo_user.evals_employees",
+      "expected_tools": [
+        {
+          "name": "base_columnDescription",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_columnDescription",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees"
+          }
+        }
+      ],
+      "actual_output": "The table **demo_user.evals_employees** contains the following **7 columns**:\n\n| Column Name | Data Type |\n|-------------|-----------|\n| **employee_id** | INTEGER |\n| **name** | VARCHAR |\n| **department** | VARCHAR |\n| **region** | VARCHAR |\n| **hire_date** | DATE |\n| **manager_id** | INTEGER |\n| **salary** | DECIMAL |\n\nThis appears to be an employee table with basic employee information including identification, organizational structure (department, region, manager), and compensation details.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_columnDescription_ambiguous_vs_columnMetadata",
+      "case_type": "ambiguous_selection",
+      "description": "A simple 'what columns does this table have' question should prefer base_columnDescription",
+      "input": "What are the column names and types in demo_user.evals_orders?",
+      "expected_tools": [
+        {
+          "name": "base_columnDescription",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_columnDescription",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        }
+      ],
+      "actual_output": "The table `demo_user.evals_orders` contains the following columns:\n\n| Column Name | Data Type |\n|------------|-----------|\n| order_id | INTEGER |\n| order_date | DATE |\n| customer_name | VARCHAR |\n| product_category | VARCHAR |\n| quantity | INTEGER |\n| amount | DECIMAL |\n| ship_date | DATE |\n\nThe table has 7 columns in total, with a mix of date, numeric, and text fields suitable for order transaction data.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_columnMetadata_ambiguous_vs_columnDescription",
+      "case_type": "ambiguous_selection",
+      "description": "Asking for precise Teradata type codes and character sets should prefer base_columnMetadata",
+      "input": "Give me the exact Teradata type codes, character sets, and precision details for every column in demo_user.evals_employees",
+      "expected_tools": [
+        {
+          "name": "base_columnMetadata",
+          "params": {
+            "database_name": "demo_user",
+            "object_name": "evals_employees"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "base_columnMetadata",
+          "params": {
+            "database_name": "demo_user",
+            "object_name": "evals_employees"
+          }
+        }
+      ],
+      "actual_output": "Perfect! Here are the exact Teradata type codes, character sets, and precision details for every column in **demo_user.evals_employees**:\n\n## Column Metadata Summary\n\n| Column Name | Teradata Type Code | SQL Type String | Length | Character Set | Precision/Scale | Nullable | Index Type | Case Specificity |\n|-------------|-------------------|-----------------|---------|---------------|-----------------|----------|------------|------------------|\n| **employee_id** | **I** | INTEGER | 4 bytes | - | - | **NO** | **USI** (Unique Secondary Index) | NOT CASESPECIFIC |\n| **name** | **CV** | VARCHAR(100) LATIN | 100 chars | **LATIN** | - | **NO** | - | NOT CASESPECIFIC |\n| **department** | **CV** | VARCHAR(50) LATIN | 50 chars | **LATIN** | - | **NO** | - | NOT CASESPECIFIC |\n| **salary** | **D** | DOUBLE PRECISION | 8 bytes | - | Total: 10 digits, Fractional: 2 digits | **YES** | - | NOT CASESPECIFIC |\n| **region** | **CV** | VARCHAR(50) LATIN | 50 chars | **LATIN** | - | **NO** | - | NOT CASESPECIFIC |\n| **hire_date** | **DA** | DATE | 4 bytes | - | - | **NO** | - | NOT CASESPECIFIC |\n| **manager_id** | **I** | INTEGER | 4 bytes | - | - | **YES** | - | NOT CASESPECIFIC |\n\n### Key Details:\n\n- **Teradata Type Codes:**\n  - `I` = INTEGER (4-byte signed integer)\n  - `CV` = CHARACTER VARYING (VARCHAR)\n  - `D` = DOUBLE PRECISION (floating-point)\n  - `DA` = DATE\n\n- **Character Sets:** All string columns use **LATIN** character set (CharType=1)\n\n- **Indexes:** `employee_id` has a **Unique Secondary Index (USI)**\n\n- **Nullable Columns:** Only `salary` and `manager_id` allow NULL values\n\n- **Formats:**\n  - Integers: `-(10)9` (10-digit signed format)\n  - Strings: `X(n)` where n is the length\n  - Salary: `---------.99` (decimal with 2 fractional digits)\n  - Date: `YY/MM/DD`",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "base_unknown_tool_missing",
+      "case_type": "missing_parameter",
+      "description": "User asks to do something no tool supports \u2014 agent should explain and ask for clarification",
+      "input": "Automatically tune my Teradata database indexes and rebalance the AMPs",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I appreciate your interest in optimizing your Teradata database, but I need to clarify what's possible with the available tools and Teradata's architecture.\n\n## Current Tool Capabilities\n\nThe tools I have access to are **read-only analysis and monitoring tools**. They can:\n\n- \u2705 Analyze table usage patterns and query affinity\n- \u2705 Identify space usage and performance bottlenecks\n- \u2705 Review query execution history and resource consumption\n- \u2705 Examine table structures, indexes, and DDL\n- \u2705 Detect data quality issues\n- \u2705 Analyze SQL query patterns for optimization opportunities\n\n## What I Cannot Do Automatically\n\nI **cannot** execute DDL/DML operations such as:\n\n- \u274c Creating, dropping, or modifying indexes\n- \u274c Rebalancing AMPs or data distribution\n- \u274c Altering table structures\n- \u274c Changing primary indexes or partitioning\n\n## What I Can Help You With\n\nInstead, I can help you make **informed decisions** about index optimization:\n\n1. **Analyze Query Patterns**: Identify which tables are most frequently accessed and how they're queried\n2. **Review Current Indexes**: Examine existing table structures and index definitions\n3. **Identify Optimization Opportunities**: Find tables with performance issues, skew problems, or missing indexes\n4. **Generate Recommendations**: Suggest specific DDL statements you can review and execute\n\n## AMP Rebalancing Note\n\nTeradata **automatically handles AMP rebalancing** as part of its architecture. Data distribution is determined by the Primary Index (PI) hash. If you're experiencing skew issues, the solution is typically to:\n- Choose a better Primary Index column\n- Use a composite Primary Index\n- Consider partitioning strategies\n\n---\n\n**Would you like me to:**\n1. Analyze your current table usage patterns to identify optimization candidates?\n2. Review specific tables for potential index improvements?\n3. Examine query performance to find tables that would benefit from secondary indexes?\n\nPlease let me know which database you'd like me to analyze, and I'll provide actionable recommendations with the specific DDL you would need to execute.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "chat_completeChat_missing_message",
+      "case_type": "missing_parameter",
+      "description": "User invokes chat without providing a message",
+      "input": "Can you use the chat completion tool for me?",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I don't have a chat completion tool available in my current set of tools. The tools I have access to are primarily focused on:\n\n1. **Database operations** - querying Teradata databases, listing tables, viewing table structures\n2. **Data quality analysis** - checking for missing values, duplicates, statistics\n3. **Database administration** - monitoring space usage, user activity, sessions\n4. **Security** - checking user permissions and roles\n5. **SQL optimization** - clustering and analyzing SQL queries\n6. **Graph analysis** - analyzing database dependencies and lineage\n7. **RAG (Retrieval-Augmented Generation)** - answering questions based on document context\n8. **Visualization** - creating charts from data\n\nIf you're looking to have a conversation or need help with text generation, I can assist directly without needing a separate chat completion tool. \n\nHow can I help you? Are you looking to:\n- Work with a Teradata database?\n- Analyze data quality?\n- Visualize some data?\n- Something else?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "chat_unknown_tool_missing",
+      "case_type": "missing_parameter",
+      "description": "User asks for a non\u2011existent chat tool",
+      "input": "Talk to the assistant about budgeting",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I'd be happy to help you with budgeting! However, I should clarify my role and capabilities.\n\nI'm a specialized assistant designed to work with **Teradata databases**. My tools are focused on:\n\n- **Database Administration**: Analyzing disk space, table usage, system resources\n- **Data Quality**: Checking for missing values, statistics, data profiling\n- **Security**: Managing user permissions, roles, and access rights\n- **Query Analysis**: Examining SQL execution patterns, performance optimization\n- **Graph Analytics**: Dependency analysis and lineage tracing\n- **RAG (Retrieval Augmented Generation)**: Document-based question answering\n\nIf you're looking to discuss **personal or business budgeting** (managing finances, expenses, savings, etc.), I wouldn't be the right assistant for that topic, as I don't have tools designed for financial planning.\n\nHowever, if you're interested in budgeting related to:\n- **Database resource budgeting** (storage space allocation, capacity planning)\n- **Query cost analysis** (CPU/IO resource consumption)\n- **Workload management** (understanding resource usage patterns)\n\nThen I can definitely help! Could you let me know which type of budgeting you're interested in discussing?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_tableSpace_happy",
+      "case_type": "happy_path",
+      "description": "List largest tables by storage in the evals database",
+      "input": "Show me the 10 largest tables in demo_user ranked by storage consumption.",
+      "expected_tools": [
+        {
+          "name": "dba_tableSpace",
+          "params": {
+            "database_name": "demo_user",
+            "top_n": 10
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_tableSpace",
+          "params": {
+            "database_name": "demo_user",
+            "top_n": 10
+          }
+        }
+      ],
+      "actual_output": "Here are the **10 largest tables in demo_user** ranked by storage consumption:\n\n| Rank | Database Name | Table Name | Current Storage (bytes) | Peak Storage (bytes) | Skew % |\n|------|---------------|------------|------------------------|---------------------|--------|\n| 1 | demo_user | **All** (Total) | 1,146,880 | 1,146,880 | 16.67% |\n| 2 | demo_user | **get_data** | 294,912 | 294,912 | 35.71% |\n| 3 | demo_user | **remove_data** | 262,144 | 262,144 | 33.33% |\n| 4 | demo_user | **evals_orders** | 196,608 | 196,608 | 0.00% |\n| 5 | demo_user | **space_report** | 196,608 | 196,608 | 25.00% |\n| 6 | demo_user | **evals_employees** | 196,608 | 196,608 | 0.00% |\n\n**Key Insights:**\n- The database contains only **5 tables** (the \"All\" row is an aggregate total)\n- **get_data** is the largest table at ~288 KB, consuming about 25.7% of total space\n- **remove_data** is second at ~256 KB (22.9% of total space)\n- The remaining three tables are roughly equal in size at ~192 KB each\n- **get_data** and **remove_data** show higher data skew (35.71% and 33.33%), suggesting uneven distribution across AMPs\n- **evals_orders** and **evals_employees** show perfect distribution with 0% skew\n\nTotal database storage: **~1.1 MB**",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_tableSqlList_happy",
+      "case_type": "happy_path",
+      "description": "List SQL executed against evals_orders over the past 14 days",
+      "input": "Show me all queries run against evals_orders over the last 14 days.",
+      "expected_tools": [
+        {
+          "name": "dba_tableSqlList",
+          "params": {
+            "table_name": "evals_orders",
+            "no_days": 14
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_tableSqlList",
+          "params": {
+            "table_name": "evals_orders",
+            "no_days": 14
+          }
+        }
+      ],
+      "actual_output": "Here are all the queries run against the **evals_orders** table over the last 14 days:\n\n## Summary\nFound **16 queries** executed by **DEMO_USER** on **June 23, 2026**\n\n## Query Types\n\n### 1. **Data Retrieval Queries**\n- `SELECT * FROM demo_user.evals_orders WHERE amount > 500` (2 occurrences)\n- `SELECT TOP 5 * FROM demo_user.evals_orders` (4 occurrences)\n- `SELECT COUNT(*) FROM demo_user.evals_orders` (2 occurrences)\n\n### 2. **Metadata Queries**\n- `SHOW TABLE demo_user.evals_orders` (5 occurrences)\n\n### 3. **Table Affinity Analysis**\n- Complex query analyzing which tables are queried together with evals_orders (3 occurrences)\n  - This query joins `DBC.DBQLObjTbl` with `DBC.DBQLogTbl` to find co-occurring tables in queries\n\n## Key Observations\n- All queries were executed by the **DEMO_USER** account\n- Most activity occurred on **June 23, 2026** around **20:38 - 21:17**\n- The most common operations were:\n  - Previewing the table structure (`SHOW TABLE`)\n  - Sampling data (`TOP 5`)\n  - Filtering records by amount (`WHERE amount > 500`)\n  - Analyzing table relationships (affinity analysis)\n\nAll queries appear to be exploratory in nature, focused on understanding the table structure and its relationships with other tables in the database.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_userSqlList_happy",
+      "case_type": "happy_path",
+      "description": "Show queries executed by a specific user over the past 14 days",
+      "input": "Show me what queries John_Smith has been executing over the past 14 days.",
+      "expected_tools": [
+        {
+          "name": "dba_userSqlList",
+          "params": {
+            "user_name": "John_Smith",
+            "no_days": 14
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_userSqlList",
+          "params": {
+            "user_name": "John_Smith",
+            "no_days": 14
+          }
+        }
+      ],
+      "actual_output": "Based on the query results, **no SQL queries were found** for user `John_Smith` in the past 14 days.\n\nThis could mean:\n- The user hasn't executed any queries during this period\n- The username might be slightly different (case-sensitive or with different formatting)\n- The query logging may not have captured activity for this user\n- The DBQL (Database Query Logging) data may have been purged or not enabled for this user\n\nWould you like me to:\n1. Check if there are any sessions currently active for John_Smith?\n2. Try searching with a different username variation?\n3. Look at a longer time period?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_databaseSpace_happy",
+      "case_type": "happy_path",
+      "description": "Storage allocated to the evals database",
+      "input": "How much disk space is allocated to the demo_user database?",
+      "expected_tools": [
+        {
+          "name": "dba_databaseSpace",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_databaseSpace",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "actual_output": "The **demo_user** database has the following disk space allocation:\n\n- **Space Allocated**: 78.0 GB\n- **Space Used**: 0.0 GB\n- **Free Space**: 78.0 GB\n- **Percent Used**: 0.0%\n\nThe database has 78 GB of space allocated to it, and currently none of that space is being used - it's completely empty.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_tableUsageImpact_happy",
+      "case_type": "happy_path",
+      "description": "Which users are consuming the most resources in the evals database",
+      "input": "Which users are consuming the most resources in demo_user?",
+      "expected_tools": [
+        {
+          "name": "dba_tableUsageImpact",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_tableUsageImpact",
+          "params": {
+            "database_name": "demo_user"
+          }
+        },
+        {
+          "name": "dba_resusageSummary",
+          "params": {
+            "no_days": 30
+          }
+        }
+      ],
+      "actual_output": "Perfect! Based on the system-wide resource usage data, I can see that **DEMO_USER** is the primary user consuming resources. Here's a summary of their resource consumption over the last 30 days:\n\n## Resource Consumption by DEMO_USER\n\n### Summary Statistics:\n- **Primary User**: DEMO_USER (most active)\n- **Secondary User**: DBC (minimal system activity)\n\n### DEMO_USER Activity Breakdown:\n\n**Top Resource-Consuming Periods:**\n\n1. **June 19, 1:00 AM (Friday)** - Highest CPU Usage\n   - 147 queries\n   - **24.20 CPU seconds**\n   - 3.71 GB I/O\n   - Workload: Query/Answers via PYTHON3\n\n2. **June 15, 6:00 PM (Monday)**\n   - 366 queries\n   - **12.32 CPU seconds**\n   - 3.23 GB I/O\n   - Workload: Query/Answers via PYTHON3\n\n3. **June 23, 7:00 PM (Tuesday)**\n   - 64 queries\n   - **5.73 CPU seconds**\n   - 1.97 GB I/O\n   - Workload: Query/Answers via PYTHON3\n\n4. **June 8, 5:00 PM (Monday)** - ETL Activity\n   - 1,957 requests\n   - **3.17 CPU seconds**\n   - 0.64 GB I/O\n   - Workload: ETL/ELT via BTEQ\n\n### Key Insights:\n- **Application Tools**: Primarily PYTHON3, some BTEQ for ETL\n- **Workload Types**: Mostly \"Answers\" complexity queries and some ETL/System operations\n- **Pattern**: Activity spans multiple days with peak usage during evening hours (5-7 PM) and some overnight processing (1 AM)\n- **DEMO_USER** is essentially the only active user in the system (aside from minimal DBC system activity)\n\nWould you like me to drill down into specific time periods or analyze the types of queries being run?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_resusageSummary_happy",
+      "case_type": "happy_path",
+      "description": "System-wide CPU/memory/IO by application over the past month",
+      "input": "Show me how much CPU, memory, and I/O was consumed over the past month, grouped by application.",
+      "expected_tools": [
+        {
+          "name": "dba_resusageSummary",
+          "params": {
+            "no_days": 30
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_resusageSummary",
+          "params": {
+            "no_days": 30
+          }
+        }
+      ],
+      "actual_output": "Based on the resource usage data from the past 30 days, here's a summary of CPU, memory, and I/O consumption grouped by application:\n\n## **Resource Consumption by Application (Past 30 Days)**\n\n### **PYTHON3 (Primary Application)**\n- **Request Count**: 1,495+ requests\n- **Total CPU Time**: 46+ seconds\n- **Total I/O Operations**: 234,546+ logical I/O\n- **Total I/O Volume**: ~15+ GB logical I/O\n- **Physical I/O**: ~132 operations, ~8 MB physical I/O\n- **Workload Types**: \n  - QUERY (Answers) - majority\n  - ETL/ELT (System/Procedural)\n  - OTHER (System/Procedural)\n\n### **BTEQ (Batch Processing)**\n- **Request Count**: 1,957 requests\n- **Total CPU Time**: 3.17 seconds\n- **Total I/O Operations**: 19,923 logical I/O\n- **Total I/O Volume**: 0.64 GB logical I/O\n- **Physical I/O**: 277 operations, ~4.5 MB physical I/O\n- **Workload Type**: ETL/ELT (System/Procedural)\n- **Peak Usage**: June 8th at 5 PM\n\n### **NODE (System Process)**\n- **Request Count**: 2 requests\n- **Total CPU Time**: 0.024 seconds\n- **Total I/O Operations**: 20 logical I/O\n- **Total I/O Volume**: 0.0006 GB logical I/O\n- **User**: DBC (system user)\n- **Workload Type**: OTHER (System/Procedural)\n\n### **Key Insights:**\n1. **PYTHON3 dominates resource usage** - accounting for the vast majority of CPU, I/O, and request volume\n2. **Peak hours**: Generally between 5-7 PM on weekdays\n3. **Workload pattern**: Most activity is analytical queries (\"Answers\" complexity)\n4. **I/O efficiency**: Low physical I/O relative to logical I/O indicates good caching\n\nWould you like me to drill down into any specific application, time period, or workload type?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_databaseVersion_happy",
+      "case_type": "happy_path",
+      "description": "Get current Teradata software version",
+      "input": "What release of Teradata software is currently running on our system?",
+      "expected_tools": [
+        {
+          "name": "dba_databaseVersion",
+          "params": {}
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_databaseVersion",
+          "params": {}
+        }
+      ],
+      "actual_output": "Your Teradata system is currently running:\n\n- **Version/Release**: 20.00.24.60\n- **Language Support Mode**: Standard\n\nThis is Teradata Database version 20.00, which is part of the Teradata Vantage platform. The build/maintenance level is 24.60.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_flowControl_happy",
+      "case_type": "happy_path",
+      "description": "System throttling and delay statistics for a date range",
+      "input": "Show me the system throttling and flow control delay statistics from January 15th 2024 through February 28th 2024.",
+      "expected_tools": [
+        {
+          "name": "dba_flowControl",
+          "params": {
+            "start_date": "2024-01-15",
+            "end_date": "2024-02-28"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_flowControl",
+          "params": {
+            "start_date": "2024-01-15",
+            "end_date": "2024-02-28"
+          }
+        }
+      ],
+      "actual_output": "Based on the query results, **no flow control events or throttling delays were recorded** during the period from January 15th, 2024 through February 28th, 2024.\n\nThis indicates that:\n\n- The Teradata workload management system did not impose any flow control restrictions during this timeframe\n- There were no resource constraint conditions that required the system to throttle or delay queries\n- The system had sufficient capacity to handle the workload without triggering flow control mechanisms\n\n**What this means:**\nFlow control events typically occur when the system experiences resource pressure (CPU, I/O, memory, or AMP worker task exhaustion). The absence of flow control events suggests the system was operating within its capacity limits throughout this period.\n\nIf you're investigating performance issues during this timeframe, you may want to look at:\n- User-level query delays using the **dba_userDelay** tool to see if queries were waiting in queues\n- Resource consumption patterns using **dba_resusageSummary** to understand overall system utilization\n- Specific query performance from the query logs\n\nWould you like me to investigate any of these alternative performance metrics?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_featureUsage_happy",
+      "case_type": "happy_path",
+      "description": "Feature utilization metrics for a date range",
+      "input": "Show me how different Teradata features were being utilized by our users between January 15th, 2024 and March 31st, 2024.",
+      "expected_tools": [
+        {
+          "name": "dba_featureUsage",
+          "params": {
+            "start_date": "2024-01-15",
+            "end_date": "2024-03-31"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_featureUsage",
+          "params": {
+            "start_date": "2024-01-15",
+            "end_date": "2024-03-31"
+          }
+        }
+      ],
+      "actual_output": "Based on the query results, **no Teradata feature usage data was found** for the period between January 15th, 2024 and March 31st, 2024.\n\nThis could mean:\n\n1. **No query logs available**: The DBC.DBQLogTbl (query logging table) may not contain data for this time period\n2. **Query logging not enabled**: Feature usage tracking requires query logging to be enabled on the Teradata system\n3. **Logs aged out**: Historical query logs may have been purged before this date range\n4. **No queries executed**: No user queries were run during this period (unlikely)\n\n**To investigate further, you could:**\n\n- Check what date ranges ARE available in the query logs\n- Verify that query logging is enabled on your Teradata system\n- Check with your DBA about log retention policies\n- Try a more recent date range to see if current data is being captured\n\nWould you like me to check what query log data is available or investigate a different time period?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_userDelay_happy",
+      "case_type": "happy_path",
+      "description": "How long users waited in queues for a date range",
+      "input": "Show me how long users were waiting in the query queue between March 1st 2024 and March 31st 2024.",
+      "expected_tools": [
+        {
+          "name": "dba_userDelay",
+          "params": {
+            "start_date": "2024-03-01",
+            "end_date": "2024-03-31"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_userDelay",
+          "params": {
+            "start_date": "2024-03-01",
+            "end_date": "2024-03-31"
+          }
+        }
+      ],
+      "actual_output": "Based on the query results for March 1-31, 2024, **there were no queries that experienced any queue delays during this period**. \n\nThe query specifically looks for instances where `DelayTime > 0`, meaning queries that had to wait in the queue before execution. Since no records were returned, this indicates that:\n\n- All queries during March 2024 were able to execute immediately without waiting\n- The system had sufficient resources available to handle the workload\n- No workload management throttling or queueing occurred during this time period\n\nThis is generally a positive indicator of system performance, suggesting that the Teradata system had adequate capacity to handle the query workload during March 2024 without requiring users to wait in queues.\n\nIf you'd like to:\n- Check a different time period that might have had more activity\n- Look at system-level flow control events (which would show throttling at the workload management level)\n- Investigate resource usage patterns during this period\n\nJust let me know!",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_sessionInfo_happy",
+      "case_type": "happy_path",
+      "description": "Active sessions for a specific user",
+      "input": "Show me what active connections the database user SALES_ADMIN currently has open in Teradata.",
+      "expected_tools": [
+        {
+          "name": "dba_sessionInfo",
+          "params": {
+            "user_name": "SALES_ADMIN"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_sessionInfo",
+          "params": {
+            "user_name": "SALES_ADMIN"
+          }
+        }
+      ],
+      "actual_output": "The query returned no results, which means the database user **SALES_ADMIN** currently has **no active connections** open in Teradata.\n\nThis could mean:\n- The user is not currently logged in\n- All sessions for this user have been closed\n- The user account exists but has no active sessions at this moment\n\nIf you were expecting to see active sessions, you may want to verify:\n- The exact username spelling (it's case-insensitive in the query)\n- Whether the user has recently disconnected\n- If there are any connection issues preventing login",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_systemSpace_happy",
+      "case_type": "happy_path",
+      "description": "Total disk consumption across all databases",
+      "input": "How much disk capacity is currently being consumed across all databases in our data warehouse?",
+      "expected_tools": [
+        {
+          "name": "dba_systemSpace",
+          "params": {}
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_systemSpace",
+          "params": {}
+        }
+      ],
+      "actual_output": "## Data Warehouse Disk Capacity Summary\n\nHere's the current disk space consumption across all databases in your data warehouse:\n\n| Metric | Value |\n|--------|-------|\n| **Space Used** | 0 GB |\n| **Space Allocated** | 92 GB |\n| **Percentage Used** | 0% |\n| **Free Space** | 92 GB |\n\n### Key Findings:\n\n- **Total Allocated Capacity**: 92 GB has been allocated across all databases\n- **Current Consumption**: Effectively 0 GB is currently being used (less than 1 GB)\n- **Available Space**: 92 GB remains available for use\n- **Utilization Rate**: 0% - your data warehouse is essentially empty or has minimal data\n\nThis indicates that your data warehouse has plenty of available capacity and is currently consuming very little disk space. If you'd like to see which specific databases or tables are using space, I can drill down into:\n- Space usage by individual database using `dba_databaseSpace`\n- Space usage by tables within a specific database using `dba_tableSpace`",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_tableSpace_ambiguous_vs_databaseSpace",
+      "case_type": "ambiguous_selection",
+      "description": "Ranking tables by size inside one database should prefer dba_tableSpace, not dba_databaseSpace",
+      "input": "Which tables in demo_user are using the most disk space?",
+      "expected_tools": [
+        {
+          "name": "dba_tableSpace",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_tableSpace",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "actual_output": "Here are the tables in the **demo_user** database ranked by disk space usage:\n\n| **Table Name** | **Current Space (bytes)** | **Peak Space (bytes)** | **Skew %** |\n|---|---|---|---|\n| **get_data** | 294,912 | 294,912 | 35.71% |\n| **remove_data** | 262,144 | 262,144 | 33.33% |\n| **evals_orders** | 196,608 | 196,608 | 0.0% |\n| **space_report** | 196,608 | 196,608 | 25.0% |\n| **evals_employees** | 196,608 | 196,608 | 0.0% |\n\n**Key Findings:**\n- **Total database space:** 1,146,880 bytes (~1.09 MB)\n- **Largest table:** `get_data` uses 294,912 bytes (~288 KB), representing about 26% of the database\n- **Second largest:** `remove_data` uses 262,144 bytes (~256 KB), about 23% of the database\n- **Data skew:** Both `get_data` (35.71%) and `remove_data` (33.33%) show significant data skew across AMPs, while `evals_orders` and `evals_employees` have perfect distribution (0% skew)\n\nThe top two tables (`get_data` and `remove_data`) account for nearly half of the database's disk usage.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_databaseSpace_ambiguous_vs_systemSpace",
+      "case_type": "ambiguous_selection",
+      "description": "Storage for one named database should prefer dba_databaseSpace, not dba_systemSpace",
+      "input": "How much total space is the demo_user database using?",
+      "expected_tools": [
+        {
+          "name": "dba_databaseSpace",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_databaseSpace",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "actual_output": "The **demo_user** database has the following disk space usage:\n\n- **Space Allocated**: 78.0 GB\n- **Space Used**: 0.0 GB\n- **Free Space**: 78.0 GB\n- **Percent Used**: 0.0%\n\nThe database currently has 78 GB of space allocated to it but is not using any of that space yet (0.0 GB used). This means the database exists but either has no tables in it or the tables are empty.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_systemSpace_ambiguous_vs_databaseSpace",
+      "case_type": "ambiguous_selection",
+      "description": "Warehouse-wide storage across all databases should prefer dba_systemSpace, not dba_databaseSpace",
+      "input": "What is the total disk usage across the entire Teradata system?",
+      "expected_tools": [
+        {
+          "name": "dba_systemSpace",
+          "params": {}
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_systemSpace",
+          "params": {}
+        }
+      ],
+      "actual_output": "Based on the system-wide disk space analysis, here's the total disk usage across your entire Teradata system:\n\n## System Disk Space Summary\n\n- **Total Space Allocated**: 92 GB\n- **Space Currently Used**: 0 GB\n- **Percentage Used**: 0%\n- **Free Space Available**: 92 GB\n\nThe system currently has 92 GB of total allocated disk space with essentially no space being used at this time. This indicates either a new system or one that has been recently cleaned/reset with minimal data loaded.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_tableSqlList_ambiguous_vs_userSqlList",
+      "case_type": "ambiguous_selection",
+      "description": "Queries run against a table should prefer dba_tableSqlList, not dba_userSqlList",
+      "input": "What SQL has been executed against evals_orders in the past week?",
+      "expected_tools": [
+        {
+          "name": "dba_tableSqlList",
+          "params": {
+            "table_name": "evals_orders",
+            "no_days": 7
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_tableSqlList",
+          "params": {
+            "table_name": "evals_orders",
+            "no_days": 7
+          }
+        }
+      ],
+      "actual_output": "Based on the query log for the `evals_orders` table over the past week, here are the SQL statements that have been executed:\n\n## Summary of SQL Activity\n\n**User:** DEMO_USER  \n**Time Period:** Past 7 days (mostly from June 23, 2026)\n\n### Main Query Types:\n\n1. **Table Preview Queries:**\n   - `SELECT TOP 5 * FROM demo_user.evals_orders`\n   - Multiple executions to sample the table data\n\n2. **Filtered Data Retrieval:**\n   - `SELECT * FROM demo_user.evals_orders WHERE amount > 500`\n   - Executed multiple times to retrieve orders with amounts greater than 500\n\n3. **Count Queries:**\n   - `SELECT COUNT(*) FROM demo_user.evals_orders`\n   - Used to get total row counts\n\n4. **Table Metadata:**\n   - `SHOW TABLE demo_user.evals_orders`\n   - Multiple executions to view table structure\n\n5. **Table Affinity Analysis:**\n   - Complex query joining `DBC.DBQLObjTbl` and `DBC.DBQLogTbl` to analyze which tables are queried together with `evals_orders`\n   - This appears to be an internal system query for understanding table relationships\n\n### Key Observations:\n\n- All queries were executed by the **DEMO_USER** account\n- Most activity occurred on **June 23, 2026** between 20:38 and 21:17\n- The queries are primarily **read operations** (SELECT statements)\n- No INSERT, UPDATE, DELETE, or DDL operations were detected\n- Common patterns include data sampling, filtering, and metadata inspection\n\nThe table appears to be used mainly for data exploration and analysis purposes during this period.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_userSqlList_ambiguous_vs_tableSqlList",
+      "case_type": "ambiguous_selection",
+      "description": "Queries run by a specific user should prefer dba_userSqlList, not dba_tableSqlList",
+      "input": "List all SQL statements that user ANALYTICS_USER has run over the past 7 days.",
+      "expected_tools": [
+        {
+          "name": "dba_userSqlList",
+          "params": {
+            "user_name": "ANALYTICS_USER",
+            "no_days": 7
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_userSqlList",
+          "params": {
+            "user_name": "ANALYTICS_USER",
+            "no_days": 7
+          }
+        }
+      ],
+      "actual_output": "The query returned **no SQL statements** for user ANALYTICS_USER over the past 7 days.\n\nThis could mean:\n1. **The user has not run any queries** in the past 7 days\n2. **Query logging is not enabled** or not capturing data for this user\n3. **The user name may be incorrect** - Teradata user names are case-sensitive\n4. **Query log data may have been purged** or is not being retained\n\n**Suggestions:**\n- Verify the exact user name (check capitalization)\n- Check if query logging (DBQL) is enabled on the system\n- Try expanding the time range beyond 7 days to see if historical data exists\n- Verify that the user actually has been running queries during this period\n\nWould you like me to:\n- Check with a different user name?\n- Extend the time range (e.g., 30 days)?\n- List all active users who have run queries recently?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_tableUsageImpact_ambiguous_vs_resusageSummary",
+      "case_type": "ambiguous_selection",
+      "description": "Heavy users of a specific database should prefer dba_tableUsageImpact, not dba_resusageSummary",
+      "input": "Who is generating the heaviest workload against demo_user?",
+      "expected_tools": [
+        {
+          "name": "dba_tableUsageImpact",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_tableUsageImpact",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "actual_output": "The query returned no results, which means there's no recorded workload activity against the **demo_user** database in the DBQL (Database Query Log) tables.\n\nThis could happen for several reasons:\n\n1. **DBQL logging may not be enabled** for queries against this database\n2. **No recent query activity** has occurred against demo_user tables\n3. **The database may be empty** or not actively used\n4. **DBQL retention period** may have expired and historical data has been purged\n\nTo investigate further, I can:\n- Check if the demo_user database exists and contains tables\n- Look at system-wide resource usage to see if there's activity elsewhere\n- Check session information to see if there are active connections\n\nWould you like me to check if the demo_user database exists and what tables it contains?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_resusageSummary_ambiguous_vs_tableUsageImpact",
+      "case_type": "ambiguous_selection",
+      "description": "System-wide CPU/memory/I/O by application should prefer dba_resusageSummary, not dba_tableUsageImpact",
+      "input": "Break down CPU, memory, and I/O consumption by application over the last 30 days.",
+      "expected_tools": [
+        {
+          "name": "dba_resusageSummary",
+          "params": {
+            "no_days": 30
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_resusageSummary",
+          "params": {
+            "no_days": 30
+          }
+        }
+      ],
+      "actual_output": "Based on the resource usage data over the last 30 days, here's the breakdown of CPU, memory, and I/O consumption by application:\n\n## **Resource Consumption by Application (Last 30 Days)**\n\n### **Primary Applications Identified:**\n\n#### **1. PYTHON3 (Dominant Application)**\n- **Request Count:** 577 total requests across various workloads\n- **CPU Usage:** \n  - Peak session: 24.20 seconds (AMPCPUTime) on June 19\n  - Average range: 1.40 - 12.32 seconds per session\n- **I/O Consumption:**\n  - Peak logical I/O: **85,309 operations** (3.71 GB)\n  - Typical range: 7,547 - 85,309 I/O operations\n  - Physical I/O: Minimal (0 - 71 operations), indicating good caching\n- **Workload Types:**\n  - Query/Answers (primary)\n  - ETL/ELT\n  - System/Procedural\n\n#### **2. BTEQ (Batch Processing)**\n- **Request Count:** 1,957 requests\n- **CPU Usage:** 3.17 seconds (AMPCPUTime)\n- **I/O Consumption:**\n  - Logical I/O: 19,923 operations (0.64 GB)\n  - Physical I/O: 277 operations (4.53 MB)\n- **Workload Type:** ETL/ELT System/Procedural\n\n#### **3. NODE (System Operations)**\n- **Request Count:** 2 requests (minimal activity)\n- **CPU Usage:** 0.024 seconds\n- **I/O Consumption:** 20 operations (0.56 MB)\n- **Workload Type:** System/Procedural\n\n### **Key Insights:**\n\n1. **PYTHON3 dominates resource consumption** - responsible for the majority of query workloads and highest CPU/I/O usage\n2. **Excellent cache efficiency** - Very low physical I/O compared to logical I/O indicates data is mostly served from cache\n3. **Peak activity periods:**\n   - Monday evenings (18:00-19:00)\n   - Friday early morning (01:00)\n   - Tuesday evening (19:00)\n4. **Workload complexity:** Most queries classified as \"Answers\" complexity with some ETL/ELT procedural work\n\n**Note:** The data shows Total Server Byte Count as 0 across all entries, indicating memory metrics may not be captured in this particular logging configuration. CPU and I/O metrics are fully available and detailed above.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_tableUsageImpact_ambiguous_vs_sessionInfo",
+      "case_type": "ambiguous_selection",
+      "description": "Historical resource consumption by users in a database should prefer dba_tableUsageImpact, not dba_sessionInfo",
+      "input": "Which users have been consuming the most CPU and query resources in demo_user over time?",
+      "expected_tools": [
+        {
+          "name": "dba_tableUsageImpact",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_tableUsageImpact",
+          "params": {
+            "database_name": "demo_user"
+          }
+        },
+        {
+          "name": "dba_resusageSummary",
+          "params": {
+            "no_days": 30
+          }
+        }
+      ],
+      "actual_output": "Perfect! Based on the resource usage data over the past 30 days, here's what I found about CPU and query resource consumption:\n\n## **CPU and Query Resource Consumption Summary**\n\n### **Top User: DEMO_USER**\n\nThe **DEMO_USER** account has been the dominant consumer of system resources. Here are the key findings:\n\n### **Highest Activity Periods:**\n\n1. **June 19 at 1:00 AM (Friday)** - Peak CPU usage\n   - **24.20 CPU seconds** across 147 queries\n   - 3.71 GB of I/O processed\n   - Workload type: QUERY (Answers complexity)\n\n2. **June 15 at 6:00 PM (Monday)** - High volume\n   - **12.32 CPU seconds** across 366 queries\n   - 3.23 GB of I/O processed\n   - Application: PYTHON3\n\n3. **June 23 at 7:00 PM (Tuesday)**\n   - **5.73 CPU seconds** across 64 queries\n   - 1.97 GB of I/O processed\n\n### **Workload Breakdown:**\n\n- **Query Workload (Answers)**: Most CPU-intensive, typically running analytical queries via PYTHON3\n- **ETL/ELT Operations**: Lower CPU but involved in data loading (using BTEQ on June 8)\n- **System/Procedural**: Administrative tasks with minimal resource consumption\n\n### **Secondary User:**\n- **DBC** (system account): Minimal usage - 0.024 CPU seconds on June 8\n\n### **Key Observations:**\n\n1. **DEMO_USER is the sole significant user** consuming resources in this system\n2. **Python-based applications** are the primary access method\n3. **Peak activity occurs during evening hours** (6-7 PM) and early morning (1 AM)\n4. **Monday and Friday** show the highest activity levels\n5. Total query count ranges from **5 to 366 queries** per session\n\nWould you like me to drill deeper into specific time periods or analyze the SQL queries being executed by DEMO_USER?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_sessionInfo_ambiguous_vs_tableUsageImpact",
+      "case_type": "ambiguous_selection",
+      "description": "Open sessions for a specific user should prefer dba_sessionInfo, not dba_tableUsageImpact",
+      "input": "What active sessions does user SALES_ADMIN currently have open?",
+      "expected_tools": [
+        {
+          "name": "dba_sessionInfo",
+          "params": {
+            "user_name": "SALES_ADMIN"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_sessionInfo",
+          "params": {
+            "user_name": "SALES_ADMIN"
+          }
+        }
+      ],
+      "actual_output": "The user **SALES_ADMIN** currently has **no active sessions** open on the Teradata system.\n\nThis means:\n- The user is not currently logged in\n- There are no open connections or database sessions associated with this user account\n- No queries or operations are being executed under this user's credentials at this time\n\nIf you were expecting to see active sessions, the user may have logged out, their sessions may have timed out, or they simply aren't connected at the moment.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_userDelay_ambiguous_vs_flowControl",
+      "case_type": "ambiguous_selection",
+      "description": "How long users waited in queues should prefer dba_userDelay, not dba_flowControl",
+      "input": "How long were users waiting in the query queue between March 1 and March 31, 2024?",
+      "expected_tools": [
+        {
+          "name": "dba_userDelay",
+          "params": {
+            "start_date": "2024-03-01",
+            "end_date": "2024-03-31"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_userDelay",
+          "params": {
+            "start_date": "2024-03-01",
+            "end_date": "2024-03-31"
+          }
+        }
+      ],
+      "actual_output": "Based on the query results, **there were no user delays in the query queue between March 1 and March 31, 2024**. \n\nThe system found zero instances where users had to wait (DelayTime > 0) before their queries started executing during this period. This indicates that:\n\n- **No queries experienced queue delays** - All queries were able to start executing immediately\n- **The system had sufficient capacity** - There were no resource constraints causing queries to wait\n- **Workload management was effective** - No throttling or queuing was necessary\n\nThis is a positive indicator of system performance, suggesting that the Teradata system had adequate resources to handle the workload during March 2024 without requiring users to wait in the query queue.\n\nIf you'd like to check:\n- System-wide throttling and flow control events (even without user delays), I can use the `dba_flowControl` tool\n- Resource usage patterns during this period to understand overall system load\n- A different time period to see if delays occurred at other times\n\nWould you like me to investigate any of these aspects?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_flowControl_ambiguous_vs_userDelay",
+      "case_type": "ambiguous_selection",
+      "description": "System throttling and flow-control statistics should prefer dba_flowControl, not dba_userDelay",
+      "input": "Show throttling and flow-control delay statistics from January 15 through February 28, 2024.",
+      "expected_tools": [
+        {
+          "name": "dba_flowControl",
+          "params": {
+            "start_date": "2024-01-15",
+            "end_date": "2024-02-28"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_flowControl",
+          "params": {
+            "start_date": "2024-01-15",
+            "end_date": "2024-02-28"
+          }
+        }
+      ],
+      "actual_output": "## Throttling and Flow-Control Statistics\n**Period: January 15 - February 28, 2024**\n\n**No flow control events were recorded during this period.**\n\nThe query successfully executed against the Teradata workload management tables (DBC.RESUSAGESAWT, DBC.RESUSAGESVPR, DBC.RESUSAGESPMA), but returned zero rows. This indicates that:\n\n- **No throttling occurred**: The system did not impose any workload management flow control restrictions during this timeframe\n- **No resource-based delays**: Queries were not delayed due to CPU, memory, or I/O resource constraints\n- **Healthy system state**: The absence of flow control events suggests the system had adequate capacity to handle the workload without throttling\n\n**What the report would have shown (if events existed):**\n- Date and time of each flow control event\n- Duration of flow control delays\n- FlowControl% - percentage of time queries were throttled\n- CPU utilization metrics (execution, service, I/O wait, idle percentages)\n- Correlation between CPU pressure and throttling events\n\nThis is generally a positive indicator of system health during the specified period.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_tableSpace_missing_db",
+      "case_type": "missing_parameter",
+      "description": "Agent must ask which database to list biggest tables for",
+      "input": "Show me the biggest tables",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I'd be happy to help you see the biggest tables! However, I need to know which database you'd like to check. \n\nCould you please specify which database you want to see the largest tables for?\n\nFor example:\n- A specific database name (e.g., \"SALES_DB\", \"DEV01_StGeo_STD_T\")\n- Or if you'd like to see system-wide space usage across all databases",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_tableSqlList_missing_table",
+      "case_type": "missing_parameter",
+      "description": "Agent must ask which table to list queries for",
+      "input": "Show me the queries from the last 14 days",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I'd be happy to show you the queries from the last 14 days, but I need a bit more information to give you the most relevant results.\n\nCould you please clarify what type of query history you're looking for?\n\n1. **Queries run by a specific user** - If you want to see queries executed by a particular user account, I can use the user SQL history tool. Please provide the username.\n\n2. **Queries run against a specific table** - If you want to see queries that accessed a particular table, I can use the table SQL history tool. Please provide the table name.\n\n3. **System-wide query activity** - If you want broader system metrics like resource usage, workload patterns, or user activity across the system, I can provide that as well.\n\nWhich would you prefer, and what specific details should I filter by?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_userSqlList_missing_user",
+      "case_type": "missing_parameter",
+      "description": "Agent must ask which user to list queries for",
+      "input": "Show me the queries a user executed over the past 14 days",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I'd be happy to help you retrieve the SQL queries executed by a user over the past 14 days. However, I need to know which specific user account you'd like to analyze.\n\nCould you please provide the username (Teradata user account name) you want to investigate?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_databaseSpace_missing_db",
+      "case_type": "missing_parameter",
+      "description": "Agent must ask which database to get storage for",
+      "input": "How much space is a specific database using?",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I can help you find out how much space a specific database is using. However, I need to know which database you'd like to check.\n\nCould you please provide the name of the database you want to analyze?\n\nOnce you give me the database name, I'll use the `dba_databaseSpace` tool to retrieve its disk space allocation and usage information.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_tableUsageImpact_missing_db",
+      "case_type": "missing_parameter",
+      "description": "Agent must ask which database to evaluate usage impact for",
+      "input": "Which users are hitting a particular database the most?",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I'd be happy to help you identify which users are most actively querying a particular database. However, I need to know which database you want to analyze.\n\n**Could you please specify the database name?**\n\nOnce you provide the database name, I'll use the `dba_tableUsageImpact` tool to show you:\n- Which users are generating the most query activity\n- Which tables are being accessed most frequently\n- Resource consumption patterns (CPU, IO, etc.)\n- Query counts and activity metrics\n\nFor example, if you want to analyze a database called \"SALES_DB\" or \"CUSTOMER_DATA\", just let me know the name and I'll retrieve the usage statistics for you.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "dba_databaseSpace_clarify_then_call",
+      "case_type": "missing_parameter",
+      "description": "Agent asks which database, then calls dba_databaseSpace after user clarifies",
+      "input": "Turn 1: How much space is a specific database using? | Turn 2: How much disk space is the demo_user database using?",
+      "expected_tools": [
+        {
+          "name": "dba_databaseSpace",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_databaseSpace",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "actual_output": "The **demo_user** database has the following disk space usage:\n\n- **Space Allocated**: 78.0 GB\n- **Space Used**: 0.0 GB\n- **Free Space**: 78.0 GB\n- **Percent Used**: 0.0%\n\nThe database currently has 78 GB of space allocated to it but is not using any of that space at the moment. This suggests the database either has no tables/data yet, or the tables are empty.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": [
+        {
+          "turn": 1,
+          "input": "How much space is a specific database using?",
+          "mode": "clarification",
+          "passed": true,
+          "actual_tools": []
+        },
+        {
+          "turn": 2,
+          "input": "How much disk space is the demo_user database using?",
+          "mode": "tool",
+          "passed": true,
+          "actual_tools": [
+            {
+              "name": "dba_databaseSpace",
+              "params": {
+                "database_name": "demo_user"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "dba_tableSqlList_clarify_then_call",
+      "case_type": "missing_parameter",
+      "description": "Agent asks which table, then calls dba_tableSqlList after user clarifies",
+      "input": "Turn 1: Show me the queries from the last 14 days | Turn 2: List SQL run against evals_orders over the past 14 days",
+      "expected_tools": [
+        {
+          "name": "dba_tableSqlList",
+          "params": {
+            "table_name": "evals_orders",
+            "no_days": 14
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_tableSqlList",
+          "params": {
+            "table_name": "evals_orders",
+            "no_days": 14
+          }
+        }
+      ],
+      "actual_output": "Here are the SQL queries that have been run against the **evals_orders** table over the past 14 days:\n\n## Query Summary\n\nAll queries were executed by **DEMO_USER** on **June 23, 2026**. Here are the distinct types of queries found:\n\n### 1. **Data Exploration Queries**\n```sql\nSELECT TOP 5 * FROM demo_user.evals_orders\n```\n- Simple preview queries to see sample data\n\n### 2. **Filtered Queries**\n```sql\nSELECT * FROM demo_user.evals_orders WHERE amount > 500\n```\n- Filtering orders where amount exceeds 500\n\n### 3. **Count Queries**\n```sql\nSELECT COUNT(*) FROM demo_user.evals_orders\n```\n- Getting total row counts\n\n### 4. **Schema Inspection**\n```sql\nSHOW TABLE demo_user.evals_orders\n```\n- Checking table structure and metadata\n\n### 5. **Complex Analytics Query**\n```sql\nLOCKING ROW FOR ACCESS\nSELECT\n    TRIM(QTU2.DatabaseName) AS \"DatabaseName\",\n    TRIM(QTU2.TableName) AS \"TableName\",\n    COUNT(DISTINCT QTU1.QueryID) AS \"QueryCount\",\n    (current_timestamp - min(QTU2.CollectTimeStamp)) day(4) AS \"FirstQueryDaysAgo\",\n    (current_timestamp - max(QTU2.CollectTimeStamp)) day(4) AS \"LastQueryDaysAgo\"\nFROM (... complex join logic ...)\n```\n- Advanced query analyzing table affinity and usage patterns (likely from the system's own metadata tracking)\n\n## Activity Pattern\n- **Most Recent Activity**: June 23, 2026 at 21:17 (9:17 PM)\n- **Primary User**: DEMO_USER\n- **Query Types**: Mix of exploratory queries, basic filtering, and metadata inspection\n\nThe queries show typical exploratory and analytical activity, with users examining the data, checking counts, and filtering based on the `amount` column.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": [
+        {
+          "turn": 1,
+          "input": "Show me the queries from the last 14 days",
+          "mode": "clarification",
+          "passed": true,
+          "actual_tools": []
+        },
+        {
+          "turn": 2,
+          "input": "List SQL run against evals_orders over the past 14 days",
+          "mode": "tool",
+          "passed": true,
+          "actual_tools": [
+            {
+              "name": "dba_tableSqlList",
+              "params": {
+                "table_name": "evals_orders",
+                "no_days": 14
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "dba_userSqlList_clarify_then_call",
+      "case_type": "missing_parameter",
+      "description": "Agent asks which user, then calls dba_userSqlList after user clarifies",
+      "input": "Turn 1: Show me the queries a user executed over the past 14 days | Turn 2: List all SQL that user ANALYTICS_USER has run over the last 14 days",
+      "expected_tools": [
+        {
+          "name": "dba_userSqlList",
+          "params": {
+            "user_name": "ANALYTICS_USER",
+            "no_days": 14
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "dba_userSqlList",
+          "params": {
+            "user_name": "ANALYTICS_USER",
+            "no_days": 14
+          }
+        }
+      ],
+      "actual_output": "The query completed successfully, but **no SQL statements were found** for user **ANALYTICS_USER** over the last 14 days.\n\nThis could mean:\n- The user hasn't executed any queries in the past 14 days\n- The user account name might be slightly different (case-sensitive or has extra spaces)\n- Query logging may not be enabled or may have been purged\n- The user might be running queries under a different username\n\n**Would you like me to:**\n1. Check if there are any active sessions for this user?\n2. Verify the exact username exists in the system?\n3. Try a different time period or different username?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": [
+        {
+          "turn": 1,
+          "input": "Show me the queries a user executed over the past 14 days",
+          "mode": "clarification",
+          "passed": true,
+          "actual_tools": []
+        },
+        {
+          "turn": 2,
+          "input": "List all SQL that user ANALYTICS_USER has run over the last 14 days",
+          "mode": "tool",
+          "passed": true,
+          "actual_tools": [
+            {
+              "name": "dba_userSqlList",
+              "params": {
+                "user_name": "ANALYTICS_USER",
+                "no_days": 14
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "dba_unknown_tool_missing",
+      "case_type": "missing_parameter",
+      "description": "User asks for something no DBA tool supports \u2014 agent should explain and ask for clarification",
+      "input": "Automatically redistribute my table data across AMPs to improve skew",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I understand you want to redistribute table data across AMPs to improve skew, but I need more information to help you effectively:\n\n## Required Information:\n\n1. **Which table** do you want to redistribute? (Please provide the full table name)\n2. **Which database** is it in?\n\n## Additional Context That Would Help:\n\n3. Do you know if the table currently has high skew? (Have you measured CPU skew or data distribution skew?)\n4. What is the current Primary Index (PI) of the table?\n5. Do you have a candidate column or set of columns in mind for a new Primary Index?\n\n## What I Can Do For You:\n\nOnce you provide the table and database name, I can:\n\n- **Analyze current skew patterns** using SQL optimization tools (check CPU skew, I/O skew)\n- **Examine the table's schema** and current Primary Index\n- **Identify high-cardinality columns** that might make good PI candidates\n- **Generate a redistribution strategy** (ALTER TABLE with new UPI or NUPI)\n- **Create the DDL** to redistribute the data\n\n## Note on Redistribution:\n\nRedistributing data typically involves:\n- Changing the Primary Index definition (which controls AMP distribution)\n- This triggers a full table redistribution across all AMPs\n- For large tables, this can be resource-intensive\n\n**Please provide the table name and database name so I can analyze and help you redistribute the data.**",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "plot_line_chart_happy",
+      "case_type": "happy_path",
+      "description": "Line chart of order amounts over time from evals_orders",
+      "input": "Show me a line chart of order amounts over time from demo_user.evals_orders using order_date on the x-axis and amount on the y-axis",
+      "expected_tools": [
+        {
+          "name": "plot_line_chart",
+          "params": {
+            "table_name": "demo_user.evals_orders",
+            "labels": "order_date",
+            "columns": [
+              "amount"
+            ]
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "plot_line_chart",
+          "params": {
+            "table_name": "demo_user.evals_orders",
+            "labels": "order_date",
+            "columns": "amount"
+          }
+        },
+        {
+          "name": "base_readQuery",
+          "params": {
+            "sql": "SELECT order_date, CAST(amount AS FLOAT) as amount FROM demo_user.evals_orders ORDER BY order_date"
+          }
+        }
+      ],
+      "actual_output": "Perfect! Here's the data from your evals_orders table showing order amounts over time:\n\n## Order Amounts Over Time - Line Chart Data\n\n| Order Date | Amount |\n|------------|---------|\n| 2024-01-05 | $1,250.00 |\n| 2024-01-12 | -$200.00 |\n| 2024-02-03 | $875.50 |\n| 2024-02-17 | $3,400.00 |\n| 2024-03-01 | $560.00 |\n| 2024-03-15 | -$150.00 |\n| 2024-04-02 | $2,100.00 |\n| 2024-04-20 | $930.00 |\n| 2024-05-08 | $1,780.00 |\n| 2024-05-25 | $4,200.00 |\n\nThe data shows order amounts from January through May 2024. Notable observations:\n- **Highest order**: $4,200 on May 25, 2024\n- **Two negative amounts**: -$200 (Jan 12) and -$150 (Mar 15), which may represent returns or refunds\n- **Overall trend**: Generally positive with some fluctuation, peaking in late May\n\nThe line chart would show the progression of order amounts over this ~5-month period, with the negative values creating dips in January and March, and a strong upward movement toward the May peak.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "plot_pie_chart_happy",
+      "case_type": "happy_path",
+      "description": "Pie chart breaking down orders by product category",
+      "input": "Plot demo_user.evals_orders as a pie chart using product_category for the slice labels and amount for the values.",
+      "expected_tools": [
+        {
+          "name": "plot_pie_chart",
+          "params": {
+            "table_name": "demo_user.evals_orders",
+            "labels": "product_category",
+            "column": "amount"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "plot_pie_chart",
+          "params": {
+            "table_name": "demo_user.evals_orders",
+            "labels": "product_category",
+            "column": "amount"
+          }
+        },
+        {
+          "name": "base_readQuery",
+          "params": {
+            "sql": "SELECT product_category, CAST(SUM(amount) AS FLOAT) as amount FROM demo_user.evals_orders GROUP BY product_category"
+          }
+        }
+      ],
+      "actual_output": "I can see the data aggregated by product category. Here's the breakdown:\n\n**Amount by Product Category:**\n- **Electronics**: $6,430.00 (largest category)\n- **Sports**: $6,300.00\n- **Food**: $1,805.50\n- **Books**: $560.00\n- **Clothing**: -$350.00 (negative value, likely returns/refunds)\n\nUnfortunately, there appears to be a technical issue with the direct pie chart plotting function and decimal data types. The data shows that Electronics and Sports dominate the sales, together accounting for the vast majority of the total amount, while Clothing has a negative value which may represent returns or refunds.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "plot_polar_chart_happy",
+      "case_type": "happy_path",
+      "description": "Polar area chart of order amounts by product category",
+      "input": "Create a polar area chart showing order amounts by product_category from demo_user.evals_orders",
+      "expected_tools": [
+        {
+          "name": "plot_polar_chart",
+          "params": {
+            "table_name": "demo_user.evals_orders",
+            "labels": "product_category",
+            "column": "amount"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "plot_polar_chart",
+          "params": {
+            "table_name": "demo_user.evals_orders",
+            "labels": "product_category",
+            "column": "order_amount"
+          }
+        },
+        {
+          "name": "base_columnDescription",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        },
+        {
+          "name": "plot_polar_chart",
+          "params": {
+            "table_name": "demo_user.evals_orders",
+            "labels": "product_category",
+            "column": "amount"
+          }
+        },
+        {
+          "name": "base_readQuery",
+          "params": {
+            "sql": "SELECT product_category, CAST(SUM(amount) AS FLOAT) as total_amount FROM demo_user.evals_orders GROUP BY product_category",
+            "persist": true
+          }
+        },
+        {
+          "name": "plot_polar_chart",
+          "params": {
+            "column": "total_amount",
+            "labels": "product_category",
+            "table_name": "vt_d842dc42_33bd_41"
+          }
+        }
+      ],
+      "actual_output": "",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "plot_radar_chart_happy",
+      "case_type": "happy_path",
+      "description": "Radar chart of salary by department in evals_employees",
+      "input": "Draw a spider chart from demo_user.evals_employees using department as the axis labels and salary as the values.",
+      "expected_tools": [
+        {
+          "name": "plot_radar_chart",
+          "params": {
+            "table_name": "demo_user.evals_employees",
+            "labels": "department",
+            "columns": "salary"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "plot_radar_chart",
+          "params": {
+            "table_name": "demo_user.evals_employees",
+            "labels": "department",
+            "columns": "salary"
+          }
+        },
+        {
+          "name": "base_readQuery",
+          "params": {
+            "sql": "SELECT department, CAST(AVG(salary) AS DECIMAL(18,2)) as avg_salary \nFROM demo_user.evals_employees \nGROUP BY department \nORDER BY department"
+          }
+        }
+      ],
+      "actual_output": "I see the data shows average salaries by department. Unfortunately, there appears to be a technical issue with the radar chart function handling the Decimal data type from the database. \n\nHere's the salary data by department that would be displayed in the spider chart:\n\n**Department Salary Overview:**\n- **Engineering**: $95,000 (highest)\n- **Finance**: $88,000\n- **Marketing**: $77,000\n- **Sales**: $70,750\n- **HR**: $68,000 (lowest)\n\nThe spider/radar chart would show these five departments as points around the perimeter, with salary values determining how far from the center each point extends. Engineering would have the longest spoke, followed by Finance, Marketing, Sales, and HR.\n\nThis visualization would help compare salary levels across departments at a glance, showing that Engineering has the highest average salaries while HR has the lowest among the five departments.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "plot_line_vs_radar_ambiguous",
+      "case_type": "ambiguous_selection",
+      "description": "Time-series data should use line chart, not radar",
+      "input": "Plot how order amounts change over time from demo_user.evals_orders using order_date on the x-axis",
+      "expected_tools": [
+        {
+          "name": "plot_line_chart",
+          "params": {
+            "table_name": "demo_user.evals_orders",
+            "labels": "order_date",
+            "columns": [
+              "amount"
+            ]
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "plot_line_chart",
+          "params": {
+            "table_name": "demo_user.evals_orders",
+            "labels": "order_date",
+            "columns": "order_amount"
+          }
+        },
+        {
+          "name": "base_columnDescription",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        },
+        {
+          "name": "plot_line_chart",
+          "params": {
+            "table_name": "demo_user.evals_orders",
+            "labels": "order_date",
+            "columns": "amount"
+          }
+        },
+        {
+          "name": "base_readQuery",
+          "params": {
+            "sql": "SELECT order_date, CAST(amount AS FLOAT) as amount FROM demo_user.evals_orders ORDER BY order_date"
+          }
+        }
+      ],
+      "actual_output": "Perfect! I can see the data now. Here's a summary of how order amounts change over time from January to May 2024:\n\n**Order Amounts Over Time (demo_user.evals_orders)**\n\n| Order Date | Amount |\n|------------|---------|\n| 2024-01-05 | $1,250.00 |\n| 2024-01-12 | -$200.00 (return/refund) |\n| 2024-02-03 | $875.50 |\n| 2024-02-17 | $3,400.00 |\n| 2024-03-01 | $560.00 |\n| 2024-03-15 | -$150.00 (return/refund) |\n| 2024-04-02 | $2,100.00 |\n| 2024-04-20 | $930.00 |\n| 2024-05-08 | $1,780.00 |\n| 2024-05-25 | $4,200.00 |\n\n**Key Observations:**\n- The data spans from January to May 2024 with 10 orders\n- Order amounts range from -$200 to $4,200\n- There are two negative amounts (returns/refunds) in January and March\n- The highest order amount ($4,200) occurred on May 25th\n- February 17th also had a significant order at $3,400\n\nThe trend shows some volatility with occasional high-value orders and a couple of returns, with the highest activity value occurring at the end of May.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "plot_pie_vs_polar_ambiguous",
+      "case_type": "ambiguous_selection",
+      "description": "Proportion/share breakdown should use pie chart over polar",
+      "input": "Use a pie chart to show demo_user.evals_orders with product_category as labels and amount as the values.",
+      "expected_tools": [
+        {
+          "name": "plot_pie_chart",
+          "params": {
+            "table_name": "demo_user.evals_orders",
+            "labels": "product_category",
+            "column": "amount"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "plot_pie_chart",
+          "params": {
+            "table_name": "demo_user.evals_orders",
+            "labels": "product_category",
+            "column": "amount"
+          }
+        },
+        {
+          "name": "base_readQuery",
+          "params": {
+            "sql": "SELECT product_category, SUM(amount) as total_amount FROM demo_user.evals_orders GROUP BY product_category"
+          }
+        }
+      ],
+      "actual_output": "Based on the data from demo_user.evals_orders, here's the breakdown by product category:\n\n## Product Category Distribution by Amount\n\n| Product Category | Total Amount |\n|-----------------|--------------|\n| **Electronics** | $6,430.00 |\n| **Sports** | $6,300.00 |\n| **Food** | $1,805.50 |\n| **Books** | $560.00 |\n| **Clothing** | -$350.00 |\n\n**Total:** $14,745.50\n\n**Key Insights:**\n- **Electronics** and **Sports** are the top categories, each accounting for over $6,000 in sales\n- **Food** represents a moderate amount at $1,805.50\n- **Books** contributes $560.00\n- **Clothing** shows a negative value (-$350.00), which may indicate returns or refunds\n\nNote: The pie chart visualization encountered a technical issue with decimal number formatting, but the data summary above provides the complete picture of how amounts are distributed across product categories.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "plot_missing_data",
+      "case_type": "missing_parameter",
+      "description": "Chart request with no table or data provided \u2014 agent must ask for clarification",
+      "input": "Create a chart for me",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I'd be happy to create a chart for you! To do that, I need a bit more information:\n\n1. **What type of chart** would you like?\n   - Line chart (for trends over time)\n   - Pie chart (for proportions/breakdowns)\n   - Polar chart (for circular category comparisons)\n   - Radar/spider chart (for multi-dimensional comparisons)\n\n2. **What data** should be visualized?\n   - Which table/database contains the data?\n   - What columns should be displayed?\n   - Any specific filtering or time period?\n\nFor example, you could say:\n- \"Create a line chart showing sales over time from the Sales table\"\n- \"Create a pie chart of revenue by region from the Revenue_Data table\"\n- \"Show me a radar chart comparing product metrics\"\n\nWhat would you like to visualize?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "plot_pie_chart_direct",
+      "case_type": "happy_path",
+      "description": "Direct pie chart from table \u2014 no pre-query needed since plot tools read tables directly",
+      "input": "Give me a pie chart of amount by product_category from demo_user.evals_orders",
+      "expected_tools": [
+        {
+          "name": "plot_pie_chart",
+          "params": {
+            "table_name": "demo_user.evals_orders",
+            "labels": "product_category",
+            "column": "amount"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "plot_pie_chart",
+          "params": {
+            "table_name": "demo_user.evals_orders",
+            "labels": "product_category",
+            "column": "amount"
+          }
+        },
+        {
+          "name": "base_readQuery",
+          "params": {
+            "sql": "SELECT product_category, SUM(amount) as total_amount FROM demo_user.evals_orders GROUP BY product_category"
+          }
+        }
+      ],
+      "actual_output": "Here's the pie chart breakdown of amount by product category from demo_user.evals_orders:\n\n**Amount by Product Category:**\n\n| Product Category | Total Amount |\n|-----------------|--------------|\n| **Electronics** | $6,430.00 (44.6%) |\n| **Sports** | $6,300.00 (43.7%) |\n| **Food** | $1,805.50 (12.5%) |\n| **Books** | $560.00 (3.9%) |\n| **Clothing** | -$350.00 (-2.4%) |\n\n**Key Insights:**\n- **Electronics** and **Sports** dominate, together accounting for 88.3% of total amount\n- **Clothing** shows a negative amount (-$350), which may indicate returns or refunds\n- Total amount across all categories: **$14,745.50**\n\nNote: The negative value in Clothing suggests there were returns or credit transactions that exceeded sales in that category.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "plot_missing_table",
+      "case_type": "missing_parameter",
+      "description": "Agent must ask which table to plot",
+      "input": "Create a line chart of sales over time",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I'd be happy to help you create a line chart of sales over time! However, I need a few more details to get started:\n\n1. **Table name**: Which table contains the sales data?\n2. **Database name**: Which database is this table in?\n3. **Date/Time column**: What is the name of the column that contains the date or time information?\n4. **Sales column**: What is the name of the column that contains the sales values?\n\nFor example, if you have a table called `sales_data` in database `analytics` with columns `sale_date` and `sales_amount`, I would use those.\n\nCould you provide these details so I can create the line chart for you?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "plot_unknown_tool_missing",
+      "case_type": "missing_parameter",
+      "description": "User asks for a non\u2011existent plot tool",
+      "input": "Show me the network topology as a diagram",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I understand you'd like to see a network topology diagram. However, I need more specific information to help you with this request:\n\n1. **What type of network topology are you referring to?**\n   - Database dependency graph (tables, views, and their relationships)?\n   - Data lineage network (upstream/downstream dependencies)?\n   - System architecture diagram?\n\n2. **Which database or objects would you like to analyze?**\n   - A specific database name?\n   - Specific tables or views?\n   - A pattern like '%WBC%' or '%SALES%'?\n\nThe available tools I have can help you visualize:\n\n- **Database dependency graphs**: Using graph analysis tools, I can show you:\n  - Root objects (starting points with no dependencies)\n  - Downstream dependencies (what depends on what)\n  - Upstream dependencies (what objects depend on)\n  - Circular dependencies (cycles)\n  - Connected components (isolated groups)\n\n- **Table relationship networks**: Show which tables are commonly queried together (affinity analysis)\n\nCould you please clarify:\n- What database or schema you want to analyze?\n- What specific aspect of the topology you're interested in (dependencies, lineage, relationships)?\n\nOnce you provide this information, I can generate the appropriate network diagram for you.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "qlty_missingValues_happy",
+      "case_type": "happy_path",
+      "description": "Find columns with nulls in evals_orders (ship_date is nullable)",
+      "input": "Which columns in demo_user.evals_orders contain null or empty entries?",
+      "expected_tools": [
+        {
+          "name": "qlty_missingValues",
+          "params": {}
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "qlty_missingValues",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        }
+      ],
+      "actual_output": "Based on the analysis of the `demo_user.evals_orders` table, here are the columns with NULL or empty entries:\n\n## Columns with Missing Values:\n\n**1. ship_date**\n- **NULL Count:** 3\n- **NULL Percentage:** 30.0%\n\nThis is the only column that contains NULL values in the table.\n\n## Columns with No Missing Values:\n\nThe following columns have no NULL or missing values:\n- `order_id`\n- `customer_name`\n- `order_date`\n- `product_category`\n- `amount`\n- `quantity`\n\nThe `ship_date` column has 3 NULL entries out of 10 total rows (30%), which could indicate orders that haven't been shipped yet or missing shipping information.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "qlty_missingValues_ambiguous_vs_rowsWithMissingValues",
+      "case_type": "ambiguous_selection",
+      "description": "Asking which columns have nulls (column-level summary) should prefer qlty_missingValues over qlty_rowsWithMissingValues",
+      "input": "Which fields in demo_user.evals_orders have missing data?",
+      "expected_tools": [
+        {
+          "name": "qlty_missingValues",
+          "params": {}
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "qlty_missingValues",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        }
+      ],
+      "actual_output": "The `demo_user.evals_orders` table has missing data in **one field**:\n\n- **ship_date**: 3 null values (30.0% of records)\n\nAll other fields have complete data with no missing values:\n- order_id\n- quantity\n- amount\n- customer_name\n- order_date\n- product_category\n\nSo about 30% of the orders in this table are missing their shipping dates, which might indicate orders that haven't been shipped yet or incomplete data entry.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "qlty_negativeValues_happy",
+      "case_type": "happy_path",
+      "description": "Find negative amounts in evals_orders (some amounts are negative refunds)",
+      "input": "Show me which fields in demo_user.evals_orders contain numbers below zero",
+      "expected_tools": [
+        {
+          "name": "qlty_negativeValues",
+          "params": {}
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "qlty_negativeValues",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        }
+      ],
+      "actual_output": "Based on the analysis of the `demo_user.evals_orders` table, here are the fields that contain numbers below zero:\n\n**Field with Negative Values:**\n- **amount** - Contains 2 records with negative values\n\n**Fields with No Negative Values:**\n- **quantity** - 0 negative values\n- **order_id** - 0 negative values\n\nThe other fields (ship_date, product_category, order_date, customer_name) are non-numeric fields, so negative value checking doesn't apply to them.\n\nThe `amount` field is the only column in your table that has negative numbers, with 2 instances of values below zero.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "qlty_distinctCategories_happy",
+      "case_type": "happy_path",
+      "description": "List unique product categories in evals_orders",
+      "input": "Show me all the unique values in the product_category column of demo_user.evals_orders",
+      "expected_tools": [
+        {
+          "name": "qlty_distinctCategories",
+          "params": {
+            "column_name": "product_category"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "qlty_distinctCategories",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders",
+            "column_name": "product_category"
+          }
+        }
+      ],
+      "actual_output": "Perfect! Here are all the unique values in the **product_category** column of **demo_user.evals_orders**:\n\n| Product Category | Count of Records |\n|-----------------|------------------|\n| **Electronics** | 3 |\n| **Books** | 1 |\n| **Clothing** | 2 |\n| **Sports** | 2 |\n| **Food** | 2 |\n\nThere are **5 distinct product categories** in total, with Electronics being the most common (appearing 3 times) and Books being the least common (appearing once).",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "qlty_distinctCategories_missing_column",
+      "case_type": "missing_parameter",
+      "description": "Agent must ask which column when none is specified",
+      "input": "What distinct values exist in a column of demo_user.evals_orders?",
+      "expected_tools": [],
+      "passed": false,
+      "failure_stage": "deterministic",
+      "failure_detail": "expected no tool calls for missing_parameter case, got ['base_columnDescription']",
+      "actual_tools": [
+        {
+          "name": "base_columnDescription",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        }
+      ],
+      "actual_output": "The `demo_user.evals_orders` table has the following columns:\n\n1. **product_category** (VARCHAR)\n2. **ship_date** (DATE)\n3. **customer_name** (VARCHAR)\n4. **order_id** (INTEGER)\n5. **quantity** (INTEGER)\n6. **amount** (DECIMAL)\n7. **order_date** (DATE)\n\nWhich column would you like to see the distinct values for?",
+      "metric_reasons": [],
+      "recommendation": "The prompt deliberately omits required information: \"What distinct values exist in a column of demo_user.evals_orders?\". The agent called `base_columnDescription` instead of asking for clarification. Recommendation: review whether those tool descriptions invite calls without full context, and keep the eval prompt vague enough that asking is the only reasonable response.",
+      "turn_details": null
+    },
+    {
+      "case_id": "qlty_standardDeviation_happy",
+      "case_type": "happy_path",
+      "description": "Get mean and spread of salary in evals_employees",
+      "input": "What is the average and spread of salary values in demo_user.evals_employees?",
+      "expected_tools": [
+        {
+          "name": "qlty_standardDeviation",
+          "params": {
+            "column_name": "salary"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "qlty_standardDeviation",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees",
+            "column_name": "salary"
+          }
+        }
+      ],
+      "actual_output": "Based on the analysis of the salary column in demo_user.evals_employees:\n\n**Average Salary:** $83,055.56\n\n**Standard Deviation (Spread):** $12,053.12\n\nThis means:\n- The typical salary in this dataset is around $83,056\n- Most salaries fall within approximately one standard deviation of the mean, which would be roughly between $71,002 and $95,109\n- The standard deviation of about $12,053 indicates moderate variability in salary values across the employees in this table",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "qlty_standardDeviation_ambiguous_vs_univariateStatistics",
+      "case_type": "ambiguous_selection",
+      "description": "Asking specifically for standard deviation should prefer qlty_standardDeviation over the broader qlty_univariateStatistics",
+      "input": "What is the standard deviation of the salary field in demo_user.evals_employees?",
+      "expected_tools": [
+        {
+          "name": "qlty_standardDeviation",
+          "params": {
+            "column_name": "salary"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "qlty_standardDeviation",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees",
+            "column_name": "salary"
+          }
+        }
+      ],
+      "actual_output": "The standard deviation of the salary field in demo_user.evals_employees is **12,053.12**.\n\nAdditionally, the mean (average) salary is **83,055.56**.\n\nThis indicates that salaries in this table vary by approximately $12,053 from the average, which suggests a moderate spread in the salary distribution.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "qlty_columnSummary_happy",
+      "case_type": "happy_path",
+      "description": "Get a statistical summary of all columns in evals_employees",
+      "input": "Show me a statistical summary of every field in demo_user.evals_employees",
+      "expected_tools": [
+        {
+          "name": "qlty_columnSummary",
+          "params": {}
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "qlty_columnSummary",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees"
+          }
+        }
+      ],
+      "actual_output": "Here's a statistical summary of every field in **demo_user.evals_employees**:\n\n## String/Character Fields\n\n| Column | Data Type | Non-Null Count | Null Count | Blank Count | Null % |\n|--------|-----------|----------------|------------|-------------|--------|\n| **name** | VARCHAR(100) | 10 | 0 | 0 | 0.0% |\n| **region** | VARCHAR(50) | 10 | 0 | 0 | 0.0% |\n| **department** | VARCHAR(50) | 10 | 0 | 0 | 0.0% |\n\n## Numeric Fields\n\n| Column | Data Type | Non-Null Count | Null Count | Zero Count | Positive Count | Negative Count | Null % |\n|--------|-----------|----------------|------------|------------|----------------|----------------|--------|\n| **employee_id** | INTEGER | 10 | 0 | 0 | 10 | 0 | 0.0% |\n| **manager_id** | INTEGER | 9 | 1 | 0 | 9 | 0 | 10.0% |\n| **salary** | DECIMAL(10,2) | 9 | 1 | 0 | 9 | 0 | 10.0% |\n\n## Date Fields\n\n| Column | Data Type | Non-Null Count | Null Count | Null % |\n|--------|-----------|----------------|------------|--------|\n| **hire_date** | DATE | 10 | 0 | 0.0% |\n\n### Key Findings:\n- **Total rows**: 10 employees\n- **Complete fields**: name, region, department, employee_id, and hire_date have 100% data completeness\n- **Missing data**: manager_id and salary each have 1 missing value (10% null rate)\n- **All numeric values are positive**: No negative or zero values in employee_id, manager_id, or salary\n- **No blank strings**: All text fields are properly populated",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "qlty_univariateStatistics_happy",
+      "case_type": "happy_path",
+      "description": "Get full univariate stats for salary in evals_employees",
+      "input": "Give me a complete statistical breakdown of the salary field in demo_user.evals_employees",
+      "expected_tools": [
+        {
+          "name": "qlty_univariateStatistics",
+          "params": {
+            "column_name": "salary"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "qlty_univariateStatistics",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees",
+            "column_name": "salary"
+          }
+        }
+      ],
+      "actual_output": "## Complete Statistical Breakdown - Salary Field (demo_user.evals_employees)\n\n### **Central Tendency Measures**\n- **Mean**: $83,055.56\n- **Median**: $85,000.00\n- **Mode**: $68,000.00\n- **Geometric Mean**: $82,278.64\n- **Harmonic Mean**: $81,508.55\n- **Trimmed Mean**: $82,500.00\n\n### **Dispersion Measures**\n- **Standard Deviation**: $12,053.12\n- **Variance**: $145,277,777.78\n- **Coefficient of Variation**: 14.51%\n- **Range**: $34,000.00\n- **Interquartile Range**: $19,000.00\n- **Standard Error**: $4,017.71\n\n### **Range & Extremes**\n- **Minimum**: $68,000.00\n- **Maximum**: $102,000.00\n- **Bottom 5 Values**: $68,000, $69,500, $72,000, $77,000, $85,000\n- **Top 5 Values**: $102,000, $95,000, $91,000, $88,000, $85,000\n\n### **Percentiles**\n- **1st Percentile**: $68,120.00\n- **5th Percentile**: $68,600.00\n- **10th Percentile**: $69,200.00\n- **25th Percentile (Q1)**: $72,000.00\n- **50th Percentile (Q2/Median)**: $85,000.00\n- **75th Percentile (Q3)**: $91,000.00\n- **90th Percentile**: $96,400.00\n- **95th Percentile**: $99,200.00\n- **99th Percentile**: $101,440.00\n\n### **Distribution Shape**\n- **Skewness**: 0.152 (slightly right-skewed, nearly symmetric)\n- **Kurtosis**: -1.333 (platykurtic - flatter than normal distribution)\n\n### **Data Quality**\n- **Count**: 9 salary values\n- **Null Count**: 1 missing value\n- **Unique Values**: 9\n- **Zero Values**: 0\n- **Negative Values**: 0\n- **Positive Values**: 9\n\n### **Aggregate Measures**\n- **Sum**: $747,500.00\n- **Corrected Sum of Squares**: $1,162,222,222.22\n- **Uncorrected Sum of Squares**: $63,246,250,000.00\n\n### **Key Insights**\n\u2713 The salary distribution is fairly balanced with a mean of $83,055 and median of $85,000  \n\u2713 Low coefficient of variation (14.51%) indicates moderate consistency  \n\u2713 Slight positive skew suggests a few higher salaries pulling the mean slightly up  \n\u2713 The interquartile range of $19,000 shows reasonable mid-range spread  \n\u2713 One employee has a missing salary value",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "qlty_univariateStatistics_ambiguous_vs_columnSummary",
+      "case_type": "ambiguous_selection",
+      "description": "Asking for stats on a specific column should prefer qlty_univariateStatistics over the table-level qlty_columnSummary",
+      "input": "Show me min, max, mean, and percentiles for the amount column in demo_user.evals_orders",
+      "expected_tools": [
+        {
+          "name": "qlty_univariateStatistics",
+          "params": {
+            "column_name": "amount"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "qlty_univariateStatistics",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders",
+            "column_name": "amount"
+          }
+        }
+      ],
+      "actual_output": "Here are the key statistics for the **amount** column in **demo_user.evals_orders**:\n\n## Summary Statistics\n\n- **Minimum**: -200.0\n- **Maximum**: 4,200.0\n- **Mean**: 1,474.55\n- **Median**: 1,090.0\n\n## Percentiles\n\n| Percentile | Value |\n|------------|--------|\n| 1st | -195.5 |\n| 5th | -177.5 |\n| 10th | -155.0 |\n| 25th (Q1) | 638.9 |\n| 50th (Median) | 1,090.0 |\n| 75th (Q3) | 2,020.0 |\n| 90th | 3,480.0 |\n| 95th | 3,840.0 |\n| 99th | 4,128.0 |\n\n## Additional Insights\n\n- **Standard Deviation**: 1,437.8\n- **Count**: 10 records\n- **Range**: 4,400.0 (from -200 to 4,200)\n- **Negative Values**: 2 records have negative amounts\n- **Interquartile Range (IQR)**: 1,381.1\n\nThe data shows a right-skewed distribution (skewness = 0.82) with some negative values that appear to be returns or refunds, and most values clustering in the lower-to-mid range with a few high-value outliers.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "qlty_rowsWithMissingValues_happy",
+      "case_type": "happy_path",
+      "description": "Retrieve rows where ship_date is null in evals_orders",
+      "input": "Show me all records from demo_user.evals_orders where the ship_date is empty or null",
+      "expected_tools": [
+        {
+          "name": "qlty_rowsWithMissingValues",
+          "params": {
+            "column_name": "ship_date"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "qlty_rowsWithMissingValues",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders",
+            "column_name": "ship_date"
+          }
+        }
+      ],
+      "actual_output": "I found **3 records** from demo_user.evals_orders where the ship_date is null:\n\n| Order ID | Customer Name | Order Date | Ship Date | Amount | Product Category | Quantity |\n|----------|---------------|------------|-----------|---------|------------------|----------|\n| 1009 | Iota Inc | 2024-05-08 | null | 1780.0 | Electronics | 1 |\n| 1006 | Zeta Partners | 2024-03-15 | null | -150.0 | Clothing | 1 |\n| 1003 | Gamma Inc | 2024-02-03 | null | 875.5 | Food | 5 |\n\nAll three of these orders have no ship date recorded, indicating they may not have been shipped yet or the shipping information wasn't entered into the system.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "qlty_rowsWithMissingValues_ambiguous_vs_missingValues",
+      "case_type": "ambiguous_selection",
+      "description": "Asking to retrieve the actual rows with missing data should prefer qlty_rowsWithMissingValues over qlty_missingValues",
+      "input": "Fetch the rows from demo_user.evals_orders that are missing a ship_date",
+      "expected_tools": [
+        {
+          "name": "qlty_rowsWithMissingValues",
+          "params": {
+            "column_name": "ship_date"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "qlty_rowsWithMissingValues",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders",
+            "column_name": "ship_date"
+          }
+        }
+      ],
+      "actual_output": "I found **3 rows** in demo_user.evals_orders that are missing a ship_date:\n\n| order_id | customer_name | order_date | ship_date | amount  | product_category | quantity |\n|----------|---------------|------------|-----------|---------|------------------|----------|\n| 1009     | Iota Inc      | 2024-05-08 | NULL      | 1780.0  | Electronics      | 1        |\n| 1006     | Zeta Partners | 2024-03-15 | NULL      | -150.0  | Clothing         | 1        |\n| 1003     | Gamma Inc     | 2024-02-03 | NULL      | 875.5   | Food             | 5        |\n\nThese are orders that have been placed but not yet shipped.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "qlty_multi_tool_summary_then_nulls",
+      "case_type": "multi_tool",
+      "description": "Get column summary then drill into rows with missing values",
+      "input": "First give me a column summary of demo_user.evals_orders, then show me the rows where ship_date is missing",
+      "expected_tools": [
+        {
+          "name": "qlty_columnSummary",
+          "params": {}
+        },
+        {
+          "name": "qlty_rowsWithMissingValues",
+          "params": {
+            "column_name": "ship_date"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "qlty_columnSummary",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        },
+        {
+          "name": "qlty_rowsWithMissingValues",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders",
+            "column_name": "ship_date"
+          }
+        }
+      ],
+      "actual_output": "## Column Summary for demo_user.evals_orders\n\nThe table has **7 columns** with the following characteristics:\n\n| Column Name | Data Type | Non-Null Count | Null Count | Null % | Additional Info |\n|-------------|-----------|----------------|------------|--------|-----------------|\n| **order_id** | INTEGER | 10 | 0 | 0% | All positive values |\n| **customer_name** | VARCHAR(100) | 10 | 0 | 0% | No blanks |\n| **order_date** | DATE | 10 | 0 | 0% | Complete |\n| **ship_date** | DATE | 7 | **3** | **30%** | Missing for 3 orders |\n| **amount** | DECIMAL(10,2) | 10 | 0 | 0% | 8 positive, 2 negative |\n| **product_category** | VARCHAR(50) | 10 | 0 | 0% | No blanks |\n| **quantity** | INTEGER | 10 | 0 | 0% | All positive values |\n\n---\n\n## Rows Where ship_date is Missing\n\nThere are **3 orders** with missing ship dates:\n\n| Order ID | Customer Name | Order Date | Ship Date | Amount | Product Category | Quantity |\n|----------|---------------|------------|-----------|--------|------------------|----------|\n| **1009** | Iota Inc | 2024-05-08 | NULL | $1,780.00 | Electronics | 1 |\n| **1006** | Zeta Partners | 2024-03-15 | NULL | -$150.00 | Clothing | 1 |\n| **1003** | Gamma Inc | 2024-02-03 | NULL | $875.50 | Food | 5 |\n\n**Note:** Order 1006 (Zeta Partners) has a negative amount of -$150.00, which may indicate a return or credit.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "qlty_unknown_tool_missing",
+      "case_type": "missing_parameter",
+      "description": "User asks for a non\u2011existent quality tool",
+      "input": "Give me a data quality score for the dataset",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I'd be happy to help you calculate a data quality score for a dataset. However, I need you to provide some information first:\n\n1. **Database name** (if applicable, otherwise I can use the default)\n2. **Table name** - Which specific table/dataset do you want to analyze?\n\nOnce you provide the table name, I can run several data quality checks including:\n- **Missing values analysis** - identifying columns with NULL values\n- **Column summary statistics** - providing an overview of all columns\n- **Negative values check** - for numeric columns where negatives might be anomalous\n- **Univariate statistics** - detailed statistical profiles for numeric columns\n\nPlease share the table name (and database name if you know it), and I'll generate a comprehensive data quality assessment for you.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "sec_userDbPermissions_ambiguous_vs_userRoles",
+      "case_type": "ambiguous_selection",
+      "description": "Asking about a user's access rights on databases should prefer sec_userDbPermissions, not sec_userRoles",
+      "input": "Which databases can the user 'bob' access and what can they do in each one?",
+      "expected_tools": [
+        {
+          "name": "sec_userDbPermissions",
+          "params": {
+            "user_name": "bob"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "sec_userDbPermissions",
+          "params": {
+            "user_name": "bob"
+          }
+        },
+        {
+          "name": "sec_userRoles",
+          "params": {
+            "user_name": "bob"
+          }
+        }
+      ],
+      "actual_output": "Based on the results:\n\n## Summary for User 'bob':\n\n**Direct Database Permissions:** None found\n\n**Role Memberships:** None found\n\nThis indicates that user 'bob' either:\n1. Does not exist in the system\n2. Has no permissions or roles currently assigned\n3. May only have permissions on their own user database (if one exists with the same name)\n\nIn Teradata, users typically get access to databases through either:\n- **Direct grants** - specific permissions granted directly to the user account\n- **Role memberships** - permissions inherited from roles assigned to the user\n\nSince both queries returned no results, user 'bob' appears to have no database access permissions configured at this time. If 'bob' needs access to databases, a database administrator would need to either:\n- Grant direct permissions to 'bob' on specific databases/tables\n- Assign 'bob' to one or more roles that have the necessary permissions\n\nWould you like me to check if the user 'bob' exists in the system, or would you like to grant them specific permissions?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "sec_userDbPermissions_missing_user",
+      "case_type": "missing_parameter",
+      "description": "User asks about permissions without naming a user",
+      "input": "Show me the database permissions",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I'd be happy to help you view database permissions! To show you the relevant permissions, I need a bit more information:\n\n**What type of permissions are you looking for?**\n\n1. **User's database permissions** - What databases and tables a specific user can access (SELECT, INSERT, UPDATE, DELETE, etc.)\n   - Need: Username\n\n2. **Role's database permissions** - What access rights are granted to a specific role\n   - Need: Role name\n\n3. **User's role assignments** - What roles are assigned to a specific user\n   - Need: Username\n\nPlease let me know which type you'd like to see and provide the username or role name accordingly.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "sec_rolePermissions_ambiguous_vs_userDbPermissions",
+      "case_type": "ambiguous_selection",
+      "description": "Asking about a role's access should use sec_rolePermissions, not sec_userDbPermissions",
+      "input": "What access rights does the 'analyst' role have across all databases?",
+      "expected_tools": [
+        {
+          "name": "sec_rolePermissions",
+          "params": {
+            "role_name": "analyst"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "sec_rolePermissions",
+          "params": {
+            "role_name": "analyst"
+          }
+        }
+      ],
+      "actual_output": "The query returned no results, which means the 'analyst' role either:\n\n1. **Does not exist** in the system\n2. **Has no database-level permissions granted** to it\n3. **Has no members** (the query joins role members with role rights)\n\nThis could happen if:\n- The role name is different (case-sensitive or spelled differently)\n- The role exists but hasn't been granted any database access rights yet\n- The role has no users assigned to it\n\nWould you like me to:\n- Check if the role exists with a different spelling or case?\n- Look up what roles are available in the system?\n- Check permissions for a specific user instead?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "sec_userRoles_ambiguous_vs_rolePermissions",
+      "case_type": "ambiguous_selection",
+      "description": "Listing roles assigned to a user should prefer sec_userRoles, not sec_rolePermissions",
+      "input": "Which roles are currently assigned to user 'diana'?",
+      "expected_tools": [
+        {
+          "name": "sec_userRoles",
+          "params": {
+            "user_name": "diana"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "sec_userRoles",
+          "params": {
+            "user_name": "diana"
+          }
+        }
+      ],
+      "actual_output": "The user **'diana'** currently has **no roles assigned**.\n\nThe query checked the Teradata system catalogs for any role memberships associated with this user account, but no role assignments were found. This means 'diana' either:\n- Has no roles granted to them\n- Relies on direct database-level permissions instead of role-based access\n- May be a newly created user account\n\nIf you'd like to check what direct database permissions 'diana' has instead, I can run that query using the `sec_userDbPermissions` tool.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "sec_rolePermissions_ambiguous_vs_userRoles",
+      "case_type": "ambiguous_selection",
+      "description": "Permissions granted to a named role should prefer sec_rolePermissions, not sec_userRoles",
+      "input": "What database access has the 'analyst' role been granted?",
+      "expected_tools": [
+        {
+          "name": "sec_rolePermissions",
+          "params": {
+            "role_name": "analyst"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "sec_rolePermissions",
+          "params": {
+            "role_name": "analyst"
+          }
+        }
+      ],
+      "actual_output": "The 'analyst' role currently has **no database access permissions** granted to it. The query returned zero results, which means:\n\n- No direct database-level permissions (SELECT, INSERT, UPDATE, DELETE, etc.) have been granted to this role\n- No CREATE, DROP, or ALTER privileges on database objects\n- No administrative or system-level privileges\n\nThis could mean:\n1. The role exists but hasn't been granted any permissions yet\n2. The role doesn't exist in the system\n3. Access is granted through other means (e.g., individual user permissions rather than role-based permissions)\n\nIf you expected this role to have permissions, you may want to:\n- Check if the role name is spelled correctly\n- Verify if permissions are granted directly to users instead of through this role\n- Check if there are other roles that users should be assigned to instead",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "sec_userRoles_ambiguous_vs_userDbPermissions",
+      "case_type": "ambiguous_selection",
+      "description": "Asking about a user's role assignments should prefer sec_userRoles even though permissions is related",
+      "input": "Tell me which roles have been assigned to user 'diana'",
+      "expected_tools": [
+        {
+          "name": "sec_userRoles",
+          "params": {
+            "user_name": "diana"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "sec_userRoles",
+          "params": {
+            "user_name": "diana"
+          }
+        }
+      ],
+      "actual_output": "The query returned no results for user 'diana'. This means that either:\n\n1. **The user 'diana' does not exist** in the Teradata system, or\n2. **The user 'diana' has no roles assigned** to them\n\nUsers in Teradata can exist without having any roles assigned - they might only have direct database permissions instead. If you'd like, I can check:\n- User 'diana's direct database permissions using `sec_userDbPermissions`\n- Whether the user exists at all by checking session or user information\n\nWould you like me to investigate further?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "sec_multi_tool_user_roles_then_role_permissions",
+      "case_type": "multi_tool",
+      "description": "Find a user's roles, then inspect a specific named role's permissions in one pass",
+      "input": "Show me what roles 'alice' has, then list the permissions for the 'analyst' role",
+      "expected_tools": [
+        {
+          "name": "sec_userRoles",
+          "params": {
+            "user_name": "alice"
+          }
+        },
+        {
+          "name": "sec_rolePermissions",
+          "params": {
+            "role_name": "analyst"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "sec_userRoles",
+          "params": {
+            "user_name": "alice"
+          }
+        },
+        {
+          "name": "sec_rolePermissions",
+          "params": {
+            "role_name": "analyst"
+          }
+        }
+      ],
+      "actual_output": "Based on the query results:\n\n## Roles for user 'alice'\n**No roles found** - The user 'alice' does not have any roles assigned in the system.\n\n## Permissions for role 'analyst'\n**No permissions found** - The role 'analyst' either doesn't exist in the system or has no database-level permissions granted to it.\n\n**Possible reasons:**\n1. The user 'alice' may not exist in the system\n2. The role 'analyst' may not exist in the system\n3. User and role names may be case-sensitive - you might want to try different capitalizations (e.g., 'Alice', 'ALICE', 'Analyst', 'ANALYST')\n4. The user exists but simply has no roles assigned\n5. The role exists but has no permissions granted yet\n\nWould you like me to check with different name variations, or would you like to see a list of all available users or roles in the system?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "sec_userDbPermissions_happy",
+      "case_type": "happy_path",
+      "description": "Show what databases a user can access and what they can do in each",
+      "input": "Show me what access rights jsmith has across all the different databases in the system.",
+      "expected_tools": [
+        {
+          "name": "sec_userDbPermissions",
+          "params": {
+            "user_name": "jsmith"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "sec_userDbPermissions",
+          "params": {
+            "user_name": "jsmith"
+          }
+        }
+      ],
+      "actual_output": "The query returned no results for user 'jsmith'. This could mean one of the following:\n\n1. **The user doesn't exist** in the system\n2. **The user has no direct database permissions** granted (they may only have access through role memberships)\n3. **The username might be different** (case-sensitive or different format)\n\nWould you like me to:\n- **Check what roles are assigned to jsmith** (using `sec_userRoles`)? Users often receive their permissions through role memberships rather than direct grants.\n- **Search for similar usernames** if the exact username might be different?\n\nLet me know how you'd like to proceed!",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "sec_rolePermissions_happy",
+      "case_type": "happy_path",
+      "description": "Show what permissions a named role has",
+      "input": "What access rights are granted to the FinanceReporter role?",
+      "expected_tools": [
+        {
+          "name": "sec_rolePermissions",
+          "params": {
+            "role_name": "FinanceReporter"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "sec_rolePermissions",
+          "params": {
+            "role_name": "FinanceReporter"
+          }
+        }
+      ],
+      "actual_output": "The query returned no results for the **FinanceReporter** role. This could mean one of the following:\n\n1. **The role does not exist** in the Teradata system\n2. **The role has no database-level permissions granted** to it\n3. **The role name might be different** (case-sensitive or spelled differently)\n\nTo help troubleshoot, you might want to:\n- Verify the exact role name exists in the system\n- Check if the role has been granted any permissions at all\n- Ensure you have the necessary privileges to view role permissions\n\nWould you like me to help verify if this role exists or check permissions for a different role name?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "sec_userRoles_happy",
+      "case_type": "happy_path",
+      "description": "List the roles assigned to a user account",
+      "input": "Which roles are assigned to the database account jsmith?",
+      "expected_tools": [
+        {
+          "name": "sec_userRoles",
+          "params": {
+            "user_name": "jsmith"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "sec_userRoles",
+          "params": {
+            "user_name": "jsmith"
+          }
+        }
+      ],
+      "actual_output": "The database account **jsmith** currently has **no roles** assigned to it. The query returned zero results, indicating that this user account either:\n\n1. Has no roles explicitly granted to it\n2. Only has direct database permissions (not role-based access)\n\nIf you need to see what direct database permissions jsmith has instead, I can check that using a different query. Would you like me to look up the direct database permissions for jsmith?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "sec_rolePermissions_missing_role",
+      "case_type": "missing_parameter",
+      "description": "Agent must ask which role to inspect",
+      "input": "What access rights does the role have?",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I'd be happy to help you check the access rights for a role, but I need to know which specific role you'd like me to look up.\n\nCould you please provide the name of the Teradata role you want to investigate?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "sec_userRoles_missing_user",
+      "case_type": "missing_parameter",
+      "description": "Agent must ask which user to retrieve roles for",
+      "input": "Show me the user roles",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I'll retrieve the list of user roles from the system. However, I need to clarify: would you like to see:\n\n1. **All roles that exist in the system** (role definitions)\n2. **Roles assigned to a specific user** (requires a username)\n3. **Permissions granted to a specific role** (requires a role name)\n\nCould you please clarify which information you're looking for? If you want to see roles for a specific user or details about a specific role, please provide the username or role name.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    },
+    {
+      "case_id": "sec_userRoles_clarify_then_call",
+      "case_type": "missing_parameter",
+      "description": "Agent asks which user, then calls sec_userRoles after user clarifies",
+      "input": "Turn 1: Show me the user roles | Turn 2: Which roles are assigned to user diana?",
+      "expected_tools": [
+        {
+          "name": "sec_userRoles",
+          "params": {
+            "user_name": "diana"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "sec_userRoles",
+          "params": {
+            "user_name": "diana"
+          }
+        }
+      ],
+      "actual_output": "The query returned no results, which means **user 'diana' currently has no roles assigned**.\n\nThis could mean:\n1. The user 'diana' exists but has no roles granted to them\n2. The user 'diana' doesn't exist in the system\n3. The user has direct database permissions instead of role-based permissions\n\nWould you like me to:\n- Check what **direct database permissions** user diana has (using `sec_userDbPermissions`)?\n- Verify if the user exists by checking session information?\n- Look for a different user name (in case of a typo)?",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": [
+        {
+          "turn": 1,
+          "input": "Show me the user roles",
+          "mode": "clarification",
+          "passed": true,
+          "actual_tools": []
+        },
+        {
+          "turn": 2,
+          "input": "Which roles are assigned to user diana?",
+          "mode": "tool",
+          "passed": true,
+          "actual_tools": [
+            {
+              "name": "sec_userRoles",
+              "params": {
+                "user_name": "diana"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "sec_rolePermissions_clarify_then_call",
+      "case_type": "missing_parameter",
+      "description": "Agent asks which role, then calls sec_rolePermissions after user clarifies",
+      "input": "Turn 1: What access rights does the role have? | Turn 2: What database access has the analyst role been granted?",
+      "expected_tools": [
+        {
+          "name": "sec_rolePermissions",
+          "params": {
+            "role_name": "analyst"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "sec_rolePermissions",
+          "params": {
+            "role_name": "analyst"
+          }
+        }
+      ],
+      "actual_output": "The query completed successfully, but **no database access permissions were found for the \"analyst\" role**. This could mean:\n\n1. **The role doesn't exist** - There may not be a role named \"analyst\" in the system\n2. **The role has no permissions** - The role exists but hasn't been granted any database access rights yet\n3. **Case sensitivity** - The role name might have different casing (e.g., \"Analyst\", \"ANALYST\")\n\nWould you like me to:\n- Check if the role exists with a different case variation?\n- List all available roles in the system?\n- Check permissions for a different role name?\n\nPlease let me know how you'd like to proceed!",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": [
+        {
+          "turn": 1,
+          "input": "What access rights does the role have?",
+          "mode": "clarification",
+          "passed": true,
+          "actual_tools": []
+        },
+        {
+          "turn": 2,
+          "input": "What database access has the analyst role been granted?",
+          "mode": "tool",
+          "passed": true,
+          "actual_tools": [
+            {
+              "name": "sec_rolePermissions",
+              "params": {
+                "role_name": "analyst"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "sec_userDbPermissions_clarify_then_call",
+      "case_type": "missing_parameter",
+      "description": "Agent asks which user, then calls sec_userDbPermissions after user clarifies",
+      "input": "Turn 1: Show me the database permissions | Turn 2: What databases can user bob access and what can they do in each?",
+      "expected_tools": [
+        {
+          "name": "sec_userDbPermissions",
+          "params": {
+            "user_name": "bob"
+          }
+        }
+      ],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [
+        {
+          "name": "sec_userDbPermissions",
+          "params": {
+            "user_name": "bob"
+          }
+        }
+      ],
+      "actual_output": "The query results show that user **'bob'** has **no direct database permissions** granted in the system. This means:\n\n- No direct SELECT, INSERT, UPDATE, DELETE, or other access rights are assigned to 'bob' at the database or table level\n- Bob may still have access through **role-based permissions** (roles assigned to the user that have permissions)\n\n**Would you like me to check:**\n1. **What roles are assigned to bob?** (using `sec_userRoles`) - This would show if bob has any roles that might grant permissions\n2. **The permissions of specific roles** that bob might belong to?\n\nThis would give us a complete picture of bob's effective access rights in the system.",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": [
+        {
+          "turn": 1,
+          "input": "Show me the database permissions",
+          "mode": "clarification",
+          "passed": true,
+          "actual_tools": []
+        },
+        {
+          "turn": 2,
+          "input": "What databases can user bob access and what can they do in each?",
+          "mode": "tool",
+          "passed": true,
+          "actual_tools": [
+            {
+              "name": "sec_userDbPermissions",
+              "params": {
+                "user_name": "bob"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "sec_unknown_tool_missing",
+      "case_type": "missing_parameter",
+      "description": "Vague access question with no user or role named \u2014 agent should ask for clarification",
+      "input": "What access does this user have in the system?",
+      "expected_tools": [],
+      "passed": true,
+      "failure_stage": null,
+      "failure_detail": null,
+      "actual_tools": [],
+      "actual_output": "I'd be happy to help you check what access a user has in the system. However, I need to know which user you'd like me to look up.\n\nCould you please provide the username you want to check?\n\nOnce you give me the username, I can show you:\n- **Database permissions** - What access rights (SELECT, INSERT, UPDATE, DELETE, etc.) the user has across databases\n- **Role assignments** - Which roles are assigned to the user\n- **Role permissions** - What access those roles provide",
+      "metric_reasons": [],
+      "recommendation": null,
+      "turn_details": null
+    }
+  ]
+}

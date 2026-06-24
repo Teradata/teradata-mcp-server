@@ -1,0 +1,138 @@
+{
+  "module": "plot",
+  "cases": [
+    {
+      "id": "plot_line_chart_happy",
+      "type": "happy_path",
+      "description": "Line chart of order amounts over time from evals_orders",
+      "input": "Show me a line chart of order amounts over time from {EVALS_DATABASE}.evals_orders using order_date on the x-axis and amount on the y-axis",
+      "expected_tools": [
+        {
+          "name": "plot_line_chart",
+          "params": {
+            "table_name": "{EVALS_DATABASE}.evals_orders",
+            "labels": "order_date",
+            "columns": ["amount"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "plot_pie_chart_happy",
+      "type": "happy_path",
+      "description": "Pie chart breaking down orders by product category",
+      "input": "Plot {EVALS_DATABASE}.evals_orders as a pie chart using product_category for the slice labels and amount for the values.",
+      "expected_tools": [
+        {
+          "name": "plot_pie_chart",
+          "params": {
+            "table_name": "{EVALS_DATABASE}.evals_orders",
+            "labels": "product_category",
+            "column": "amount"
+          }
+        }
+      ]
+    },
+    {
+      "id": "plot_polar_chart_happy",
+      "type": "happy_path",
+      "description": "Polar area chart of order amounts by product category",
+      "input": "Create a polar area chart showing order amounts by product_category from {EVALS_DATABASE}.evals_orders",
+      "expected_tools": [
+        {
+          "name": "plot_polar_chart",
+          "params": {
+            "table_name": "{EVALS_DATABASE}.evals_orders",
+            "labels": "product_category",
+            "column": "amount"
+          }
+        }
+      ]
+    },
+    {
+      "id": "plot_radar_chart_happy",
+      "type": "happy_path",
+      "description": "Radar chart of salary by department in evals_employees",
+      "input": "Draw a spider chart from {EVALS_DATABASE}.evals_employees using department as the axis labels and salary as the values.",
+      "expected_tools": [
+        {
+          "name": "plot_radar_chart",
+          "params": {
+            "table_name": "{EVALS_DATABASE}.evals_employees",
+            "labels": "department",
+            "columns": "salary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "plot_line_vs_radar_ambiguous",
+      "type": "ambiguous_selection",
+      "description": "Time-series data should use line chart, not radar",
+      "input": "Plot how order amounts change over time from {EVALS_DATABASE}.evals_orders using order_date on the x-axis",
+      "expected_tools": [
+        {
+          "name": "plot_line_chart",
+          "params": {
+            "table_name": "{EVALS_DATABASE}.evals_orders",
+            "labels": "order_date",
+            "columns": ["amount"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "plot_pie_vs_polar_ambiguous",
+      "type": "ambiguous_selection",
+      "description": "Proportion/share breakdown should use pie chart over polar",
+      "input": "Use a pie chart to show {EVALS_DATABASE}.evals_orders with product_category as labels and amount as the values.",
+      "expected_tools": [
+        {
+          "name": "plot_pie_chart",
+          "params": {
+            "table_name": "{EVALS_DATABASE}.evals_orders",
+            "labels": "product_category",
+            "column": "amount"
+          }
+        }
+      ]
+    },
+    {
+      "id": "plot_missing_data",
+      "type": "missing_parameter",
+      "description": "Chart request with no table or data provided \u2014 agent must ask for clarification",
+      "input": "Create a chart for me",
+      "expected_tools": []
+    },
+    {
+      "id": "plot_pie_chart_direct",
+      "type": "happy_path",
+      "description": "Direct pie chart from table — no pre-query needed since plot tools read tables directly",
+      "input": "Give me a pie chart of amount by product_category from {EVALS_DATABASE}.evals_orders",
+      "expected_tools": [
+        {
+          "name": "plot_pie_chart",
+          "params": {
+            "table_name": "{EVALS_DATABASE}.evals_orders",
+            "labels": "product_category",
+            "column": "amount"
+          }
+        }
+      ]
+    },
+    {
+      "id": "plot_missing_table",
+      "type": "missing_parameter",
+      "description": "Agent must ask which table to plot",
+      "input": "Create a line chart of sales over time",
+      "expected_tools": []
+    },
+    {
+      "id": "plot_unknown_tool_missing",
+      "type": "missing_parameter",
+      "description": "User asks for a non\u2011existent plot tool",
+      "input": "Show me the network topology as a diagram",
+      "expected_tools": []
+    }
+  ]
+}

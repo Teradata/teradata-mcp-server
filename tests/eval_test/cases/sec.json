@@ -1,0 +1,231 @@
+{
+  "module": "sec",
+  "cases": [
+    {
+      "id": "sec_userDbPermissions_ambiguous_vs_userRoles",
+      "type": "ambiguous_selection",
+      "description": "Asking about a user's access rights on databases should prefer sec_userDbPermissions, not sec_userRoles",
+      "input": "Which databases can the user 'bob' access and what can they do in each one?",
+      "expected_tools": [
+        {
+          "name": "sec_userDbPermissions",
+          "params": {
+            "user_name": "bob"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec_userDbPermissions_missing_user",
+      "type": "missing_parameter",
+      "description": "User asks about permissions without naming a user",
+      "input": "Show me the database permissions",
+      "expected_tools": []
+    },
+    {
+      "id": "sec_rolePermissions_ambiguous_vs_userDbPermissions",
+      "type": "ambiguous_selection",
+      "description": "Asking about a role's access should use sec_rolePermissions, not sec_userDbPermissions",
+      "input": "What access rights does the 'analyst' role have across all databases?",
+      "expected_tools": [
+        {
+          "name": "sec_rolePermissions",
+          "params": {
+            "role_name": "analyst"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec_userRoles_ambiguous_vs_rolePermissions",
+      "type": "ambiguous_selection",
+      "description": "Listing roles assigned to a user should prefer sec_userRoles, not sec_rolePermissions",
+      "input": "Which roles are currently assigned to user 'diana'?",
+      "expected_tools": [
+        {
+          "name": "sec_userRoles",
+          "params": {
+            "user_name": "diana"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec_rolePermissions_ambiguous_vs_userRoles",
+      "type": "ambiguous_selection",
+      "description": "Permissions granted to a named role should prefer sec_rolePermissions, not sec_userRoles",
+      "input": "What database access has the 'analyst' role been granted?",
+      "expected_tools": [
+        {
+          "name": "sec_rolePermissions",
+          "params": {
+            "role_name": "analyst"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec_userRoles_ambiguous_vs_userDbPermissions",
+      "type": "ambiguous_selection",
+      "description": "Asking about a user's role assignments should prefer sec_userRoles even though permissions is related",
+      "input": "Tell me which roles have been assigned to user 'diana'",
+      "expected_tools": [
+        {
+          "name": "sec_userRoles",
+          "params": {
+            "user_name": "diana"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec_multi_tool_user_roles_then_role_permissions",
+      "type": "multi_tool",
+      "description": "Find a user's roles, then inspect a specific named role's permissions in one pass",
+      "input": "Show me what roles 'alice' has, then list the permissions for the 'analyst' role",
+      "expected_tools": [
+        {
+          "name": "sec_userRoles",
+          "params": {
+            "user_name": "alice"
+          }
+        },
+        {
+          "name": "sec_rolePermissions",
+          "params": {
+            "role_name": "analyst"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec_userDbPermissions_happy",
+      "type": "happy_path",
+      "description": "Show what databases a user can access and what they can do in each",
+      "input": "Show me what access rights jsmith has across all the different databases in the system.",
+      "expected_tools": [
+        {
+          "name": "sec_userDbPermissions",
+          "params": {
+            "user_name": "jsmith"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec_rolePermissions_happy",
+      "type": "happy_path",
+      "description": "Show what permissions a named role has",
+      "input": "What access rights are granted to the FinanceReporter role?",
+      "expected_tools": [
+        {
+          "name": "sec_rolePermissions",
+          "params": {
+            "role_name": "FinanceReporter"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec_userRoles_happy",
+      "type": "happy_path",
+      "description": "List the roles assigned to a user account",
+      "input": "Which roles are assigned to the database account jsmith?",
+      "expected_tools": [
+        {
+          "name": "sec_userRoles",
+          "params": {
+            "user_name": "jsmith"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec_rolePermissions_missing_role",
+      "type": "missing_parameter",
+      "description": "Agent must ask which role to inspect",
+      "input": "What access rights does the role have?",
+      "expected_tools": []
+    },
+    {
+      "id": "sec_userRoles_missing_user",
+      "type": "missing_parameter",
+      "description": "Agent must ask which user to retrieve roles for",
+      "input": "Show me the user roles",
+      "expected_tools": []
+    },
+    {
+      "id": "sec_userRoles_clarify_then_call",
+      "type": "missing_parameter",
+      "description": "Agent asks which user, then calls sec_userRoles after user clarifies",
+      "turns": [
+        {
+          "input": "Show me the user roles",
+          "expect": "clarification"
+        },
+        {
+          "input": "Which roles are assigned to user diana?",
+          "expected_tools": [
+            {
+              "name": "sec_userRoles",
+              "params": {
+                "user_name": "diana"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sec_rolePermissions_clarify_then_call",
+      "type": "missing_parameter",
+      "description": "Agent asks which role, then calls sec_rolePermissions after user clarifies",
+      "turns": [
+        {
+          "input": "What access rights does the role have?",
+          "expect": "clarification"
+        },
+        {
+          "input": "What database access has the analyst role been granted?",
+          "expected_tools": [
+            {
+              "name": "sec_rolePermissions",
+              "params": {
+                "role_name": "analyst"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sec_userDbPermissions_clarify_then_call",
+      "type": "missing_parameter",
+      "description": "Agent asks which user, then calls sec_userDbPermissions after user clarifies",
+      "turns": [
+        {
+          "input": "Show me the database permissions",
+          "expect": "clarification"
+        },
+        {
+          "input": "What databases can user bob access and what can they do in each?",
+          "expected_tools": [
+            {
+              "name": "sec_userDbPermissions",
+              "params": {
+                "user_name": "bob"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sec_unknown_tool_missing",
+      "type": "missing_parameter",
+      "description": "Vague access question with no user or role named — agent should ask for clarification",
+      "input": "What access does this user have in the system?",
+      "expected_tools": []
+    }
+  ]
+}

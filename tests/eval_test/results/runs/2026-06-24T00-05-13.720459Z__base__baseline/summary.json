@@ -1,0 +1,683 @@
+{
+  "run_id": "2026-06-24T00-05-13.720459Z__base__baseline",
+  "started_at": "2026-06-24T00:05:13.720459+00:00",
+  "module_filter": "base",
+  "case_type_filter": "all",
+  "run_label": null,
+  "agent_model_id": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+  "judge_model_id": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+  "evals_database": "demo_user",
+  "description_mode": "mcp_server",
+  "description_overrides_file": null,
+  "description_override_count": 0,
+  "total": 32,
+  "passed": 0,
+  "failed": 32,
+  "cases": [
+    {
+      "case_id": "base_readQuery_happy",
+      "case_type": "happy_path",
+      "description": "Execute a SQL query against the evals employees table",
+      "input": "Run this query: SELECT name, department, salary FROM demo_user.evals_employees WHERE department = 'Sales'",
+      "expected_tools": [
+        {
+          "name": "base_readQuery",
+          "params": {
+            "sql": "SELECT name, department, salary FROM demo_user.evals_employees WHERE department = 'Sales'"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_readQuery_ambiguous_vs_tablePreview",
+      "case_type": "ambiguous_selection",
+      "description": "Prompt with a WHERE clause should use base_readQuery, not base_tablePreview",
+      "input": "Get me all orders from demo_user.evals_orders where the amount is greater than 500",
+      "expected_tools": [
+        {
+          "name": "base_readQuery",
+          "params": {
+            "sql": "SELECT * FROM demo_user.evals_orders WHERE amount > 500"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_readQuery_missing_sql",
+      "case_type": "missing_parameter",
+      "description": "Agent must ask for clarification when no SQL or table is given",
+      "input": "Query the database for me",
+      "expected_tools": [],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableList_happy",
+      "case_type": "happy_path",
+      "description": "List tables in the evals database",
+      "input": "What tables are in the demo_user database?",
+      "expected_tools": [
+        {
+          "name": "base_tableList",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableList_missing_database",
+      "case_type": "missing_parameter",
+      "description": "User asks for tables without specifying a database",
+      "input": "Show me what tables are available",
+      "expected_tools": [],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableDDL_happy",
+      "case_type": "happy_path",
+      "description": "Retrieve DDL for the evals employees table",
+      "input": "Show me the CREATE statement for evals_employees in the demo_user database",
+      "expected_tools": [
+        {
+          "name": "base_tableDDL",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableDDL_ambiguous_vs_columnMetadata",
+      "case_type": "ambiguous_selection",
+      "description": "Asking for full structure including constraints should prefer base_tableDDL",
+      "input": "Describe the full structure of demo_user.evals_employees including any constraints and indexes",
+      "expected_tools": [
+        {
+          "name": "base_tableDDL",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_columnMetadata_happy",
+      "case_type": "happy_path",
+      "description": "Get precise Teradata type codes, character sets, and precision for columns in evals_orders",
+      "input": "Give me the exact Teradata type codes, character set, and decimal precision for every column in demo_user.evals_orders",
+      "expected_tools": [
+        {
+          "name": "base_columnMetadata",
+          "params": {
+            "database_name": "demo_user",
+            "object_name": "evals_orders"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_columnMetadata_ambiguous_vs_tableDDL",
+      "case_type": "ambiguous_selection",
+      "description": "Asking for technical Teradata column precision metadata should prefer base_columnMetadata over base_tableDDL",
+      "input": "I need the UNICODE vs LATIN character set and nullability for every column in demo_user.evals_employees",
+      "expected_tools": [
+        {
+          "name": "base_columnMetadata",
+          "params": {
+            "database_name": "demo_user",
+            "object_name": "evals_employees"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tablePreview_happy",
+      "case_type": "happy_path",
+      "description": "Preview a sample of rows from the evals orders table",
+      "input": "Give me a quick preview of what's in demo_user.evals_orders",
+      "expected_tools": [
+        {
+          "name": "base_tablePreview",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tablePreview_ambiguous_vs_readQuery",
+      "case_type": "ambiguous_selection",
+      "description": "A simple 'show me a few rows' without a WHERE clause should use base_tablePreview",
+      "input": "Show me a few rows from demo_user.evals_orders",
+      "expected_tools": [
+        {
+          "name": "base_tablePreview",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_databaseList_happy",
+      "case_type": "happy_path",
+      "description": "List all accessible databases",
+      "input": "What databases do I have access to?",
+      "expected_tools": [
+        {
+          "name": "base_databaseList",
+          "params": {}
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableList_ambiguous_vs_databaseList",
+      "case_type": "ambiguous_selection",
+      "description": "Listing tables inside one database should prefer base_tableList, not base_databaseList",
+      "input": "What tables exist inside the demo_user database?",
+      "expected_tools": [
+        {
+          "name": "base_tableList",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_databaseList_ambiguous_vs_tableList",
+      "case_type": "ambiguous_selection",
+      "description": "Listing accessible databases should prefer base_databaseList, not base_tableList",
+      "input": "Which databases am I allowed to connect to on this system?",
+      "expected_tools": [
+        {
+          "name": "base_databaseList",
+          "params": {}
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_saveDDL_ambiguous_vs_tableDDL",
+      "case_type": "ambiguous_selection",
+      "description": "Persisting DDL to a file should prefer base_saveDDL, not base_tableDDL",
+      "input": "Export the DDL for demo_user.evals_orders to a file on disk",
+      "expected_tools": [
+        {
+          "name": "base_saveDDL",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableAffinity_ambiguous_vs_tableUsage",
+      "case_type": "ambiguous_selection",
+      "description": "Finding tables co-queried with a specific table should prefer base_tableAffinity, not base_tableUsage",
+      "input": "Which tables in demo_user tend to appear in the same queries as evals_employees?",
+      "expected_tools": [
+        {
+          "name": "base_tableAffinity",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableUsage_ambiguous_vs_tableAffinity",
+      "case_type": "ambiguous_selection",
+      "description": "Access frequency for tables in a database should prefer base_tableUsage, not base_tableAffinity",
+      "input": "Who has been reading tables in demo_user lately and how often?",
+      "expected_tools": [
+        {
+          "name": "base_tableUsage",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_saveDDL_happy",
+      "case_type": "happy_path",
+      "description": "Save DDL for the evals employees table to a file",
+      "input": "Save the DDL for evals_employees in demo_user to a file",
+      "expected_tools": [
+        {
+          "name": "base_saveDDL",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableAffinity_happy",
+      "case_type": "happy_path",
+      "description": "Find tables commonly queried together with evals_orders",
+      "input": "Which tables in demo_user are most often queried together with evals_orders?",
+      "expected_tools": [
+        {
+          "name": "base_tableAffinity",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableUsage_happy",
+      "case_type": "happy_path",
+      "description": "Check usage metrics for the evals database",
+      "input": "How frequently are the tables in demo_user being accessed and by whom?",
+      "expected_tools": [
+        {
+          "name": "base_tableUsage",
+          "params": {
+            "database_name": "demo_user"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_multi_tool_list_then_preview",
+      "case_type": "multi_tool",
+      "description": "List tables in evals database then preview one",
+      "input": "List all tables in demo_user, then show me a preview of evals_employees",
+      "expected_tools": [
+        {
+          "name": "base_tableList",
+          "params": {
+            "database_name": "demo_user"
+          }
+        },
+        {
+          "name": "base_tablePreview",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_multi_tool_ddl_then_columns",
+      "case_type": "multi_tool",
+      "description": "Get DDL then drill into column detail for the same table",
+      "input": "First show me the DDL for demo_user.evals_orders, then give me the detailed column metadata",
+      "expected_tools": [
+        {
+          "name": "base_tableDDL",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        },
+        {
+          "name": "base_columnMetadata",
+          "params": {
+            "database_name": "demo_user",
+            "object_name": "evals_orders"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableDDL_missing_table",
+      "case_type": "missing_parameter",
+      "description": "Agent must ask for database name when only table is provided",
+      "input": "Show me the CREATE statement for evals_employees",
+      "expected_tools": [],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tablePreview_missing_table",
+      "case_type": "missing_parameter",
+      "description": "Agent must ask which table to preview",
+      "input": "Preview some rows",
+      "expected_tools": [],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_saveDDL_missing_table",
+      "case_type": "missing_parameter",
+      "description": "Agent must ask which table to save DDL for",
+      "input": "Save the DDL to a file",
+      "expected_tools": [],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tablePreview_clarify_then_call",
+      "case_type": "missing_parameter",
+      "description": "Agent asks which table to preview, then calls base_tablePreview after user clarifies",
+      "input": "Turn 1: Preview some rows for me | Turn 2: Preview rows from demo_user.evals_employees",
+      "expected_tools": [],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_tableList_clarify_then_call",
+      "case_type": "missing_parameter",
+      "description": "Agent asks which database, then calls base_tableList after user clarifies",
+      "input": "Turn 1: Show me what tables are available | Turn 2: List tables in the demo_user database",
+      "expected_tools": [],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_readQuery_clarify_then_call",
+      "case_type": "missing_parameter",
+      "description": "Agent asks for SQL, then calls base_readQuery after user provides the query",
+      "input": "Turn 1: Run a query for me | Turn 2: Run: SELECT name, department FROM demo_user.evals_employees WHERE department = 'Sales'",
+      "expected_tools": [],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_columnDescription_happy",
+      "case_type": "happy_path",
+      "description": "Show basic column info for the evals employees table",
+      "input": "Show me the columns in demo_user.evals_employees",
+      "expected_tools": [
+        {
+          "name": "base_columnDescription",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_employees"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_columnDescription_ambiguous_vs_columnMetadata",
+      "case_type": "ambiguous_selection",
+      "description": "A simple 'what columns does this table have' question should prefer base_columnDescription",
+      "input": "What are the column names and types in demo_user.evals_orders?",
+      "expected_tools": [
+        {
+          "name": "base_columnDescription",
+          "params": {
+            "database_name": "demo_user",
+            "table_name": "evals_orders"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_columnMetadata_ambiguous_vs_columnDescription",
+      "case_type": "ambiguous_selection",
+      "description": "Asking for precise Teradata type codes and character sets should prefer base_columnMetadata",
+      "input": "Give me the exact Teradata type codes, character sets, and precision details for every column in demo_user.evals_employees",
+      "expected_tools": [
+        {
+          "name": "base_columnMetadata",
+          "params": {
+            "database_name": "demo_user",
+            "object_name": "evals_employees"
+          }
+        }
+      ],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    },
+    {
+      "case_id": "base_unknown_tool_missing",
+      "case_type": "missing_parameter",
+      "description": "User asks to do something no tool supports \u2014 agent should explain and ask for clarification",
+      "input": "Automatically tune my Teradata database indexes and rebalance the AMPs",
+      "expected_tools": [],
+      "passed": false,
+      "failure_stage": "agent",
+      "failure_detail": "unhandled errors in a TaskGroup (1 sub-exception)",
+      "actual_tools": null,
+      "actual_output": null,
+      "metric_reasons": [],
+      "recommendation": "The agent loop failed before scoring: unhandled errors in a TaskGroup (1 sub-exception). Check MCP server connectivity, Bedrock credentials, and that the eval prompt is reachable with the current environment (`EVALS_DATABASE=demo_user`).",
+      "turn_details": null
+    }
+  ]
+}
