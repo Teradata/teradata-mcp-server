@@ -122,6 +122,22 @@ def _make_bedrock_client(region: str = "us-east-1"):
     return boto3.client("bedrock-runtime", region_name=region)
 
 
+def _run_async(coro):
+    """Run an async coroutine, handling both raw asyncio and pytest event loop contexts."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # No running loop — safe to use asyncio.run()
+        return asyncio.run(coro)
+
+    # A loop is already running. This can happen in pytest with event loop plugins.
+    # Use asyncio.ensure_future and wait for it to complete.
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(asyncio.run, coro)
+        return future.result()
+
+
 def _mcp_tool_to_bedrock(tool) -> dict:
     return {
         "toolSpec": {
@@ -328,7 +344,7 @@ def run_agent(
             region=os.environ.get("AWS_REGION", "us-east-1"),
         )
 
-    return asyncio.run(
+    return _run_async(
         _run_agent_async(
             prompt=prompt,
             model_id=resolved_model,
@@ -361,7 +377,7 @@ def run_agent_turns(
             region=os.environ.get("AWS_REGION", "us-east-1"),
         )
 
-    return asyncio.run(
+    return _run_async(
         _run_agent_turns_async(
             prompts=prompts,
             model_id=resolved_model,
