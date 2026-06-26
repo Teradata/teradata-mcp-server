@@ -6,6 +6,11 @@ Tests whether an LLM agent selects the right MCP tool and forms valid parameters
 
 ## Quick start
 
+**Pre-requisite:** ensure that the MCP Server is running in a separate process and reachable in streamable-http.
+
+Eg. `teradata-mcp-server --mcp_port 8001 --mcp_transport streamable-http` 
+
+
 ```bash
 uv venv && uv sync
 cp .env.example .env   # set MCP_SERVER_URL, EVALS_DATABASE, Bedrock credentials
