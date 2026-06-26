@@ -1,6 +1,6 @@
 /*
  * File: evals_employees_DDL.sql
- * Generated: 2026-06-26 14:04:34
+ * Generated: 2026-06-26 15:04:08
  * Type: TABLE
  * Database: demo_user
  * Object: evals_employees

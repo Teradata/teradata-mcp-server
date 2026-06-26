@@ -19,6 +19,7 @@ from judge.metrics import (
     tool_correctness_metric,
 )
 from judge.report import CaseEvalResult, build_recommendation, record_case_result
+from judge.usage import begin_case_usage, end_case_usage
 
 MAX_TURNS = 7
 
@@ -517,7 +518,12 @@ def build_test_case(case: dict, bedrock_client, agent_model_id: str) -> LLMTestC
 
 def assert_eval_case(case: dict, bedrock_client, agent_model_id: str, judge_llm) -> None:
     """Run and score any eval case (single- or multi-turn)."""
-    result = run_eval_case(case, bedrock_client, agent_model_id, judge_llm)
+    usage_token = begin_case_usage()
+    try:
+        result = run_eval_case(case, bedrock_client, agent_model_id, judge_llm)
+    finally:
+        usage_summary = end_case_usage(usage_token)
+    result.token_usage = usage_summary.to_dict()
     record_case_result(result)
     if not result.passed:
         detail = result.failure_detail or "; ".join(result.metric_reasons) or "eval case failed"

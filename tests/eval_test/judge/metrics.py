@@ -6,20 +6,26 @@ from deepeval.metrics import ConversationalGEval, GEval, ToolCorrectnessMetric
 from deepeval.test_case import MultiTurnParams, SingleTurnParams, ToolCallParams
 
 
+def _enable_custom_cost_tracking(metric, judge_llm):
+    if getattr(judge_llm, "returns_token_cost", False):
+        metric.using_native_model = True
+    return metric
+
+
 def tool_correctness_metric(judge_llm) -> ToolCorrectnessMetric:
     """Evaluates tool selection accuracy and parameter correctness via LLM judge."""
-    return ToolCorrectnessMetric(
+    return _enable_custom_cost_tracking(ToolCorrectnessMetric(
         threshold=1.0,
         evaluation_params=[ToolCallParams.INPUT_PARAMETERS],
         model=judge_llm,
         include_reason=True,
         should_exact_match=True,
-    )
+    ), judge_llm)
 
 
 def clarification_metric(judge_llm) -> GEval:
     """For missing_parameter cases: checks the agent asked for clarification rather than hallucinating."""
-    return GEval(
+    return _enable_custom_cost_tracking(GEval(
         name="Clarification Check",
         criteria=(
             "The agent was given a prompt that is missing a required parameter. "
@@ -34,12 +40,12 @@ def clarification_metric(judge_llm) -> GEval:
         ],
         model=judge_llm,
         threshold=0.5,
-    )
+    ), judge_llm)
 
 
 def conversational_clarification_metric(judge_llm) -> ConversationalGEval:
     """For multi-turn clarification turns: checks the latest assistant turn asks for missing info."""
-    return ConversationalGEval(
+    return _enable_custom_cost_tracking(ConversationalGEval(
         name="Clarification Check",
         criteria=(
             "Evaluate the latest assistant turn in the conversation. The user request is missing "
@@ -56,7 +62,7 @@ def conversational_clarification_metric(judge_llm) -> ConversationalGEval:
         ],
         model=judge_llm,
         threshold=0.5,
-    )
+    ), judge_llm)
 
 
 def get_metrics(case: dict, judge_llm) -> list:
