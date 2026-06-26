@@ -1,0 +1,6 @@
+{
+  "name": "teradata-mcp-customisation",
+  "version": "1.0.0",
+  "description": "Build, edit, and debug a semantic layer for the Teradata MCP server — custom tools, cubes, prompts, and glossary entries declared in YAML, plus the profiles.yml that exposes them.",
+  "skills": "./skills/"
+}
