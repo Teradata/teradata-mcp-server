@@ -65,7 +65,7 @@ def handle_fs_myFunctionName(
 
     except Exception as e:
         logger.error(f"Error in handle_fs_myFunctionName: {e}")
-        return create_response({"error": str(e)}, {"tool_name": "fs_myFunctionName"})
+        raise
 ```
 
 ---
@@ -83,6 +83,26 @@ fs:
     fs_myPromptName: True
 ```
 
+
+---
+
+### 🏷️ Tool Annotations (automatic)
+
+Every registered tool receives an MCP `ToolAnnotations` object based on its name prefix. These hints tell LLM clients whether a tool is safe to run silently (`readOnlyHint`) or requires a confirmation prompt (`destructiveHint`).
+
+| Prefix | Hint applied |
+|--------|-------------|
+| `base_`, `dba_`, `sec_`, `rag_`, `qlty_`, `graph_`, `sql_`, `plot_`, `tdvs_` | `readOnlyHint=True, idempotentHint=True` |
+| `bar_` | `readOnlyHint=False, destructiveHint=True` |
+| `tdml_` | `readOnlyHint=False, idempotentHint=True` |
+| `chat_`, `fs_`, unknown prefixes | No annotation (MCP default) |
+
+Per-tool overrides exist for `tdvs_grant_user` and `tdvs_revoke_user` (marked destructive despite the read-only `tdvs_` prefix).
+
+When adding a new tool:
+- **Existing prefix** — no action needed; the correct annotation is inherited automatically.
+- **New prefix** — add an entry to `_PREFIX_ANNOTATIONS` in `app.py`.
+- **Exception within a read-only prefix** (e.g., a future `dba_dropTable`) — add a per-tool entry to `_TOOL_ANNOTATIONS` in `app.py`.
 
 ---
 

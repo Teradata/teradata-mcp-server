@@ -17,14 +17,21 @@ import sys
 import time
 from contextlib import AsyncExitStack
 from datetime import datetime
+from pathlib import Path
+
+_INTEGRATION_DIR = Path(__file__).resolve().parent
+_DEFAULT_CASES_FILE = str(_INTEGRATION_DIR / "cases" / "core_test_cases.json")
 
 # MCP client imports
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
+from mcp.client.streamable_http import streamablehttp_client
 
 
 class MCPTestRunner:
-    def __init__(self, test_cases_files: list[str] = ["tests/cases/core_test_cases.json"], verbose: bool = False):
+    def __init__(self, test_cases_files: list[str] | None = None, verbose: bool = False):
+        if test_cases_files is None:
+            test_cases_files = [_DEFAULT_CASES_FILE]
         self.test_cases_files = test_cases_files if isinstance(test_cases_files, list) else [test_cases_files]
         self.test_cases: dict[str, list[dict]] = {}
         self.scripts: dict[str, dict] = {"pre_test": [], "post_test": []}
@@ -33,6 +40,7 @@ class MCPTestRunner:
         self.session: ClientSession | None = None
         self.exit_stack: AsyncExitStack | None = None
         self.verbose = verbose
+        self._http_server_proc: subprocess.Popen | None = None
 
     def _find_project_root(self) -> str:
         """Find the project root directory (contains profiles.yml)."""
@@ -157,6 +165,105 @@ class MCPTestRunner:
                 traceback.print_exc()
             sys.exit(1)
 
+    async def connect_via_http(self, server_command: list[str]):
+        """Start the server in streamable-http mode and connect via the MCP HTTP client."""
+        import socket as _socket
+
+        if not os.environ.get("DATABASE_URI"):
+            print("✗ Error: DATABASE_URI environment variable is required")
+            print("  Please set DATABASE_URI before running tests:")
+            print("  export DATABASE_URI='teradata://user:pass@host:1025/database'")
+            sys.exit(1)
+
+        # Find a free port
+        with _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM) as s:
+            s.bind(("", 0))
+            port = s.getsockname()[1]
+
+        host = "127.0.0.1"
+        url = f"http://{host}:{port}/mcp/"
+
+        env_vars = {
+            **os.environ,
+            "MCP_TRANSPORT": "streamable-http",
+            "MCP_HOST": host,
+            "MCP_PORT": str(port),
+            "LOGGING_LEVEL": "INFO" if self.verbose else "WARNING",
+        }
+
+        cmd = server_command + [
+            "--mcp_transport", "streamable-http",
+            "--mcp_host", host,
+            "--mcp_port", str(port),
+        ]
+
+        project_root = self._find_project_root()
+        print(f"Starting MCP server (streamable-http): {' '.join(cmd)}")
+        print(f"  Port: {port}")
+
+        self._http_server_proc = subprocess.Popen(
+            cmd,
+            env=env_vars,
+            cwd=project_root,
+            stdout=subprocess.PIPE if not self.verbose else None,
+            stderr=subprocess.PIPE if not self.verbose else None,
+        )
+
+        # Wait for the port to be ready
+        print("  Waiting for server to bind...")
+        deadline = time.time() + 20.0
+        ready = False
+        while time.time() < deadline:
+            try:
+                with _socket.create_connection((host, port), timeout=1):
+                    ready = True
+                    break
+            except OSError:
+                await asyncio.sleep(0.5)
+
+        if not ready:
+            print("✗ Server did not start within 20 seconds")
+            if not self.verbose:
+                _, stderr = self._http_server_proc.communicate(timeout=2)
+                if stderr:
+                    print(f"  Server stderr:\n{stderr.decode()[:1000]}")
+            sys.exit(1)
+
+        print("  Server is listening, establishing MCP HTTP session...")
+
+        try:
+            if not self.exit_stack:
+                self.exit_stack = AsyncExitStack()
+
+            streams = await self.exit_stack.enter_async_context(
+                streamablehttp_client(url)
+            )
+            read, write, _ = streams
+
+            self.session = await self.exit_stack.enter_async_context(
+                ClientSession(read, write)
+            )
+
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    await asyncio.wait_for(self.session.initialize(), timeout=10)
+                    print("✓ Connected to MCP server (streamable-http)")
+                    return
+                except TimeoutError:
+                    if attempt < max_retries - 1:
+                        print(f"  Initialization timeout, retrying... ({attempt + 1}/{max_retries})")
+                        await asyncio.sleep(1)
+                    else:
+                        raise
+
+        except Exception as e:
+            print(f"✗ Failed to connect to MCP server over HTTP: {e}")
+            if self.verbose:
+                import traceback
+                traceback.print_exc()
+            sys.exit(1)
+
     async def discover_tools(self):
         """Discover available tools from the MCP server."""
         try:
@@ -265,6 +372,36 @@ class MCPTestRunner:
                                 response_text += content_item.text
                     else:
                         response_text = str(response.content)
+
+                    # Handle expect_error: tool should have returned an MCP error response
+                    is_error_response = getattr(response, 'isError', False)
+                    expect_error = test_case.get("expect_error", False)
+                    if expect_error:
+                        if is_error_response:
+                            print(f"PASS ({duration:.2f}s)")
+                            return {
+                                "tool": tool_name,
+                                "test": test_case['name'],
+                                "status": "PASS",
+                                "duration": duration,
+                                "response_length": len(response_text),
+                                "error": None,
+                                "response_status": "error",
+                                "full_response": response_text,
+                                "has_warning": False,
+                            }
+                        else:
+                            print(f"FAIL (expected error but got success) ({duration:.2f}s)")
+                            return {
+                                "tool": tool_name,
+                                "test": test_case['name'],
+                                "status": "FAIL",
+                                "duration": duration,
+                                "response_length": len(response_text),
+                                "error": "Expected error response but got success",
+                                "response_status": "unexpected_success",
+                                "full_response": response_text,
+                            }
 
                     # Parse JSON response
                     response_json = json.loads(response_text)
@@ -508,38 +645,62 @@ class MCPTestRunner:
         self.session = None
         self.exit_stack = None
 
+        if self._http_server_proc is not None:
+            self._http_server_proc.terminate()
+            try:
+                self._http_server_proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self._http_server_proc.kill()
+            self._http_server_proc = None
+
 
 async def main():
     """Main entry point."""
     if len(sys.argv) < 2:
-        print("Usage: python tests/run_mcp_tests.py <server_command> [test_cases_file1] [test_cases_file2] [...] [--verbose]")
+        print("Usage: python tests/integration/run_mcp_tests.py <server_command> [test_cases_file ...] [--transport streamable-http] [--verbose]")
         print("Examples:")
-        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server'")
-        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server' tests/cases/core_test_cases.json")
-        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server' tests/cases/core_test_cases.json tests/cases/fs_test_cases.json")
+        print("  python tests/integration/run_mcp_tests.py 'uv run teradata-mcp-server'")
+        print("  python tests/integration/run_mcp_tests.py 'uv run teradata-mcp-server' tests/integration/cases/core_test_cases.json")
+        print("  python tests/integration/run_mcp_tests.py 'uv run teradata-mcp-server' --transport streamable-http")
+        print("  python tests/integration/run_mcp_tests.py 'uv run teradata-mcp-server' tests/integration/cases/core_test_cases.json --transport streamable-http")
         sys.exit(1)
 
     server_command = sys.argv[1].split()
 
-    # Parse test case files from arguments
+    # Parse flags and test case files from remaining arguments
     test_cases_files = []
     verbose = "--verbose" in sys.argv
+    transport = "stdio"
 
-    # Check for test case file arguments (anything that doesn't start with --)
     for i in range(2, len(sys.argv)):
-        if not sys.argv[i].startswith('--'):
-            test_cases_files.append(sys.argv[i])
+        arg = sys.argv[i]
+        if arg == "--transport" and i + 1 < len(sys.argv):
+            transport = sys.argv[i + 1]
+        elif arg in ("--verbose", "stdio", "streamable-http", "sse"):
+            pass  # flags or transport values, not file paths
+        elif not arg.startswith("--"):
+            test_cases_files.append(arg)
+
+    if transport not in ("stdio", "streamable-http", "sse"):
+        print(f"✗ Unknown transport: {transport}. Choose from: stdio, streamable-http, sse")
+        sys.exit(1)
 
     # Default to core test cases if no files specified
     if not test_cases_files:
-        test_cases_files = ["tests/cases/core_test_cases.json"]
+        test_cases_files = [_DEFAULT_CASES_FILE]
 
     runner = MCPTestRunner(test_cases_files, verbose)
 
     try:
         await runner.load_test_cases()
         await runner.run_scripts('pre_test')
-        await runner.connect_to_server(server_command)
+
+        if transport in ("streamable-http", "sse"):
+            print(f"\nTransport: {transport}")
+            await runner.connect_via_http(server_command)
+        else:
+            await runner.connect_to_server(server_command)
+
         await runner.discover_tools()
         await runner.run_all_tests()
         runner.generate_report()

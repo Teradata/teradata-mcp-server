@@ -33,7 +33,7 @@ uv run mypy src/
 
 # Run tests (requires a live Teradata connection)
 export DATABASE_URI="teradata://user:pass@host:1025/database"
-uv run python tests/run_mcp_tests.py "uv run teradata-mcp-server"
+uv run python tests/integration/run_mcp_tests.py "uv run teradata-mcp-server"
 
 # Docker
 docker compose up teradata-mcp-server
@@ -44,7 +44,7 @@ docker compose up teradata-mcp-server
 ### Request Flow
 
 1. **`server.py`** — CLI argument parsing, calls `create_mcp_app()`
-2. **`app.py`** — FastMCP app factory. Creates the MCP instance, registers tools/prompts/resources based on profile, configures middleware
+2. **`app.py`** — FastMCP app factory. Creates the MCP instance, registers tools/prompts/resources based on profile, configures middleware. A `teradata_lifespan` async context manager (passed to `FastMCP(lifespan=...)`) owns the `TDConn` pool lifecycle: creates the pool at server startup and calls `engine.dispose()` in its `finally` block on shutdown.
 3. **`middleware.py`** — `RequestContextMiddleware` extracts per-request headers, auth, and session info. Sets Teradata QueryBand for tracing
 4. **Tool handlers** — Plain sync functions (`handle_*`) in `tools/` subdirectories. Wrapped to async via `asyncio.to_thread`
 
@@ -73,7 +73,7 @@ The ~89 `tdml_*` tools (e.g., `tdml_KMeans`, `tdml_XGBoost`) are registered dyna
 - **`tools/constants.py`** — `TD_ANALYTIC_FUNCS`: a `dict[str, str]` mapping teradataml function name → curated one-line summary. This is the authoritative list of which functions to register. To add a new function, add one entry here.
 - **`tools/utils/__init__.py`** — `build_tdml_tool_docstring(summary, func_metadata, partition_order_cols)`: builds the compact MCP tool description at registration time by reading parameter names, descriptions, and types from the live teradataml JSON store.
 
-Tools are only registered when `enable_analytic_functions` is true, teradataml is installed, and a database connection is available. Functions missing from the connected system are skipped with a warning.
+Tools are registered inside `teradata_lifespan` at server startup (after the DB connection and teradataml context are confirmed). This means `tdml_*` tools become available once the lifespan completes, not at factory time. Functions missing from the connected system are skipped with a warning.
 
 ### Configuration System
 
@@ -86,6 +86,8 @@ Settings dataclass in `config/__init__.py` merges CLI args, environment variable
 ### Database Connectivity
 
 `TDConn` class in `tools/td_connect.py` manages SQLAlchemy engine creation for Teradata. Supports connection pooling (`TD_POOL_SIZE`, `TD_MAX_OVERFLOW`, `TD_POOL_TIMEOUT`), auth modes (TD2, LDAP via `LOGMECH`), and rate-limited authentication.
+
+The `TDConn` instance is created inside the `teradata_lifespan` context manager in `app.py` and stored in a `_ConnState` holder (`_state.tdconn`). This guarantees `engine.dispose()` runs on server shutdown. If `DATABASE_URI` is not set, `TDConn` sets `engine = None` and the server starts without a database (tools will raise at invocation time).
 
 Tool handlers receive either a SQLAlchemy `Connection` or raw `TeradataConnection` as their first parameter — the wrapper in `app.py` handles injection.
 
@@ -102,7 +104,7 @@ For stdio transport, logs go to file only (to avoid polluting MCP stdout). Log l
 
 ### Testing
 
-Tests require a live Teradata database. Test cases are JSON files in `tests/cases/` (e.g., `core_test_cases.json`). The test runner (`tests/run_mcp_tests.py`) dynamically discovers available tools and only runs matching test cases. Results are saved as timestamped JSON in `var/test-reports/`.
+Tests require a live Teradata database. Test cases are JSON files in `tests/integration/cases/` (e.g., `core_test_cases.json`). The test runner (`tests/integration/run_mcp_tests.py`) dynamically discovers available tools and only runs matching test cases. Results are saved as timestamped JSON in `var/test-reports/`.
 
 ## Code Conventions
 

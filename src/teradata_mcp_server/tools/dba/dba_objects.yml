@@ -1,11 +1,10 @@
 dba_tableSpace:
   type: tool
-  description: "Get table space used across all tables, or filtered by database and/or table name."
+  description: "Show table-level disk space usage within a specific Teradata database, ranked by size. Use when the user asks which tables are largest or consuming the most storage within a named database. NEVER call this tool with an empty database_name — if the user's message does not explicitly name a database, ask which database they want before calling. For space allocated to a whole database, use dba_databaseSpace. For total system-wide storage, use dba_systemSpace."
   parameters:
     database_name:
-      description: "Database name filter. Leave empty for all databases."
+      description: "Database name. Required — do not pass empty string."
       type_hint: str
-      default: ''
     table_name:
       description: "Table name filter. Leave empty for all tables."
       type_hint: str
@@ -23,8 +22,8 @@ dba_tableSpace:
         SUM(a.CurrentPerm) AS CurrentPerm1, SUM(a.PeakPerm) AS PeakPerm,
         CAST((100-(AVG(a.CURRENTPERM)/MAX(NULLIFZERO(a.CURRENTPERM))*100)) AS DECIMAL(5,2)) AS SkewPct
     FROM DBC.AllSpaceV a
-    LEFT JOIN DBC.TablesV t ON a.DatabaseName = t.DatabaseName AND a.TableName = t.TableName
-    WHERE (:database_name = '' OR a.DatabaseName = :database_name)
+    LEFT JOIN DBC.TablesVX t ON a.DatabaseName = t.DatabaseName AND a.TableName = t.TableName
+    WHERE a.DatabaseName = :database_name
     AND (:table_name = '' OR a.TableName = :table_name)
     AND (:exclude_system <> 'Y' OR (
         t.TableKind = 'T'
@@ -49,7 +48,7 @@ dba_tableSpace:
 
 dba_tableSqlList:
   type: tool
-  description: "Get a list of SQL run against a table in the last number of days."
+  description: "Retrieve SQL statements that have been executed against a specific named table. Use when the user asks what queries have run against a particular table. ONLY call when the user has explicitly named a specific table — if no table name is in the message, ask for clarification. Do NOT use for SQL history by user — use dba_userSqlList when the user asks what queries a specific person has been running."
   parameters:
     table_name:
       description: "Table name to search for"
@@ -68,12 +67,11 @@ dba_tableSqlList:
 
 dba_userSqlList:
   type: tool
-  description: "Get SQL run by a user in the last number of days. Leave user_name empty for all users."
+  description: "Retrieve SQL statements executed by a specific named user. Use when the user asks what queries a particular person or account has been running. ONLY call when the user has explicitly named a specific user account — if no user name appears in the message, ask for clarification. NEVER call with an empty user_name. Do NOT use for SQL history by table — use dba_tableSqlList when the user asks about queries against a specific table."
   parameters:
     user_name:
-      description: "User name filter. Leave empty or omit for all users."
+      description: "User name to filter by. Required — do not pass empty string."
       type_hint: str
-      default: ''
     no_days:
       description: "Number of days to look back"
       type_hint: int
@@ -83,17 +81,16 @@ dba_userSqlList:
     FROM DBC.QryLogSqlV t1
     JOIN DBC.QryLogV t2 ON t1.QueryID = t2.QueryID
     WHERE CAST(t1.CollectTimeStamp AS DATE) >= CURRENT_DATE - :no_days
-    AND (:user_name = '' OR t2.UserName = :user_name)
+    AND t2.UserName = :user_name
     ORDER BY t1.CollectTimeStamp DESC;
 
 dba_databaseSpace:
   type: tool
-  description: "Get database space allocation for a specific database or all databases."
+  description: "Show disk space allocation for a specific named Teradata database. Use when the user asks how much space a particular database is using or how much has been allocated to it. If no database name is provided, ask for clarification — do not call with an empty database name. For table-level breakdowns within a database, use dba_tableSpace. For system-wide totals across all databases, use dba_systemSpace."
   parameters:
     database_name:
-      description: "Database name. Leave empty or omit for all databases."
+      description: "Database name. Required — do not pass empty string."
       type_hint: str
-      default: ''
   sql: |
     SELECT
         DatabaseName,
@@ -101,20 +98,19 @@ dba_databaseSpace:
         CAST(SUM(CurrentPerm)/1024/1024/1024 AS DECIMAL(10,2)) AS SpaceUsed_GB,
         CAST((SUM(MaxPerm) - SUM(CurrentPerm))/1024/1024/1024 AS DECIMAL(10,2)) AS FreeSpace_GB,
         CAST((SUM(CurrentPerm) * 100.0 / NULLIF(SUM(MaxPerm),0)) AS DECIMAL(10,2)) AS PercentUsed
-    FROM DBC.DiskSpaceV
+    FROM DBC.DiskSpaceVX
     WHERE MaxPerm > 0
-    AND (:database_name = '' OR DatabaseName = :database_name)
+    AND DatabaseName = :database_name
     GROUP BY 1
     ORDER BY 5 DESC;
 
 dba_tableUsageImpact:
   type: tool
-  description: "Measure the usage of tables and views by users to understand what users and tables are driving most resource usage."
+  description: "Identify which users and tables are driving the most query and resource activity within a specific Teradata database. Use when the user asks who is hitting a named database hardest, which users are most active, or which tables generate the most load. ONLY call when the user has specified a database name — if no database name appears in the message, ask for clarification. For system-wide CPU, IO, and memory metrics by time period or application, use dba_resusageSummary instead."
   parameters:
     database_name:
-      description: "Database name to analyze. Leave empty for all databases."
+      description: "Database name to analyze. Required — do not pass empty string."
       type_hint: str
-      default: ''
     user_name:
       description: "User name to analyze. Leave empty for all users."
       type_hint: str
@@ -143,7 +139,7 @@ dba_tableUsageImpact:
             SELECT objectdatabasename AS DatabaseName, ObjectTableName AS TableName, ob.QueryId
             FROM DBC.DBQLObjTbl ob
             WHERE ObjectType IN ('Tab', 'Viw')
-            AND (:database_name = '' OR objectdatabasename = :database_name)
+            AND objectdatabasename = :database_name
             AND ObjectTableName IS NOT NULL
             AND ObjectColumnName IS NULL
             GROUP BY 1, 2, 3
@@ -158,7 +154,7 @@ dba_tableUsageImpact:
 
 dba_resusageSummary:
   type: tool
-  description: "Get summary of resource usage (CPU, IO, Memory) for a specified date range, broken down by specified dimensions."
+  description: "Report system-wide resource consumption (CPU, IO, memory) broken down by time period, application, workload type, or complexity class. Use when the user asks for system-level resource breakdowns, workload profiles, or consumption trends over a date range — not tied to a specific database. For per-database or per-user impact within a named database, use dba_tableUsageImpact instead."
   parameters:
     user_name:
       description: "User name to filter by. Leave empty for all users."
@@ -269,13 +265,13 @@ dba_resusageSummary:
 
 dba_databaseVersion:
   type: tool
-  description: " Get Teradata database version information."
+  description: "Return the Teradata database software version and release information. Use when the user asks what version of Teradata is running on the system."
   sql: |
     select InfoKey, InfoData FROM DBC.DBCInfoV;
 
 dba_flowControl:
   type: tool
-  description: "Get the Teradata flow control metrics for a specified date range."
+  description: "Report Teradata workload management flow control events showing when and how much the system throttled or delayed queries due to resource constraints. Use when the user asks about system throttling, flow control delays, or how often the workload manager imposed restrictions. For how long individual users personally waited in queues, use dba_userDelay instead."
   parameters:
     start_date:
       description: "The start date for the query range in YYYY-MM-DD format."
@@ -316,7 +312,7 @@ dba_flowControl:
 
 dba_featureUsage:
   type: tool
-  description: "Get the user feature usage metrics for a specified date range."
+  description: "Report which Teradata product features were used during a specified date range. Use when the user asks about feature adoption, which Teradata capabilities are being used, or how feature utilization has changed over a period."
   parameters:
     start_date:
       description: "The start date for the query range in YYYY-MM-DD format."
@@ -342,7 +338,7 @@ dba_featureUsage:
 
 dba_userDelay:
   type: tool
-  description: "Get the Teradata user delay metrics for a specified date range."
+  description: "Report how long Teradata users waited in the query queue before their queries began executing. Use when the user asks about user wait times, queue delays, or how long users had to wait. For system-level throttling and workload management flow control events, use dba_flowControl instead."
   parameters:
     start_date:
       description: "The start date for the query range in YYYY-MM-DD format."
@@ -381,39 +377,39 @@ dba_userDelay:
 
 dba_sessionInfo:
   type: tool
-  description: "Get the Teradata session information for user."
+  description: "Report currently active session information for a specific user or all users. Use when the user asks about open connections, active sessions, or currently logged-in users. You may call with the default '*' to show all sessions when no specific user is mentioned — no clarification required for this tool."
   sql: |
     SELECT
         UserName,
         AccountName,
         SessionNo,
-        DefaultDataBase, 
+        DefaultDataBase,
         LogonDate,
         LogonTime,
-        LogonSource, 
+        LogonSource,
         LogonAcct,
-        CurrentRole, 
+        CurrentRole,
         QueryBand,
-        ClientIpAddress, 
+        ClientIpAddress,
         ClientProgramName,
         ClientSystemUserId,
         ClientInterfaceVersion
-    FROM DBC.SessionInfoV
+    FROM DBC.SessionInfoVX
     WHERE UserName = :user_name (NOT CASESPECIFIC) or :user_name='*';
   parameters:
     user_name:
-      description: "User name to analyze. User '*' to get all users."
+      description: "User name to analyze. Use '*' to get all users."
       type_hint: str
       default: '*'
 
 dba_systemSpace:
   type: tool
-  description: "Get the Teradata total system database space usage."
+  description: "Show total disk space usage across the entire Teradata system, aggregated over all databases. Use when the user asks about warehouse-wide storage, total system capacity, or overall disk consumption across all databases. For a single named database, use dba_databaseSpace. For table-level details within a database, use dba_tableSpace."
   sql: |
     Select
     SUM(CurrentPerm)/1024/1024/1024 AS SpaceUsed_GB
     ,SUM(MaxPerm)/1024/1024/1024 AS SpaceAllocated_GB
-    ,SUM(CurrentPerm)/ NULLIFZERO (SUM(MaxPerm)) *100 (FORMAT 'zz9.99%') AS Percentage_Used 
+    ,SUM(CurrentPerm)/ NULLIFZERO (SUM(MaxPerm)) *100 (FORMAT 'zz9.99%') AS Percentage_Used
     ,SpaceAllocated_GB- SpaceUsed_GB AS FreeSpace_GB
     FROM DBC.DiskSpace;
 

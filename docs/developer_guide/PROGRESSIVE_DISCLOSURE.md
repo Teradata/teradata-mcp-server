@@ -249,7 +249,7 @@ All existing tests continue to work:
 
 ```bash
 export DATABASE_URI="teradata://user:pass@host:1025/database"
-uv run python tests/run_mcp_tests.py "uv run teradata-mcp-server"
+uv run python tests/integration/run_mcp_tests.py "uv run teradata-mcp-server"
 ```
 
 ## Benefits

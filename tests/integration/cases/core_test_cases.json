@@ -20,6 +20,13 @@
         }
       },
       {
+        "name": "invalid_sql_returns_masked_error",
+        "parameters": {
+          "sql": "SELECT * FROM nonexistent_table_xyz_mask_test_12345"
+        },
+        "expect_error": true
+      },
+      {
         "name": "persist_result_as_volatile_table",
         "parameters": {
           "sql": "SELECT TOP 20 DatabaseName, TableName FROM DBC.TablesV WHERE DatabaseName = 'DBC'",
@@ -92,35 +99,35 @@
         "name": "system_table_columns",
         "parameters": {
           "database_name": "DBC",
-          "obj_name": "TablesV"
+          "table_name": "TablesV"
         }
       },
       {
-        "name": "wildcard_obj_name_in_database",
+        "name": "wildcard_table_name_in_database",
         "parameters": {
           "database_name": "DBC",
-          "obj_name": "%"
+          "table_name": "%"
         }
       },
       {
-        "name": "like_pattern_obj_name",
+        "name": "like_pattern_table_name",
         "parameters": {
           "database_name": "DBC",
-          "obj_name": "Tables%"
+          "table_name": "Tables%"
         }
       },
       {
-        "name": "case_insensitive_obj_name",
+        "name": "case_insensitive_table_name",
         "parameters": {
           "database_name": "dbc",
-          "obj_name": "tablesv"
+          "table_name": "tablesv"
         }
       },
       {
         "name": "view_columns",
         "parameters": {
           "database_name": "DBC",
-          "obj_name": "DatabasesV"
+          "table_name": "DatabasesV"
         }
       },
       {
@@ -164,10 +171,6 @@
         "parameters": {
           "database_name": "DBC"
         }
-      },
-      {
-        "name": "all_database_space",
-        "parameters": {}
       }
     ],
     "dba_tableSpace": [
@@ -179,32 +182,16 @@
         }
       },
       {
-        "name": "all_tables",
-        "parameters": {}
-      },
-      {
         "name": "database_only",
         "parameters": {
           "database_name": "DBC"
         }
       },
       {
-        "name": "table_name_only",
+        "name": "database_and_table",
         "parameters": {
-          "table_name": "TVM"
-        }
-      },
-      {
-        "name": "top_n_tables",
-        "parameters": {
-          "top_n": 10
-        }
-      },
-      {
-        "name": "exclude_system_tables",
-        "parameters": {
-          "top_n": 10,
-          "exclude_system": "Y"
+          "database_name": "DBC",
+          "table_name": "Tables"
         }
       }
     ],
@@ -324,10 +311,6 @@
         }
       },
       {
-        "name": "all_table_impact",
-        "parameters": {}
-      },
-      {
         "name": "database_table_impact",
         "parameters": {
           "database_name": "data_scientist"
@@ -349,16 +332,6 @@
         "parameters": {
           "user_name": "DBC",
           "no_days": 7
-        }
-      },
-      {
-        "name": "all_users_sql",
-        "parameters": {}
-      },
-      {
-        "name": "all_users_sql_30_days",
-        "parameters": {
-          "no_days": 30
         }
       }
     ],

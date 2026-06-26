@@ -5,23 +5,22 @@ from teradata_mcp_server.tools.plot.plot_utils import get_plot_json_data, get_ra
 
 def handle_plot_line_chart(conn: TeradataConnection, table_name: str, labels: str, columns: str | list[str]):
     """
-    Function to generate a line plot for labels and columns.
-    Columns mentioned in labels are used for x-axis and columns are used for y-axis.
+    Generate a line chart that reads directly from a Teradata table — do NOT use base_readQuery to pre-fetch data first. Specify the table in `table_name`, the x-axis column in `labels` (typically a date or time field), and one or more y-axis numeric columns in `columns`. Use for time-series, trend lines, or sequential data. Do NOT use for proportional category breakdowns — use plot_pie_chart or plot_polar_chart. Do NOT use for multi-dimensional spider comparisons — use plot_radar_chart.
 
     PARAMETERS:
         table_name:
             Required Argument.
-            Specifies the name of the table to generate the donut plot.
+            Specifies the name of the table to generate the line chart.
             Types: str
 
         labels:
             Required Argument.
-            Specifies the labels to be used for the line plot.
+            Specifies the x-axis column (typically date or time).
             Types: str
 
         columns:
             Required Argument.
-            Specifies the column to be used for generating the line plot.
+            Specifies the y-axis numeric column(s) for the line chart.
             Types: List[str]
 
     RETURNS:
@@ -36,23 +35,22 @@ def handle_plot_line_chart(conn: TeradataConnection, table_name: str, labels: st
 
 def handle_plot_polar_chart(conn: TeradataConnection, table_name: str, labels: str, column: str):
     """
-    Function to generate a polar area plot for labels and columns.
-    Columns mentioned in labels are used as labels and column is used to plot.
+    Generate a polar area chart that reads directly from a Teradata table — do NOT use base_readQuery first. Specify the table in `table_name`, the category column in `labels`, and the numeric value column in `column`. Use when the user explicitly asks for a polar chart or polar area chart. For standard pie-style breakdowns, use plot_pie_chart instead.
 
     PARAMETERS:
         table_name:
             Required Argument.
-            Specifies the name of the table to generate the donut plot.
+            Specifies the name of the table to generate the polar chart.
             Types: str
 
         labels:
             Required Argument.
-            Specifies the labels to be used for the line plot.
+            Specifies the category column for labels.
             Types: str
 
         column:
             Required Argument.
-            Specifies the column to be used for generating the line plot.
+            Specifies the numeric value column for the polar chart.
             Types: str
 
     RETURNS:
@@ -67,23 +65,22 @@ def handle_plot_polar_chart(conn: TeradataConnection, table_name: str, labels: s
 
 def handle_plot_pie_chart(conn: TeradataConnection, table_name: str, labels: str, column: str):
     """
-    Function to generate a pie chart plot for labels and columns.
-    Columns mentioned in labels are used as labels and column is used to plot.
+    Generate a pie chart that reads directly from a Teradata table — do NOT use base_readQuery to pre-fetch or aggregate data first. Specify the table in `table_name`, the category column in `labels`, and the numeric value column in `column`. Use when the user asks for proportions, shares, or how a total breaks down by category. For polar area charts, use plot_polar_chart. For time-series trends, use plot_line_chart.
 
     PARAMETERS:
         table_name:
             Required Argument.
-            Specifies the name of the table to generate the donut plot.
+            Specifies the name of the table to generate the pie chart.
             Types: str
 
         labels:
             Required Argument.
-            Specifies the labels to be used for the line plot.
+            Specifies the category column for labels.
             Types: str
 
         column:
             Required Argument.
-            Specifies the column to be used for generating the line plot.
+            Specifies the numeric value column for the pie chart.
             Types: str
 
     RETURNS:
@@ -97,24 +94,23 @@ def handle_plot_pie_chart(conn: TeradataConnection, table_name: str, labels: str
 
 def handle_plot_radar_chart(conn: TeradataConnection, table_name: str, labels: str, columns: str | list[str]):
     """
-    Function to generate a radar plot for labels and columns.
-    Columns mentioned in labels are used as labels and column is used to plot.
+    Generate a radar chart (spider chart or web chart) that reads directly from a Teradata table — do NOT use base_readQuery to pre-fetch data first. Specify the table in `table_name`, the category column in `labels`, and one or more value columns in `columns`. Use when the user asks for a spider chart, radar chart, web chart, or multi-dimensional comparison across categories. For time-series or trend data, use plot_line_chart instead.
 
     PARAMETERS:
         table_name:
             Required Argument.
-            Specifies the name of the table to generate the donut plot.
+            Specifies the name of the table to generate the radar chart.
             Types: str
 
         labels:
             Required Argument.
-            Specifies the labels to be used for the line plot.
+            Specifies the category column for labels.
             Types: str
 
         columns:
             Required Argument.
-            Specifies the column to be used for generating the line plot.
-            Types: str
+            Specifies the value column(s) for the radar chart.
+            Types: str | List[str]
 
     RETURNS:
         dict

@@ -1,12 +1,6 @@
 <p align="center">
-  <!-- Optional: replace with a logo if you have one -->
-  <!-- <img src="docs/media/logo.svg" alt="Teradata MCP Server" width="120"> -->
+  <h1>Teradata MCP Server</h1>
   
-</p>
-
-<h1 align="center">Teradata MCP Server</h1>
-
-<p align="center">
   <a href="https://github.com/Teradata/teradata-mcp-server/blob/main/docs/README.md">
     <img alt="docs" src="https://img.shields.io/badge/docs-readme-555?logo=readthedocs">
   </a>
@@ -19,62 +13,27 @@
   <a href="https://pypi.org/project/teradata-mcp-server/">
     <img alt="downloads" src="https://img.shields.io/pypi/dm/teradata-mcp-server?label=downloads&color=2ea44f">
   </a>
-  <a href="./examples/app-flowise/flowise_teradata_agents/README.md">
-    <img alt="docs" src="https://img.shields.io/badge/Teradata--Agents-Setup-green">
-  </a>
+
+  <p>Connect AI agents directly to Teradata with enterprise security and extensibility.</p>
 </p>
 
-<p align="center">
-  Model Context Protocol (MCP) server for Teradata
- </p>
+![Teradata MCP Server architecture](docs/media/MCP-quickstart.png)
 
-<p align="center">
-  ✨ <a href="https://github.com/Teradata/teradata-mcp-server?tab=readme-ov-file#quick-start-with-claude-desktop-no-installation">Quickstart with Claude Desktop </a> or <a href="https://github.com/Teradata/teradata-mcp-server/blob/main/docs/README.md#-quick-start"> your favorite tool</a> in <5 minute ✨
-</p>
+## Quick Start (Choose Your Path)
 
+| **Client** | **Best For** | **Setup Time** |
+|---|---|---|
+| [Claude Desktop](docs/server_guide/QUICK_START.md) | Exploratory analysis, platform admin | 5 min |
+| [VS Code + Copilot](docs/server_guide/QUICK_START_VSCODE.md) | Data engineering, agent development | 5 min |
+| [Open WebUI](docs/server_guide/QUICK_START_OPEN_WEBUI.md) | Testing new LLMs locally | 5 min |
+| [Code Examples](examples/README.md#client-applications) | Build your own client | varies |
+| [Flowise](docs/client_guide/Flowise_with_teradata_mcp_Guide.md) | Visual agent builder | 10 min |
 
-## Overview
-The Teradata MCP server provides sets of tools and prompts, grouped as modules for interacting with Teradata databases. Enabling AI agents and users to query, analyze, and manage their data efficiently. 
+**Pre-requisites:** [Teradata database](https://www.teradata.com/getting-started/demos/clearscape-analytics) (or free sandbox) + [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
-![Getting Started](https://raw.githubusercontent.com/Teradata/teradata-mcp-server/main/docs/media/client-server-platform.png)
+### Claude Desktop Setup (No Installation)
 
-## Key features
-
-### Available tools and prompts
-
-We are providing groupings of tools and associated helpful prompts to support all type of agentic applications on the data platform.
-
-![Teradata MCP Server diagram](https://raw.githubusercontent.com/Teradata/teradata-mcp-server/main/docs/media/teradata-mcp-server.png)
-
-- **Search** tools, prompts and resources to search and manage vector stores.
-  - [RAG Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/rag/README.md) rapidly build RAG applications.
-- **Query** tools, prompts and resources to query and navigate your Teradata platform:
-  - [Base Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/base/README.md)
-- **Table** tools, to efficiently and predictably access structured data models:
-  - [Feature Store Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/fs/README.md) to access and manage the Teradata Enterprise Feature Store.
-  - [Semantic layer definitions](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/server_guide/CUSTOMIZING.md) to easily implement domain-specific tools, prompts and resources for your own business data models. 
-- **Data Quality** tools, prompts and resources accelerate exploratory data analysis:
-  - [Data Quality Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/qlty/README.md)
-- **DBA** tools, prompts and resources to facilitate your platform administration tasks:
-  - [DBA Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/dba/README.md)
-  - [Security Tools](https://github.com/Teradata/teradata-mcp-server/blob/main/src/teradata_mcp_server/tools/sec/README.md)
-- **Data Scientist** tools, prompts, and resources to build powerful [AI agents and workflows](./examples/app-flowise/flowise_teradata_agents/README.md) for data-driven applications.
-  - [Teradata Vector Store Tools](./src/teradata_mcp_server/tools/tdvs/README.md)
-  - [Teradataml Functions Tools](./src/teradata_mcp_server/tools/constants.py)
-  - [Plot Tools](./src/teradata_mcp_server/tools/plot/README.md)
- - **BAR** tools, prompts and resources for database backup and restore operations:
-   - [BAR Tools](src/teradata_mcp_server/tools/bar/README.md) integrate AI agents with Teradata DSA (Data Stream Architecture) for comprehensive backup management across multiple storage solutions including disk files, cloud storage (AWS S3, Azure Blob, Google Cloud), and enterprise systems (NetBackup, IBM Spectrum).
-
-## Quick start with Claude Desktop (no installation)
-> Prefer to use other tools? Check out our Quick Starts for [VS Code/Copilot](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/server_guide/QUICK_START_VSCODE.md), [Open WebUI](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/server_guide/QUICK_START_OPEN_WEBUI.md), or dive into [simple code examples](https://github.com/Teradata/teradata-mcp-server/blob/main/examples/README.md#client-applications)!
-You can use Claude Desktop to give the  Teradata MCP server a quick try, Claude can manage the server in the background using `uv`. No permanent installation needed.
-
-**Pre-requisites**
-1. Get your Teradata database credentials or create a free sandbox at [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics).
-2. Install [Claude Desktop](https://claude.ai/download).
-3. Install [uv](https://docs.astral.sh/uv/getting-started/installation/). If you are on MacOS, Use Homebrew: `brew install uv`, on Windows you may use `pip install uv` as an alternative to the installer.
-
-Configure the claude_desktop_config.json (Settings>Developer>Edit Config) by adding the configuration below, updating the database username, password and URL:
+Add this to `claude_desktop_config.json` (Settings > Developer > Edit Config):
 
 ```json
 {
@@ -90,30 +49,47 @@ Configure the claude_desktop_config.json (Settings>Developer>Edit Config) by add
 }
 ```
 
-## Installation Instructions
+## What You Can Do
 
-Follow this process to install your server, connect it to your Teradata platform and integrated your tools.
+| **Use Case** | **Capabilities** | **Tools** |
+|---|---|---|
+| **Query & Analyze** | Explore tables, profile data, explain results, visualize patterns—no SQL needed | [base](src/teradata_mcp_server/tools/base/README.md), [dba](src/teradata_mcp_server/tools/dba/README.md), [qlty](src/teradata_mcp_server/tools/qlty/README.md), [plot](src/teradata_mcp_server/tools/plot/README.md) |
+| **AI & RAG Pipelines** | Semantic search, retrieval-augmented generation, vector storage | [rag](src/teradata_mcp_server/tools/rag/README.md), [tdvs](src/teradata_mcp_server/tools/tdvs/README.md), [fs](src/teradata_mcp_server/tools/fs/README.md) |
+| **Database Admin** | Manage security, monitor capacity, automate backups | [dba](src/teradata_mcp_server/tools/dba/README.md), [sec](src/teradata_mcp_server/tools/sec/README.md), [bar](src/teradata_mcp_server/tools/bar/README.md) |
+| **Custom Logic** | Define domain tools, metrics, and semantic layers in YAML | [Learn more →](docs/server_guide/CUSTOMIZING.md) |
 
-**Step 1.** - Identify the running Teradata System, you need username, password and host details. If you do not have a Teradata system to connect to, then leverage [Teradata Clearscape Experience](https://www.teradata.com/getting-started/demos/clearscape-analytics)
+## What's New (Latest Release)
 
-**Step 2.** - To install, configure and run the MCP server, refer to the [Teradata MCP Server Documentation](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/README.md).
+- **FastMCP v3** — Guaranteed resource cleanup with improved lifespan management
+- **Hooks Capability** — Intercept tool calls for custom monitoring, audit, or rate-limiting
+- **Row Limit Protection** — Configurable caps (`DEFAULT_ROW_LIMIT`, `MAX_ROW_LIMIT`) prevent LLM token overflow
+- **Enhanced Security** — VX views for fine-grained row-level access control
 
-**Step 3.** - There are many client options available, the [Client Guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/README.md#-client-guide) explains how to configure and run a sample of different clients.
+## Extend & Deploy
 
-<br>
+**Add Custom Logic**  
+Use hooks to intercept tool calls for monitoring, audit trails, or validation → [Hooks Guide](docs/developer_guide/HOOKS.md)
 
-Check out our libraries of [curated examples](https://github.com/Teradata/teradata-mcp-server/blob/main/examples/) or [video guides](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/server_guide/VIDEO_LIBRARY.md).
+**Define Semantic Layers**  
+Create domain-specific tools, prompts, and cubes in YAML → [Customization Guide](docs/server_guide/CUSTOMIZING.md)
 
-<br>
+**Deploy Everywhere**  
+Run as CLI (uv), HTTP server, Docker container, or cloud service → [Installation Guide](docs/server_guide/INSTALLATION.md)
 
+## See It In Action
 
+- [Voice Agent](examples/app-voice-agent/) — Real-time bidirectional audio with Amazon Nova Sonic
+- [Web Agent](examples/app-adk-agent/) — Interactive chat UI with Google ADK framework
+- [Flowise Builder](examples/app-flowise/) — Visual drag-and-drop workflows
+- [Custom Middleware](examples/server-customisation/server-hooks/) — Performance monitoring patterns
+
+## Learn More
+
+- [Full Documentation](docs/README.md) — Installation, configuration, architecture, security
+- [Video Tutorials](docs/server_guide/VIDEO_LIBRARY.md) — Step-by-step walkthroughs
+- [Developer Guide](docs/developer_guide/DEVELOPER_GUIDE.md) — Extend and contribute
+- [Architecture](docs/server_guide/ARCHITECTURE.md) — How components work together
 
 ## Contributing
-Please refer to the [Contributing](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/developer_guide/CONTRIBUTING.md) guide and the [Developer Guide](https://github.com/Teradata/teradata-mcp-server/blob/main/docs/developer_guide/DEVELOPER_GUIDE.md).
 
-
----------------------------------------------------------------------
-## Certification
-<a href="https://glama.ai/mcp/servers/@Teradata/teradata-mcp-server">
-  <img width="380" height="200" src="https://glama.ai/mcp/servers/@Teradata/teradata-mcp-server/badge" alt="Teradata Server MCP server" />
-</a>
+We welcome contributions! See our [Contributing Guide](docs/developer_guide/CONTRIBUTING.md) and [Developer Guide](docs/developer_guide/DEVELOPER_GUIDE.md) to get started.

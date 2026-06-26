@@ -1,0 +1,183 @@
+{
+  "module": "qlty",
+  "cases": [
+    {
+      "id": "qlty_missingValues_happy",
+      "type": "happy_path",
+      "description": "Find columns with nulls in evals_orders (ship_date is nullable)",
+      "input": "Which columns in {EVALS_DATABASE}.evals_orders contain null or empty entries?",
+      "expected_tools": [
+        {
+          "name": "qlty_missingValues",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "qlty_missingValues_ambiguous_vs_rowsWithMissingValues",
+      "type": "ambiguous_selection",
+      "description": "Asking which columns have nulls (column-level summary) should prefer qlty_missingValues over qlty_rowsWithMissingValues",
+      "input": "Which fields in {EVALS_DATABASE}.evals_orders have missing data?",
+      "expected_tools": [
+        {
+          "name": "qlty_missingValues",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "qlty_negativeValues_happy",
+      "type": "happy_path",
+      "description": "Find negative amounts in evals_orders (some amounts are negative refunds)",
+      "input": "Show me which fields in {EVALS_DATABASE}.evals_orders contain numbers below zero",
+      "expected_tools": [
+        {
+          "name": "qlty_negativeValues",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "qlty_distinctCategories_happy",
+      "type": "happy_path",
+      "description": "List unique product categories in evals_orders",
+      "input": "Show me all the unique values in the product_category column of {EVALS_DATABASE}.evals_orders",
+      "expected_tools": [
+        {
+          "name": "qlty_distinctCategories",
+          "params": {
+            "column_name": "product_category"
+          }
+        }
+      ]
+    },
+    {
+      "id": "qlty_distinctCategories_missing_column",
+      "type": "missing_parameter",
+      "description": "Agent must ask which column when none is specified",
+      "input": "What distinct values exist in a column of {EVALS_DATABASE}.evals_orders?",
+      "expected_tools": []
+    },
+    {
+      "id": "qlty_standardDeviation_happy",
+      "type": "happy_path",
+      "description": "Get mean and spread of salary in evals_employees",
+      "input": "What is the average and spread of salary values in {EVALS_DATABASE}.evals_employees?",
+      "expected_tools": [
+        {
+          "name": "qlty_standardDeviation",
+          "params": {
+            "column_name": "salary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "qlty_standardDeviation_ambiguous_vs_univariateStatistics",
+      "type": "ambiguous_selection",
+      "description": "Asking specifically for standard deviation should prefer qlty_standardDeviation over the broader qlty_univariateStatistics",
+      "input": "What is the standard deviation of the salary field in {EVALS_DATABASE}.evals_employees?",
+      "expected_tools": [
+        {
+          "name": "qlty_standardDeviation",
+          "params": {
+            "column_name": "salary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "qlty_columnSummary_happy",
+      "type": "happy_path",
+      "description": "Get a statistical summary of all columns in evals_employees",
+      "input": "Show me a statistical summary of every field in {EVALS_DATABASE}.evals_employees",
+      "expected_tools": [
+        {
+          "name": "qlty_columnSummary",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "qlty_univariateStatistics_happy",
+      "type": "happy_path",
+      "description": "Get full univariate stats for salary in evals_employees",
+      "input": "Give me a complete statistical breakdown of the salary field in {EVALS_DATABASE}.evals_employees",
+      "expected_tools": [
+        {
+          "name": "qlty_univariateStatistics",
+          "params": {
+            "column_name": "salary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "qlty_univariateStatistics_ambiguous_vs_columnSummary",
+      "type": "ambiguous_selection",
+      "description": "Asking for stats on a specific column should prefer qlty_univariateStatistics over the table-level qlty_columnSummary",
+      "input": "Show me min, max, mean, and percentiles for the amount column in {EVALS_DATABASE}.evals_orders",
+      "expected_tools": [
+        {
+          "name": "qlty_univariateStatistics",
+          "params": {
+            "column_name": "amount"
+          }
+        }
+      ]
+    },
+    {
+      "id": "qlty_rowsWithMissingValues_happy",
+      "type": "happy_path",
+      "description": "Retrieve rows where ship_date is null in evals_orders",
+      "input": "Show me all records from {EVALS_DATABASE}.evals_orders where the ship_date is empty or null",
+      "expected_tools": [
+        {
+          "name": "qlty_rowsWithMissingValues",
+          "params": {
+            "column_name": "ship_date"
+          }
+        }
+      ]
+    },
+    {
+      "id": "qlty_rowsWithMissingValues_ambiguous_vs_missingValues",
+      "type": "ambiguous_selection",
+      "description": "Asking to retrieve the actual rows with missing data should prefer qlty_rowsWithMissingValues over qlty_missingValues",
+      "input": "Fetch the rows from {EVALS_DATABASE}.evals_orders that are missing a ship_date",
+      "expected_tools": [
+        {
+          "name": "qlty_rowsWithMissingValues",
+          "params": {
+            "column_name": "ship_date"
+          }
+        }
+      ]
+    },
+    {
+      "id": "qlty_multi_tool_summary_then_nulls",
+      "type": "multi_tool",
+      "description": "Get column summary then drill into rows with missing values",
+      "input": "First give me a column summary of {EVALS_DATABASE}.evals_orders, then show me the rows where ship_date is missing",
+      "expected_tools": [
+        {
+          "name": "qlty_columnSummary",
+          "params": {}
+        },
+        {
+          "name": "qlty_rowsWithMissingValues",
+          "params": {
+            "column_name": "ship_date"
+          }
+        }
+      ]
+    },
+    {
+      "id": "qlty_unknown_tool_missing",
+      "type": "missing_parameter",
+      "description": "User asks for a non\u2011existent quality tool",
+      "input": "Give me a data quality score for the dataset",
+      "expected_tools": []
+    }
+  ]
+}

@@ -38,13 +38,33 @@ npx modelcontextprotocol/inspector uv run teradata-mcp-server
 
 ### 5) Run tests
 
-Always run tests before submitting a PR:
+Always run the full pre-push checklist before submitting a PR. Run steps in order — the fast checks come first so you fail early.
 
 ```bash
-# core tests
-python tests/run_mcp_tests.py "uv run teradata-mcp-server"
+# 1. Lint (no database required)
+uv run ruff check src/
+uv run ruff format --check src/
+
+# 2. Type check (no database required)
+uv sync --extra dev
+uv run mypy src/
+
+# 3. HTTP transport smoke test (no database required)
+#    Catches startup-time errors in HTTP-specific code paths (middleware,
+#    imports, constructor errors) that the stdio suite cannot reach.
+uv run python tests/integration/smoke_http.py --verbose
+
+# 4. Integration tests — stdio (requires DATABASE_URI)
+export DATABASE_URI="teradata://user:pass@host:1025/database"
+uv run python tests/integration/run_mcp_tests.py "uv run teradata-mcp-server"
+
+# 5. Integration tests — streamable-http (requires DATABASE_URI)
+uv run python tests/integration/run_mcp_tests.py "uv run teradata-mcp-server" --transport streamable-http
 ```
-Most users use the MCP server with Claude, stdio, so always test Claude's behaviour with your code or build before pushing it. 
+
+Steps 1–3 have no database dependency and are quick — run them on every change. Steps 4–5 require VPN and credentials; run them when you have changed tool handlers, middleware, or connection logic.
+
+Most users use the MCP server with Claude over stdio, so always test Claude's behaviour with your code or build before pushing it.
 
 Example configurations:
 ```json
@@ -106,7 +126,7 @@ The directory structure will follow the following conventions
 - `config.py`: `Settings` dataclass and `settings_from_env()` for centralized configuration (single source of truth; precedence is CLI > env > defaults).
 - `utils.py` (logging): structured logging setup (stdio‑safe) and JSON formatter.
 - `middleware.py`: shared `RequestContextMiddleware` that extracts per-request context; has a stdio fast-path (no headers/auth) and a full HTTP/SSE path that can enforce auth and cache.
-- MCP adapter (inlined in `app.py`): internal `execute_db_tool` (DB connection injection, QueryBand, error handling) and `make_tool_wrapper` (auto MCP wrapper for `handle_*` functions).
+- MCP adapter (inlined in `app.py`): internal `execute_db_tool` (DB connection injection, QueryBand, raises `ToolError` on failure) and `make_tool_wrapper` (auto MCP wrapper for `handle_*` functions). `ErrorHandlingMiddleware` with `mask_error_details=True` ensures raw SQL errors and stack traces are never forwarded to LLM clients.
 - `tools/utils/queryband.py`: pure helpers to build Teradata QueryBand strings from request context (protocol-agnostic).
 - `utils.py`: configuration helpers for profiles and YAML object loading.
 - `testing/`: testing framework and utilities.
@@ -373,17 +393,17 @@ This section explains how the pieces fit together at runtime.
   - The wrapper delegates execution to `execute_db_tool` which:
     - Injects a DB connection (SQLAlchemy `Connection` preferred)
     - Sets QueryBand based on request context (`tools/utils/queryband.py`)
-- Dynamically registers `tdml_*` analytic function tools when teradataml is installed and a database connection is available (see below).
+- Dynamically registers `tdml_*` analytic function tools via the `teradata_lifespan` context manager, after the database connection and teradataml context are confirmed (see below).
 
 ### Dynamic teradataml Analytic Function Registration
 
-The ~89 `tdml_*` tools (e.g., `tdml_KMeans`, `tdml_XGBoost`) are not defined as `handle_*` functions. Instead, `app.py` generates and registers them at startup when `enable_analytic_functions` is true:
+The ~89 `tdml_*` tools (e.g., `tdml_KMeans`, `tdml_XGBoost`) are not defined as `handle_*` functions. Instead, `app.py` generates and registers them inside the `teradata_lifespan` async context manager at server startup, after the teradataml context is established:
 
 1. **`tools/constants.py`** — `TD_ANALYTIC_FUNCS` is a `dict[str, str]` mapping each teradataml function name to a curated one-line summary (e.g., `"KMeans": "Groups observations into k clusters..."`). This dict is the authoritative list of which functions to register.
 
 2. **`tools/utils/__init__.py`** — `build_tdml_tool_docstring(summary, func_metadata, partition_order_cols)` builds the compact MCP tool description at registration time. It reads parameter names, descriptions, Required/Optional, and types directly from `func_metadata.arguments` (teradataml's live JSON store, populated from the database), combining them with the curated summary.
 
-3. **`app.py`** — Iterates `TD_ANALYTIC_FUNCS.items()`, queries the live JSON store for each function's metadata, generates a Python function string via `exec()`, and registers it with `mcp.tool()`. If a function from the dict is not present in the connected database's function list, it is skipped with a warning.
+3. **`app.py` (`teradata_lifespan`)** — After confirming the teradataml context is available, iterates `TD_ANALYTIC_FUNCS.items()`, queries the live JSON store for each function's metadata, generates a Python function string via `exec()`, and registers it with `server.tool()`. If a function from the dict is not present in the connected database's function list, it is skipped with a warning. Registration happens once at startup before any client connections are accepted.
 
 **To add a new analytic function:** add one entry to `TD_ANALYTIC_FUNCS` in `tools/constants.py` with a concise one-line description. No other code changes are needed.
 
@@ -630,18 +650,18 @@ Use the provided testing tool to run tests, add tests if you add a new tool.
 
 We have a "core" test suite for all the core tools provided with this server, separate ones for the add-ons (eg. Enterprise Feature Store, Enterprise Vector Store) and you can add more for your custom tools.
 
-See guidelines and details in [our testing guide](/tests/README.md)
+See guidelines and details in [our testing guide](/tests/integration/README.md)
 
 Run testing before PR, and copy/paste the test report status in the PR. 
 
 **Development testing:**
 ```bash
-python tests/run_mcp_tests.py "uv run teradata-mcp-server"
+python tests/integration/run_mcp_tests.py "uv run teradata-mcp-server"
 ```
 
 **Installed package testing:**
 ```bash
-python tests/run_mcp_tests.py "teradata-mcp-server"
+python tests/integration/run_mcp_tests.py "teradata-mcp-server"
 ```
 
 <br><br><br>

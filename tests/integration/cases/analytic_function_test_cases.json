@@ -1,11 +1,11 @@
 {
     "scripts": {
         "pre_test": {
-            "command": "python tests/scripts/analytic_functions_setup.py --action setup",
+            "command": "python tests/integration/scripts/analytic_functions_setup.py --action setup",
             "description": "Setup Analytic functions test environment"
         },
         "post_test": {
-            "command": "python tests/scripts/analytic_functions_setup.py --action cleanup",
+            "command": "python tests/integration/scripts/analytic_functions_setup.py --action cleanup",
             "description": "Teardown Analytic functions test environment"
         }
     },

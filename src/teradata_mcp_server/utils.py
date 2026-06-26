@@ -171,10 +171,6 @@ def format_text_response(text: Any):
     return [types.TextContent(type="text", text=str(text))]
 
 
-def format_error_response(error: str):
-    return format_text_response(f"Error: {error}")
-
-
 # -------------------- Type hint resolution -------------------- #
 def resolve_type_hint(type_hint):
     """Convert a type hint from string or type to actual type class.
