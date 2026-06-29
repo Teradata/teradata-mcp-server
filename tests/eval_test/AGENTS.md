@@ -47,11 +47,12 @@ judge/
 cases/
   <module>.json       # Eval case definitions per MCP module prefix
 tests/
-  conftest.py         # Fixtures, {EVALS_DATABASE} substitution, assert_eval_case()
-  case_runner.py      # Single/multi-turn execution and per-turn scoring
-  test_<module>.py    # One pytest file per module (all use assert_eval_case)
-  test_checks.py      # Unit tests for judge/checks.py
-  test_multi_turn.py  # Unit tests for multi-turn schema validation
+  conftest.py          # Fixtures, _substitute() helper, wrapper functions for eval case execution
+  case_runner.py       # Single/multi-turn execution and per-turn scoring (raw functions)
+  generated_cases.py   # Dynamically generates pytest tests from JSON case definitions
+  test_generated_cases.py # Exposes generated tests to pytest discovery
+  test_checks.py       # Unit tests for judge/checks.py
+  test_multi_turn.py   # Unit tests for multi-turn schema validation
 backup/               # Optional bootstrap/audit scripts — see backup/README.md
 run_evals.py          # CLI entry point (deepeval + pytest)
 suggest_overrides.py  # CLI: draft description_overrides from eval failures
@@ -122,7 +123,8 @@ pyproject.toml        # Project metadata, Ruff config, pytest paths
 | Agent loop / MCP session | `agent/client.py` |
 | Deterministic checks | `judge/checks.py` |
 | LLM judge metrics | `judge/metrics.py` |
-| Run + score any case | `tests/case_runner.py` → `assert_eval_case()` |
+| Dynamic test generation from JSON | `tests/generated_cases.py` → `_register_module_tests()` |
+| Run + score any case (raw) | `tests/case_runner.py` → `assert_eval_case()` |
 | Eval run summaries | `judge/report.py` → `results/runs/<run_id>/` + `results/latest.json` |
 | List recent runs | `run_evals.py --list-runs` |
 | Override suggestions | `suggest_overrides.py` → run's `suggested_overrides.json` |
@@ -132,7 +134,7 @@ pyproject.toml        # Project metadata, Ruff config, pytest paths
 | Ambiguous pair registry / live MCP diff | `backup/audit_cases.py` → `AMBIGUOUS_PAIRS`, `--live-mcp` |
 | Happy-path generator | `backup/generate_cases.py` |
 | Test data setup / preflight | `setup_test_data.py`, `preflight.py` |
-| `{EVALS_DATABASE}` substitution | `tests/conftest.py` → `_substitute()` |s
+| `{EVALS_DATABASE}` substitution (runtime) | `tests/generated_cases.py` → `_register_module_tests()` calls `_substitute()` from conftest before execution |
 | User-facing docs | `README.md`, `docs/` |
 
 ## EVAL FLOW
@@ -147,14 +149,15 @@ pyproject.toml        # Project metadata, Ruff config, pytest paths
 
 **Per-case scoring:**
 
-1. Test loads case from `cases/<module>.json` via `load_cases()`.
-2. `{EVALS_DATABASE}` placeholder substituted at runtime.
-3. **Single-turn:** `run_agent()` → deterministic checks → deepeval metrics.
-4. **Multi-turn:** `run_agent_turns()` (one MCP session, max 7 turns) → per-turn checks:
+1. Pytest discovers parametrized tests from `tests/generated_cases.py` → `_register_module_tests()`.
+2. Each parametrized test loads a case from `cases/<module>.json` and filters by `EVALS_RUN_MODULE` / `EVALS_RUN_TYPE` env vars.
+3. `{EVALS_DATABASE}` placeholder substituted at runtime via `_substitute()` from `conftest.py` before execution.
+4. **Single-turn:** `run_agent()` → deterministic checks → deepeval metrics.
+5. **Multi-turn:** `run_agent_turns()` (one MCP session, max 7 turns) → per-turn checks:
    - Clarification turns: no tools + Clarification GEval
    - Tool turns: deterministic checks + ToolCorrectnessMetric
-5. Structural failures in `judge/checks.py` raise `AssertionError` before the judge runs.
-6. Outcomes recorded under `results/runs/<run_id>/` via `judge/report.py`.
+6. Structural failures in `judge/checks.py` raise `AssertionError` before the judge runs.
+7. Outcomes recorded under `results/runs/<run_id>/` via `judge/report.py`.
 
 ## CASE JSON CONVENTIONS
 

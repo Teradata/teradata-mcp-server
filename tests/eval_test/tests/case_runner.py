@@ -3,16 +3,23 @@
 from __future__ import annotations
 
 import os
+from contextlib import redirect_stderr, redirect_stdout
+from io import StringIO
 from typing import Any
 
-from deepeval.evaluate.configs import CacheConfig, DisplayConfig, ErrorConfig
-from deepeval.evaluate.execute import execute_test_cases
-from deepeval.test_case import LLMTestCase, ToolCall
+from deepeval import evaluate
+from deepeval.evaluate import AsyncConfig, CacheConfig, DisplayConfig, ErrorConfig
+from deepeval.test_case import ConversationalTestCase, LLMTestCase, ToolCall, Turn
 
 from agent.client import run_agent, run_agent_turns
-from judge.checks import ToolCallRecord, run_deterministic_checks
-from judge.metrics import clarification_metric, get_metrics, tool_correctness_metric
+from judge.checks import EXACT_VALUE_KEYS, PRESENCE_ONLY_KEYS, ToolCallRecord, run_deterministic_checks
+from judge.metrics import (
+    conversational_clarification_metric,
+    get_metrics,
+    tool_correctness_metric,
+)
 from judge.report import CaseEvalResult, build_recommendation, record_case_result
+from judge.usage import begin_case_usage, end_case_usage
 
 MAX_TURNS = 7
 
@@ -65,35 +72,111 @@ def _tool_dicts(records: list[ToolCallRecord]) -> list[dict[str, Any]]:
     return [{"name": tc.name, "params": tc.input_parameters} for tc in records]
 
 
-def _make_test_case(
+def _normalize_tool_params(
+    expected_params: dict[str, Any],
+    actual_params: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Normalize params for DeepEval's exact matcher without requiring exact SQL text."""
+    expected_normalized: dict[str, Any] = {}
+    actual_normalized: dict[str, Any] = {}
+
+    for key, expected_value in expected_params.items():
+        if key in PRESENCE_ONLY_KEYS:
+            if expected_value:
+                expected_normalized[key] = "__present__"
+                actual_normalized[key] = "__present__" if actual_params.get(key) else "__missing__"
+            continue
+
+        if key in EXACT_VALUE_KEYS and expected_value not in ("", None):
+            expected_normalized[key] = expected_value
+            actual_normalized[key] = actual_params.get(key)
+            continue
+
+        expected_normalized[key] = expected_value
+        actual_normalized[key] = actual_params.get(key)
+
+    for key, actual_value in actual_params.items():
+        if key not in expected_params:
+            actual_normalized[key] = actual_value
+
+    return expected_normalized, actual_normalized
+
+
+def _make_tool_correctness_test_case(
     *,
     user_input: str,
     response: str,
     tools_called: list[ToolCallRecord],
     expected_tools_raw: list[dict[str, Any]],
 ) -> LLMTestCase:
+    expected_tools: list[ToolCall] = []
+    normalized_calls: list[ToolCall] = []
+
+    for index, expected_tool in enumerate(expected_tools_raw):
+        expected_name = expected_tool["name"]
+        expected_params = expected_tool.get("params", {})
+        actual_params = tools_called[index].input_parameters if index < len(tools_called) else {}
+        expected_normalized, actual_normalized = _normalize_tool_params(expected_params, actual_params)
+        expected_tools.append(ToolCall(name=expected_name, input_parameters=expected_normalized))
+
+        if index < len(tools_called):
+            normalized_calls.append(
+                ToolCall(name=tools_called[index].name, input_parameters=actual_normalized),
+            )
+
+    for extra_call in tools_called[len(expected_tools_raw):]:
+        normalized_calls.append(
+            ToolCall(name=extra_call.name, input_parameters=extra_call.input_parameters),
+        )
+
     return LLMTestCase(
         input=user_input,
         actual_output=response,
-        tools_called=_to_tool_calls(tools_called),
-        expected_tools=[
-            ToolCall(name=t["name"], input_parameters=t.get("params", {}))
-            for t in expected_tools_raw
-        ],
+        tools_called=normalized_calls,
+        expected_tools=expected_tools,
     )
 
 
-def _evaluate_metrics(test_case: LLMTestCase, metrics) -> tuple[list[str], bool]:
-    test_result = execute_test_cases(
-        [test_case],
-        metrics,
-        error_config=ErrorConfig(ignore_errors=False, skip_on_missing_params=False),
-        display_config=DisplayConfig(verbose_mode=False, show_indicator=False),
-        cache_config=CacheConfig(write_cache=False, use_cache=False),
-        identifier="eval",
-        _use_bar_indicator=False,
-        _is_assert_test=True,
-    )[0]
+def _make_conversational_test_case(
+    *,
+    previous_turns: list[Turn],
+    user_input: str,
+    response: str,
+    case_id: str,
+) -> ConversationalTestCase:
+    return ConversationalTestCase(
+        turns=[
+            *previous_turns,
+            Turn(role="user", content=user_input),
+            Turn(role="assistant", content=response),
+        ],
+        scenario=f"{case_id}: missing required information before an MCP tool can be called",
+        expected_outcome="The latest assistant turn asks the user for the missing information.",
+    )
+
+
+def _evaluate_metrics(
+    test_case: LLMTestCase | ConversationalTestCase,
+    metrics,
+) -> tuple[list[str], bool]:
+    stdout = StringIO()
+    stderr = StringIO()
+    with redirect_stdout(stdout), redirect_stderr(stderr):
+        evaluation = evaluate(
+            test_cases=[test_case],
+            metrics=metrics,
+            error_config=ErrorConfig(ignore_errors=False, skip_on_missing_params=False),
+            display_config=DisplayConfig(
+                verbose_mode=False,
+                show_indicator=False,
+                print_results=False,
+                inspect_after_run=False,
+            ),
+            cache_config=CacheConfig(write_cache=False, use_cache=False),
+            async_config=AsyncConfig(run_async=False),
+            identifier="eval",
+        )
+    test_result = evaluation.test_results[0]
 
     if test_result.success:
         return [], True
@@ -203,7 +286,7 @@ def run_single_turn_case(case: dict, bedrock_client, agent_model_id: str, judge_
             actual_output=agent_result.final_response,
         )
 
-    test_case = _make_test_case(
+    test_case = _make_tool_correctness_test_case(
         user_input=case["input"],
         response=agent_result.final_response,
         tools_called=raw_calls,
@@ -254,6 +337,7 @@ def run_multi_turn_case(case: dict, bedrock_client, agent_model_id: str, judge_l
             expected_tools=[],
         )
 
+    previous_turns: list[Turn] = []
     conversation_prefix = ""
     turn_details: list[dict[str, Any]] = []
 
@@ -292,13 +376,13 @@ def run_multi_turn_case(case: dict, bedrock_client, agent_model_id: str, judge_l
                     turn_details=turn_details,
                 )
 
-            test_case = _make_test_case(
-                user_input=turn_input,
+            test_case = _make_conversational_test_case(
+                previous_turns=previous_turns,
+                user_input=turn_spec["input"],
                 response=turn_result.final_response,
-                tools_called=[],
-                expected_tools_raw=[],
+                case_id=case.get("id", "<unknown>"),
             )
-            metric_reasons, passed = _evaluate_metrics(test_case, [clarification_metric(judge_llm)])
+            metric_reasons, passed = _evaluate_metrics(test_case, [conversational_clarification_metric(judge_llm)])
         else:
             expected_tools = turn_spec.get("expected_tools", [])
             pseudo_case = {
@@ -331,7 +415,7 @@ def run_multi_turn_case(case: dict, bedrock_client, agent_model_id: str, judge_l
                     turn_details=turn_details,
                 )
 
-            test_case = _make_test_case(
+            test_case = _make_tool_correctness_test_case(
                 user_input=turn_input,
                 response=turn_result.final_response,
                 tools_called=raw_calls,
@@ -372,6 +456,12 @@ def run_multi_turn_case(case: dict, bedrock_client, agent_model_id: str, judge_l
                 "passed": True,
                 "actual_tools": actual_tools,
             }
+        )
+        previous_turns.extend(
+            [
+                Turn(role="user", content=turn_spec["input"]),
+                Turn(role="assistant", content=turn_result.final_response, tools_called=_to_tool_calls(raw_calls)),
+            ],
         )
         conversation_prefix += f"User: {turn_spec['input']}\nAssistant: {turn_result.final_response}\n"
 
@@ -418,7 +508,7 @@ def build_test_case(case: dict, bedrock_client, agent_model_id: str) -> LLMTestC
         case_id = case.get("id", "<unknown>")
         raise AssertionError(f"[{case_id}] deterministic check failed: {'; '.join(det_errors)}")
 
-    return _make_test_case(
+    return _make_tool_correctness_test_case(
         user_input=case["input"],
         response=agent_result.final_response,
         tools_called=raw_calls,
@@ -428,7 +518,12 @@ def build_test_case(case: dict, bedrock_client, agent_model_id: str) -> LLMTestC
 
 def assert_eval_case(case: dict, bedrock_client, agent_model_id: str, judge_llm) -> None:
     """Run and score any eval case (single- or multi-turn)."""
-    result = run_eval_case(case, bedrock_client, agent_model_id, judge_llm)
+    usage_token = begin_case_usage()
+    try:
+        result = run_eval_case(case, bedrock_client, agent_model_id, judge_llm)
+    finally:
+        usage_summary = end_case_usage(usage_token)
+    result.token_usage = usage_summary.to_dict()
     record_case_result(result)
     if not result.passed:
         detail = result.failure_detail or "; ".join(result.metric_reasons) or "eval case failed"

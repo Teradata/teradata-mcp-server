@@ -13,6 +13,8 @@ import boto3
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
+from judge.usage import record_bedrock_usage
+
 MAX_TOOL_RESULT_CHARS = int(os.environ.get("MAX_TOOL_RESULT_CHARS", "8000"))
 
 # ---------------------------------------------------------------------------
@@ -247,6 +249,7 @@ async def _run_agent_turns_async(
                             "toolChoice": {"auto": {}},
                         },
                     )
+                    record_bedrock_usage(model_id=model_id, role="agent", response=response)
 
                     stop_reason = response["stopReason"]
                     output_message = response["output"]["message"]
@@ -303,6 +306,7 @@ async def _run_agent_async(
                         "toolChoice": {"auto": {}},
                     },
                 )
+                record_bedrock_usage(model_id=model_id, role="agent", response=response)
 
                 stop_reason = response["stopReason"]
                 output_message = response["output"]["message"]

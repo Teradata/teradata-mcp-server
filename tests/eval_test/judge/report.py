@@ -32,6 +32,7 @@ class CaseEvalResult:
     metric_reasons: list[str] = field(default_factory=list)
     recommendation: str | None = None
     turn_details: list[dict[str, Any]] | None = None
+    token_usage: dict[str, Any] | None = None
 
 
 @dataclass
@@ -220,8 +221,81 @@ def _format_tools(tools: list[dict[str, Any]] | None) -> str:
     return "\n".join(lines)
 
 
+def _aggregate_token_usage(report: EvalRunReport) -> dict[str, Any]:
+    by_key: dict[str, dict[str, Any]] = {}
+    for result in report.results:
+        token_usage = result.token_usage or {}
+        for item in token_usage.get("by_model", []):
+            if not isinstance(item, dict):
+                continue
+            role = str(item.get("role") or "")
+            model_id = str(item.get("model_id") or "")
+            key = f"{role}:{model_id}"
+            aggregate = by_key.setdefault(
+                key,
+                {
+                    "model_id": model_id,
+                    "role": role,
+                    "calls": 0,
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "cache_read_input_tokens": 0,
+                    "cache_write_input_tokens": 0,
+                    "total_tokens": 0,
+                    "cost_usd": None,
+                },
+            )
+            for field_name in (
+                "calls",
+                "input_tokens",
+                "output_tokens",
+                "cache_read_input_tokens",
+                "cache_write_input_tokens",
+                "total_tokens",
+            ):
+                aggregate[field_name] += int(item.get(field_name) or 0)
+            if item.get("cost_usd") is not None:
+                aggregate["cost_usd"] = (aggregate["cost_usd"] or 0.0) + float(item["cost_usd"])
+
+    total = {
+        "model_id": None,
+        "role": "all",
+        "calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "total_tokens": 0,
+        "cost_usd": None,
+    }
+    for item in by_key.values():
+        for field_name in (
+            "calls",
+            "input_tokens",
+            "output_tokens",
+            "cache_read_input_tokens",
+            "cache_write_input_tokens",
+            "total_tokens",
+        ):
+            total[field_name] += int(item.get(field_name) or 0)
+        if item.get("cost_usd") is not None:
+            total["cost_usd"] = (total["cost_usd"] or 0.0) + float(item["cost_usd"])
+
+    return {
+        "total": total,
+        "by_model": sorted(by_key.values(), key=lambda item: (item["role"], item["model_id"])),
+    }
+
+
+def _format_cost(value: Any) -> str:
+    if value is None:
+        return "not configured"
+    return f"${float(value):.6f}"
+
+
 def render_markdown(report: EvalRunReport) -> str:
     """Render a markdown summary for the eval run."""
+    token_usage = _aggregate_token_usage(report)
     lines = [
         "# Teradata MCP Eval Run Summary",
         "",
@@ -251,6 +325,32 @@ def render_markdown(report: EvalRunReport) -> str:
             f"| Total cases | {report.total} |",
             f"| Passed | {report.passed_count} |",
             f"| Failed | {report.failed_count} |",
+            "",
+            "## Token Usage",
+            "",
+            "| Role | Model | Calls | Input | Output | Cache read | Cache write | Total | Cost |",
+            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        ]
+    )
+    if token_usage["by_model"]:
+        for item in token_usage["by_model"]:
+            lines.append(
+                f"| {item['role']} | `{item['model_id']}` | {item['calls']} | "
+                f"{item['input_tokens']} | {item['output_tokens']} | "
+                f"{item['cache_read_input_tokens']} | {item['cache_write_input_tokens']} | "
+                f"{item['total_tokens']} | {_format_cost(item['cost_usd'])} |"
+            )
+        total = token_usage["total"]
+        lines.append(
+            f"| **All** | **All** | **{total['calls']}** | **{total['input_tokens']}** | "
+            f"**{total['output_tokens']}** | **{total['cache_read_input_tokens']}** | "
+            f"**{total['cache_write_input_tokens']}** | **{total['total_tokens']}** | "
+            f"**{_format_cost(total['cost_usd'])}** |"
+        )
+    else:
+        lines.append("| _none_ | _none_ | 0 | 0 | 0 | 0 | 0 | 0 | not configured |")
+    lines.extend(
+        [
             "",
         ]
     )
@@ -395,6 +495,7 @@ def resolve_suggestion_output_path(summary_path: Path) -> Path:
 
 
 def _summary_payload(report: EvalRunReport) -> dict[str, Any]:
+    token_usage = _aggregate_token_usage(report)
     return {
         "run_id": build_run_id(report),
         "started_at": report.started_at,
@@ -410,11 +511,13 @@ def _summary_payload(report: EvalRunReport) -> dict[str, Any]:
         "total": report.total,
         "passed": report.passed_count,
         "failed": report.failed_count,
+        "token_usage": token_usage,
         "cases": [asdict(result) for result in report.results],
     }
 
 
 def _manifest_payload(report: EvalRunReport, *, run_id: str) -> dict[str, Any]:
+    token_usage = _aggregate_token_usage(report)
     return {
         "run_id": run_id,
         "started_at": report.started_at,
@@ -430,6 +533,7 @@ def _manifest_payload(report: EvalRunReport, *, run_id: str) -> dict[str, Any]:
         "total": report.total,
         "passed": report.passed_count,
         "failed": report.failed_count,
+        "token_usage": token_usage,
         "artifacts": {
             "summary_md": "summary.md",
             "summary_json": "summary.json",
@@ -440,6 +544,7 @@ def _manifest_payload(report: EvalRunReport, *, run_id: str) -> dict[str, Any]:
 
 
 def _index_entry(report: EvalRunReport, *, run_id: str) -> dict[str, Any]:
+    token_usage = _aggregate_token_usage(report)
     return {
         "run_id": run_id,
         "started_at": report.started_at,
@@ -453,6 +558,7 @@ def _index_entry(report: EvalRunReport, *, run_id: str) -> dict[str, Any]:
         "run_dir": f"runs/{run_id}",
         "summary_json": f"runs/{run_id}/summary.json",
         "summary_md": f"runs/{run_id}/summary.md",
+        "token_usage": token_usage["total"],
     }
 
 
@@ -525,6 +631,7 @@ def write_eval_summary(report: EvalRunReport) -> RunArtifacts:
     markdown = render_markdown(report)
     payload = _summary_payload(report)
     manifest_payload = _manifest_payload(report, run_id=run_id)
+    token_usage = _aggregate_token_usage(report)
 
     summary_md.write_text(markdown + "\n", encoding="utf-8")
     summary_json.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -548,6 +655,7 @@ def write_eval_summary(report: EvalRunReport) -> RunArtifacts:
         "passed": report.passed_count,
         "failed": report.failed_count,
         "total": report.total,
+        "token_usage": token_usage["total"],
     }
     LATEST_POINTER_FILE.write_text(json.dumps(pointer, indent=2) + "\n", encoding="utf-8")
     _update_run_index(_index_entry(report, run_id=run_id))
