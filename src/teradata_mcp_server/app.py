@@ -849,8 +849,46 @@ def create_mcp_app(settings: Settings):
         :return: A SQL query string generator function taking dimensions and measures as comma-separated strings.
         """
 
+        def _is_table_ref(sql_str: str) -> bool:
+            """Return True if sql_str is a bare table/view reference (no whitespace → not a query)."""
+            return " " not in sql_str.strip() and "\n" not in sql_str.strip()
+
+        def _source_clause(sql_str: str, alias: str) -> str:
+            """Wrap a query in parentheses with alias, or use a table ref directly."""
+            stripped = sql_str.strip()
+            if _is_table_ref(stripped):
+                return f"{stripped} AS {alias}"
+            return f"(\n{stripped}\n) AS {alias}"
+
+        def _join_on(join_def: dict) -> str:
+            """Return the join ON condition.
+
+            YAML 1.1 (used by PyYAML) treats the unquoted key ``on:`` as the Python
+            boolean ``True``.  We check both the boolean and string forms so that users
+            can write ``on: "..."`` in their YAML files without needing to quote the key.
+            """
+            return join_def.get("on", join_def.get(True, ""))
+
+        def _extract_param_refs(text: str) -> set:
+            """Return the set of :param_name references in a SQL string."""
+            return set(re.findall(r":([a-zA-Z_][a-zA-Z0-9_]*)", text))
+
+        def _dim_expression(dim_key: str) -> str:
+            """Return the SQL expression for a dimension key, supporting both 'sql' and 'expression' fields."""
+            dim_cfg = cube.get("dimensions", {}).get(dim_key)
+            if dim_cfg is None:
+                return dim_key
+            return dim_cfg.get("sql", dim_cfg.get("expression", dim_key))
+
+        def _meas_expression(meas_key: str) -> str:
+            """Return the SQL expression for a measure key, supporting both 'sql' and 'expression' fields."""
+            mdef = cube.get("measures", {}).get(meas_key)
+            if mdef is None:
+                return None
+            return mdef.get("sql", mdef.get("expression"))
+
         def _cube_query_tool(
-            dimensions: str, measures: str, dim_filters: str, meas_filters: str, order_by: str, top: int
+            dimensions: str, measures: str, dim_filters: str, meas_filters: str, order_by: str, top: int, **kwargs
         ) -> str:
             """
             Generate a SQL query string for the cube using the specified dimensions and measures.
@@ -862,43 +900,91 @@ def create_mcp_app(settings: Settings):
                 meas_filters (str): Filter SQL expressions on computed measures.
                 order_by (str): Order SQL expressions on selected dimensions and measures.
                 top (int): Filters the top N results.
+                **kwargs: Custom parameter values (used for join materialization decisions).
 
             Returns:
                 str: The generated SQL query.
             """
             dim_list_raw = [d.strip() for d in dimensions.split(",") if d.strip()]
             mes_list_raw = [m.strip() for m in measures.split(",") if m.strip()]
-            # Get dimension expressions from dictionary
-            dim_list = ",\n  ".join(
-                [cube["dimensions"][d]["expression"] if d in cube["dimensions"] else d for d in dim_list_raw]
-            )
+
+            # Resolve dimension expressions; alias when expression differs from key
+            dim_exprs = [_dim_expression(d) for d in dim_list_raw]
+            dim_selects = []
+            dim_group_by = []
+            for key, expr in zip(dim_list_raw, dim_exprs):
+                dim_group_by.append(expr)
+                dim_selects.append(f"{expr} AS {key}" if expr != key else expr)
+            dim_list = ",\n  ".join(dim_selects)
+
             mes_lines = []
             for measure in mes_list_raw:
-                mdef = cube["measures"].get(measure)
-                if mdef is None:
+                expr = _meas_expression(measure)
+                if expr is None:
                     raise ValueError(f"Measure '{measure}' not found in cube '{name}'.")
-                expr = mdef["expression"]
                 mes_lines.append(f"{expr} AS {measure}")
             meas_list = ",\n  ".join(mes_lines)
-            top_clause = f"TOP {top}" if top else ""
+
+            # TOP prefix — no trailing space when absent to avoid double-space
+            top_prefix = f"TOP {top} " if top else ""
             dim_comma = ",\n  " if dim_list.strip() else ""
             where_dim_clause = f"WHERE {dim_filters}" if dim_filters else ""
             where_meas_clause = f"WHERE {meas_filters}" if meas_filters else ""
             order_clause = f"ORDER BY {order_by}" if order_by else ""
+            group_by_clause = f"GROUP BY {', '.join(dim_group_by)}" if dim_group_by else ""
+
+            # --- Join materialization ---
+            joins = cube.get("joins", [])
+            param_defs = cube.get("parameters", {})
+            # Parameters that always have a value (have a default or were provided by caller)
+            always_present_params = {p for p, cfg in param_defs.items() if "default" in cfg} | set(kwargs.keys())
+
+            join_clauses = []
+            for join in joins:
+                join_name = join["name"]
+                is_optional = join.get("optional", True)
+
+                if not is_optional:
+                    materialize = True
+                else:
+                    join_sql_text = join.get("sql", "")
+                    join_on_text = _join_on(join)
+                    # Materialize if any selected dimension references this join
+                    dim_ref = any(f"{join_name}." in expr for expr in dim_exprs)
+                    # Materialize if any selected measure references this join
+                    meas_ref = any(
+                        f"{join_name}." in (_meas_expression(m) or "") for m in mes_list_raw
+                    )
+                    # Materialize if dim_filters references this join alias
+                    filter_ref = f"{join_name}." in (dim_filters or "")
+                    # Materialize if a parameter referenced by this join's sql/on is present
+                    join_params = _extract_param_refs(join_sql_text) | _extract_param_refs(join_on_text)
+                    param_trigger = bool(join_params & always_present_params)
+                    materialize = dim_ref or meas_ref or filter_ref or param_trigger
+
+                if materialize:
+                    join_type = join.get("type", "inner").upper()
+                    join_on = _join_on(join)
+                    join_src = _source_clause(join.get("sql", ""), join_name)
+                    join_clauses.append(f"{join_type} JOIN {join_src} ON {join_on}")
+
+            # Build the FROM clause: base source then any materialised joins at the same
+            # query level so join aliases are in scope for SELECT expressions and GROUP BY.
+            base_src = _source_clause(cube["sql"], name)
+            joins_sql = ("\n" + "\n".join(join_clauses)) if join_clauses else ""
 
             sql = (
-                f"SELECT {top_clause} * from\n"
+                f"SELECT {top_prefix}* FROM\n"
                 "(SELECT\n"
                 f"  {dim_list}{dim_comma}"
                 f"  {meas_list}\n"
-                "FROM (\n"
-                f"sel * from ({cube['sql'].strip()}) a \n"
-                f"{where_dim_clause}"
-                ") AS c\n"
-                f"GROUP BY {', '.join(dim_list_raw)}"
+                f"FROM {base_src}"
+                f"{joins_sql}\n"
+                f"{where_dim_clause}\n"
+                f"{group_by_clause}\n"
                 ") AS a\n"
-                f"{where_meas_clause}"
-                f"{order_clause}"
+                f"{where_meas_clause}\n"
+                f"{order_clause}\n"
                 ";"
             )
             return sql
@@ -1011,18 +1097,31 @@ def create_mcp_app(settings: Settings):
                 raise ValueError(f"Missing required parameters: {missing}")
 
             sql_generator = generate_cube_query_tool(name, cube)
+            sql = sql_generator(
+                dimensions=dimensions,
+                measures=measures,
+                dim_filters=dim_filters,
+                meas_filters=meas_filters,
+                order_by=order_by,
+                top=top,
+                **kwargs,  # forwarded for join materialization decisions
+            )
+
+            # Bind any :param_name references in the generated SQL that the caller didn't
+            # supply. This handles the case where an optional join was materialised (e.g.
+            # because a dimension references it) but its parameter wasn't provided — the DB
+            # sees NULL and any ":p IS NULL OR ..." condition in the ON/WHERE stays neutral.
+            referenced_params = set(re.findall(r":([a-zA-Z_][a-zA-Z0-9_]*)", sql))
+            bind_kwargs = dict(kwargs)
+            for p in referenced_params:
+                if p not in bind_kwargs:
+                    bind_kwargs[p] = None
+
             return execute_db_tool(
                 td.handle_base_readQuery,
-                sql=sql_generator(
-                    dimensions=dimensions,
-                    measures=measures,
-                    dim_filters=dim_filters,
-                    meas_filters=meas_filters,
-                    order_by=order_by,
-                    top=top,
-                ),
+                sql=sql,
                 tool_name=name,
-                **kwargs,
+                **bind_kwargs,
             )
 
         # Build detailed dimension and measure lists for docstring
@@ -1045,6 +1144,18 @@ def create_mcp_app(settings: Settings):
         if custom_param_lines:
             custom_params_section = "\n" + chr(10).join(custom_param_lines) + "\n"
 
+        # Build optional joins documentation
+        joins_section = ""
+        joins_def = cube.get("joins", [])
+        if joins_def:
+            join_lines = []
+            for j in joins_def:
+                optional_flag = "" if j.get("optional", True) else " (always joined)"
+                # _join_on is not in scope here; replicate the YAML 1.1 bool-key logic inline
+                j_on = j.get("on", j.get(True, ""))
+                join_lines.append(f"\t\t- {j['name']} ({j.get('type', 'inner')} join){optional_flag}: {j_on}")
+            joins_section = "\nJoins (materialised on demand based on selected dimensions/measures/parameters):\n" + chr(10).join(join_lines) + "\n"
+
         doc_string = f"""
 {cube.get("description", "")}
 This is an OLAP cube tool that presents selected measures at a specified level of aggregation and filtering.
@@ -1060,7 +1171,7 @@ Expected inputs:
     * meas_filters (str): {meas_filters_desc}
     * order_by (str): {order_by_desc}
     * top (int): Limit the number of rows returned (positive integer)
-{custom_params_section}
+{custom_params_section}{joins_section}
 Returns:
     Query result as a formatted response.
         """
