@@ -22,7 +22,7 @@ A semantic layer in this context is a collection of custom tools, prompts, cubes
 - **Profiles:** Named sets of tools, prompts, and resources that enable domain-specific server instantiations.
 
 ### Declarative Specification
-All custom objects can be defined in a YAML file (e.g., `sales_objects.yml`, `finance_objects.yml`). The file is a dictionary keyed by object name, with each entry specifying its type and details:
+All custom objects can be defined in an object YAML file (e.g., `sales_objects.yml`, `finance_objects.yml`). The file is a dictionary keyed by object name, with each entry specifying its type and details:
 
 ```yaml
 sales_by_region:
@@ -41,6 +41,51 @@ sales_by_region:
     total_sales:
       description: Total sales amount
       expression: SUM(amount)
+
+dbc_space_cube:
+  type: cube
+  description: Teradata space usage cube with optional table metadata.
+  sql: |
+    SELECT
+      DataBaseName,
+      TableName,
+      CurrentPerm,
+      PeakPerm,
+      MaxPerm
+    FROM DBC.AllSpaceV
+    WHERE TableName <> 'All'
+  joins:
+    - name: databases
+      sql: DBC.DatabasesV
+      on: "dbc_space_cube.DataBaseName = databases.DatabaseName"
+      type: left
+      optional: false
+    - name: tables
+      sql: DBC.TablesV
+      on: >-
+        dbc_space_cube.DataBaseName = tables.DatabaseName
+        AND dbc_space_cube.TableName = tables.TableName
+        AND COALESCE(:tablekind, tables.TableKind) = tables.TableKind
+      type: left
+      optional: true
+  dimensions:
+    database_name:
+      description: Database name.
+      expression: dbc_space_cube.DataBaseName
+    owner_name:
+      description: Database owner.
+      expression: databases.OwnerName
+    table_kind:
+      description: Object kind from DBC.TablesV.
+      expression: tables.TableKind
+  measures:
+    current_perm_bytes:
+      description: Current permanent space in bytes.
+      expression: SUM(dbc_space_cube.CurrentPerm)
+  parameters:
+    tablekind:
+      description: Optional object kind filter, for example T or V.
+      optional: true
 
 get_top_customers:
   type: tool
@@ -137,9 +182,9 @@ The server loads custom objects (tools, cubes, prompts, glossaries) from multipl
 
 **Configuration loading priority:**
 1. **Packaged defaults** - Built-in objects from `src/tools/*/*.yml` (shipped with package)
-2. **Config directory** - Any `*.yml` files in your config directory (overrides packaged objects by name)
+2. **Config directory** - Any `*_objects.yml` files in your config directory (overrides packaged objects by name)
 
-**File naming:** Custom object files should be named `*.yml` (e.g., `sales_objects.yml`, `finance_objects.yml`, `my_custom_tools.yml`). The special config files (`profiles.yml`, `chat_config.yml`, `rag_config.yml`, `sql_opt_config.yml`) are handled separately using the layered configuration system.
+**File naming:** Custom object files in your config directory should be named `*_objects.yml` (e.g., `sales_objects.yml`, `finance_objects.yml`, `my_custom_objects.yml`). The special config files (`profiles.yml`, `chat_config.yml`, `rag_config.yml`, `sql_opt_config.yml`) are handled separately using the layered configuration system.
 
 ### Supported Object Types and Attribute Rules
 Each entry in the YAML file is keyed by its name and must specify a `type`. Supported types and their required/optional attributes:
@@ -160,7 +205,62 @@ Each entry in the YAML file is keyed by its name and must specify a `type`. Supp
   - `measures`: Dictionary of measure definitions (each with `expression`)
 - **Optional:**
   - `description`: Text description of the cube
-  - `parameters`: Dictionary of parameter name (key) and properties (dictionary with `description`, `default`, `type_hint`}) - if used in the sql
+  - `parameters`: Dictionary of parameter name (key) and properties (dictionary with `description`, `default`, `optional`, `required`, `type_hint`) - if used in the sql or join conditions
+  - `joins`: List of join definitions used to add related tables/views only when needed
+
+Cube definitions are exposed as MCP tools. The server generates the tool signature from the cube definition:
+
+```python
+my_cube(
+    dimensions: str,   # comma-separated dimension names to group by
+    measures: str,     # comma-separated measure names to aggregate
+    filter: str = "",  # pre-aggregation SQL filter
+    res_filter: str = "",  # post-aggregation result filter
+    order_by: str = "",
+    top: int | None = None,
+    # plus custom parameters declared under parameters:
+)
+```
+
+`dimensions` and `measures` must use the public names listed in the cube definition. Unknown dimension or measure names fail before SQL is sent to the database, with an error listing allowed names.
+
+##### Cube filters
+
+Cubes support two filter phases:
+
+- `filter`: Runs before aggregation. Use it to reduce the base row set before `GROUP BY`. It can reference cube dimension names even when those dimensions are not selected in `dimensions`. The server rewrites dimension names to their configured SQL expressions and materializes any optional join referenced by those expressions.
+- `res_filter`: Runs after aggregation. Use it to filter computed result columns, such as `current_perm_bytes > 1000000000`.
+
+Example:
+
+```yaml
+# Tool call arguments
+dimensions: "database_name"
+measures: "current_perm_bytes"
+filter: "table_kind = 'T'"
+```
+
+If `table_kind` is defined as `tables.TableKind`, the generated pre-aggregation filter uses:
+
+```sql
+WHERE tables.TableKind = 'T'
+```
+
+and the optional `tables` join is materialized even though `table_kind` is not part of the grouping dimensions.
+
+##### Cube joins
+
+`joins` add related sources at the same query level as the cube's base SQL, making join aliases available to dimension and measure expressions.
+
+Each join supports:
+
+- `name`: Join alias. Dimension and measure expressions reference this alias, for example `tables.TableKind`.
+- `sql`: Table/view name or SQL subquery to join.
+- `on`: Join condition.
+- `type`: Join type, such as `left` or `inner`. Defaults to `inner`.
+- `optional`: When `false`, the join is always materialized. When `true` or omitted, the join is materialized only if selected dimensions, selected measures, `filter`, or meaningful custom parameters require it.
+
+Optional parameters can be declared with `optional: true`, `required: false`, or a `default`. For nullable optional parameters, blank values and common placeholders such as `No value`, `NULL`, `None`, `NA`, and `N/A` are treated as SQL `NULL`.
   
 #### Prompt
 - **Required:**
@@ -189,7 +289,7 @@ Each entry in the YAML file is keyed by its name and must specify a `type`. Supp
 
 1. **Install from PyPI:** `pip install teradata-mcp-server`
 2. **Create config directory:** `mkdir my-teradata-config`
-3. **Create custom objects:** Add your `*.yml` files (e.g., `my_tools.yml`) to the config directory
+3. **Create custom objects:** Add your `*_objects.yml` files (e.g., `my_objects.yml`) to the config directory
 4. **Optionally customize profiles:** Create `profiles.yml` in config directory to override default profiles
 5. **Run server:** `teradata-mcp-server --config_dir my-teradata-config --profile my_profile`
 
@@ -235,7 +335,7 @@ See the [registry developer guide](../developer_guide/REGISTRY_IMPLEMENTATION.md
 
 ## Best Practices
 
-- **Organize by domain:** Use separate YAML files for each business domain (e.g., `sales_tools.yml`, `finance_metrics.yml`)
+- **Organize by domain:** Use separate YAML files for each business domain (e.g., `sales_objects.yml`, `finance_objects.yml`)
 - **Use descriptive names:** Clear, descriptive names for each tool, cube, and prompt help users understand their purpose
 - **Document everything:** Add descriptions to all parameters, dimensions, and measures
 - **Config directory approach:** Create a dedicated directory for your custom configurations and use `--config_dir` to point to it
@@ -249,8 +349,8 @@ See the [registry developer guide](../developer_guide/REGISTRY_IMPLEMENTATION.md
 my-teradata-config/
 ├── profiles.yml           # Custom profiles (optional)
 ├── sales_objects.yml      # Sales domain tools and cubes
-├── finance_metrics.yml    # Finance domain objects
-└── hr_tools.yml          # HR domain tools
+├── finance_objects.yml    # Finance domain objects
+└── hr_objects.yml         # HR domain tools
 ```
 
 ### Complete Example
