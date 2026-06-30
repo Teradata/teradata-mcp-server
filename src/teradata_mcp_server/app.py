@@ -22,7 +22,7 @@ import os
 import re
 from contextlib import asynccontextmanager
 from importlib.resources import files as pkg_files
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any
 
 import yaml
 from fastmcp import FastMCP
@@ -846,7 +846,7 @@ def create_mcp_app(settings: Settings):
         return inspect.Parameter.empty
 
     def _yaml_parameter_annotation(type_hint: type, description: str, default: Any) -> Any:
-        annotation_type = Optional[type_hint] if default is None else type_hint
+        annotation_type = type_hint | None if default is None else type_hint
         return Annotated[annotation_type, description] if description else annotation_type
 
     def _is_nullish_yaml_param_value(value: Any) -> bool:
@@ -896,7 +896,7 @@ def create_mcp_app(settings: Settings):
             boolean ``True``.  We check both the boolean and string forms so that users
             can write ``on: "..."`` in their YAML files without needing to quote the key.
             """
-            return join_def.get("on", join_def.get(True, ""))
+            return str(join_def.get("on", join_def.get(True, "")))
 
         def _extract_param_refs(text: str) -> set:
             """Return the set of :param_name references in a SQL string."""
@@ -907,14 +907,15 @@ def create_mcp_app(settings: Settings):
             dim_cfg = cube.get("dimensions", {}).get(dim_key)
             if dim_cfg is None:
                 return dim_key
-            return dim_cfg.get("sql", dim_cfg.get("expression", dim_key))
+            return str(dim_cfg.get("sql", dim_cfg.get("expression", dim_key)))
 
-        def _meas_expression(meas_key: str) -> str:
+        def _meas_expression(meas_key: str) -> str | None:
             """Return the SQL expression for a measure key, supporting both 'sql' and 'expression' fields."""
             mdef = cube.get("measures", {}).get(meas_key)
             if mdef is None:
                 return None
-            return mdef.get("sql", mdef.get("expression"))
+            expr = mdef.get("sql", mdef.get("expression"))
+            return str(expr) if expr is not None else None
 
         def _replace_dimension_refs(expr: str) -> str:
             """Replace public dimension names in a SQL expression with their cube SQL expressions."""
@@ -966,17 +967,17 @@ def create_mcp_app(settings: Settings):
             dim_exprs = [_dim_expression(d) for d in dim_list_raw]
             dim_selects = []
             dim_group_by = []
-            for key, expr in zip(dim_list_raw, dim_exprs):
-                dim_group_by.append(expr)
-                dim_selects.append(f"{expr} AS {key}" if expr != key else expr)
+            for key, dim_expr in zip(dim_list_raw, dim_exprs):
+                dim_group_by.append(dim_expr)
+                dim_selects.append(f"{dim_expr} AS {key}" if dim_expr != key else dim_expr)
             dim_list = ",\n  ".join(dim_selects)
 
             mes_lines = []
             for measure in mes_list_raw:
-                expr = _meas_expression(measure)
-                if expr is None:
+                meas_expr = _meas_expression(measure)
+                if meas_expr is None:
                     raise ValueError(f"Measure '{measure}' not found in cube '{name}'.")
-                mes_lines.append(f"{expr} AS {measure}")
+                mes_lines.append(f"{meas_expr} AS {measure}")
             meas_list = ",\n  ".join(mes_lines)
 
             pre_agg_filter = _replace_dimension_refs(filter or "")
@@ -1012,9 +1013,7 @@ def create_mcp_app(settings: Settings):
                     # Materialize if any selected dimension references this join
                     dim_ref = any(f"{join_name}." in expr for expr in dim_exprs)
                     # Materialize if any selected measure references this join
-                    meas_ref = any(
-                        f"{join_name}." in (_meas_expression(m) or "") for m in mes_list_raw
-                    )
+                    meas_ref = any(f"{join_name}." in (_meas_expression(m) or "") for m in mes_list_raw)
                     # Materialize if filter references this join alias after dimension-name expansion
                     filter_ref = f"{join_name}." in pre_agg_filter
                     # Materialize if a parameter referenced by this join's sql/on is present
@@ -1132,7 +1131,7 @@ def create_mcp_app(settings: Settings):
                 "top",
                 kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
                 default=None,
-                annotation=Annotated[Optional[int], "Limit the number of rows returned (positive integer)"],
+                annotation=Annotated[int | None, "Limit the number of rows returned (positive integer)"],
             ),
         ]
 
@@ -1212,7 +1211,11 @@ def create_mcp_app(settings: Settings):
                 # _join_on is not in scope here; replicate the YAML 1.1 bool-key logic inline
                 j_on = j.get("on", j.get(True, ""))
                 join_lines.append(f"\t\t- {j['name']} ({j.get('type', 'inner')} join){optional_flag}: {j_on}")
-            joins_section = "\nJoins (materialised on demand based on selected dimensions/measures/parameters):\n" + chr(10).join(join_lines) + "\n"
+            joins_section = (
+                "\nJoins (materialised on demand based on selected dimensions/measures/parameters):\n"
+                + chr(10).join(join_lines)
+                + "\n"
+            )
 
         doc_string = f"""
 {cube.get("description", "")}
