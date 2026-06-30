@@ -92,7 +92,7 @@ Save as `mcp_list_tools.sh`, `chmod +x`, run against your server. You should see
 | Tool present but not in your profile | Regex selector mismatch — `foo_*` is `foo` then zero-or-more underscores; you probably wanted `foo_.*` |
 | Glossary missing | Glossary is selected by `resource:` not `tool:` |
 | Cube tool errors with `ValueError: Measure '…' not found` | Caller passed a measure name that isn't in the cube's `measures:` dict — usually a typo in your prompt or a stale schema cache |
-| `dim_filters` ignored or causing parse errors | You wrote it against dimension names that aren't aliased in the base SQL; or you used post-aggregation column names — use `meas_filters` for those |
+| `filter` ignored or causing parse errors | You wrote invalid SQL or used post-aggregation column names — use `res_filter` for those |
 | Identifier interpolation produces `'DBC.AllSpaceV'` literal | You used `:database_name` instead of `{database_name}` for an identifier |
 
 ## Where to look in logs

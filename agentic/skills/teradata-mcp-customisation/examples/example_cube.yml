@@ -69,13 +69,12 @@ dbc_space_cube:
       type: left
       optional: false                # always join — owner_name / account_name always useful
 
-    - name: tables
+    - name: tables                   # This join materializes only if provided dimensions/metrics are requested or if parameter tablekind is supplied (acts as a filter since default join type is `inner`)
       sql: DBC.TablesV               # bare table reference
       on: >-
         dbc_space_cube.DataBaseName = tables.DatabaseName
         AND dbc_space_cube.TableName = tables.TableName
-        AND COALESCE(:tablekind, tables.TableKind) = tables.TableKind
-      type: left
+        AND COALESCE(:tablekind, tables.TableKind) = tables.TableKind 
       optional: true                 # materialise only when table-grain data is needed
 
   dimensions:
@@ -93,9 +92,6 @@ dbc_space_cube:
     table_name:
       description: "Table / view / macro name. Selecting this triggers the TablesV join."
       expression: "tables.TableName"
-    table_kind:
-      description: "Object kind code: T=table, V=view, M=macro, P=procedure, etc."
-      expression: "tables.TableKind"
 
   measures:
     # ── space measures (always available — base source only) ─────────────────
@@ -129,10 +125,8 @@ dbc_space_cube:
     tablekind:
       description: >-
         Filter by object kind code: 'T' = permanent table, 'V' = view,
-        'M' = macro, 'P' = procedure. When supplied, the TablesV join is
-        materialised; when omitted the TablesV join is only materialised if
-        a table-grain dimension or measure was selected.
-      optional: true    # no default — join triggered only when caller provides this
+        'M' = macro, 'P' = procedure.
+      optional: true    # no default — join triggered when caller provides a value
 
 
 # ----------------------------------------------------------------------------
@@ -163,10 +157,10 @@ dbc_space_cube:
 #     → ON condition: ... AND (NULL IS NULL OR tables.TableKind = 'T')
 #       which is  ... AND (TRUE)  →  effectively filters to tables only
 #
-# ⑤ Filter-triggered — dim_filters references tables. alias
+# ⑤ Filter-triggered — filter references tables. alias
 #     dimensions   = "database_name"
 #     measures     = "current_perm_gb"
-#     dim_filters  = "tables.TableKind = 'V'"
+#     filter       = "table_kind = 'V'"
 #     → SQL includes: both joins (filter text triggers the tables join)
 #     → tablekind bound as NULL (neutral)
 # ----------------------------------------------------------------------------

@@ -109,7 +109,7 @@ my_cube_name:
 
 **Conventions that pay off:**
 - In the base SQL, alias dimension source columns to the dimension name (`d.database_name AS database_name`) so the dimension `expression:` is just the bare name. Alias measure source columns with a `_v` suffix (`s.current_perm AS current_perm_v`) to signal "internal value column, not for direct selection."
-- Pin domain filters in the base SQL `WHERE` (e.g. `tablename = 'All'`, exclude system schemas). Do not push that into `dim_filters`.
+- Pin domain filters in the base SQL `WHERE` (e.g. `tablename = 'All'`, exclude system schemas). Do not push that into `filter`.
 - Measure expressions are evaluated *after* the implicit `GROUP BY <dimensions>`. They can be any aggregate, including ratios, `CAST`s, and window expressions like `SUM(x) OVER ()` for share-of-total measures.
 
 ---
