@@ -6,18 +6,20 @@
 
 The Teradata MCP server enables rapid creation of domain-focused semantic layers by allowing you to declaratively define custom tools, prompts, cubes, and glossary terms. No code change needed, you can customize the server by placing YAML files in your current working directory. This approach empowers admins and data teams to tailor the MCP experience to specific business domains—without writing Python code or modifying the server itself.
 
+You may use the [MCP Customization Agent Skill](https://github.com/Teradata/teradata-mcp-server/blob/main/agentic/skills/teradata-mcp-customisation/SKILL.md) to create semantic layer configuration based on your existing documentation.
+
 ## Key principles
 
 - **Domain Focus:** Build MCP servers that speak your users' language and provide business-relevant tools and explanations.
-- **Controlled Access:** Predefine queries, aggregations, and resources to ensure correctness, security, and optimal resource utilization.
+- **Controlled Access:** Predefine queries, semantic layers, and resources to ensure correctness, security, and optimal resource utilization.
 - **Declarative Workflow:** All customization is done via YAML—no code changes required. Admins can add, update, or remove domain logic by editing a single file.
 - **Trustworthy Outcomes:** By specifying queries and logic up front, you avoid the risks of LLMs repeatedly "guessing" at database structure, ensuring reliable, consistent and auditable results.
 
 ### Semantic Layer
 A semantic layer in this context is a collection of custom tools, prompts, cubes, and glossary terms focused on a specific business domain (e.g., sales, finance, HR). It provides:
 - **Custom Tools:** Parameterized SQL queries exposed as callable MCP tools.
+- **Cubes:** Semantic container defining business metrics and associated dimensions. Compiles and execute SQL at runtime.
 - **Prompts:** Predefined user prompts for natural language interactions.
-- **Cubes:** Aggregation templates for business metrics, with dimensions and measures.
 - **Glossary:** Domain-specific terms, definitions, and synonyms, automatically enriched from cubes and tools.
 - **Profiles:** Named sets of tools, prompts, and resources that enable domain-specific server instantiations.
 
@@ -200,13 +202,13 @@ Each entry in the YAML file is keyed by its name and must specify a `type`. Supp
 #### Cube
 - **Required:**
   - `type`: Must be `cube`
-  - `sql`: SQL base query
+  - `sql`: SQL base query or table
   - `dimensions`: Dictionary of dimension definitions (each with `expression`)
   - `measures`: Dictionary of measure definitions (each with `expression`)
 - **Optional:**
   - `description`: Text description of the cube
+  - `joins`: List of relations definitions add related tables/views to the model. Joins are materialized by the compiler only when needed for a selected dimension/metric requested otherwise.
   - `parameters`: Dictionary of parameter name (key) and properties (dictionary with `description`, `default`, `optional`, `required`, `type_hint`) - if used in the sql or join conditions
-  - `joins`: List of join definitions used to add related tables/views only when needed
 
 Cube definitions are exposed as MCP tools. The server generates the tool signature from the cube definition:
 
