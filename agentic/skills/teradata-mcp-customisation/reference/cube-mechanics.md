@@ -6,8 +6,8 @@ When a `type: cube` is loaded, the server registers a single MCP tool whose Pyth
 my_cube_tool(
     dimensions: str,         # comma-separated dimension names
     measures: str,           # comma-separated measure names
-    dim_filters: str,        # raw SQL filter expression, applied PRE-aggregation
-    meas_filters: str,       # raw SQL filter expression, applied POST-aggregation
+    filter: str,             # SQL filter expression, applied PRE-aggregation
+    res_filter: str,         # SQL filter expression, applied POST-aggregation
     order_by: str,           # raw SQL ORDER BY expression
     top: int,                # TOP n (0 / empty = no TOP)
     # ...plus any custom parameters you declared under `parameters:`
@@ -29,33 +29,33 @@ SELECT TOP {top} * FROM
   <expression-of-m2> AS m2
 FROM (
   sel * from ( <YOUR BASE SQL, with :params substituted> ) a
-  WHERE <dim_filters>          -- omitted if empty
+  WHERE <filter>               -- omitted if empty
 ) AS c
 GROUP BY d1, d2
 ) AS a
-WHERE <meas_filters>            -- omitted if empty
+WHERE <res_filter>              -- omitted if empty
 ORDER BY <order_by>             -- omitted if empty
 ;
 ```
 
 Three consequences fall out of this shape — internalise them before authoring a cube.
 
-### 1. `dim_filters` runs on **base SQL columns**, not on dimension expressions
+### 1. `filter` runs before aggregation and can use cube dimension names
 
-The base SQL is wrapped as `sel * from ( ... ) a`, and `dim_filters` lives in the outer `WHERE` of that subquery. So `dim_filters` references **whatever columns your base SELECT emits**.
+The `filter` expression is applied before aggregation. It may reference cube dimension names even if those dimensions are not selected in `dimensions`. The server rewrites matching dimension names to their configured SQL expressions before generating SQL, and materialises any optional join referenced by those expressions.
 
-If your base SQL aliases columns to the same names as your dimensions, `dim_filters` looks symmetric to the LLM:
+Example:
 ```yaml
-dim_filters example:  database_name = 'FINANCE'
+filter example:  database_name = 'FINANCE'
+filter example:  table_kind = 'V'   # can trigger the TablesV join even if table_kind is not grouped
 ```
-If you don't alias, the LLM will write `dim_filters` against dimension names that don't exist in the inner table, and you'll get a SQL error. **Always alias base columns to the dimension name** unless you have a strong reason not to.
 
-### 2. `meas_filters` runs on **measure aliases**, not on aggregate expressions
+### 2. `res_filter` runs on **result aliases**, not on aggregate expressions
 
-After `GROUP BY`, the inner result has columns named after the measures (`m1`, `m2`, …). `meas_filters` is applied as the outer `WHERE`, so:
+After `GROUP BY`, the inner result has columns named after the selected dimensions and measures (`m1`, `m2`, …). `res_filter` is applied as the outer `WHERE`, so:
 ```yaml
-meas_filters example:  current_perm_bytes > 1000000000     -- correct
-meas_filters example:  SUM(current_perm_v) > 1000000000    -- WRONG, won't resolve
+res_filter example:  current_perm_bytes > 1000000000     -- correct
+res_filter example:  SUM(current_perm_v) > 1000000000    -- WRONG, won't resolve
 ```
 
 ### 3. Window functions in measures see the **post-aggregation** rowset
@@ -75,7 +75,7 @@ Note the double `SUM` — inner `SUM(x_v)` is the per-group aggregate, outer `SU
 A good base SQL is:
 
 - **Flat and denormalised.** Pre-join all the dimension tables. The cube tool should not have to know about joins.
-- **Pinned to a domain.** Hard-code the filters that define what the cube *is* (subject area, view flag, product family). Do not let the LLM pick those via `dim_filters`.
+- **Pinned to a domain.** Hard-code the filters that define what the cube *is* (subject area, view flag, product family). Do not let the LLM pick those via `filter`.
 - **Row-grain matches the smallest dimension you expose.** If your finest dimension is `month_end × business_line`, that's your row grain. Coarser dim selections aggregate cleanly via `GROUP BY`.
 - **Aliased to the public names.** Each base column that becomes a dimension is aliased to the dimension name; each base column that feeds a measure is aliased to a `_v` (value) suffix to signal "internal."
 

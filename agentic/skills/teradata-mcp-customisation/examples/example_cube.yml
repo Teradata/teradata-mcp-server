@@ -1,29 +1,189 @@
 # ============================================================================
-# Example cube — "database space" semantic layer over DBC.AllSpaceV
+# Example cube — Teradata space usage over DBC system views
 # ============================================================================
 #
-# Demonstrates:
-#   - flat denormalised base SQL with public-named alias for dimensions and
-#     _v-suffixed alias for measure source columns
-#   - domain pinned in base WHERE (TableName = 'All' for db-level rows,
-#     exclude system schemas the user can't manage)
-#   - aggregate measure expressions, ratio with NULLIFZERO, share-of-total
-#     via SUM(...) OVER ()
-#   - no custom parameters — the auto-added dim_filters / meas_filters /
-#     order_by / top is enough for most ad-hoc questions
+# Demonstrates all Phase-1 semantic layer features:
+#
+#   * sql as a query (subquery wrapping) and as a bare table reference
+#   * joins list with optional: false (always materialised) and optional: true
+#     (materialised only when needed)
+#   * Dimensions referencing the base source and joined tables
+#   * Measures referencing base-source and joined-table columns
+#   * Parameter with optional: true — triggers its join when supplied, binds
+#     as NULL otherwise (so the ":p IS NULL OR ..." ON condition stays neutral)
+#   * Backward-compatible flat variant (no joins) preserved at the bottom
+#
+# To use this file drop it (or your own *_objects.yml) in the server's
+# CONFIG_DIR and add the cube names to the active profile's tool patterns.
 # ============================================================================
+
+# ----------------------------------------------------------------------------
+# Join-based cube: two grain levels in one cube
+#
+# Grain depends on selected dimensions:
+#   - Database grain: database_name, owner_name, account_name
+#   - Table grain:    + table_name, table_kind (adds the TablesV join)
+#
+# Joins:
+#   - databases  LEFT JOIN DBC.DatabasesV  — always materialised (owner/account)
+#   - tables     LEFT JOIN DBC.TablesV     — optional; materialised when:
+#       a) table_name, table_kind, or last_alter_ts is selected, OR
+#       b) a dim_filter references "tables.", OR
+#       c) the tablekind parameter is supplied by the caller
+# ----------------------------------------------------------------------------
 
 dbc_space_cube:
   type: cube
   description: |
-    Database-level storage cube. One row per (database, owner, account) with
-    measures derived from DBC.AllSpaceV's database-grain rows (TableName =
-    'All'). Use this for "who is using the space", "which databases are
-    near their cap", "share of total perm" questions. For per-table
-    breakdown within one database, use dbc_top_tables_by_size instead.
+    Teradata space usage cube backed by DBC.AllSpaceV. Supports two grains:
+
+    * Database grain (default) — group by database_name, owner_name, or
+      account_name. The databases join is always active. The tables join
+      is skipped, giving a lighter, faster query.
+
+    * Table grain — add table_name or table_kind to your dimension list, or
+      supply the tablekind parameter. The tables join is materialised and
+      you get per-object breakdowns plus the last_alter_ts measure.
 
     Built-in scope: excludes the DBC, TDWM, and SystemFe administrative
-    schemas, which would otherwise dominate every result.
+    schemas and the synthetic "All" row in AllSpaceV.
+
+  sql: |
+    SELECT
+      DataBaseName,
+      TableName,
+      CurrentPerm,
+      PeakPerm,
+      MaxPerm,
+      CurrentSpool,
+      PeakSpool,
+      MaxSpool
+    FROM DBC.AllSpaceV
+    WHERE TableName <> 'All'
+      AND DataBaseName NOT IN ('DBC', 'TDWM', 'SystemFe')
+
+  joins:
+    - name: databases
+      sql: DBC.DatabasesV            # bare table reference — no subquery overhead
+      on: "dbc_space_cube.DataBaseName = databases.DatabaseName"
+      type: left
+      optional: false                # always join — owner_name / account_name always useful
+
+    - name: tables                   # This join materializes only if provided dimensions/metrics are requested or if parameter tablekind is supplied (acts as a filter since default join type is `inner`)
+      sql: DBC.TablesV               # bare table reference
+      on: >-
+        dbc_space_cube.DataBaseName = tables.DatabaseName
+        AND dbc_space_cube.TableName = tables.TableName
+        AND COALESCE(:tablekind, tables.TableKind) = tables.TableKind 
+      optional: true                 # materialise only when table-grain data is needed
+
+  dimensions:
+    # ── database-grain dimensions (databases join, always available) ──────────
+    database_name:
+      description: "Database / schema name."
+      expression: "dbc_space_cube.DataBaseName"
+    owner_name:
+      description: "Database owner (from DBC.DatabasesV)."
+      expression: "databases.OwnerName"
+    account_name:
+      description: "Account string for workload accounting (from DBC.DatabasesV)."
+      expression: "databases.AccountName"
+    # ── table-grain dimensions (tables join, materialised on demand) ──────────
+    table_name:
+      description: "Table / view / macro name. Selecting this triggers the TablesV join."
+      expression: "tables.TableName"
+
+  measures:
+    # ── space measures (always available — base source only) ─────────────────
+    current_perm_bytes:
+      description: "Current permanent space in use, bytes."
+      expression: "SUM(dbc_space_cube.CurrentPerm)"
+    current_perm_gb:
+      description: "Current permanent space in use, GiB."
+      expression: "CAST(SUM(dbc_space_cube.CurrentPerm) / 1073741824.0 AS DECIMAL(18,2))"
+    peak_perm_bytes:
+      description: "Peak permanent space observed since last reset, bytes."
+      expression: "SUM(dbc_space_cube.PeakPerm)"
+    max_perm_bytes:
+      description: "Max permanent space granted, bytes."
+      expression: "SUM(dbc_space_cube.MaxPerm)"
+    perm_utilisation_pct:
+      description: "Current perm as % of max perm. NULL when max = 0 (uncapped)."
+      expression: "CAST(SUM(dbc_space_cube.CurrentPerm) * 100.0 / NULLIFZERO(SUM(dbc_space_cube.MaxPerm)) AS DECIMAL(10,2))"
+    spool_peak_bytes:
+      description: "Peak spool consumed, bytes."
+      expression: "SUM(dbc_space_cube.PeakSpool)"
+    share_of_total_perm_pct:
+      description: "This group's share of total CurrentPerm across the result set, %."
+      expression: "CAST(SUM(dbc_space_cube.CurrentPerm) * 100.0 / NULLIFZERO(SUM(SUM(dbc_space_cube.CurrentPerm)) OVER ()) AS DECIMAL(10,2))"
+    # ── table-grain measure (requires tables join) ───────────────────────────
+    last_alter_ts:
+      description: "Most recent table-alteration timestamp. Selecting this triggers the TablesV join."
+      expression: "MAX(tables.LastAlterTimestamp)"
+
+  parameters:
+    tablekind:
+      description: >-
+        Filter by object kind code: 'T' = permanent table, 'V' = view,
+        'M' = macro, 'P' = procedure.
+      optional: true    # no default — join triggered when caller provides a value
+
+
+# ----------------------------------------------------------------------------
+# Example calls and the join-materialisation that results:
+#
+# ① Database grain — only databases join (tablekind not supplied, no table dims)
+#     dimensions   = "database_name, owner_name"
+#     measures     = "current_perm_gb, perm_utilisation_pct"
+#     → SQL includes: LEFT JOIN DBC.DatabasesV
+#     → SQL does NOT include: TablesV join
+#
+# ② Table grain via dimension — both joins (table_name dimension detected)
+#     dimensions   = "database_name, table_name, table_kind"
+#     measures     = "current_perm_bytes"
+#     → SQL includes: LEFT JOIN DBC.DatabasesV  +  LEFT JOIN DBC.TablesV
+#     → ON condition: ... AND COALESCE(NULL, tables.TableKind) = tables.TableKind → neutral (all kinds)
+#
+# ③ Table grain via measure — both joins (last_alter_ts references tables.)
+#     dimensions   = "database_name"
+#     measures     = "current_perm_gb, last_alter_ts"
+#     → SQL includes: both joins
+#
+# ④ Parameter-triggered — tablekind supplied, no table-grain dim/measure
+#     dimensions   = "database_name, owner_name"
+#     measures     = "current_perm_gb"
+#     tablekind    = "T"
+#     → SQL includes: both joins (tablekind triggers the tables join)
+#     → ON condition: ... AND (NULL IS NULL OR tables.TableKind = 'T')
+#       which is  ... AND (TRUE)  →  effectively filters to tables only
+#
+# ⑤ Filter-triggered — filter references tables. alias
+#     dimensions   = "database_name"
+#     measures     = "current_perm_gb"
+#     filter       = "table_kind = 'V'"
+#     → SQL includes: both joins (filter text triggers the tables join)
+#     → tablekind bound as NULL (neutral)
+# ----------------------------------------------------------------------------
+
+
+# ============================================================================
+# Backward-compatible flat cube (no joins) — original dbc_space_cube style
+# ============================================================================
+#
+# Demonstrates the pre-join style still works: sql is a full SELECT query,
+# no joins key, dimensions reference aliases produced by that query.
+# ============================================================================
+
+dbc_space_flat_cube:
+  type: cube
+  description: |
+    Database-level storage cube (flat / no-join variant). One row per
+    (database, owner, account) with measures from DBC.AllSpaceV's
+    database-grain rows (TableName = 'All'). Use this for "who is using
+    the space", "which databases are near their cap", "share of total perm"
+    questions. For per-table breakdown, use dbc_space_cube instead.
+
+    Built-in scope: excludes DBC, TDWM, SystemFe administrative schemas.
   sql: |
     SELECT
       s.DataBaseName       AS database_name,
@@ -41,55 +201,33 @@ dbc_space_cube:
       AND s.DataBaseName NOT IN ('DBC', 'TDWM', 'SystemFe')
   dimensions:
     database_name:
-      description: "Database / schema name (DBC.AllSpaceV.DataBaseName)."
+      description: "Database / schema name."
       expression: database_name
     owner_name:
-      description: "Database owner / creator (DBC.DatabasesV.OwnerName)."
+      description: "Database owner."
       expression: owner_name
     account_name:
-      description: "Account string used for workload accounting."
+      description: "Account string for workload accounting."
       expression: account_name
   measures:
     current_perm_bytes:
-      description: "Current permanent space in use across all AMPs, bytes."
+      description: "Current permanent space in use, bytes."
       expression: "SUM(current_perm_v)"
     current_perm_gb:
       description: "Current permanent space in use, GiB."
       expression: "CAST(SUM(current_perm_v) / 1073741824.0 AS DECIMAL(18,2))"
     peak_perm_bytes:
-      description: "Peak permanent space observed since last reset, bytes."
+      description: "Peak permanent space, bytes."
       expression: "SUM(peak_perm_v)"
     max_perm_bytes:
-      description: "Maximum permanent space granted to the database, bytes."
+      description: "Max permanent space granted, bytes."
       expression: "SUM(max_perm_v)"
     perm_utilisation_pct:
-      description: |
-        Current perm as % of granted max. NULL when max=0 (uncapped
-        databases). Above ~85% indicates a database that should be
-        reviewed.
+      description: "Current perm as % of max perm. NULL when max = 0."
       expression: "CAST(SUM(current_perm_v) * 100.0 / NULLIFZERO(SUM(max_perm_v)) AS DECIMAL(10,2))"
     spool_peak_bytes:
-      description: "Peak spool consumed by users charged to this database, bytes."
+      description: "Peak spool, bytes."
       expression: "SUM(peak_spool_v)"
     share_of_total_perm_pct:
-      description: |
-        This group's share of total CurrentPerm across the result set, %.
-        Useful for ranking which database, owner, or account is using
-        most of the space in scope.
+      description: "This group's share of total CurrentPerm, %."
       expression: "CAST(SUM(current_perm_v) * 100.0 / NULLIFZERO(SUM(SUM(current_perm_v)) OVER ()) AS DECIMAL(10,2))"
-
-# ----------------------------------------------------------------------------
-# Example calls (what the LLM will generate against the auto-built tool):
-#
-#   dimensions    = "database_name"
-#   measures      = "current_perm_gb, perm_utilisation_pct, share_of_total_perm_pct"
-#   dim_filters   = "owner_name = 'DBADMIN'"
-#   meas_filters  = "perm_utilisation_pct > 80"
-#   order_by      = "current_perm_gb DESC"
-#   top           = 20
-#
-# Note:
-#   - dim_filters references owner_name (a column emitted by base SQL).
-#   - meas_filters references perm_utilisation_pct (a measure ALIAS), not
-#     its SUM() expression — see reference/cube-mechanics.md §2.
-# ----------------------------------------------------------------------------

@@ -1,0 +1,7 @@
+{
+  "name": "teradata-mcp-server",
+  "version": "1.0.0",
+  "displayName": "Teradata MCP Server",
+  "description": "Teradata MCP server skills for agentic frameworks.",
+  "category": "development"
+}

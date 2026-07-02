@@ -6,6 +6,11 @@ Tests whether an LLM agent selects the right MCP tool and forms valid parameters
 
 ## Quick start
 
+**Pre-requisite:** ensure that the MCP Server is running in a separate process and reachable in streamable-http.
+
+Eg. `teradata-mcp-server --mcp_port 8001 --mcp_transport streamable-http` 
+
+
 ```bash
 uv venv && uv sync
 cp .env.example .env   # set MCP_SERVER_URL, EVALS_DATABASE, Bedrock credentials
@@ -14,7 +19,15 @@ python setup_test_data.py
 python run_evals.py --module base
 ```
 
-Open `results/latest_summary.md` for pass/fail details, or run `python run_evals.py --list-runs` to browse run directories.
+Open `results/latest_summary.md` for pass/fail details and aggregate Bedrock token usage, or run `python run_evals.py --list-runs` to browse run directories. `summary.json` also includes per-case `token_usage` plus run-level totals; set the optional `BEDROCK_AGENT_*_COST_PER_1M_TOKENS` and `BEDROCK_JUDGE_*_COST_PER_1M_TOKENS` env vars to add USD cost reporting.
+
+To compare several evaluated models with the same judge, put the model set in YAML and run:
+
+```bash
+python run_evals.py --module base --model-set model_set.yml
+```
+
+When the YAML contains multiple evaluated models, the runner writes one normal run per model plus `results/latest_batch_summary.md` with links, pass ratios, token totals, and cost comparison. With one evaluated model, it behaves like the regular single-run path while taking model IDs and costs from YAML.
 
 ## Workflow
 

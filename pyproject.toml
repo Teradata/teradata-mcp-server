@@ -1,6 +1,6 @@
 [project]
 name = "teradata-mcp-server"
-version = "0.2.4"
+version = "0.2.5"
 
 description = "Model Context Protocol (MCP) server for Teradata, Community edition"
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -143,6 +143,7 @@ disable_error_code = ["import-untyped"]
 [dependency-groups]
 dev = [
     "build>=1.3.0",
+    "pytest>=9.1.1",
 ]
 
 

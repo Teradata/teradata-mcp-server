@@ -1,0 +1,14 @@
+{
+  "name": "teradata-mcp-server",
+  "owner": {
+    "name": "Teradata"
+  },
+  "plugins": [
+    {
+      "name": "teradata-mcp-customisation",
+      "description": "Build, edit, and debug a semantic layer for the Teradata MCP server — custom tools, cubes, prompts, and glossary entries declared in YAML, plus the profiles.yml that exposes them.",
+      "source": "agentic",
+      "category": "development"
+    }
+  ]
+}
