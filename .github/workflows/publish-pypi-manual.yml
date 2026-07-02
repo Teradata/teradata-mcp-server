@@ -1,0 +1,123 @@
+name: Manual PyPI Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (e.g., 0.2.5)"
+        required: true
+      skip_test_pypi:
+        description: "Skip TestPyPI and publish directly to PyPI"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+jobs:
+  build:
+    name: Build & Verify
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: "v${{ github.event.inputs.version }}"
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Verify version matches input
+        id: version
+        run: |
+          VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [ "$VERSION" != "${{ github.event.inputs.version }}" ]; then
+            echo "❌ Version mismatch! Tag v${{ github.event.inputs.version }} but pyproject.toml has v$VERSION"
+            exit 1
+          fi
+          echo "✓ Version matches: $VERSION"
+
+      - name: Build artifacts
+        run: uv build --no-cache
+
+      - name: Verify metadata and README
+        run: uvx twine check dist/*
+
+      - name: Test wheel locally
+        run: |
+          uvx ./dist/teradata_mcp_server-${{ steps.version.outputs.version }}-py3-none-any.whl \
+            teradata_mcp_server --version
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  publish-test-pypi:
+    name: Publish to TestPyPI
+    needs: build
+    if: github.event.inputs.skip_test_pypi == 'false'
+    runs-on: ubuntu-latest
+    environment: test-pypi
+    steps:
+      - uses: astral-sh/setup-uv@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Upload to TestPyPI
+        run: uvx twine upload --repository testpypi dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
+
+      - name: Smoke test from TestPyPI
+        run: |
+          for i in 1 2 3 4 5; do
+            uvx --no-cache \
+              --index-url https://test.pypi.org/simple \
+              --extra-index-url https://pypi.org/simple \
+              --index-strategy unsafe-best-match \
+              "teradata-mcp-server==${{ needs.build.outputs.version }}" --version && break
+            echo "Attempt $i failed — waiting 30s for TestPyPI to index the package..."
+            sleep 30
+          done
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [build, publish-test-pypi]
+    if: always() && needs.build.result == 'success' && (github.event.inputs.skip_test_pypi == 'true' || needs.publish-test-pypi.result == 'success')
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: astral-sh/setup-uv@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Upload to PyPI
+        run: uvx twine upload dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+
+      - name: Smoke test from PyPI
+        run: |
+          for i in 1 2 3 4 5; do
+            uvx --no-cache "teradata-mcp-server==${{ needs.build.outputs.version }}" --version && break
+            echo "Attempt $i failed — waiting 30s for PyPI to index the package..."
+            sleep 30
+          done
