@@ -17,10 +17,10 @@ var/
 /*_objects.yml
 examples/app-flowise/.*
 test_*.py
+!tests/eval_test/tests/test_*.py
 .planning/
 .ruff_cache/
 Start_MCP_Server.bat
 .deepeval/
 .pytest_cache/
-
 

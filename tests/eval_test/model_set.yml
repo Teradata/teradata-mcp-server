@@ -1,0 +1,39 @@
+# Example multi-model eval batch for us-west-2.
+# Prices are USD per 1M tokens from Amazon Bedrock on-demand standard pricing.
+name: us-west-2-model-comparison
+
+judge:
+  label: claude-sonnet-4-5-judge
+  model: anthropic.claude-sonnet-4-5-20250929-v1:0
+  cost:
+    input_cost_per_1m_tokens: 3.30
+    output_cost_per_1m_tokens: 16.50
+    cache_read_input_cost_per_1m_tokens: 0.33
+    cache_write_input_cost_per_1m_tokens: 4.125
+
+models:
+  - label: claude-haiku-4-5
+    model: us.anthropic.claude-haiku-4-5-20251001-v1:0
+    cost:
+      input_cost_per_1m_tokens: 1.10
+      output_cost_per_1m_tokens: 5.50
+      cache_read_input_cost_per_1m_tokens: 0.11
+      cache_write_input_cost_per_1m_tokens: 1.375
+
+  - label: deepseek-v3-2
+    model: deepseek.v3.2
+    cost:
+      input_cost_per_1m_tokens: 0.62
+      output_cost_per_1m_tokens: 1.85
+
+  - label: gpt-oss-safeguard-20b
+    model: openai.gpt-oss-safeguard-20b
+    cost:
+      input_cost_per_1m_tokens: 0.07
+      output_cost_per_1m_tokens: 0.20
+
+  - label: ministral-3-3b
+    model: mistral.ministral-3-3b-instruct
+    cost:
+      input_cost_per_1m_tokens: 0.10
+      output_cost_per_1m_tokens: 0.10
