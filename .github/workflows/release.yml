@@ -72,10 +72,11 @@ jobs:
             --title "v${{ needs.build.outputs.version }}" \
             --generate-notes \
             dist/*
+        continue-on-error: true
 
   publish-test-pypi:
     name: Publish to TestPyPI
-    needs: [build, create-github-release]
+    needs: build
     runs-on: ubuntu-latest
     environment: test-pypi
     steps:
