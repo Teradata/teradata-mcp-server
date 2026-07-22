@@ -405,3 +405,21 @@ AUTH_TIMEOUT=5                        # Validation timeout in seconds
 ## Deployment hardening
 
 Place the MCP server behind NGINX for TLS termination and rate limiting; the app listens on an internal HTTP port only.
+
+## Dependency vulnerabilities
+
+### ChromaDB (Feature Store extra only)
+
+The optional Feature Store module (`uv sync --extra fs`, Docker `ENABLE_FS_MODULE=true`) pulls in `tdfs4ds`, which depends on `chromadb`. As of the current release, ChromaDB 1.5.9 is affected by [CVE-2026-45829](https://nvd.nist.gov/vuln/detail/CVE-2026-45829) (GHSA-f4j7-r4q5-qw2c): a pre-authentication remote code execution vulnerability in the ChromaDB server API when `trust_remote_code=true` is used on collection creation. No patched ChromaDB release is available yet ([chroma-core/chroma#6717](https://github.com/chroma-core/chroma/issues/6717)).
+
+**Default installs are not affected.** The base package and default Docker image do not include ChromaDB.
+
+**If you enable the Feature Store module:**
+
+- Do not expose ChromaDB ports to untrusted networks.
+- Keep the MCP server behind TLS termination and authentication (`AUTH_MODE=basic` or `oauth`).
+- Monitor the ChromaDB advisory for a patched release and upgrade promptly when available.
+
+### MCP SDK and HTTP transport
+
+HTTP and SSE deployments should run `mcp>=1.28.1` (enforced in `pyproject.toml`) to address session-authentication and WebSocket validation issues in the MCP Python SDK (GHSA-jpw9-pfvf-9f58, GHSA-hvrp-rf83-w775, GHSA-vj7q-gjh5-988w). Enable server-side authentication for any internet-facing deployment; see [Authentication](#authentication) above.

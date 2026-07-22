@@ -5,3 +5,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+  - package-ecosystem: "uv"
+    directory: "/tests/eval_test"
+    schedule:
+      interval: "weekly"

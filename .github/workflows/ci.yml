@@ -57,6 +57,20 @@ jobs:
       - name: Run HTTP smoke test (no database required)
         run: uv run python tests/integration/smoke_http.py --verbose
 
+  eval-lockfile:
+    name: Eval Suite Lockfile Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: cd tests/eval_test && uv sync --frozen
+      - run: cd tests/eval_test && uv run pytest tests/test_checks.py tests/test_multi_turn.py -v
+
   test-stdio:
     name: Integration Tests (stdio)
     runs-on: ubuntu-latest
