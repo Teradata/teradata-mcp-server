@@ -11,7 +11,7 @@ dependencies = [
     "pyyaml>=6.0.0",
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
-    "teradatasql>=20.0.0",
+    "teradatasql>=20.0.0.63",
 ]
 
 [project.scripts]
