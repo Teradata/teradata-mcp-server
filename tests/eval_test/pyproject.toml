@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "deepeval>=4.1.4",
     "mcp>=1.28.1",
+
     "boto3>=1.43.54",
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0.0",
