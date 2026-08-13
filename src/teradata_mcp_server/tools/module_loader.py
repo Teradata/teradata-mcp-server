@@ -68,6 +68,36 @@ class ModuleLoader:
         self._required_modules = required_modules
         return list(required_modules)
 
+    def get_enabled_tags(self, config: dict) -> set[str]:
+        """
+        Get the set of tags that should be enabled based on profile configuration.
+
+        Tags correspond to module prefixes (base, dba, sec, rag, etc.) and are used
+        to control tool visibility. For tag-based filtering to work, this must be
+        called before tools are disabled to build the set of tags that should remain enabled.
+
+        Args:
+            config: Profile configuration dictionary
+
+        Returns:
+            Set of tag names that should be enabled (e.g., {'base', 'dba', 'rag'})
+        """
+        tool_patterns = config.get("tool", [])
+        enabled_tags = set()
+
+        # base and td_connect are always enabled
+        enabled_tags.add("base")
+
+        # Check each tool pattern against module prefixes
+        for pattern in tool_patterns:
+            for prefix in self.MODULE_MAP.keys():
+                # Create a test tool name to see if pattern matches
+                test_name = f"{prefix}_test"
+                if re.match(pattern, test_name):
+                    enabled_tags.add(prefix)
+
+        return enabled_tags
+
     def load_module(self, module_name: str) -> Any | None:
         """
         Load a specific module if it hasn't been loaded yet.
