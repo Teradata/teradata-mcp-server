@@ -1,8 +1,9 @@
 import asyncio
 import inspect
+from typing import Any
 
 
-async def _fetch_request_context():
+async def _fetch_request_context() -> Any:
     """Fetch RequestContext from FastMCP state in the async layer before thread dispatch."""
     try:
         from fastmcp.server.dependencies import get_context
@@ -25,8 +26,8 @@ def create_mcp_tool(
     """
     Unified factory for creating async MCP tool functions.
 
-
     All tool functions use asyncio.to_thread to execute blocking database operations.
+    Request context is automatically injected via _fetch_request_context.
 
     Args:
         executor_func: Callable that will be executed. Should be a function that
@@ -55,7 +56,7 @@ def create_mcp_tool(
             name for name, param in signature.parameters.items() if param.default is inspect.Parameter.empty
         ]
 
-        async def _mcp_tool(**kwargs):
+        async def _mcp_tool(**kwargs: Any) -> Any:
             missing = [n for n in required_params if n not in kwargs]
             if missing:
                 raise ValueError(f"Missing required parameters: {missing}")
@@ -64,7 +65,7 @@ def create_mcp_tool(
             return await asyncio.to_thread(executor_func, **merged_kwargs)
     else:
 
-        async def _mcp_tool(**kwargs):
+        async def _mcp_tool(**kwargs: Any) -> Any:
             request_context = await _fetch_request_context()
             merged_kwargs = {**inject_kwargs, **kwargs, "_request_context": request_context}
             return await asyncio.to_thread(executor_func, **merged_kwargs)

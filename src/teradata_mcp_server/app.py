@@ -27,8 +27,8 @@ from typing import Annotated, Any
 import yaml
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
-from fastmcp.prompts.prompt import Message, TextContent
-from mcp.types import ToolAnnotations
+from fastmcp.prompts import Message
+from mcp.types import TextContent, ToolAnnotations
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection
 
@@ -598,6 +598,13 @@ def create_mcp_app(settings: Settings):
         all_functions = module_loader.get_all_functions()
         registered_count = 0
 
+        # Get enabled tags from the profile configuration
+        enabled_tags = module_loader.get_enabled_tags(config)
+        all_possible_tags = set(module_loader.MODULE_MAP.keys())
+        disabled_tags = all_possible_tags - enabled_tags
+
+        logger.info(f"Profile-based module loading: enabled_tags={enabled_tags}, disabled_tags={disabled_tags}")
+
         for name, func in all_functions.items():
             if not (inspect.isfunction(func) and name.startswith("handle_")):
                 continue
@@ -617,12 +624,15 @@ def create_mcp_app(settings: Settings):
                 logger.info(f"Skipping chat completion tool: {tool_name} (chat completion functionality disabled)")
                 continue
 
+            # Extract module tag from tool name prefix
+            tool_tag = tool_name.split("_")[0] if "_" in tool_name else "misc"
+
             # Register tools for MCP access. We have two modes:
             #    - Static registration: Individual MCP tools via @mcp.tool decorator, all listed in list_tools()
             #    - Progressive disclosure: Tools registered in catalog, accessed via search_tool() and execute_tool()
             if settings.progressive_disclosure:
                 # Determine category from tool prefix
-                category = tool_name.split("_")[0] if "_" in tool_name else "misc"
+                category = tool_tag
                 context_catalog.register_tool(func, category=category)
                 registered_count += 1
                 logger.debug(f"Registered tool in catalog: {tool_name} (category: {category})")
@@ -630,16 +640,21 @@ def create_mcp_app(settings: Settings):
                 # Always register base_readQuery as a direct MCP tool (core tool)
                 if tool_name == "base_readQuery":
                     wrapped = make_tool_wrapper(func)
-                    mcp.tool(name=tool_name, description=wrapped.__doc__, annotations=_annotations_for(tool_name))(
+                    mcp.tool(name=tool_name, description=wrapped.__doc__, annotations=_annotations_for(tool_name), tags=[tool_tag])(
                         wrapped
                     )
                     logger.info(f"Registered core tool as direct MCP tool: {tool_name}")
             else:
                 # Static mode: register all tools as MCP tools
                 wrapped = make_tool_wrapper(func)
-                mcp.tool(name=tool_name, description=wrapped.__doc__, annotations=_annotations_for(tool_name))(wrapped)
+                mcp.tool(name=tool_name, description=wrapped.__doc__, annotations=_annotations_for(tool_name), tags=[tool_tag])(wrapped)
                 registered_count += 1
                 logger.debug(f"Registered MCP tool: {tool_name}")
+
+        # Disable tags that are not in the enabled set (implements profile-based filtering)
+        if disabled_tags:
+            mcp.disable(tags=list(disabled_tags))
+            logger.info(f"Disabled tags for tools not in profile: {disabled_tags}")
 
         if settings.progressive_disclosure:
             logger.info(f"Progressive disclosure: Registered {registered_count} tools in catalog")

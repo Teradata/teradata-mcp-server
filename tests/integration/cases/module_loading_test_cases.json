@@ -1,0 +1,24 @@
+{
+  "test_cases": {
+    "base_tableList": [
+      {
+        "name": "table_list_basic",
+        "parameters": {
+          "database_name": "DBC"
+        }
+      }
+    ],
+    "dba_listUsers": [
+      {
+        "name": "list_users_basic",
+        "parameters": {}
+      }
+    ],
+    "sec_showGrants": [
+      {
+        "name": "show_grants_basic",
+        "parameters": {}
+      }
+    ]
+  }
+}
