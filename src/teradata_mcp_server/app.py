@@ -393,7 +393,7 @@ def create_mcp_app(settings: Settings):
     mcp.add_middleware(ErrorHandlingMiddleware(logger=logger, include_traceback=True))
     mcp.add_middleware(middleware)
 
-    if settings.mcp_transport in ("streamable-http", "sse"):
+    if settings.mcp_transport == "streamable-http":
         from fastmcp.server.middleware.ping import PingMiddleware
 
         mcp.add_middleware(PingMiddleware(interval_ms=settings.ping_interval * 1000))
