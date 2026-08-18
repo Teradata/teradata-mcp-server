@@ -26,6 +26,17 @@ from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
 
 @dataclass
 class RequestContext:
+    """Per-request context extracted by middleware.
+
+    In v4 sessionless protocol:
+    - request_id: Unique per request (or from context.fastmcp_context.request_id if available)
+    - session_id: Usually equals request_id; scoped to the request's lifecycle only
+    - All other fields capture headers/auth/tenant from that specific request
+
+    Scope: within-request (stored in middleware, retrieved by tools via get_state("request_context"))
+    The context is NOT persisted across requests — each request generates a fresh context.
+    """
+
     headers: dict[str, str]
     request_id: str | None = None
     session_id: str | None = None
@@ -60,6 +71,12 @@ class RequestContextMiddleware(Middleware):
         )
 
     async def on_request(self, context: MiddlewareContext, call_next):
+        # v4 sessionless protocol: on_request fires for ALL message types (requests + notifications).
+        # Skip non-routable messages (notifications, validation failures, etc.) — only process requests.
+        if getattr(context, "type", "request") != "request":
+            self.logger.debug(f"Skipping non-request message type: {getattr(context, 'type', 'unknown')}")
+            return await call_next(context)
+
         transport = (context.fastmcp_context.transport if context.fastmcp_context else None) or "stdio"
         self.logger.info(f"on_request: Called with transport={transport}")
         # stdio: generate lightweight context; do not touch stdout

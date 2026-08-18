@@ -33,6 +33,7 @@ def _make_middleware():
 def _make_context(transport: str | None, fastmcp_context: bool = True):
     """Build a minimal MiddlewareContext-like object."""
     ctx = MagicMock()
+    ctx.type = "request"  # v4: distinguish request from notification
     if fastmcp_context:
         ctx.fastmcp_context = MagicMock()
         ctx.fastmcp_context.transport = transport
@@ -114,6 +115,7 @@ class TestLifespanStateSupplier(unittest.TestCase):
         )
 
         context = MagicMock()
+        context.type = "request"
         context.fastmcp_context = MagicMock()
         context.fastmcp_context.transport = "streamable-http"
         context.fastmcp_context.session_id = "sess-1"
@@ -151,6 +153,7 @@ class TestLifespanStateSupplier(unittest.TestCase):
 
         # stdio path — supplier is not called; just verify the middleware initialises
         context = MagicMock()
+        context.type = "request"
         context.fastmcp_context = MagicMock()
         context.fastmcp_context.transport = "stdio"
         context.fastmcp_context.session_id = "sess-2"

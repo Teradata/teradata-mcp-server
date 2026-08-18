@@ -29,7 +29,7 @@ from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.prompts import Message
 from mcp.types import TextContent, ToolAnnotations
-from pydantic import BaseModel, Field
+from pydantic import Field
 from sqlalchemy.engine import Connection
 
 from teradata_mcp_server import utils as config_utils
@@ -41,7 +41,6 @@ from teradata_mcp_server.tools import ContextCatalog
 from teradata_mcp_server.tools.graph.graph_edge_contract import GRAPH_EDGE_CONTRACT
 from teradata_mcp_server.tools.utils import (
     build_tdml_tool_docstring,
-    execute_analytic_function,
     get_anlytic_function_signature,
     get_dynamic_function_definition,
     get_partition_col_order_col_doc_string,
@@ -331,11 +330,44 @@ def create_mcp_app(settings: Settings):
             if ts:
                 middleware.registry_tools_loaded_ts = ts
 
+        # Background registry refresh task (v4 sessionless: on_initialize no longer fires)
+        # Instead of waiting for session handshakes, periodically refresh from the database.
+        refresh_task = None
+        if registry_db and getattr(_state.tdconn, "engine", None):
+            async def background_registry_refresh():
+                """Periodically refresh registry tools from database."""
+                while True:
+                    try:
+                        await asyncio.sleep(settings.registry_refresh_interval)
+                        logger.debug(f"Background registry refresh triggered (interval={settings.registry_refresh_interval}s)")
+                        # Use the watermark from middleware to load only new/updated tools
+                        new_ts = load_registry_tools(middleware.registry_tools_loaded_ts)
+                        if new_ts:
+                            middleware.registry_tools_loaded_ts = new_ts
+                            logger.info(f"Background registry refresh completed, watermark={new_ts}")
+                    except asyncio.CancelledError:
+                        logger.debug("Background registry refresh task cancelled on shutdown")
+                        break
+                    except Exception as e:
+                        logger.error(f"Error in background registry refresh: {e}", exc_info=True)
+
+            refresh_task = asyncio.create_task(background_registry_refresh())
+            logger.info(f"Background registry refresh task started (interval={settings.registry_refresh_interval}s)")
+
         # ── Yield ─────────────────────────────────────────────────────────
         try:
             yield
         finally:
             # ── Shutdown ──────────────────────────────────────────────────
+            # Cancel background refresh task if running
+            if refresh_task and not refresh_task.done():
+                refresh_task.cancel()
+                try:
+                    await refresh_task
+                except asyncio.CancelledError:
+                    pass
+                logger.debug("Background registry refresh task cancelled")
+
             if _state.tdconn and getattr(_state.tdconn, "engine", None):
                 _state.tdconn.engine.dispose()
                 logger.info("TDConn engine disposed on shutdown")
@@ -389,8 +421,12 @@ def create_mcp_app(settings: Settings):
 
         - Detects whether the handler expects a SQLAlchemy Connection or a raw
           DB-API connection and injects appropriately.
-        - For HTTP transport, builds and sets Teradata QueryBand per request using
-          the RequestContext captured by middleware.
+        - QueryBand (sessionless behavior): Sets Teradata QueryBand on EVERY request,
+          not cached per-session. This is correct for v4 sessionless protocol where each
+          request is independent with its own request_id, session_id, and context. The
+          RequestContext captured by middleware reflects per-request values from headers
+          and FastMCP context. If a tool makes multiple DB calls via the same connection,
+          QueryBand is set once and reused (standard Teradata behavior).
         - Formats return values into FastMCP content and captures exceptions with
           context for easier debugging.
         """
@@ -1317,7 +1353,6 @@ Returns:
 
         Returns: handler function with proper signature and metadata
         """
-        from teradata_mcp_server.tools.registry.registry_tools import build_registry_sql
 
         description = tool_def.get("description", "")
         param_defs = tool_def.get("parameters", {})
@@ -1434,7 +1469,6 @@ Returns:
 
         try:
             from teradata_mcp_server.tools.registry import RegistryLoader
-            from teradata_mcp_server.tools.registry.registry_tools import build_registry_sql
 
             loader = RegistryLoader(tdconn_local, registry_db, last_load_ts=last_load_ts)
             registry_tools, current_ts = loader.load_tools()
