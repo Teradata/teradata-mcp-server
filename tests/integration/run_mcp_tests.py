@@ -25,7 +25,7 @@ _DEFAULT_CASES_FILE = str(_INTEGRATION_DIR / "cases" / "core_test_cases.json")
 # MCP client imports
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
-from mcp.client.streamable_http import streamablehttp_client
+from mcp.client.streamable_http import streamable_http_client
 
 
 class MCPTestRunner:
@@ -236,7 +236,7 @@ class MCPTestRunner:
                 self.exit_stack = AsyncExitStack()
 
             streams = await self.exit_stack.enter_async_context(
-                streamablehttp_client(url)
+                streamable_http_client(url)
             )
             read, write, _ = streams
 
