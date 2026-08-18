@@ -50,22 +50,22 @@ from teradata_mcp_server.tools.utils.queryband import build_queryband
 from teradata_mcp_server.utils import format_text_response, resolve_type_hint, setup_logging
 
 _TOOL_ANNOTATIONS: dict[str, ToolAnnotations] = {
-    "tdvs_grant_user": ToolAnnotations(readOnlyHint=False, destructiveHint=True),
-    "tdvs_revoke_user": ToolAnnotations(readOnlyHint=False, destructiveHint=True),
+    "tdvs_grant_user": ToolAnnotations(read_only_hint=False, destructive_hint=True),
+    "tdvs_revoke_user": ToolAnnotations(read_only_hint=False, destructive_hint=True),
 }
 
 _PREFIX_ANNOTATIONS: dict[str, ToolAnnotations] = {
-    "base_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "dba_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "sec_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "rag_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "qlty_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "graph_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "sql_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "plot_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "tdvs_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "bar_": ToolAnnotations(readOnlyHint=False, destructiveHint=True),
-    "tdml_": ToolAnnotations(readOnlyHint=False, idempotentHint=True),
+    "base_": ToolAnnotations(read_only_hint=True, idempotent_hint=True),
+    "dba_": ToolAnnotations(read_only_hint=True, idempotent_hint=True),
+    "sec_": ToolAnnotations(read_only_hint=True, idempotent_hint=True),
+    "rag_": ToolAnnotations(read_only_hint=True, idempotent_hint=True),
+    "qlty_": ToolAnnotations(read_only_hint=True, idempotent_hint=True),
+    "graph_": ToolAnnotations(read_only_hint=True, idempotent_hint=True),
+    "sql_": ToolAnnotations(read_only_hint=True, idempotent_hint=True),
+    "plot_": ToolAnnotations(read_only_hint=True, idempotent_hint=True),
+    "tdvs_": ToolAnnotations(read_only_hint=True, idempotent_hint=True),
+    "bar_": ToolAnnotations(read_only_hint=False, destructive_hint=True),
+    "tdml_": ToolAnnotations(read_only_hint=False, idempotent_hint=True),
 }
 
 
@@ -1618,6 +1618,48 @@ Returns:
         return json.dumps(response)
 
     logger.info("Registered resource: task://{task_id} for background task status polling")
+
+    # ── Argument Completion Handlers ──────────────────────────────────────
+    # Provides dynamic suggestions for table_name and column_name parameters
+    # across all tools. One handler covers all tools with these parameter names.
+    # ──────────────────────────────────────────────────────────────────────
+    from mcp_types import CompletionArgument
+
+    from teradata_mcp_server.tools.utils.completion import (
+        fetch_column_completions,
+        fetch_table_completions,
+    )
+
+    @mcp.completion
+    async def complete_table_or_column(ref: str, argument: CompletionArgument, ctx) -> list:
+        """Provide table/column name completions from Teradata DBC views.
+
+        Handles both table_name and column_name parameters across all tools.
+        Results are limited to 50 matches; filters exclude system databases.
+        """
+        if argument.name not in ("table_name", "column_name"):
+            return []
+
+        prefix = (argument.value or "").strip()
+
+        # Get the DB connection from context
+        conn = None
+        if _state.tdconn and getattr(_state.tdconn, "engine", None):
+            conn = _state.tdconn.engine.raw_connection()
+
+        try:
+            if argument.name == "table_name":
+                return await fetch_table_completions(prefix, conn)
+            else:  # column_name
+                return await fetch_column_completions(prefix, conn)
+        finally:
+            if conn:
+                import contextlib
+
+                with contextlib.suppress(Exception):
+                    conn.close()
+
+    logger.info("Registered completion handler: table_name, column_name")
 
     # Return the configured app and some handles used by the entrypoint if needed
     return mcp, logger
