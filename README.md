@@ -60,7 +60,11 @@ Add this to `claude_desktop_config.json` (Settings > Developer > Edit Config):
 
 ## What's New (Latest Release)
 
-- **FastMCP v3** — Guaranteed resource cleanup with improved lifespan management
+- **FastMCP v4** — Sessionless protocol, background tasks for long-running analytics, argument completion
+- **Response Caching** — 5-minute TTL signals reduce redundant database queries in multi-turn conversations
+- **Guard Mode** — Multi-step confirmation flows for destructive operations (bar_*, sec_*)
+- **Background Tasks** — `tdml_*` analytic functions return task IDs for polling instead of blocking
+- **Argument Completion** — Auto-suggest table and column names from schema as users type
 - **Hooks Capability** — Intercept tool calls for custom monitoring, audit, or rate-limiting
 - **Row Limit Protection** — Configurable caps (`DEFAULT_ROW_LIMIT`, `MAX_ROW_LIMIT`) prevent LLM token overflow
 - **Enhanced Security** — VX views for fine-grained row-level access control
