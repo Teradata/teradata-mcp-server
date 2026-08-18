@@ -374,7 +374,7 @@ class MCPTestRunner:
                         response_text = str(response.content)
 
                     # Handle expect_error: tool should have returned an MCP error response
-                    is_error_response = getattr(response, 'isError', False)
+                    is_error_response = getattr(response, 'is_error', False)
                     expect_error = test_case.get("expect_error", False)
                     if expect_error:
                         if is_error_response:
