@@ -91,6 +91,14 @@ async def main():
     settings = parse_args_to_settings()
     mcp, logger = create_mcp_app(settings)
 
+    # Deprecation warning: SSE transport is removed in v4.0
+    if settings.mcp_transport.lower() == "sse":
+        logger.warning(
+            "⚠️  SSE transport (MCP_TRANSPORT='sse') is DEPRECATED and will be removed in v4.0. "
+            "Please migrate to 'streamable-http' transport. "
+            "Migration guide: https://github.com/Teradata/teradata-mcp-server/blob/main/docs/fastmcp-v4-migration-plan.md"
+        )
+
     # Graceful shutdown
     try:
         loop = asyncio.get_running_loop()
