@@ -28,7 +28,7 @@ def parse_args_to_settings() -> Settings:
         required=False,
         help="Directory for user configuration files (default: current working directory)",
     )
-    parser.add_argument("--mcp_transport", type=str, choices=["stdio", "streamable-http", "sse"], required=False)
+    parser.add_argument("--mcp_transport", type=str, choices=["stdio", "streamable-http"], required=False)
     parser.add_argument("--mcp_host", type=str, required=False)
     parser.add_argument("--mcp_port", type=int, required=False)
     parser.add_argument("--mcp_path", type=str, required=False)
@@ -91,14 +91,6 @@ async def main():
     settings = parse_args_to_settings()
     mcp, logger = create_mcp_app(settings)
 
-    # Deprecation warning: SSE transport is removed in v4.0
-    if settings.mcp_transport.lower() == "sse":
-        logger.warning(
-            "⚠️  SSE transport (MCP_TRANSPORT='sse') is DEPRECATED and will be removed in v4.0. "
-            "Please migrate to 'streamable-http' transport. "
-            "Migration guide: https://github.com/Teradata/teradata-mcp-server/blob/main/docs/fastmcp-v4-migration-plan.md"
-        )
-
     # Graceful shutdown
     try:
         loop = asyncio.get_running_loop()
@@ -109,9 +101,9 @@ async def main():
         logger.warning("Signal handling not supported on this platform")
 
     # Run transport
-    if settings.mcp_transport in ["sse", "streamable-http"]:
+    if settings.mcp_transport == "streamable-http":
         await mcp.run_http_async(
-            transport=settings.mcp_transport, host=settings.mcp_host, port=settings.mcp_port, path=settings.mcp_path
+            transport="streamable-http", host=settings.mcp_host, port=settings.mcp_port, path=settings.mcp_path
         )
     else:
         await mcp.run_stdio_async()

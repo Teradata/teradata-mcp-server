@@ -18,11 +18,11 @@ class Settings:
     config_dir: str | None = None  # User config directory for runtime overrides
 
     # MCP transport
-    mcp_transport: str = "stdio"  # stdio | streamable-http | sse
+    mcp_transport: str = "stdio"  # stdio | streamable-http
     mcp_host: str = "localhost"
     mcp_port: int = 8001
     mcp_path: str = "/mcp/"
-    ping_interval: int = 30  # keep-alive ping interval (seconds) for streamable-http and sse
+    ping_interval: int = 30  # keep-alive ping interval (seconds) for streamable-http
 
     # Auth
     auth_mode: str = "none"  # none | basic
