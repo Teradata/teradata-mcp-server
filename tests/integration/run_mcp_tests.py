@@ -676,13 +676,13 @@ async def main():
         arg = sys.argv[i]
         if arg == "--transport" and i + 1 < len(sys.argv):
             transport = sys.argv[i + 1]
-        elif arg in ("--verbose", "stdio", "streamable-http", "sse"):
+        elif arg in ("--verbose", "stdio", "streamable-http", "sse"):  # sse deprecated, kept for backward compatibility
             pass  # flags or transport values, not file paths
         elif not arg.startswith("--"):
             test_cases_files.append(arg)
 
-    if transport not in ("stdio", "streamable-http", "sse"):
-        print(f"✗ Unknown transport: {transport}. Choose from: stdio, streamable-http, sse")
+    if transport not in ("stdio", "streamable-http", "sse"):  # sse deprecated in v4.0
+        print(f"✗ Unknown transport: {transport}. Choose from: stdio, streamable-http (sse deprecated)")
         sys.exit(1)
 
     # Default to core test cases if no files specified
@@ -695,8 +695,11 @@ async def main():
         await runner.load_test_cases()
         await runner.run_scripts('pre_test')
 
-        if transport in ("streamable-http", "sse"):
-            print(f"\nTransport: {transport}")
+        if transport in ("streamable-http", "sse"):  # sse deprecated, will be removed in v4.0
+            if transport == "sse":
+                print(f"\n⚠️  Transport: {transport} (DEPRECATED, will be removed in v4.0)")
+            else:
+                print(f"\nTransport: {transport}")
             await runner.connect_via_http(server_command)
         else:
             await runner.connect_to_server(server_command)

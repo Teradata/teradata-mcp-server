@@ -28,7 +28,7 @@ export DATABASE_URI="teradata://username:password@host:1025/database"
 export MCP_TRANSPORT="stdio"           # or "streamable-http"
 export MCP_HOST="localhost"            # for HTTP transport
 export MCP_PORT="8001"                 # for HTTP transport
-export MCP_PING_INTERVAL="30"         # keep-alive ping interval (seconds) for streamable-http and sse transports
+export MCP_PING_INTERVAL="30"         # keep-alive ping interval (seconds) for streamable-http (sse deprecated)
 export PROFILE="all"                   # tool profile to load
 export LOGGING_LEVEL="WARNING"         # DEBUG, INFO, WARNING, ERROR
 
@@ -286,17 +286,21 @@ teradata-mcp-server --mcp_transport streamable-http --mcp_port 8001
 - Can be combined with user authentication to enforce individual data access policies
 - Can be containerized
 
-### Server-Sent Events (sse)
+### Server-Sent Events (sse) — DEPRECATED
 
-For specialized streaming applications:
+> **⚠️ DEPRECATED:** SSE transport is deprecated and will be removed in v4.0. 
+> Please use `streamable-http` instead (see section above).
 
 ```bash
-teradata-mcp-server --mcp_transport sse --mcp_port 8001
+teradata-mcp-server --mcp_transport sse --mcp_port 8001  # ⚠️ Deprecated, use streamable-http
 ```
 
-### Keep-Alive (HTTP/SSE transports)
+**Migration:** Replace `--mcp_transport sse` with `--mcp_transport streamable-http`. The endpoint and behavior remain compatible.
 
-Load balancers and reverse proxies (nginx, AWS ALB) close idle connections after a fixed timeout. For long-running Teradata queries over `streamable-http` or `sse`, the server sends periodic ping messages to keep the connection alive.
+### Keep-Alive (HTTP Transports)
+
+Load balancers and reverse proxies (nginx, AWS ALB) close idle connections after a fixed timeout. For long-running Teradata queries over `streamable-http`, the server sends periodic ping messages to keep the connection alive.
+(Note: SSE support is deprecated and will be removed in v4.0.)
 
 ```bash
 export MCP_PING_INTERVAL="30"   # seconds between keep-alive pings (default: 30)
