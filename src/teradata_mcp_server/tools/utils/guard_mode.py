@@ -3,48 +3,40 @@
 Provides utilities for tools marked with destructive_hint=True to require
 explicit user confirmation before executing irreversible operations.
 
-Example usage in a tool handler:
+NOTE: The InputRequiredResult API from mcp>=2.0.0 is still evolving.
+The helper functions below are PLACEHOLDERS and will be updated once
+the v4 API stabilizes. For now, tools should return error messages
+for destructive operations requiring confirmation rather than using
+these helpers directly.
 
-    from mcp import Context
-    from teradata_mcp_server.tools.utils.guard_mode import require_confirmation, check_confirmation
+Example usage pattern (current workaround):
 
-    async def handle_bar_drop_table(table_name: str, ctx: Context) -> str:
-        # Check if user has already confirmed
-        if not ctx.input_responses:
-            # First invocation: ask for confirmation
-            return require_confirmation(
-                operation_name="Drop Table",
-                description=f"Drop table '{table_name}'? All data will be lost permanently.",
-                risk_level="critical",
-            )
-
-        # Second invocation: user has confirmed (or not)
-        user_response = ctx.input_responses[0]
-        if not check_confirmation(user_response):
-            return f"Operation cancelled."
-
-        # Proceed with the destructive operation
-        # ... actual drop table logic ...
-        return f"Successfully dropped table '{table_name}'"
+    async def handle_bar_drop_table(table_name: str) -> str:
+        # For now, return an error message asking for confirmation
+        # until InputRequiredResult API is stable
+        return f"Drop table '{table_name}'? This is irreversible. " \
+               f"Please confirm explicitly in a follow-up request."
 """
-
-from mcp.types import InputRequiredResult
 
 
 def require_confirmation(
     operation_name: str,
     description: str,
     risk_level: str = "high",
-) -> InputRequiredResult:
-    """Generate an InputRequiredResult for a destructive operation confirmation.
+) -> dict:
+    """Generate confirmation request for a destructive operation.
+
+    NOTE: This is a PLACEHOLDER. The actual InputRequiredResult API
+    in MCP v4 is still evolving. This currently returns a dict that
+    can be converted to error message text.
 
     Args:
         operation_name: Human-readable name of the operation (e.g., "Drop Table")
-        description: Detailed description of what will happen (e.g., "Drop table 'customers'? This is irreversible.")
+        description: Detailed description of what will happen
         risk_level: "high" or "critical"; used to emphasize severity
 
     Returns:
-        InputRequiredResult that the client will present to the user for confirmation
+        Dict with confirmation request details (for future InputRequiredResult)
     """
     prefix = "⚠️ WARNING" if risk_level == "high" else "🔴 CRITICAL"
 
@@ -54,10 +46,14 @@ def require_confirmation(
 
 This action CANNOT be undone. Please confirm by typing 'yes' to proceed."""
 
-    return InputRequiredResult(
-        message=message,
-        response_type="string",  # type: ignore[arg-type]
-    )
+    # TODO: Once InputRequiredResult API is stable in v4, replace with:
+    # return InputRequiredResult(...)
+    return {
+        "type": "confirmation_required",
+        "message": message,
+        "operation": operation_name,
+        "risk_level": risk_level,
+    }
 
 
 def check_confirmation(
