@@ -112,9 +112,12 @@ def create_mcp_app(settings: Settings):
     enable_analytic_functions = bool(profile_name and profile_name == "dataScientist")
 
     # State holder — replaces nonlocal pattern; lifespan owns the lifecycle
+    from teradata_mcp_server.tools.utils.task_runner import TaskManager
+
     class _ConnState:
         tdconn = None
         fs_config = None
+        task_manager = TaskManager()
 
     _state = _ConnState()
 
@@ -312,6 +315,8 @@ def create_mcp_app(settings: Settings):
                     doc_string=summary,
                     func_args_str=func_args_str,
                     tables_to_df=json.dumps(inp_data),
+                    task_manager="_state.task_manager",
+                    submit_as_task="False",  # Future: enable via client API
                 )
 
                 doc_string = build_tdml_tool_docstring(summary, func_metadata, partition_order_cols)
@@ -334,12 +339,15 @@ def create_mcp_app(settings: Settings):
         # Instead of waiting for session handshakes, periodically refresh from the database.
         refresh_task = None
         if registry_db and getattr(_state.tdconn, "engine", None):
+
             async def background_registry_refresh():
                 """Periodically refresh registry tools from database."""
                 while True:
                     try:
                         await asyncio.sleep(settings.registry_refresh_interval)
-                        logger.debug(f"Background registry refresh triggered (interval={settings.registry_refresh_interval}s)")
+                        logger.debug(
+                            f"Background registry refresh triggered (interval={settings.registry_refresh_interval}s)"
+                        )
                         # Use the watermark from middleware to load only new/updated tools
                         new_ts = load_registry_tools(middleware.registry_tools_loaded_ts)
                         if new_ts:
@@ -374,7 +382,13 @@ def create_mcp_app(settings: Settings):
             _state.tdconn = None
             _state.fs_config = None
 
-    mcp = FastMCP("teradata-mcp-server", lifespan=teradata_lifespan, mask_error_details=True)
+    mcp = FastMCP(
+        "teradata-mcp-server",
+        lifespan=teradata_lifespan,
+        mask_error_details=True,
+        cache_ttl=300,  # 5 minutes for read-only tools
+        cache_scope="public",  # Shareable across users for read-only query results
+    )
 
     # Middleware (auth + request context)
     # Note: registry_load_callback will be set later after load_registry_tools is defined
@@ -676,14 +690,22 @@ def create_mcp_app(settings: Settings):
                 # Always register base_readQuery as a direct MCP tool (core tool)
                 if tool_name == "base_readQuery":
                     wrapped = make_tool_wrapper(func)
-                    mcp.tool(name=tool_name, description=wrapped.__doc__, annotations=_annotations_for(tool_name), tags=[tool_tag])(
-                        wrapped
-                    )
+                    mcp.tool(
+                        name=tool_name,
+                        description=wrapped.__doc__,
+                        annotations=_annotations_for(tool_name),
+                        tags=[tool_tag],
+                    )(wrapped)
                     logger.info(f"Registered core tool as direct MCP tool: {tool_name}")
             else:
                 # Static mode: register all tools as MCP tools
                 wrapped = make_tool_wrapper(func)
-                mcp.tool(name=tool_name, description=wrapped.__doc__, annotations=_annotations_for(tool_name), tags=[tool_tag])(wrapped)
+                mcp.tool(
+                    name=tool_name,
+                    description=wrapped.__doc__,
+                    annotations=_annotations_for(tool_name),
+                    tags=[tool_tag],
+                )(wrapped)
                 registered_count += 1
                 logger.debug(f"Registered MCP tool: {tool_name}")
 
@@ -1560,6 +1582,42 @@ Returns:
             return GRAPH_EDGE_CONTRACT
 
         logger.info("Registered resource: graph_edge_contract")
+
+    # ── Background Task Status Resource ──────────────────────────────────────
+    # Allows clients to query progress and results of long-running tools
+    # (e.g., tdml_* analytic functions submitted as background tasks).
+    # ──────────────────────────────────────────────────────────────────────
+
+    @mcp.resource("task://{task_id}")
+    def get_task_status(task_id: str) -> str:
+        """Get the status and result of a background task by ID.
+
+        Args:
+            task_id: UUID of the task to retrieve
+
+        Returns:
+            JSON string with task status, result (if completed), or error message
+        """
+        task = _state.task_manager.get_task(task_id)
+        if not task:
+            return json.dumps({"error": f"Task {task_id} not found"})
+
+        response = {
+            "id": task.id,
+            "name": task.name,
+            "status": task.status.value,
+            "created_at": task.created_at,
+            "completed_at": task.completed_at,
+        }
+
+        if task.result is not None:
+            response["result"] = task.result
+        if task.error:
+            response["error"] = task.error
+
+        return json.dumps(response)
+
+    logger.info("Registered resource: task://{task_id} for background task status polling")
 
     # Return the configured app and some handles used by the entrypoint if needed
     return mcp, logger
