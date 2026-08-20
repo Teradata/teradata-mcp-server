@@ -20,6 +20,7 @@ import inspect
 import json
 import os
 import re
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from importlib.resources import files as pkg_files
 from typing import Annotated, Any
@@ -50,8 +51,9 @@ from teradata_mcp_server.tools.utils.queryband import build_queryband
 from teradata_mcp_server.utils import format_text_response, resolve_type_hint, setup_logging
 
 _TOOL_ANNOTATIONS: dict[str, ToolAnnotations] = {
-    "tdvs_grant_user": ToolAnnotations(read_only_hint=False, destructive_hint=True),
-    "tdvs_revoke_user": ToolAnnotations(read_only_hint=False, destructive_hint=True),
+    "tdvs_grant_user_permission": ToolAnnotations(read_only_hint=False, destructive_hint=True),
+    "tdvs_revoke_user_permission": ToolAnnotations(read_only_hint=False, destructive_hint=True),
+    "tdvs_destroy": ToolAnnotations(read_only_hint=False, destructive_hint=True),
 }
 
 _PREFIX_ANNOTATIONS: dict[str, ToolAnnotations] = {
@@ -76,6 +78,87 @@ def _annotations_for(tool_name: str) -> ToolAnnotations | None:
         if tool_name.startswith(prefix):
             return ann
     return None
+
+
+def _guard_bar_manageDsaDiskFileSystem(kwargs: dict[str, Any]) -> tuple[str, str] | None:
+    operation = kwargs.get("operation")
+    if operation not in ("delete_all", "remove"):
+        return None
+    path = kwargs.get("file_system_path", "<unspecified>")
+    verb = "Delete all data in" if operation == "delete_all" else "Remove"
+    return ("DSA Disk File System: " + operation, f"{verb} disk file system '{path}'. This cannot be undone.")
+
+
+def _guard_bar_manageMediaServer(kwargs: dict[str, Any]) -> tuple[str, str] | None:
+    if kwargs.get("operation") != "delete":
+        return None
+    server_name = kwargs.get("server_name", "<unspecified>")
+    return ("Delete Media Server", f"Delete media server '{server_name}'. This cannot be undone.")
+
+
+def _guard_bar_manageTeradataSystem(kwargs: dict[str, Any]) -> tuple[str, str] | None:
+    if kwargs.get("operation") != "delete_system":
+        return None
+    system_name = kwargs.get("system_name", "<unspecified>")
+    return (
+        "Delete Teradata System",
+        f"Delete configured Teradata system '{system_name}' from DSA. This cannot be undone.",
+    )
+
+
+def _guard_bar_manageDiskFileTargetGroup(kwargs: dict[str, Any]) -> tuple[str, str] | None:
+    if kwargs.get("operation") != "delete":
+        return None
+    name = kwargs.get("target_group_name", "<unspecified>")
+    extra = " and all associated backup data" if kwargs.get("delete_all_data") else ""
+    return ("Delete Target Group", f"Delete target group '{name}'{extra}. This cannot be undone.")
+
+
+def _guard_bar_manageJob(kwargs: dict[str, Any]) -> tuple[str, str] | None:
+    operation = kwargs.get("operation")
+    job_name = kwargs.get("job_name", "<unspecified>")
+    if operation == "delete":
+        return ("Delete Job", f"Permanently delete DSA job '{job_name}' from the repository. This cannot be undone.")
+    if operation == "run":
+        return (
+            "Run Job",
+            f"Execute DSA job '{job_name}'. This starts a real backup/restore operation against the Teradata system.",
+        )
+    return None
+
+
+def _guard_tdvs_grant_user_permission(kwargs: dict[str, Any]) -> tuple[str, str] | None:
+    vs_name = kwargs.get("vs_name", "<unspecified>")
+    user_name = kwargs.get("user_name", "<unspecified>")
+    permission = kwargs.get("permission", "<unspecified>")
+    return ("Grant Permission", f"Grant '{permission}' permission to user '{user_name}' on vector store '{vs_name}'.")
+
+
+def _guard_tdvs_revoke_user_permission(kwargs: dict[str, Any]) -> tuple[str, str] | None:
+    vs_name = kwargs.get("vs_name", "<unspecified>")
+    user_name = kwargs.get("user_name", "<unspecified>")
+    permission = kwargs.get("permission", "<unspecified>")
+    return (
+        "Revoke Permission",
+        f"Revoke '{permission}' permission from user '{user_name}' on vector store '{vs_name}'.",
+    )
+
+
+def _guard_tdvs_destroy(kwargs: dict[str, Any]) -> tuple[str, str] | None:
+    vs_name = kwargs.get("vs_name", "<unspecified>")
+    return ("Destroy Vector Store", f"Permanently destroy vector store '{vs_name}'. This cannot be undone.")
+
+
+_GUARD_CHECKS: dict[str, Callable[[dict[str, Any]], tuple[str, str] | None]] = {
+    "bar_manageDsaDiskFileSystem": _guard_bar_manageDsaDiskFileSystem,
+    "bar_manageMediaServer": _guard_bar_manageMediaServer,
+    "bar_manageTeradataSystem": _guard_bar_manageTeradataSystem,
+    "bar_manageDiskFileTargetGroup": _guard_bar_manageDiskFileTargetGroup,
+    "bar_manageJob": _guard_bar_manageJob,
+    "tdvs_grant_user_permission": _guard_tdvs_grant_user_permission,
+    "tdvs_revoke_user_permission": _guard_tdvs_revoke_user_permission,
+    "tdvs_destroy": _guard_tdvs_destroy,
+}
 
 
 def create_mcp_app(settings: Settings):
@@ -555,6 +638,8 @@ def create_mcp_app(settings: Settings):
         def executor(**kwargs):
             return execute_db_tool(func, **kwargs)
 
+        guard_tool_name = getattr(func, "__name__", "").removeprefix("handle_")
+
         return create_mcp_tool(
             executor_func=executor,
             signature=new_sig,
@@ -562,6 +647,7 @@ def create_mcp_app(settings: Settings):
             validate_required=False,
             tool_name=getattr(func, "__name__", "wrapped_tool"),
             tool_description=func.__doc__,
+            guard=_GUARD_CHECKS.get(guard_tool_name),
         )
 
     # If progressive disclosure enabled, initialize context catalog and search/execute tools

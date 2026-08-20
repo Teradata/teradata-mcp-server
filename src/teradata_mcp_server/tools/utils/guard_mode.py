@@ -1,72 +1,66 @@
 """Guard-mode helpers for multi-step confirmation flows on destructive operations.
 
-Provides utilities for tools marked with destructive_hint=True to require
-explicit user confirmation before executing irreversible operations.
+Tools marked with ``destructive_hint=True`` (or specific destructive branches
+within a multi-operation tool) can call ``confirm_destructive_operation`` to
+require explicit user confirmation, via FastMCP's elicitation API
+(``Context.elicit``), before proceeding.
 
-NOTE: The InputRequiredResult API from mcp>=2.0.0 is still evolving.
-The helper functions below are PLACEHOLDERS and will be updated once
-the v4 API stabilizes. For now, tools should return error messages
-for destructive operations requiring confirmation rather than using
-these helpers directly.
+Elicitation is async and only available on ``fastmcp.server.context.Context``.
+Tool handlers in this codebase (``handle_*``) are synchronous and run inside
+``asyncio.to_thread``, so they cannot call ``ctx.elicit`` directly. The
+confirmation must happen in the async tool wrapper, before the sync handler
+is dispatched to the thread pool — call ``confirm_destructive_operation``
+there and only invoke the handler once it returns without raising.
 
-Example usage pattern (current workaround):
+Example usage pattern:
 
-    async def handle_bar_drop_table(table_name: str) -> str:
-        # For now, return an error message asking for confirmation
-        # until InputRequiredResult API is stable
-        return f"Drop table '{table_name}'? This is irreversible. " \
-               f"Please confirm explicitly in a follow-up request."
+    from fastmcp.exceptions import ToolError
+    from teradata_mcp_server.tools.utils.guard_mode import confirm_destructive_operation
+
+    async def _mcp_tool(ctx: Context, **kwargs) -> Any:
+        if kwargs.get("operation") == "delete":
+            await confirm_destructive_operation(
+                ctx,
+                operation_name="Delete Job",
+                description=f"Delete job '{kwargs.get('job_name')}'? This is irreversible.",
+            )
+        return await asyncio.to_thread(handle_bar_manageJob, **kwargs)
 """
 
+from fastmcp.exceptions import ToolError
+from fastmcp.server.context import Context
+from fastmcp.server.elicitation import AcceptedElicitation, CancelledElicitation, DeclinedElicitation
 
-def require_confirmation(
+
+async def confirm_destructive_operation(
+    ctx: Context,
     operation_name: str,
     description: str,
     risk_level: str = "high",
-) -> dict:
-    """Generate confirmation request for a destructive operation.
+) -> None:
+    """Ask the client to confirm a destructive operation before proceeding.
 
-    NOTE: This is a PLACEHOLDER. The actual InputRequiredResult API
-    in MCP v4 is still evolving. This currently returns a dict that
-    can be converted to error message text.
+    Raises ``ToolError`` if the user declines, cancels, or answers "no" —
+    callers should let this propagate rather than catching it, so the
+    operation is aborted and the reason surfaces to the client.
 
     Args:
-        operation_name: Human-readable name of the operation (e.g., "Drop Table")
-        description: Detailed description of what will happen
-        risk_level: "high" or "critical"; used to emphasize severity
-
-    Returns:
-        Dict with confirmation request details (for future InputRequiredResult)
+        ctx: The active FastMCP request context.
+        operation_name: Human-readable name of the operation (e.g. "Delete Job").
+        description: Detailed description of what will happen.
+        risk_level: "high" or "critical"; only affects the message wording.
     """
     prefix = "⚠️ WARNING" if risk_level == "high" else "🔴 CRITICAL"
+    message = f"{prefix}: {operation_name}\n\n{description}\n\nThis action cannot be undone. Confirm to proceed?"
 
-    message = f"""{prefix}: {operation_name}
+    result = await ctx.elicit(message, response_type=bool)
 
-{description}
-
-This action CANNOT be undone. Please confirm by typing 'yes' to proceed."""
-
-    # TODO: Once InputRequiredResult API is stable in v4, replace with:
-    # return InputRequiredResult(...)
-    return {
-        "type": "confirmation_required",
-        "message": message,
-        "operation": operation_name,
-        "risk_level": risk_level,
-    }
-
-
-def check_confirmation(
-    user_response: str,
-    expected: str = "yes",
-) -> bool:
-    """Check if user confirmed a destructive operation.
-
-    Args:
-        user_response: The user's input (should be lowercase)
-        expected: The confirmation string to match (default: "yes")
-
-    Returns:
-        True if user confirmed, False otherwise
-    """
-    return user_response.strip().lower() == expected.lower()
+    if isinstance(result, AcceptedElicitation):
+        if result.data:
+            return
+        raise ToolError(f"{operation_name} was not confirmed — operation cancelled.")
+    if isinstance(result, DeclinedElicitation):
+        raise ToolError(f"{operation_name} was declined by the user — operation cancelled.")
+    if isinstance(result, CancelledElicitation):
+        raise ToolError(f"{operation_name} confirmation was cancelled — operation cancelled.")
+    raise ToolError(f"{operation_name} confirmation returned an unexpected result — operation cancelled.")

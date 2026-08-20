@@ -25,11 +25,12 @@ EXPECTED: dict[str, dict[str, bool]] = {
     "sec_userDbPermissions": {"read_only_hint": True, "idempotent_hint": True},
     # destructive (bar_ prefix)
     "bar_manageDsaDiskFileSystem": {"read_only_hint": False, "destructive_hint": True},
-    # per-tool override: tdvs_ prefix default is read-only, but grant/revoke are destructive
-    "tdvs_grant_user": {"read_only_hint": False, "destructive_hint": True},
-    "tdvs_revoke_user": {"read_only_hint": False, "destructive_hint": True},
-    # tdvs_ prefix default still applies to non-grant/revoke tools
-    "tdvs_similarity": {"read_only_hint": True, "idempotent_hint": True},
+    # per-tool override: tdvs_ prefix default is read-only, but grant/revoke/destroy are destructive
+    "tdvs_grant_user_permission": {"read_only_hint": False, "destructive_hint": True},
+    "tdvs_revoke_user_permission": {"read_only_hint": False, "destructive_hint": True},
+    "tdvs_destroy": {"read_only_hint": False, "destructive_hint": True},
+    # tdvs_ prefix default still applies to non-grant/revoke/destroy tools
+    "tdvs_similarity_search": {"read_only_hint": True, "idempotent_hint": True},
     # tdml_ — not read-only but idempotent
     "tdml_KMeans": {"read_only_hint": False, "idempotent_hint": True},
 }

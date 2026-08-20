@@ -1,6 +1,9 @@
 import asyncio
 import inspect
+from collections.abc import Callable
 from typing import Any
+
+GuardCheck = Callable[[dict[str, Any]], tuple[str, str] | None]
 
 
 async def _fetch_request_context() -> Any:
@@ -14,6 +17,32 @@ async def _fetch_request_context() -> Any:
         return None
 
 
+async def _confirm_guarded_operation(guard: GuardCheck, kwargs: dict[str, Any]) -> None:
+    """Run a guard check and, if it flags this call, require elicited confirmation.
+
+    Unlike _fetch_request_context, failures here are NOT swallowed: if a guard
+    flags a call as destructive, the operation must either be confirmed or
+    fail outright — silently proceeding unconfirmed would defeat the point.
+    """
+    gate = guard(kwargs)
+    if gate is None:
+        return
+
+    from fastmcp.exceptions import ToolError
+    from fastmcp.server.dependencies import get_context
+
+    from teradata_mcp_server.tools.utils.guard_mode import confirm_destructive_operation
+
+    operation_name, description = gate
+    try:
+        ctx = get_context()
+    except Exception as e:
+        raise ToolError(
+            f"'{operation_name}' requires user confirmation, but no request context is available: {e}"
+        ) from None
+    await confirm_destructive_operation(ctx, operation_name, description)
+
+
 def create_mcp_tool(
     *,
     executor_func=None,
@@ -22,6 +51,7 @@ def create_mcp_tool(
     validate_required=False,
     tool_name="mcp_tool",
     tool_description=None,
+    guard: GuardCheck | None = None,
 ):
     """
     Unified factory for creating async MCP tool functions.
@@ -37,6 +67,11 @@ def create_mcp_tool(
         validate_required: Whether to validate required parameters are present.
         tool_name: Name to assign to the MCP tool function.
         tool_description: Description/docstring for the MCP tool function.
+        guard: Optional callable inspecting a call's kwargs. Return
+            (operation_name, description) to require the client to confirm via
+            elicitation before the handler runs, or None to let this call
+            through unconfirmed. Lets a single tool gate only its destructive
+            branches (e.g. an `operation="delete"` value) rather than every call.
 
     Returns:
         An async function suitable for use as an MCP tool.
@@ -60,12 +95,16 @@ def create_mcp_tool(
             missing = [n for n in required_params if n not in kwargs]
             if missing:
                 raise ValueError(f"Missing required parameters: {missing}")
+            if guard is not None:
+                await _confirm_guarded_operation(guard, kwargs)
             request_context = await _fetch_request_context()
             merged_kwargs = {**inject_kwargs, **kwargs, "_request_context": request_context}
             return await asyncio.to_thread(executor_func, **merged_kwargs)
     else:
 
         async def _mcp_tool(**kwargs: Any) -> Any:
+            if guard is not None:
+                await _confirm_guarded_operation(guard, kwargs)
             request_context = await _fetch_request_context()
             merged_kwargs = {**inject_kwargs, **kwargs, "_request_context": request_context}
             return await asyncio.to_thread(executor_func, **merged_kwargs)
