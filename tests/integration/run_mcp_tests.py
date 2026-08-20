@@ -18,11 +18,13 @@ import time
 from contextlib import AsyncExitStack
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 _INTEGRATION_DIR = Path(__file__).resolve().parent
 _DEFAULT_CASES_FILE = str(_INTEGRATION_DIR / "cases" / "core_test_cases.json")
 
 # MCP client imports
+from mcp import types
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
@@ -41,6 +43,24 @@ class MCPTestRunner:
         self.exit_stack: AsyncExitStack | None = None
         self.verbose = verbose
         self._http_server_proc: subprocess.Popen | None = None
+        # Guard-mode (Phase 4.4) gates destructive tool calls behind an elicitation
+        # confirmation prompt. Without a callback, ClientSession's default handler
+        # returns "elicitation not supported" and every guarded call fails, so we
+        # supply one here. Test cases opt into a non-default response via the
+        # "elicit_response" field ("accept" | "decline" | "cancel"); "accept" is
+        # the default so existing destructive test cases keep passing unattended.
+        self._elicit_response = "accept"
+
+    async def _elicitation_callback(
+        self, context: Any, params: types.ElicitRequestParams
+    ) -> types.ElicitResult:
+        """Auto-respond to guard-mode confirmation prompts per the current test case."""
+        response = self._elicit_response
+        if response == "decline":
+            return types.ElicitResult(action="decline")
+        if response == "cancel":
+            return types.ElicitResult(action="cancel")
+        return types.ElicitResult(action="accept", content={"value": True})
 
     def _find_project_root(self) -> str:
         """Find the project root directory (contains profiles.yml)."""
@@ -130,7 +150,7 @@ class MCPTestRunner:
             print("  Server process started, establishing MCP session...")
 
             self.session = await self.exit_stack.enter_async_context(
-                ClientSession(read, write)
+                ClientSession(read, write, elicitation_callback=self._elicitation_callback)
             )
 
             print("  Initializing MCP protocol...")
@@ -241,7 +261,7 @@ class MCPTestRunner:
             read, write, _ = streams
 
             self.session = await self.exit_stack.enter_async_context(
-                ClientSession(read, write)
+                ClientSession(read, write, elicitation_callback=self._elicitation_callback)
             )
 
             max_retries = 3
@@ -352,6 +372,10 @@ class MCPTestRunner:
 
         print(f"  Running {test_name}...", end=" ")
         sys.stdout.flush()  # Force flush to ensure clean output
+
+        # Guard-mode test cases can request a non-default elicitation response
+        # (e.g. "decline") to verify the confirmation flow rejects the call.
+        self._elicit_response = test_case.get("elicit_response", "accept")
 
         try:
             response = await self.session.call_tool(

@@ -17,8 +17,12 @@ async def _fetch_request_context() -> Any:
         return None
 
 
-async def _confirm_guarded_operation(guard: GuardCheck, kwargs: dict[str, Any]) -> None:
-    """Run a guard check and, if it flags this call, require elicited confirmation.
+async def _confirm_guarded_operation(guard: GuardCheck, kwargs: dict[str, Any]) -> Any | None:
+    """Run a guard check and, if it flags this call, require confirmation.
+
+    Returns an ``InputRequiredResult`` the caller must return as-is (the
+    modern-era "ask" leg of the call — see ``guard_mode.ConfirmationRequiredError``),
+    or ``None`` to let the caller proceed to the handler.
 
     Unlike _fetch_request_context, failures here are NOT swallowed: if a guard
     flags a call as destructive, the operation must either be confirmed or
@@ -26,12 +30,12 @@ async def _confirm_guarded_operation(guard: GuardCheck, kwargs: dict[str, Any]) 
     """
     gate = guard(kwargs)
     if gate is None:
-        return
+        return None
 
     from fastmcp.exceptions import ToolError
     from fastmcp.server.dependencies import get_context
 
-    from teradata_mcp_server.tools.utils.guard_mode import confirm_destructive_operation
+    from teradata_mcp_server.tools.utils.guard_mode import ConfirmationRequiredError, confirm_destructive_operation
 
     operation_name, description = gate
     try:
@@ -40,7 +44,11 @@ async def _confirm_guarded_operation(guard: GuardCheck, kwargs: dict[str, Any]) 
         raise ToolError(
             f"'{operation_name}' requires user confirmation, but no request context is available: {e}"
         ) from None
-    await confirm_destructive_operation(ctx, operation_name, description)
+    try:
+        await confirm_destructive_operation(ctx, operation_name, description)
+    except ConfirmationRequiredError as ask:
+        return ask.input_required
+    return None
 
 
 def create_mcp_tool(
@@ -96,7 +104,9 @@ def create_mcp_tool(
             if missing:
                 raise ValueError(f"Missing required parameters: {missing}")
             if guard is not None:
-                await _confirm_guarded_operation(guard, kwargs)
+                ask = await _confirm_guarded_operation(guard, kwargs)
+                if ask is not None:
+                    return ask
             request_context = await _fetch_request_context()
             merged_kwargs = {**inject_kwargs, **kwargs, "_request_context": request_context}
             return await asyncio.to_thread(executor_func, **merged_kwargs)
@@ -104,7 +114,9 @@ def create_mcp_tool(
 
         async def _mcp_tool(**kwargs: Any) -> Any:
             if guard is not None:
-                await _confirm_guarded_operation(guard, kwargs)
+                ask = await _confirm_guarded_operation(guard, kwargs)
+                if ask is not None:
+                    return ask
             request_context = await _fetch_request_context()
             merged_kwargs = {**inject_kwargs, **kwargs, "_request_context": request_context}
             return await asyncio.to_thread(executor_func, **merged_kwargs)

@@ -88,6 +88,17 @@
           "user_name": "test1",
           "permission": "USER"
         }
+      },
+      {
+        "name": "test_vs_grant_user_permission_declined",
+        "description": "Guard-mode (Phase 4.4): declining confirmation must block the grant before it runs",
+        "parameters": {
+          "vs_name": "my_amazon_product_reviews",
+          "user_name": "test1",
+          "permission": "USER"
+        },
+        "elicit_response": "decline",
+        "expect_error": true
       }
     ],
     "tdvs_revoke_user_permission": [
@@ -98,9 +109,29 @@
           "user_name": "test1",
           "permission": "USER"
         }
+      },
+      {
+        "name": "test_vs_revoke_user_permission_declined",
+        "description": "Guard-mode (Phase 4.4): declining confirmation must block the revoke before it runs",
+        "parameters": {
+          "vs_name": "my_amazon_product_reviews",
+          "user_name": "test1",
+          "permission": "USER"
+        },
+        "elicit_response": "decline",
+        "expect_error": true
       }
     ],
     "tdvs_destroy": [
+      {
+        "name": "test_vs_destroy_declined",
+        "description": "Guard-mode (Phase 4.4): declining confirmation must block the destroy before it runs",
+        "parameters": {
+          "vs_name": "my_amazon_product_reviews"
+        },
+        "elicit_response": "decline",
+        "expect_error": true
+      },
       {
         "name": "test_vs_destroy",
         "parameters": {
