@@ -62,7 +62,7 @@ _PREFIX_ANNOTATIONS: dict[str, ToolAnnotations] = {
     "rag_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
     "qlty_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
     "graph_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "sql_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+    "sql_": ToolAnnotations(readOnlyHint=False, idempotentHint=True),
     "plot_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
     "tdvs_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
     "bar_": ToolAnnotations(readOnlyHint=False, destructiveHint=True),
