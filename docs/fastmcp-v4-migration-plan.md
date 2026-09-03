@@ -1,9 +1,10 @@
 # FastMCP v4 Migration Plan
 
-> **Status:** ✅ COMPLETE — 2026-08-18  
-> **Target:** FastMCP 4.0.0b3 (completed with v4.0.0b3 beta)  
-> **Current pin:** `fastmcp>=4.0.0b3` / `mcp[cli]>=2.0.0`  
-> **All phases complete:** Phase 0 (spike) → Phase 1 (upgrade) → Phase 2 (middleware) → Phase 3 (SSE removal) → Phase 4 (new features)
+> **Status:** ✅ COMPLETE & UPGRADED — 2026-09-03  
+> **Target:** FastMCP 4.0.2 GA (completed with v4.0.0b3 beta, upgraded to 4.0.2)  
+> **Current pin:** `fastmcp>=4.0.2` / `mcp[cli]>=2.0.0`  
+> **All phases complete:** Phase 0 (spike) → Phase 1 (upgrade) → Phase 2 (middleware) → Phase 3 (SSE removal) → Phase 4 (new features)  
+> **Verified:** Full integration testing ✅ | Streamable-http transport ✅ | Cold-start ✅
 
 ---
 
@@ -311,9 +312,9 @@ Phases 0–3 are the migration proper and should be treated as a single contiguo
 
 ---
 
-## ✅ COMPLETION SUMMARY (2026-08-18)
+## ✅ COMPLETION SUMMARY (2026-08-18) — UPGRADED TO 4.0.2 GA (2026-09-03)
 
-All phases have been successfully completed. The migration to FastMCP v4 is **production-ready**.
+All phases have been successfully completed. The migration to FastMCP v4 is **production-ready**. Upgraded to 4.0.2 GA with full verification testing.
 
 ### What Was Delivered
 
@@ -346,10 +347,30 @@ All phases have been successfully completed. The migration to FastMCP v4 is **pr
 
 ---
 
+## ✅ FASTMCP 4.0.2 GA UPGRADE (2026-09-03)
+
+**Upgrade completed:** `4.0.0b3` → `4.0.2 GA`
+
+### Testing Results
+- ✅ **Full integration test suite** — Passed with live Teradata database
+- ✅ **Streamable-http transport** — End-to-end verified
+- ✅ **Cold-start initialization** — Confirmed (no DB connection needed)
+- ✅ **All v4 features** — Working: caching, guard mode, argument completion, background tasks
+- ✅ **Middleware stability** — All internal module paths unchanged
+- ✅ **API compatibility** — No breaking changes detected
+
+### Commits
+- 1c6b8e2: chore(deps): upgrade fastmcp to 4.0.2 (GA release)
+- e5fc7de: chore: Update uv.lock for fastmcp 4.0.2
+
+**Verdict:** FastMCP 4.0.2 GA is fully compatible and production-ready. No code changes required.
+
+---
+
 ## Open Questions (For Future Versions)
 
-1. **GA Release:** Monitor for FastMCP 4.0.0 GA. Current pin is v4.0.0b3. Upgrade to GA when stable.
+1. **Phase 5 (Scaling):** Multi-instance horizontal scaling via shared task backend (database persistence) — future effort.
 
-2. **Phase 5 (Scaling):** Multi-instance horizontal scaling via shared task backend (database persistence) — future effort.
+2. **Guard Mode Integration:** Individual `bar_*` and `sec_*` tools still need to opt-in to confirmation flows. Infrastructure is in place.
 
-3. **Guard Mode Integration:** Individual `bar_*` and `sec_*` tools still need to opt-in to confirmation flows. Infrastructure is in place.
+3. **ClientCredentialsOAuthProvider:** Machine-to-machine auth for automated pipelines — available in v4, not yet implemented.
