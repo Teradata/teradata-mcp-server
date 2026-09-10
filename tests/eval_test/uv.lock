@@ -2124,13 +2124,13 @@ requires-dist = [
 
 [[package]]
 name = "teradatasql"
-version = "20.0.0.67"
+version = "20.0.0.68"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pycryptodome" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/76/fd/c6fe65d464480755ed3ced84ab8130ad1519e8c085f5c73e31ca6f46045a/teradatasql-20.0.0.67-py3-none-any.whl", hash = "sha256:400da4c43ca7d516f8983ac05a9ff85e56b41d98551324df6f29404a0e9f8efe", size = 129976440, upload-time = "2026-08-28T16:03:04.771Z" },
+    { url = "https://files.pythonhosted.org/packages/b3/16/b655d99368c0bd1f3855907b9e6c5f845eeaff94c9e48b136384e3372840/teradatasql-20.0.0.68-py3-none-any.whl", hash = "sha256:fa7893bb619643710fc9604b76284b27379d54ca75e0ae45f6c78d37ab3f59d9", size = 129981077, upload-time = "2026-09-01T20:29:43.004Z" },
 ]
 
 [[package]]
