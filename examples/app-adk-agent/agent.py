@@ -13,7 +13,6 @@ from google.adk.agents.llm_agent import LlmAgent
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools.mcp_tool.mcp_toolset import (
     MCPToolset,
-    SseConnectionParams,
     StdioConnectionParams,
     StdioServerParameters,
     StreamableHTTPConnectionParams,
@@ -39,13 +38,6 @@ async def create_agent():
             ),
             timeout=30  # Timeout in seconds for establishing the connection to the MCP std
         )
-    elif os.getenv("MCP_TRANSPORT") == 'sse':
-        # .env file needs to have MCP_TRANSPORT=sse
-        connection_params=SseConnectionParams(
-            url = f'http://{os.getenv("MCP_HOST", "localhost")}:{os.getenv("MCP_PORT", 8001)}/sse',  # URL of the MCP server
-            timeout=20,  # Timeout in seconds for establishing the connection to the MCP SSE server
-        )
-
     elif os.getenv("MCP_TRANSPORT") == 'streamable-http':
         # .env file needs to have MCP_TRANSPORT=streamable-http
         connection_params=StreamableHTTPConnectionParams(
@@ -54,7 +46,9 @@ async def create_agent():
         )
 
     else:
-        raise ValueError("MCP_TRANSPORT environment variable must be set to 'stdio', 'sse', or 'streamable-http'.")
+        raise ValueError(
+            "MCP_TRANSPORT environment variable must be set to 'stdio' or 'streamable-http'."
+        )
 
     toolset = MCPToolset(connection_params=connection_params)
 

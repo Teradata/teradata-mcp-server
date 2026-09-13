@@ -98,7 +98,6 @@ Tool handlers receive either a SQLAlchemy `Connection` or raw `TeradataConnectio
 Set via `MCP_TRANSPORT` env var or `--mcp_transport` flag:
 - **stdio** (default) — for Claude Desktop and CLI clients
 - **streamable-http** — HTTP with streaming on configurable host/port
-- **sse** — Server-Sent Events, this will be merged into streamable-http as the MCP standard is depricating SSE as a separate transport
 
 For stdio transport, logs go to file only (to avoid polluting MCP stdout). Log locations: macOS `~/Library/Logs/TeradataMCP/`, Linux `~/.local/state/teradata_mcp_server/logs/`.
 

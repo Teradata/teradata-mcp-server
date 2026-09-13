@@ -193,11 +193,43 @@ def infer_logmech_from_header(auth_header: str | None, default_basic_logmech: st
     return "", ""
 
 
-def execute_analytic_function(function_name: str, tables_to_df=None, **kwargs):
-    """
-    Executes the specified analytic function with the provided keyword arguments.
+def execute_analytic_function(
+    function_name: str, tables_to_df=None, task_manager=None, submit_as_task: bool = False, **kwargs
+):
+    """Execute the specified analytic function with the provided keyword arguments.
 
-    :param function_name: Name of the analytic function to execute.
+    Can execute synchronously (blocking) or submit to a background task queue for polling.
+
+    :param function_name: Name of the analytic function to execute (with or without 'tdml_' prefix).
+    :param tables_to_df: List of table names to convert to DataFrames.
+    :param task_manager: Optional TaskManager for submitting as background task.
+    :param submit_as_task: If True and task_manager provided, return task ID; otherwise execute sync.
+    :param kwargs: Keyword arguments for the analytic function.
+    :return: Response containing the result, or {"task_id": ..., "status": "pending"} if submitted as task.
+    """
+    # If submit_as_task is requested, delegate to background execution
+    if submit_as_task and task_manager:
+        import asyncio
+
+        task_id = asyncio.run(
+            task_manager.submit_task(
+                f"tdml_{function_name}" if not function_name.startswith("tdml_") else function_name,
+                _execute_analytic_function_sync,
+                function_name,
+                tables_to_df,
+                kwargs,
+            )
+        )
+        return {"task_id": task_id, "status": "pending"}
+
+    # Otherwise, execute synchronously
+    return _execute_analytic_function_sync(function_name, tables_to_df, kwargs)
+
+
+def _execute_analytic_function_sync(function_name: str, tables_to_df, kwargs: dict):
+    """Internal: synchronous execution of analytic function.
+
+    :param function_name: Name of the analytic function (with or without 'tdml_' prefix).
     :param tables_to_df: List of table names to convert to DataFrames.
     :param kwargs: Keyword arguments for the analytic function.
     :return: Response containing the result of the function execution.
@@ -209,7 +241,8 @@ def execute_analytic_function(function_name: str, tables_to_df=None, **kwargs):
     func_params = {k: v for k, v in kwargs.items() if k != "headers"}
 
     # Analytic functions are called with 'tdml_' prefix. Remove it.
-    function_name = function_name[5:]
+    if function_name.startswith("tdml_"):
+        function_name = function_name[5:]
 
     logger = logging.getLogger("teradata_mcp_server.utils")
     logger.info(f"received kwargs: {func_params} for the function {function_name}")
@@ -342,8 +375,10 @@ def get_anlytic_function_signature(params):
 
 
 def get_dynamic_function_definition():
-    """
-    Generate a dynamic function definition string for Teradata Analytics functions.
+    """Generate a dynamic function definition string for Teradata Analytics functions.
+
+    Supports both synchronous execution and background task submission.
+    Task submission is controlled via mcp.tool(task=True) or future client API.
     """
     s = '''
 def {analytic_function}({func_args_str}):
@@ -359,7 +394,9 @@ def {analytic_function}({func_args_str}):
     """
     params = {{arg: value for arg, value in locals().items() if arg not in ('vantage_auth')}}
     tables_to_df = {tables_to_df}
-    return execute_analytic_function('{analytic_function}', tables_to_df, **params)
+    task_manager = {task_manager}
+    submit_as_task = {submit_as_task}
+    return execute_analytic_function('{analytic_function}', tables_to_df, task_manager=task_manager, submit_as_task=submit_as_task, **params)
     '''
     return s
 

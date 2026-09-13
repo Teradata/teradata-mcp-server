@@ -18,20 +18,21 @@ from mcp.client.stdio import stdio_client
 # Tools from optional modules (bar_, tdml_, tdvs_) are skipped when not loaded.
 EXPECTED: dict[str, dict[str, bool]] = {
     # read-only + idempotent (base_ prefix)
-    "base_readQuery": {"readOnlyHint": True, "idempotentHint": True},
+    "base_readQuery": {"read_only_hint": True, "idempotent_hint": True},
     # read-only + idempotent (dba_ prefix — all current tools are SELECT-only)
-    "dba_tableSpace": {"readOnlyHint": True, "idempotentHint": True},
+    "dba_tableSpace": {"read_only_hint": True, "idempotent_hint": True},
     # read-only + idempotent (sec_ prefix)
-    "sec_userDbPermissions": {"readOnlyHint": True, "idempotentHint": True},
+    "sec_userDbPermissions": {"read_only_hint": True, "idempotent_hint": True},
     # destructive (bar_ prefix)
-    "bar_manageDsaDiskFileSystem": {"readOnlyHint": False, "destructiveHint": True},
-    # per-tool override: tdvs_ prefix default is read-only, but grant/revoke are destructive
-    "tdvs_grant_user": {"readOnlyHint": False, "destructiveHint": True},
-    "tdvs_revoke_user": {"readOnlyHint": False, "destructiveHint": True},
-    # tdvs_ prefix default still applies to non-grant/revoke tools
-    "tdvs_similarity": {"readOnlyHint": True, "idempotentHint": True},
+    "bar_manageDsaDiskFileSystem": {"read_only_hint": False, "destructive_hint": True},
+    # per-tool override: tdvs_ prefix default is read-only, but grant/revoke/destroy are destructive
+    "tdvs_grant_user_permission": {"read_only_hint": False, "destructive_hint": True},
+    "tdvs_revoke_user_permission": {"read_only_hint": False, "destructive_hint": True},
+    "tdvs_destroy": {"read_only_hint": False, "destructive_hint": True},
+    # tdvs_ prefix default still applies to non-grant/revoke/destroy tools
+    "tdvs_similarity_search": {"read_only_hint": True, "idempotent_hint": True},
     # tdml_ — not read-only but idempotent
-    "tdml_KMeans": {"readOnlyHint": False, "idempotentHint": True},
+    "tdml_KMeans": {"read_only_hint": False, "idempotent_hint": True},
 }
 
 

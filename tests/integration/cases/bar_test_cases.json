@@ -19,6 +19,16 @@
         "skip_if_no_dsa": true
       },
       {
+        "name": "remove_test_file_system_declined",
+        "parameters": {
+          "operation": "remove",
+          "file_system_path": "/test/backup/path"
+        },
+        "description": "Guard-mode (Phase 4.4): declining confirmation must block the removal before it runs",
+        "elicit_response": "decline",
+        "expect_error": true
+      },
+      {
         "name": "remove_test_file_system",
         "parameters": {
           "operation": "remove",
@@ -27,6 +37,64 @@
         "description": "Remove the test disk file system",
         "skip_if_no_dsa": true,
         "depends_on": "config_test_file_system"
+      }
+    ],
+    "bar_manageJob": [
+      {
+        "name": "delete_job_declined",
+        "parameters": {
+          "operation": "delete",
+          "job_name": "test_job"
+        },
+        "description": "Guard-mode (Phase 4.4): declining confirmation must block the delete before it runs",
+        "elicit_response": "decline",
+        "expect_error": true
+      },
+      {
+        "name": "run_job_declined",
+        "parameters": {
+          "operation": "run",
+          "job_name": "test_job"
+        },
+        "description": "Guard-mode (Phase 4.4): declining confirmation must block the run before it starts",
+        "elicit_response": "decline",
+        "expect_error": true
+      }
+    ],
+    "bar_manageMediaServer": [
+      {
+        "name": "delete_media_server_declined",
+        "parameters": {
+          "operation": "delete",
+          "server_name": "test_media_server"
+        },
+        "description": "Guard-mode (Phase 4.4): declining confirmation must block the delete before it runs",
+        "elicit_response": "decline",
+        "expect_error": true
+      }
+    ],
+    "bar_manageTeradataSystem": [
+      {
+        "name": "delete_system_declined",
+        "parameters": {
+          "operation": "delete_system",
+          "system_name": "test_system"
+        },
+        "description": "Guard-mode (Phase 4.4): declining confirmation must block the delete before it runs",
+        "elicit_response": "decline",
+        "expect_error": true
+      }
+    ],
+    "bar_manageDiskFileTargetGroup": [
+      {
+        "name": "delete_target_group_declined",
+        "parameters": {
+          "operation": "delete",
+          "target_group_name": "test_target_group"
+        },
+        "description": "Guard-mode (Phase 4.4): declining confirmation must block the delete before it runs",
+        "elicit_response": "decline",
+        "expect_error": true
       }
     ]
   }
