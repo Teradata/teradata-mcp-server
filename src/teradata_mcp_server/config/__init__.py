@@ -18,11 +18,11 @@ class Settings:
     config_dir: str | None = None  # User config directory for runtime overrides
 
     # MCP transport
-    mcp_transport: str = "stdio"  # stdio | streamable-http | sse
+    mcp_transport: str = "stdio"  # stdio | streamable-http
     mcp_host: str = "localhost"
     mcp_port: int = 8001
     mcp_path: str = "/mcp/"
-    ping_interval: int = 30  # keep-alive ping interval (seconds) for streamable-http and sse
+    ping_interval: int = 30  # keep-alive ping interval (seconds) for streamable-http
 
     # Auth
     auth_mode: str = "none"  # none | basic
@@ -49,6 +49,9 @@ class Settings:
     # Row limits for query results
     default_row_limit: int = 1000  # Default max rows returned by base_readQuery (DEFAULT_ROW_LIMIT env var)
     max_row_limit: int = 50000  # Hard ceiling; callers cannot exceed this (MAX_ROW_LIMIT env var)
+
+    # Registry refresh (background task in lifespan)
+    registry_refresh_interval: int = 300  # Interval in seconds for background registry refresh (REGISTRY_REFRESH_INTERVAL env var)
 
 
 def settings_from_env() -> Settings:
@@ -78,4 +81,5 @@ def settings_from_env() -> Settings:
         hooks_module=os.getenv("HOOKS_MODULE") or None,
         default_row_limit=int(os.getenv("DEFAULT_ROW_LIMIT", "1000")),
         max_row_limit=int(os.getenv("MAX_ROW_LIMIT", "50000")),
+        registry_refresh_interval=int(os.getenv("REGISTRY_REFRESH_INTERVAL", "300")),
     )

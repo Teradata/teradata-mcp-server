@@ -18,14 +18,16 @@ import time
 from contextlib import AsyncExitStack
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 _INTEGRATION_DIR = Path(__file__).resolve().parent
 _DEFAULT_CASES_FILE = str(_INTEGRATION_DIR / "cases" / "core_test_cases.json")
 
 # MCP client imports
+from mcp import types
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
-from mcp.client.streamable_http import streamablehttp_client
+from mcp.client.streamable_http import streamable_http_client
 
 
 class MCPTestRunner:
@@ -41,6 +43,24 @@ class MCPTestRunner:
         self.exit_stack: AsyncExitStack | None = None
         self.verbose = verbose
         self._http_server_proc: subprocess.Popen | None = None
+        # Guard-mode (Phase 4.4) gates destructive tool calls behind an elicitation
+        # confirmation prompt. Without a callback, ClientSession's default handler
+        # returns "elicitation not supported" and every guarded call fails, so we
+        # supply one here. Test cases opt into a non-default response via the
+        # "elicit_response" field ("accept" | "decline" | "cancel"); "accept" is
+        # the default so existing destructive test cases keep passing unattended.
+        self._elicit_response = "accept"
+
+    async def _elicitation_callback(
+        self, context: Any, params: types.ElicitRequestParams
+    ) -> types.ElicitResult:
+        """Auto-respond to guard-mode confirmation prompts per the current test case."""
+        response = self._elicit_response
+        if response == "decline":
+            return types.ElicitResult(action="decline")
+        if response == "cancel":
+            return types.ElicitResult(action="cancel")
+        return types.ElicitResult(action="accept", content={"value": True})
 
     def _find_project_root(self) -> str:
         """Find the project root directory (contains profiles.yml)."""
@@ -130,7 +150,7 @@ class MCPTestRunner:
             print("  Server process started, establishing MCP session...")
 
             self.session = await self.exit_stack.enter_async_context(
-                ClientSession(read, write)
+                ClientSession(read, write, elicitation_callback=self._elicitation_callback)
             )
 
             print("  Initializing MCP protocol...")
@@ -236,12 +256,12 @@ class MCPTestRunner:
                 self.exit_stack = AsyncExitStack()
 
             streams = await self.exit_stack.enter_async_context(
-                streamablehttp_client(url)
+                streamable_http_client(url)
             )
             read, write, _ = streams
 
             self.session = await self.exit_stack.enter_async_context(
-                ClientSession(read, write)
+                ClientSession(read, write, elicitation_callback=self._elicitation_callback)
             )
 
             max_retries = 3
@@ -353,6 +373,10 @@ class MCPTestRunner:
         print(f"  Running {test_name}...", end=" ")
         sys.stdout.flush()  # Force flush to ensure clean output
 
+        # Guard-mode test cases can request a non-default elicitation response
+        # (e.g. "decline") to verify the confirmation flow rejects the call.
+        self._elicit_response = test_case.get("elicit_response", "accept")
+
         try:
             response = await self.session.call_tool(
                 name=tool_name,
@@ -374,7 +398,7 @@ class MCPTestRunner:
                         response_text = str(response.content)
 
                     # Handle expect_error: tool should have returned an MCP error response
-                    is_error_response = getattr(response, 'isError', False)
+                    is_error_response = getattr(response, 'is_error', False)
                     expect_error = test_case.get("expect_error", False)
                     if expect_error:
                         if is_error_response:
@@ -676,13 +700,13 @@ async def main():
         arg = sys.argv[i]
         if arg == "--transport" and i + 1 < len(sys.argv):
             transport = sys.argv[i + 1]
-        elif arg in ("--verbose", "stdio", "streamable-http", "sse"):
+        elif arg in ("--verbose", "stdio", "streamable-http"):
             pass  # flags or transport values, not file paths
         elif not arg.startswith("--"):
             test_cases_files.append(arg)
 
-    if transport not in ("stdio", "streamable-http", "sse"):
-        print(f"✗ Unknown transport: {transport}. Choose from: stdio, streamable-http, sse")
+    if transport not in ("stdio", "streamable-http"):
+        print(f"✗ Unknown transport: {transport}. Choose from: stdio, streamable-http")
         sys.exit(1)
 
     # Default to core test cases if no files specified
@@ -695,7 +719,7 @@ async def main():
         await runner.load_test_cases()
         await runner.run_scripts('pre_test')
 
-        if transport in ("streamable-http", "sse"):
+        if transport == "streamable-http":
             print(f"\nTransport: {transport}")
             await runner.connect_via_http(server_command)
         else:

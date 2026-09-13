@@ -20,6 +20,7 @@ import inspect
 import json
 import os
 import re
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from importlib.resources import files as pkg_files
 from typing import Annotated, Any
@@ -27,9 +28,9 @@ from typing import Annotated, Any
 import yaml
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
-from fastmcp.prompts.prompt import Message, TextContent
-from mcp.types import ToolAnnotations
-from pydantic import BaseModel, Field
+from fastmcp.prompts import Message
+from mcp.types import TextContent, ToolAnnotations
+from pydantic import Field
 from sqlalchemy.engine import Connection
 
 from teradata_mcp_server import utils as config_utils
@@ -41,7 +42,6 @@ from teradata_mcp_server.tools import ContextCatalog
 from teradata_mcp_server.tools.graph.graph_edge_contract import GRAPH_EDGE_CONTRACT
 from teradata_mcp_server.tools.utils import (
     build_tdml_tool_docstring,
-    execute_analytic_function,
     get_anlytic_function_signature,
     get_dynamic_function_definition,
     get_partition_col_order_col_doc_string,
@@ -51,22 +51,23 @@ from teradata_mcp_server.tools.utils.queryband import build_queryband
 from teradata_mcp_server.utils import format_text_response, resolve_type_hint, setup_logging
 
 _TOOL_ANNOTATIONS: dict[str, ToolAnnotations] = {
-    "tdvs_grant_user": ToolAnnotations(readOnlyHint=False, destructiveHint=True),
-    "tdvs_revoke_user": ToolAnnotations(readOnlyHint=False, destructiveHint=True),
+    "tdvs_grant_user_permission": ToolAnnotations(read_only_hint=False, destructive_hint=True),
+    "tdvs_revoke_user_permission": ToolAnnotations(read_only_hint=False, destructive_hint=True),
+    "tdvs_destroy": ToolAnnotations(read_only_hint=False, destructive_hint=True),
 }
 
 _PREFIX_ANNOTATIONS: dict[str, ToolAnnotations] = {
-    "base_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "dba_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "sec_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "rag_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "qlty_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "graph_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "sql_": ToolAnnotations(readOnlyHint=False, idempotentHint=True),
-    "plot_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "tdvs_": ToolAnnotations(readOnlyHint=True, idempotentHint=True),
-    "bar_": ToolAnnotations(readOnlyHint=False, destructiveHint=True),
-    "tdml_": ToolAnnotations(readOnlyHint=False, idempotentHint=True),
+    "base_": ToolAnnotations(read_only_hint=True, idempotent_hint=True),
+    "dba_": ToolAnnotations(read_only_hint=True, idempotent_hint=True),
+    "sec_": ToolAnnotations(read_only_hint=True, idempotent_hint=True),
+    "rag_": ToolAnnotations(read_only_hint=True, idempotent_hint=True),
+    "qlty_": ToolAnnotations(read_only_hint=True, idempotent_hint=True),
+    "graph_": ToolAnnotations(read_only_hint=True, idempotent_hint=True),
+    "sql_": ToolAnnotations(read_only_hint=False, idempotent_hint=True),
+    "plot_": ToolAnnotations(read_only_hint=True, idempotent_hint=True),
+    "tdvs_": ToolAnnotations(read_only_hint=True, idempotent_hint=True),
+    "bar_": ToolAnnotations(read_only_hint=False, destructive_hint=True),
+    "tdml_": ToolAnnotations(read_only_hint=False, idempotent_hint=True),
 }
 
 
@@ -77,6 +78,87 @@ def _annotations_for(tool_name: str) -> ToolAnnotations | None:
         if tool_name.startswith(prefix):
             return ann
     return None
+
+
+def _guard_bar_manageDsaDiskFileSystem(kwargs: dict[str, Any]) -> tuple[str, str] | None:
+    operation = kwargs.get("operation")
+    if operation not in ("delete_all", "remove"):
+        return None
+    path = kwargs.get("file_system_path", "<unspecified>")
+    verb = "Delete all data in" if operation == "delete_all" else "Remove"
+    return ("DSA Disk File System: " + operation, f"{verb} disk file system '{path}'. This cannot be undone.")
+
+
+def _guard_bar_manageMediaServer(kwargs: dict[str, Any]) -> tuple[str, str] | None:
+    if kwargs.get("operation") != "delete":
+        return None
+    server_name = kwargs.get("server_name", "<unspecified>")
+    return ("Delete Media Server", f"Delete media server '{server_name}'. This cannot be undone.")
+
+
+def _guard_bar_manageTeradataSystem(kwargs: dict[str, Any]) -> tuple[str, str] | None:
+    if kwargs.get("operation") != "delete_system":
+        return None
+    system_name = kwargs.get("system_name", "<unspecified>")
+    return (
+        "Delete Teradata System",
+        f"Delete configured Teradata system '{system_name}' from DSA. This cannot be undone.",
+    )
+
+
+def _guard_bar_manageDiskFileTargetGroup(kwargs: dict[str, Any]) -> tuple[str, str] | None:
+    if kwargs.get("operation") != "delete":
+        return None
+    name = kwargs.get("target_group_name", "<unspecified>")
+    extra = " and all associated backup data" if kwargs.get("delete_all_data") else ""
+    return ("Delete Target Group", f"Delete target group '{name}'{extra}. This cannot be undone.")
+
+
+def _guard_bar_manageJob(kwargs: dict[str, Any]) -> tuple[str, str] | None:
+    operation = kwargs.get("operation")
+    job_name = kwargs.get("job_name", "<unspecified>")
+    if operation == "delete":
+        return ("Delete Job", f"Permanently delete DSA job '{job_name}' from the repository. This cannot be undone.")
+    if operation == "run":
+        return (
+            "Run Job",
+            f"Execute DSA job '{job_name}'. This starts a real backup/restore operation against the Teradata system.",
+        )
+    return None
+
+
+def _guard_tdvs_grant_user_permission(kwargs: dict[str, Any]) -> tuple[str, str] | None:
+    vs_name = kwargs.get("vs_name", "<unspecified>")
+    user_name = kwargs.get("user_name", "<unspecified>")
+    permission = kwargs.get("permission", "<unspecified>")
+    return ("Grant Permission", f"Grant '{permission}' permission to user '{user_name}' on vector store '{vs_name}'.")
+
+
+def _guard_tdvs_revoke_user_permission(kwargs: dict[str, Any]) -> tuple[str, str] | None:
+    vs_name = kwargs.get("vs_name", "<unspecified>")
+    user_name = kwargs.get("user_name", "<unspecified>")
+    permission = kwargs.get("permission", "<unspecified>")
+    return (
+        "Revoke Permission",
+        f"Revoke '{permission}' permission from user '{user_name}' on vector store '{vs_name}'.",
+    )
+
+
+def _guard_tdvs_destroy(kwargs: dict[str, Any]) -> tuple[str, str] | None:
+    vs_name = kwargs.get("vs_name", "<unspecified>")
+    return ("Destroy Vector Store", f"Permanently destroy vector store '{vs_name}'. This cannot be undone.")
+
+
+_GUARD_CHECKS: dict[str, Callable[[dict[str, Any]], tuple[str, str] | None]] = {
+    "bar_manageDsaDiskFileSystem": _guard_bar_manageDsaDiskFileSystem,
+    "bar_manageMediaServer": _guard_bar_manageMediaServer,
+    "bar_manageTeradataSystem": _guard_bar_manageTeradataSystem,
+    "bar_manageDiskFileTargetGroup": _guard_bar_manageDiskFileTargetGroup,
+    "bar_manageJob": _guard_bar_manageJob,
+    "tdvs_grant_user_permission": _guard_tdvs_grant_user_permission,
+    "tdvs_revoke_user_permission": _guard_tdvs_revoke_user_permission,
+    "tdvs_destroy": _guard_tdvs_destroy,
+}
 
 
 def create_mcp_app(settings: Settings):
@@ -113,9 +195,12 @@ def create_mcp_app(settings: Settings):
     enable_analytic_functions = bool(profile_name and profile_name == "dataScientist")
 
     # State holder — replaces nonlocal pattern; lifespan owns the lifecycle
+    from teradata_mcp_server.tools.utils.task_runner import TaskManager
+
     class _ConnState:
         tdconn = None
         fs_config = None
+        task_manager = TaskManager()
 
     _state = _ConnState()
 
@@ -313,6 +398,8 @@ def create_mcp_app(settings: Settings):
                     doc_string=summary,
                     func_args_str=func_args_str,
                     tables_to_df=json.dumps(inp_data),
+                    task_manager="_state.task_manager",
+                    submit_as_task="False",  # Future: enable via client API
                 )
 
                 doc_string = build_tdml_tool_docstring(summary, func_metadata, partition_order_cols)
@@ -331,18 +418,60 @@ def create_mcp_app(settings: Settings):
             if ts:
                 middleware.registry_tools_loaded_ts = ts
 
+        # Background registry refresh task (v4 sessionless: on_initialize no longer fires)
+        # Instead of waiting for session handshakes, periodically refresh from the database.
+        refresh_task = None
+        if registry_db and getattr(_state.tdconn, "engine", None):
+
+            async def background_registry_refresh():
+                """Periodically refresh registry tools from database."""
+                while True:
+                    try:
+                        await asyncio.sleep(settings.registry_refresh_interval)
+                        logger.debug(
+                            f"Background registry refresh triggered (interval={settings.registry_refresh_interval}s)"
+                        )
+                        # Use the watermark from middleware to load only new/updated tools
+                        new_ts = load_registry_tools(middleware.registry_tools_loaded_ts)
+                        if new_ts:
+                            middleware.registry_tools_loaded_ts = new_ts
+                            logger.info(f"Background registry refresh completed, watermark={new_ts}")
+                    except asyncio.CancelledError:
+                        logger.debug("Background registry refresh task cancelled on shutdown")
+                        break
+                    except Exception as e:
+                        logger.error(f"Error in background registry refresh: {e}", exc_info=True)
+
+            refresh_task = asyncio.create_task(background_registry_refresh())
+            logger.info(f"Background registry refresh task started (interval={settings.registry_refresh_interval}s)")
+
         # ── Yield ─────────────────────────────────────────────────────────
         try:
             yield
         finally:
             # ── Shutdown ──────────────────────────────────────────────────
+            # Cancel background refresh task if running
+            if refresh_task and not refresh_task.done():
+                refresh_task.cancel()
+                try:
+                    await refresh_task
+                except asyncio.CancelledError:
+                    pass
+                logger.debug("Background registry refresh task cancelled")
+
             if _state.tdconn and getattr(_state.tdconn, "engine", None):
                 _state.tdconn.engine.dispose()
                 logger.info("TDConn engine disposed on shutdown")
             _state.tdconn = None
             _state.fs_config = None
 
-    mcp = FastMCP("teradata-mcp-server", lifespan=teradata_lifespan, mask_error_details=True)
+    mcp = FastMCP(
+        "teradata-mcp-server",
+        lifespan=teradata_lifespan,
+        mask_error_details=True,
+        cache_ttl=300,  # 5 minutes for read-only tools
+        cache_scope="public",  # Shareable across users for read-only query results
+    )
 
     # Middleware (auth + request context)
     # Note: registry_load_callback will be set later after load_registry_tools is defined
@@ -361,7 +490,7 @@ def create_mcp_app(settings: Settings):
     mcp.add_middleware(ErrorHandlingMiddleware(logger=logger, include_traceback=True))
     mcp.add_middleware(middleware)
 
-    if settings.mcp_transport in ("streamable-http", "sse"):
+    if settings.mcp_transport == "streamable-http":
         from fastmcp.server.middleware.ping import PingMiddleware
 
         mcp.add_middleware(PingMiddleware(interval_ms=settings.ping_interval * 1000))
@@ -389,8 +518,12 @@ def create_mcp_app(settings: Settings):
 
         - Detects whether the handler expects a SQLAlchemy Connection or a raw
           DB-API connection and injects appropriately.
-        - For HTTP transport, builds and sets Teradata QueryBand per request using
-          the RequestContext captured by middleware.
+        - QueryBand (sessionless behavior): Sets Teradata QueryBand on EVERY request,
+          not cached per-session. This is correct for v4 sessionless protocol where each
+          request is independent with its own request_id, session_id, and context. The
+          RequestContext captured by middleware reflects per-request values from headers
+          and FastMCP context. If a tool makes multiple DB calls via the same connection,
+          QueryBand is set once and reused (standard Teradata behavior).
         - Formats return values into FastMCP content and captures exceptions with
           context for easier debugging.
         """
@@ -505,6 +638,8 @@ def create_mcp_app(settings: Settings):
         def executor(**kwargs):
             return execute_db_tool(func, **kwargs)
 
+        guard_tool_name = getattr(func, "__name__", "").removeprefix("handle_")
+
         return create_mcp_tool(
             executor_func=executor,
             signature=new_sig,
@@ -512,6 +647,7 @@ def create_mcp_app(settings: Settings):
             validate_required=False,
             tool_name=getattr(func, "__name__", "wrapped_tool"),
             tool_description=func.__doc__,
+            guard=_GUARD_CHECKS.get(guard_tool_name),
         )
 
     # If progressive disclosure enabled, initialize context catalog and search/execute tools
@@ -598,6 +734,13 @@ def create_mcp_app(settings: Settings):
         all_functions = module_loader.get_all_functions()
         registered_count = 0
 
+        # Get enabled tags from the profile configuration
+        enabled_tags = module_loader.get_enabled_tags(config)
+        all_possible_tags = set(module_loader.MODULE_MAP.keys())
+        disabled_tags = all_possible_tags - enabled_tags
+
+        logger.info(f"Profile-based module loading: enabled_tags={enabled_tags}, disabled_tags={disabled_tags}")
+
         for name, func in all_functions.items():
             if not (inspect.isfunction(func) and name.startswith("handle_")):
                 continue
@@ -617,12 +760,15 @@ def create_mcp_app(settings: Settings):
                 logger.info(f"Skipping chat completion tool: {tool_name} (chat completion functionality disabled)")
                 continue
 
+            # Extract module tag from tool name prefix
+            tool_tag = tool_name.split("_")[0] if "_" in tool_name else "misc"
+
             # Register tools for MCP access. We have two modes:
             #    - Static registration: Individual MCP tools via @mcp.tool decorator, all listed in list_tools()
             #    - Progressive disclosure: Tools registered in catalog, accessed via search_tool() and execute_tool()
             if settings.progressive_disclosure:
                 # Determine category from tool prefix
-                category = tool_name.split("_")[0] if "_" in tool_name else "misc"
+                category = tool_tag
                 context_catalog.register_tool(func, category=category)
                 registered_count += 1
                 logger.debug(f"Registered tool in catalog: {tool_name} (category: {category})")
@@ -630,16 +776,29 @@ def create_mcp_app(settings: Settings):
                 # Always register base_readQuery as a direct MCP tool (core tool)
                 if tool_name == "base_readQuery":
                     wrapped = make_tool_wrapper(func)
-                    mcp.tool(name=tool_name, description=wrapped.__doc__, annotations=_annotations_for(tool_name))(
-                        wrapped
-                    )
+                    mcp.tool(
+                        name=tool_name,
+                        description=wrapped.__doc__,
+                        annotations=_annotations_for(tool_name),
+                        tags=[tool_tag],
+                    )(wrapped)
                     logger.info(f"Registered core tool as direct MCP tool: {tool_name}")
             else:
                 # Static mode: register all tools as MCP tools
                 wrapped = make_tool_wrapper(func)
-                mcp.tool(name=tool_name, description=wrapped.__doc__, annotations=_annotations_for(tool_name))(wrapped)
+                mcp.tool(
+                    name=tool_name,
+                    description=wrapped.__doc__,
+                    annotations=_annotations_for(tool_name),
+                    tags=[tool_tag],
+                )(wrapped)
                 registered_count += 1
                 logger.debug(f"Registered MCP tool: {tool_name}")
+
+        # Disable tags that are not in the enabled set (implements profile-based filtering)
+        if disabled_tags:
+            mcp.disable(tags=list(disabled_tags))
+            logger.info(f"Disabled tags for tools not in profile: {disabled_tags}")
 
         if settings.progressive_disclosure:
             logger.info(f"Progressive disclosure: Registered {registered_count} tools in catalog")
@@ -1302,7 +1461,6 @@ Returns:
 
         Returns: handler function with proper signature and metadata
         """
-        from teradata_mcp_server.tools.registry.registry_tools import build_registry_sql
 
         description = tool_def.get("description", "")
         param_defs = tool_def.get("parameters", {})
@@ -1419,7 +1577,6 @@ Returns:
 
         try:
             from teradata_mcp_server.tools.registry import RegistryLoader
-            from teradata_mcp_server.tools.registry.registry_tools import build_registry_sql
 
             loader = RegistryLoader(tdconn_local, registry_db, last_load_ts=last_load_ts)
             registry_tools, current_ts = loader.load_tools()
@@ -1511,6 +1668,84 @@ Returns:
             return GRAPH_EDGE_CONTRACT
 
         logger.info("Registered resource: graph_edge_contract")
+
+    # ── Background Task Status Resource ──────────────────────────────────────
+    # Allows clients to query progress and results of long-running tools
+    # (e.g., tdml_* analytic functions submitted as background tasks).
+    # ──────────────────────────────────────────────────────────────────────
+
+    @mcp.resource("task://{task_id}")
+    def get_task_status(task_id: str) -> str:
+        """Get the status and result of a background task by ID.
+
+        Args:
+            task_id: UUID of the task to retrieve
+
+        Returns:
+            JSON string with task status, result (if completed), or error message
+        """
+        task = _state.task_manager.get_task(task_id)
+        if not task:
+            return json.dumps({"error": f"Task {task_id} not found"})
+
+        response = {
+            "id": task.id,
+            "name": task.name,
+            "status": task.status.value,
+            "created_at": task.created_at,
+            "completed_at": task.completed_at,
+        }
+
+        if task.result is not None:
+            response["result"] = task.result
+        if task.error:
+            response["error"] = task.error
+
+        return json.dumps(response)
+
+    logger.info("Registered resource: task://{task_id} for background task status polling")
+
+    # ── Argument Completion Handlers ──────────────────────────────────────
+    # Provides dynamic suggestions for table_name and column_name parameters
+    # across all tools. One handler covers all tools with these parameter names.
+    # ──────────────────────────────────────────────────────────────────────
+    from mcp_types import CompletionArgument
+
+    from teradata_mcp_server.tools.utils.completion import (
+        fetch_column_completions,
+        fetch_table_completions,
+    )
+
+    @mcp.completion
+    async def complete_table_or_column(ref: str, argument: CompletionArgument, ctx) -> list:
+        """Provide table/column name completions from Teradata DBC views.
+
+        Handles both table_name and column_name parameters across all tools.
+        Results are limited to 50 matches; filters exclude system databases.
+        """
+        if argument.name not in ("table_name", "column_name"):
+            return []
+
+        prefix = (argument.value or "").strip()
+
+        # Get the DB connection from context
+        conn = None
+        if _state.tdconn and getattr(_state.tdconn, "engine", None):
+            conn = _state.tdconn.engine.raw_connection()
+
+        try:
+            if argument.name == "table_name":
+                return await fetch_table_completions(prefix, conn)
+            else:  # column_name
+                return await fetch_column_completions(prefix, conn)
+        finally:
+            if conn:
+                import contextlib
+
+                with contextlib.suppress(Exception):
+                    conn.close()
+
+    logger.info("Registered completion handler: table_name, column_name")
 
     # Return the configured app and some handles used by the entrypoint if needed
     return mcp, logger
