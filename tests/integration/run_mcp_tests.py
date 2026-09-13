@@ -258,7 +258,9 @@ class MCPTestRunner:
             streams = await self.exit_stack.enter_async_context(
                 streamable_http_client(url)
             )
-            read, write, _ = streams
+            # Different `mcp` SDK versions yield either (read, write) or
+            # (read, write, get_session_id_callback) from streamable_http_client.
+            read, write = streams[0], streams[1]
 
             self.session = await self.exit_stack.enter_async_context(
                 ClientSession(read, write, elicitation_callback=self._elicitation_callback)

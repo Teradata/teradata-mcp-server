@@ -8,6 +8,8 @@ The Teradata MCP server enables rapid creation of domain-focused semantic layers
 
 You may use the [MCP Customization Agent Skill](https://github.com/Teradata/teradata-mcp-server/blob/main/agentic/skills/teradata-mcp-customisation/SKILL.md) to create semantic layer configuration based on your existing documentation.
 
+> This page covers declarative tools/cubes/prompts/glossary. To have the running server *serve* Agent Skill instructions to any connected MCP client, see the [Skills guide](SKILLS.md) instead.
+
 ## Key principles
 
 - **Domain Focus:** Build MCP servers that speak your users' language and provide business-relevant tools and explanations.

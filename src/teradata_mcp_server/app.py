@@ -1747,5 +1747,25 @@ Returns:
 
     logger.info("Registered completion handler: table_name, column_name")
 
+    # ── Agent Skills (served as skill://<name>/... MCP resources) ──────────
+    # Packaged skills ship under src/teradata_mcp_server/skills/; users can add
+    # their own by placing skill folders under <config_dir>/skills/. A skill
+    # name found in the config directory wins over a packaged skill of the
+    # same name (see SkillsDirectoryProvider: first matching root wins).
+    from fastmcp.server.providers.skills import SkillsDirectoryProvider
+
+    skills_roots = []
+    user_skills_dir = config_dir / "skills"
+    if user_skills_dir.is_dir():
+        skills_roots.append(user_skills_dir)
+
+    packaged_skills_dir = Path(str(pkg_files("teradata_mcp_server").joinpath("skills")))
+    if packaged_skills_dir.is_dir():
+        skills_roots.append(packaged_skills_dir)
+
+    if skills_roots:
+        mcp.add_provider(SkillsDirectoryProvider(roots=skills_roots))
+        logger.info(f"Registered skills provider with roots: {skills_roots}")
+
     # Return the configured app and some handles used by the entrypoint if needed
     return mcp, logger

@@ -142,9 +142,9 @@ Runs `CompleteChat` over a dataset and **aggregates** the outputs to show unique
 
 ---
 
-## Prompts
+## Skills
 
-The `chat` module also includes MCP prompts that orchestrate multi‑step workflows using these tools (for example, building an SQL query, running aggregated completion, and then synthesizing a final answer). These prompts are defined in the module's YAML objects and are discovered by the MCP server at startup.
+The multi‑step workflow that used to be the `chat_ai_mapreduce` MCP prompt (building an SQL query, running aggregated completion, and synthesizing a final answer) is now the [`chat-mapreduce-analysis`](../../skills/README.md) Agent Skill.
 
 ---
 

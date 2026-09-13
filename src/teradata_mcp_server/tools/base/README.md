@@ -15,11 +15,6 @@ Assumes Teradata >=17.20.
   - base_tableAffinity - gets tables commonly used together
   - base_tableUsage - Measure the usage of a table and views by users in a given schema
 
-**Base** Prompts:
+The `base_query`, `base_tableBusinessDesc`, and `base_databaseBusinessDesc` prompts that used to live here are now Agent Skills: [`base-sql-assistant`](../../skills/README.md), [`base-table-business-description`](../../skills/README.md), and [`base-database-business-description`](../../skills/README.md) respectively.
 
-  - base_query - Create a SQL query against the database
-  - base_tableBusinessDesc - generates a business description of a table
-  - base_databaseBusinessDesc - generates a business description of a databases based on the tables
-
-  
 [Return to Main README](../../../../README.md)
