@@ -90,7 +90,7 @@ class ModuleLoader:
 
         # Check each tool pattern against module prefixes
         for pattern in tool_patterns:
-            for prefix in self.MODULE_MAP.keys():
+            for prefix in self.MODULE_MAP:
                 # Create a test tool name to see if pattern matches
                 test_name = f"{prefix}_test"
                 if re.match(pattern, test_name):

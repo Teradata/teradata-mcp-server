@@ -51,7 +51,9 @@ class Settings:
     max_row_limit: int = 50000  # Hard ceiling; callers cannot exceed this (MAX_ROW_LIMIT env var)
 
     # Registry refresh (background task in lifespan)
-    registry_refresh_interval: int = 300  # Interval in seconds for background registry refresh (REGISTRY_REFRESH_INTERVAL env var)
+    registry_refresh_interval: int = (
+        300  # Interval in seconds for background registry refresh (REGISTRY_REFRESH_INTERVAL env var)
+    )
 
 
 def settings_from_env() -> Settings:

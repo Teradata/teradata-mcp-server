@@ -21,7 +21,7 @@ import json
 import os
 import re
 from collections.abc import Callable
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from importlib.resources import files as pkg_files
 from typing import Annotated, Any
 
@@ -453,10 +453,8 @@ def create_mcp_app(settings: Settings):
             # Cancel background refresh task if running
             if refresh_task and not refresh_task.done():
                 refresh_task.cancel()
-                try:
+                with suppress(asyncio.CancelledError):
                     await refresh_task
-                except asyncio.CancelledError:
-                    pass
                 logger.debug("Background registry refresh task cancelled")
 
             if _state.tdconn and getattr(_state.tdconn, "engine", None):
@@ -780,7 +778,7 @@ def create_mcp_app(settings: Settings):
                         name=tool_name,
                         description=wrapped.__doc__,
                         annotations=_annotations_for(tool_name),
-                        tags=[tool_tag],
+                        tags={tool_tag},
                     )(wrapped)
                     logger.info(f"Registered core tool as direct MCP tool: {tool_name}")
             else:
@@ -790,14 +788,14 @@ def create_mcp_app(settings: Settings):
                     name=tool_name,
                     description=wrapped.__doc__,
                     annotations=_annotations_for(tool_name),
-                    tags=[tool_tag],
+                    tags={tool_tag},
                 )(wrapped)
                 registered_count += 1
                 logger.debug(f"Registered MCP tool: {tool_name}")
 
         # Disable tags that are not in the enabled set (implements profile-based filtering)
         if disabled_tags:
-            mcp.disable(tags=list(disabled_tags))
+            mcp.disable(tags=disabled_tags)
             logger.info(f"Disabled tags for tools not in profile: {disabled_tags}")
 
         if settings.progressive_disclosure:
@@ -1709,7 +1707,7 @@ Returns:
     # Provides dynamic suggestions for table_name and column_name parameters
     # across all tools. One handler covers all tools with these parameter names.
     # ──────────────────────────────────────────────────────────────────────
-    from mcp_types import CompletionArgument
+    from mcp_types import CompletionArgument, PromptReference, ResourceTemplateReference
 
     from teradata_mcp_server.tools.utils.completion import (
         fetch_column_completions,
@@ -1717,7 +1715,9 @@ Returns:
     )
 
     @mcp.completion
-    async def complete_table_or_column(ref: str, argument: CompletionArgument, ctx) -> list:
+    async def complete_table_or_column(
+        ref: PromptReference | ResourceTemplateReference, argument: CompletionArgument, ctx
+    ) -> list[str]:
         """Provide table/column name completions from Teradata DBC views.
 
         Handles both table_name and column_name parameters across all tools.

@@ -1,10 +1,9 @@
 """Argument completion handlers for dynamic table/column name suggestions."""
 
-from mcp_types import Completion
 from sqlalchemy import Connection, text
 
 
-async def fetch_table_completions(prefix: str, conn: Connection | None) -> list[Completion]:
+async def fetch_table_completions(prefix: str, conn: Connection | None) -> list[str]:
     """Query Teradata for table names matching the given prefix.
 
     Args:
@@ -12,7 +11,7 @@ async def fetch_table_completions(prefix: str, conn: Connection | None) -> list[
         conn: SQLAlchemy connection; if None, returns empty list
 
     Returns:
-        List of Completion suggestions from DBC.TablesV, limited to 50 results
+        List of table names from DBC.TablesV, limited to 50 results
     """
     if not conn:
         return []
@@ -30,14 +29,13 @@ async def fetch_table_completions(prefix: str, conn: Connection | None) -> list[
 
     try:
         result = conn.execute(query, {"pattern": prefix_pattern})
-        tables = [row[0] for row in result.fetchall()]
-        return [Completion(label=table) for table in tables]
+        return [row[0] for row in result.fetchall()]
     except Exception:
         # Silently fail on query errors (missing view, permission denied, etc.)
         return []
 
 
-async def fetch_column_completions(prefix: str, conn: Connection | None) -> list[Completion]:
+async def fetch_column_completions(prefix: str, conn: Connection | None) -> list[str]:
     """Query Teradata for column names matching the given prefix.
 
     Args:
@@ -45,7 +43,7 @@ async def fetch_column_completions(prefix: str, conn: Connection | None) -> list
         conn: SQLAlchemy connection; if None, returns empty list
 
     Returns:
-        List of Completion suggestions from DBC.ColumnsV, limited to 50 results
+        List of column names from DBC.ColumnsV, limited to 50 results
     """
     if not conn:
         return []
@@ -63,8 +61,7 @@ async def fetch_column_completions(prefix: str, conn: Connection | None) -> list
 
     try:
         result = conn.execute(query, {"pattern": prefix_pattern})
-        columns = [row[0] for row in result.fetchall()]
-        return [Completion(label=column) for column in columns]
+        return [row[0] for row in result.fetchall()]
     except Exception:
         # Silently fail on query errors
         return []

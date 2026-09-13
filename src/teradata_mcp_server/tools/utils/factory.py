@@ -122,7 +122,7 @@ def create_mcp_tool(
             return await asyncio.to_thread(executor_func, **merged_kwargs)
 
     _mcp_tool.__name__ = tool_name
-    _mcp_tool.__signature__ = signature
+    _mcp_tool.__signature__ = signature  # type: ignore[attr-defined]
     _mcp_tool.__doc__ = tool_description
     _mcp_tool.__annotations__ = annotations
 
