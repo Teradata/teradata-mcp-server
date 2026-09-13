@@ -15,7 +15,6 @@ Assumes Teradata >=17.20.
 - qlty_rowsWithMissingValues - returns rows with missing values in a table
 
 
-**Data Quality** prompts:
-- qlty_databaseQuality - perform a data quality assess across a database and return a quality dashboard
+The `qlty_databaseQuality` prompt that used to live here is now the [`qlty-database-quality-assessment`](../../skills/README.md) Agent Skill.
 
 [Return to Main README](../../../../README.md)

@@ -30,6 +30,7 @@ Everything you need to know about running and configuring the MCP server:
 - **[Configuration](server_guide/CONFIGURATION.md)** - Server settings and tuning
 - **[Architecture](server_guide/ARCHITECTURE.md)** - How components work together
 - **[Customizing](server_guide/CUSTOMIZING.md)** - Add your own tools and business logic
+- **[Skills](server_guide/SKILLS.md)** - Bundle and serve Agent Skills to MCP clients
 - **[Security](server_guide/SECURITY.md)** - Authentication and access control
 
 

@@ -93,6 +93,15 @@ Tool handlers receive either a SQLAlchemy `Connection` or raw `TeradataConnectio
 
 `base_readQuery` caps result rows to prevent LLM token overflow: default 1000 rows, hard ceiling 50000. Configurable via `DEFAULT_ROW_LIMIT` and `MAX_ROW_LIMIT` env vars. When truncated, response metadata includes `truncated: true`; callers can pass a higher `row_limit` or use `persist=true` to bypass the cap.
 
+### Agent Skills
+
+`create_mcp_app()` registers a `SkillsDirectoryProvider` (from `fastmcp.server.providers.skills`) that serves [Agent Skill](https://docs.claude.com/en/docs/agents-and-tools/agent-skills) folders as `skill://` MCP resources to any connected client. Two roots are scanned, first match wins by skill name:
+
+- `src/teradata_mcp_server/skills/` — skills bundled with the package (included in the wheel/sdist via `pyproject.toml`)
+- `<config_dir>/skills/` — user-provided skills, using the same `--config_dir`/`CONFIG_DIR` directory as YAML customization
+
+Each skill is a folder with a `SKILL.md` (YAML frontmatter + instructions) and optional supporting files. This is unrelated to `agentic/skills/` at the repo root, which is a Claude Code plugin for developers working on this repo and is not packaged or served by the running server. See `docs/server_guide/SKILLS.md`.
+
 ### Transport Modes
 
 Set via `MCP_TRANSPORT` env var or `--mcp_transport` flag:

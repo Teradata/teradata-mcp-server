@@ -21,10 +21,8 @@ Assumes Teradata >=17.20.
 
 **DBA** prompts:
 
-- dba_databaseHealthAssessment - Create a database health assessment for a Teradata system
-- dba_userActivityAnalysis - Create a user activity analysis for a Teradata system
-- dba_tableArchive - Create a table archive strategy for database tables.
-- dba_databaseLineage - Creates a directed lineage map of tables in a database.
-- dba_tableDropImpact - assesses the impact of a table being dropped
+- dba_systemVoice - Has the assistant impersonate the Teradata system when asked about its own health/activity (kept as a prompt because `examples/app-voice-agent` fetches it via `prompts/get`)
+
+The reporting workflows that used to live here as prompts (`dba_databaseHealthAssessment`, `dba_userActivityAnalysis`, `dba_tableArchive`, `dba_databaseLineage`, `dba_tableDropImpact`) are now [Agent Skills](../../skills/README.md) instead: `dba-dashboard`, `dba-user-activity-analysis`, `dba-table-archive-advisor`, `dba-table-lineage`, and `dba-table-drop-impact` respectively.
 
 [Return to Main README](../../../../README.md)

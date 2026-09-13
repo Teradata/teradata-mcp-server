@@ -57,4 +57,8 @@ TD_PEM=/path/to/my/cert.pem
 - `tdvs_update` - Update / add data in a vector store
 - `tdvs_ask` - Find contextual information related to a query
 
+## Skills
+
+The `tdvs_tools_prompt` and `tdvs_rag_prompt` MCP prompts that used to live here are now Agent Skills: [`tdvs-vector-store-assistant`](../../skills/README.md) (routes a request to the right `tdvs_*` tool) and [`tdvs-vector-store-rag`](../../skills/README.md) (grounds answers strictly in vector store content).
+
 [Return to Main README](../../../../README.md)

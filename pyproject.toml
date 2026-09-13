@@ -82,6 +82,7 @@ packages = ["src/teradata_mcp_server"]
 include = [
   "src/teradata_mcp_server/tools/**/*.yml",
   "src/teradata_mcp_server/config/**/*.yml",
+  "src/teradata_mcp_server/skills/**/*",
 ]
 
 [tool.uv]
