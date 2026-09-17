@@ -9,8 +9,8 @@ resolution-markers = [
     "python_full_version == '3.14.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.14.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'emscripten'",
-    "python_full_version == '3.12.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.13.*' and sys_platform != 'emscripten'",
+    "python_full_version == '3.12.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.12.*' and sys_platform != 'emscripten'",
     "python_full_version < '3.12' and sys_platform == 'win32'",
     "python_full_version < '3.12' and sys_platform == 'emscripten'",
@@ -2944,8 +2944,8 @@ resolution-markers = [
     "python_full_version == '3.14.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.14.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'emscripten'",
-    "python_full_version == '3.12.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.13.*' and sys_platform != 'emscripten'",
+    "python_full_version == '3.12.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.12.*' and sys_platform != 'emscripten'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9a/80/db0b4559e57ec36362bedbb05530a87fafbcb6067708c946967a41d449e7/numpy-2.5.2.tar.gz", hash = "sha256:d482d171c406ae88c5b19cad3b6a1c4c5209f886ab74bc44c2c865c23f52d860", size = 20773161, upload-time = "2026-08-09T13:48:27.962Z" }
@@ -4806,7 +4806,7 @@ wheels = [
 
 [[package]]
 name = "tdfs4ds"
-version = "0.3.1.176"
+version = "0.3.1.208"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "chromadb" },
@@ -4834,7 +4834,7 @@ dependencies = [
     { name = "tqdm" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8d/43/0136cca8826f655afc8abce44fc6de15f3a324f2cbcb55bef0e14d5ec21e/tdfs4ds-0.3.1.176-py3-none-any.whl", hash = "sha256:502747873c32ea939600bf5891ac7ebc8dcaa004177ade84df5460b9fc3011c1", size = 1342947, upload-time = "2026-08-31T15:54:21.157Z" },
+    { url = "https://files.pythonhosted.org/packages/ac/be/e0f8e2296959bbe9a1a4f17aa9c8323cb33cf94057d5da3be751df59f945/tdfs4ds-0.3.1.208-py3-none-any.whl", hash = "sha256:95787904729b5550b0580db32913c8ef7ba9e3350e54d077924ceafd0c084390", size = 1417825, upload-time = "2026-09-11T19:44:43.347Z" },
 ]
 
 [[package]]
