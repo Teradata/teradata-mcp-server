@@ -4819,7 +4819,7 @@ wheels = [
 
 [[package]]
 name = "tdfs4ds"
-version = "0.3.1.208"
+version = "0.3.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "chromadb" },
@@ -4847,7 +4847,7 @@ dependencies = [
     { name = "tqdm" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ac/be/e0f8e2296959bbe9a1a4f17aa9c8323cb33cf94057d5da3be751df59f945/tdfs4ds-0.3.1.208-py3-none-any.whl", hash = "sha256:95787904729b5550b0580db32913c8ef7ba9e3350e54d077924ceafd0c084390", size = 1417825, upload-time = "2026-09-11T19:44:43.347Z" },
+    { url = "https://files.pythonhosted.org/packages/10/4b/795ccbb8c4fd47b833bc42e766a26cb6250f89e6ae1fab12e2fca7166cd1/tdfs4ds-0.3.2.0-py3-none-any.whl", hash = "sha256:10b26cbd9e2dd88c77d84e666dc68aad8cc706723646143ca1977c125f820ef6", size = 1726431, upload-time = "2026-10-11T12:04:31.046Z" },
 ]
 
 [[package]]
