@@ -2,7 +2,7 @@ import logging
 from typing import TYPE_CHECKING, Optional
 from urllib.parse import parse_qs, quote_plus, urlencode, urlparse
 
-from sqlalchemy import create_engine
+from sqlalchemy import URL, create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import NullPool, QueuePool
 
@@ -103,9 +103,15 @@ class TDConn:
         self._extra_uri_params: dict[str, str] = {k: v[0] for k, v in uri_query_params.items()}
 
         # Build SQLAlchemy connection string for teradatasqlalchemy
-        main_query = self._build_query_string({"LOGMECH": self._default_basic_logmech})
-        sqlalchemy_url = (
-            f"teradatasql://{user}:{password}@{self._base_host}:{self._base_port}/{self._base_db}?{main_query}"
+        main_query_dict = self._build_query_dict({"LOGMECH": self._default_basic_logmech})
+        sqlalchemy_url = URL.create(
+            "teradatasql",
+            username=user,
+            password=password,
+            host=self._base_host,
+            port=self._base_port,
+            database=self._base_db or None,
+            query=main_query_dict,
         )
 
         try:
@@ -144,6 +150,17 @@ class TDConn:
         merged.pop("LOGDATA", None)  # Never carry LOGDATA from the original URI
         merged.update(base_params)  # Explicit params win over URI extras
         return urlencode(merged)
+
+    def _build_query_dict(self, base_params: dict[str, str]) -> dict[str, str]:
+        """Build a query dict merging extra URI params with base_params.
+
+        base_params keys override any same-named extra URI params.
+        LOGDATA from extra params is excluded (it is connection-specific).
+        """
+        merged = dict(self._extra_uri_params)
+        merged.pop("LOGDATA", None)  # Never carry LOGDATA from the original URI
+        merged.update(base_params)  # Explicit params win over URI extras
+        return merged
 
     # ------------------------------------------------------------------
     # Auth header parsing & validation (for AUTH_MODE=basic)
@@ -223,8 +240,15 @@ class TDConn:
         try:
             # For basic credential validation, just validate the credentials without specifying a database
             # Let Teradata use the user's default database
-            basic_query = self._build_query_string({"LOGMECH": logmech})
-            sqlalchemy_url = f"teradatasql://{user}:{secret}@{self._base_host}:{self._base_port}?{basic_query}"
+            basic_query_dict = self._build_query_dict({"LOGMECH": logmech})
+            sqlalchemy_url = URL.create(
+                "teradatasql",
+                username=user,
+                password=secret,
+                host=self._base_host,
+                port=self._base_port,
+                query=basic_query_dict,
+            )
             engine = create_engine(
                 sqlalchemy_url,
                 poolclass=NullPool,
@@ -245,8 +269,14 @@ class TDConn:
         """
         try:
             # No username needed for JWT LOGMECH
-            jwt_query = self._build_query_string({"LOGMECH": "JWT", "LOGDATA": f"token={quote_plus(jwt_token)}"})
-            sqlalchemy_url = f"teradatasql://@{self._base_host}:{self._base_port}/{self._base_db}?{jwt_query}"
+            jwt_query_dict = self._build_query_dict({"LOGMECH": "JWT", "LOGDATA": f"token={quote_plus(jwt_token)}"})
+            sqlalchemy_url = URL.create(
+                "teradatasql",
+                host=self._base_host,
+                port=self._base_port,
+                database=self._base_db or None,
+                query=jwt_query_dict,
+            )
             engine = create_engine(
                 sqlalchemy_url,
                 poolclass=NullPool,
