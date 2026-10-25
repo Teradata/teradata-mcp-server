@@ -275,6 +275,21 @@ def create_mcp_app(settings: Settings):
         # ── Startup ──────────────────────────────────────────────────────
         _state.tdconn = td.TDConn(settings=settings)
 
+        # Warm up the connection pool to avoid first-request hangs.
+        # In some network environments (e.g. GCP VMs with stateful firewalls or NAT),
+        # the first TCP connection to Teradata stalls until the network path is established.
+        # Connecting eagerly at startup surfaces the hang here rather than blocking the
+        # first tool call — and ensures at least one pooled connection is ready. (#474)
+        if getattr(_state.tdconn, "engine", None):
+            try:
+                with _state.tdconn.engine.connect() as _warm_conn:
+                    _warm_conn.exec_driver_sql("SELECT 1")
+                logger.info("Database connection pool warmed up successfully")
+            except Exception as _warm_err:
+                logger.warning(
+                    f"Database connection pool warm-up failed (tools will attempt to reconnect on first use): {_warm_err}"
+                )
+
         _af_enabled = enable_analytic_functions
         if enable_efs or _af_enabled:
             try:
