@@ -482,7 +482,7 @@
         "name": "tables_missing_comment",
         "parameters": {
           "database_name": "DBC",
-          "table_name": "Tables",
+          "table_name": "TablesV",
           "column_name": "CommentString"
         }
       }
