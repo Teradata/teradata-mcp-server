@@ -106,4 +106,4 @@ qlty_rowsWithMissingValues:
       description: "Column name to analyze for missing values"
       type_hint: str
   sql: |
-    select * from {table_ref} where {column_name} is null
+    select top 50 * from {table_ref} where {column_name} is null
