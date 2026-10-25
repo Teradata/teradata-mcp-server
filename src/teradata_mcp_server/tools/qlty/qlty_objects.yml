@@ -106,4 +106,4 @@ qlty_rowsWithMissingValues:
       description: "Column name to analyze for missing values"
       type_hint: str
   sql: |
-    select * from TD_getRowsWithMissingValues ( ON (SELECT * FROM {table_ref}) AS InputTable USING TargetColumns ('[{column_name}]')) AS dt
+    select * from {table_ref} where {column_name} is null
