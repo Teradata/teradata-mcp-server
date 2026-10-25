@@ -60,15 +60,22 @@ def parse_args_to_settings() -> Settings:
         mcp_host=args.mcp_host if args.mcp_host is not None else env.mcp_host,
         mcp_port=args.mcp_port if args.mcp_port is not None else env.mcp_port,
         mcp_path=args.mcp_path if args.mcp_path is not None else env.mcp_path,
+        ping_interval=env.ping_interval,
         logmech=args.logmech if args.logmech is not None else env.logmech,
         logmech_is_explicit=(args.logmech is not None) or env.logmech_is_explicit,
         auth_mode=(args.auth_mode or env.auth_mode).lower(),
         auth_cache_ttl=args.auth_cache_ttl if args.auth_cache_ttl is not None else env.auth_cache_ttl,
+        auth_rate_limit_attempts=env.auth_rate_limit_attempts,
+        auth_rate_limit_window=env.auth_rate_limit_window,
+        pool_size=env.pool_size,
+        max_overflow=env.max_overflow,
+        pool_timeout=env.pool_timeout,
         logging_level=(args.logging_level or env.logging_level).upper(),
         progressive_disclosure=args.progressive_disclosure or env.progressive_disclosure,
         hooks_module=args.hooks_module if args.hooks_module is not None else env.hooks_module,
         default_row_limit=env.default_row_limit,
         max_row_limit=env.max_row_limit,
+        registry_refresh_interval=env.registry_refresh_interval,
     )
 
 

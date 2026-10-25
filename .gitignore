@@ -19,6 +19,7 @@ examples/app-flowise/.*
 test_*.py
 !tests/eval_test/tests/test_*.py
 !tests/integration/test_*.py
+!tests/phase0/test_*.py
 .planning/
 .ruff_cache/
 Start_MCP_Server.bat
