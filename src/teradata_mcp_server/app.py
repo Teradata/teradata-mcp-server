@@ -865,7 +865,7 @@ def create_mcp_app(settings: Settings):
         if parameters is None or len(parameters) == 0:
 
             async def _dynamic_prompt():
-                return Message(role="user", content=TextContent(type="text", text=prompt))
+                return [Message(role="user", content=TextContent(type="text", text=prompt))]
 
             _dynamic_prompt.__name__ = prompt_name
             return mcp.prompt(description=desc)(_dynamic_prompt)
@@ -905,7 +905,7 @@ def create_mcp_app(settings: Settings):
                 if missing:
                     raise ValueError(f"Missing parameters: {missing}")
                 formatted_prompt = prompt.format(**kwargs)
-                return Message(role="user", content=TextContent(type="text", text=formatted_prompt))
+                return [Message(role="user", content=TextContent(type="text", text=formatted_prompt))]
 
             _dynamic_prompt_with_params.__signature__ = sig  # type: ignore[attr-defined]
             _dynamic_prompt_with_params.__annotations__ = annotations
