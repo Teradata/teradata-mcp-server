@@ -1,0 +1,36 @@
+name: Dependency audit
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '19 4 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    name: Full dependency audit
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: ['.', 'tests/eval_test']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
+        with:
+          version: '0.13.10'
+      - name: Audit locked graph
+        working-directory: ${{ matrix.project }}
+        shell: bash
+        run: |
+          set +e
+          uv audit --locked
+          result=$?
+          set -e
+          if [ "$result" -eq 1 ]; then
+            echo '::warning::Existing dependency findings require triage; see audit output.'
+          elif [ "$result" -ne 0 ]; then
+            echo '::error::Dependency audit failed to execute.'
+            exit "$result"
+          fi
