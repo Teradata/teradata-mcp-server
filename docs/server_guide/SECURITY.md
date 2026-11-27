@@ -420,6 +420,14 @@ The optional Feature Store module (`uv sync --extra fs`, Docker `ENABLE_FS_MODUL
 - Keep the MCP server behind TLS termination and authentication (`AUTH_MODE=basic` or `oauth`).
 - Monitor the ChromaDB advisory for a patched release and upgrade promptly when available.
 
+#### Temporary exception for open ChromaDB alerts
+
+**Owner:** repository owner. **Approved:** 2026-11-27. **Review and expiry:** 2026-12-04; review earlier when a patched, compatible upstream release or a new exposure is reported. Retaining the Feature Store is a temporary risk decision, not a claim that these controls have been deployed or eliminate every risk. The alerts must remain open until a fix is verified.
+
+The root lockfile resolves ChromaDB 1.5.9 through `teradata-mcp-server[fs] → tdfs4ds → chromadb` (also through `langchain-chroma`). The following advisories report no fixed version as of 2026-11-27: [GHSA-36p7-vc44-83pf](https://github.com/advisories/GHSA-36p7-vc44-83pf) (affected 0.4.17–1.5.9), [GHSA-2wm9-hf6c-p5cr](https://github.com/advisories/GHSA-2wm9-hf6c-p5cr) (0.4.17–1.5.9), and [GHSA-xph7-9rjv-w5fr](https://github.com/advisories/GHSA-xph7-9rjv-w5fr) (0.5.0–1.5.9). Exposure depends on whether a deployment runs or connects to a vulnerable Chroma server and exposes its APIs or shares tenants; this repository's lockfile alone does not establish deployment exposure.
+
+Until the exception expires, deployment operators should restrict Chroma endpoints to trusted clients and networks, reject untrusted collection changes and remote model loading, and avoid sharing a vulnerable Chroma server across mutually untrusted tenants. Chroma authentication and SimpleRBAC alone must not be relied on for tenant isolation. Protect the MCP endpoint with TLS and the deployment's supported authentication and access controls. An operator must verify these controls in each affected deployment; if they cannot, isolate the affected deployment and escalate to the owner. Keep the Feature Store enabled only where these controls and the residual risk are accepted by the operator. Review the advisories and compatible `tdfs4ds` dependency metadata weekly and promptly test an upstream fix; do not dismiss the alerts or treat an expired exception as renewed.
+
 ### MCP SDK and HTTP transport
 
 HTTP and SSE deployments should run `mcp>=1.28.1` (enforced in `pyproject.toml`) to address session-authentication and WebSocket validation issues in the MCP Python SDK (GHSA-jpw9-pfvf-9f58, GHSA-hvrp-rf83-w775, GHSA-vj7q-gjh5-988w). Enable server-side authentication for any internet-facing deployment; see [Authentication](#authentication) above.
