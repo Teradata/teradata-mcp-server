@@ -95,7 +95,7 @@ def draft_case(tool, bedrock_client, model_id: str) -> dict | None:
 
 
 async def collect_tools(mcp_url: str) -> list:
-    async with streamable_http_client(mcp_url) as (read, write, _):
+    async with streamable_http_client(mcp_url) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
             result = await session.list_tools()

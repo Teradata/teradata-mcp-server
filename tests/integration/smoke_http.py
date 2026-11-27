@@ -91,7 +91,7 @@ async def run(server_cmd: str, ping_interval: int, verbose: bool) -> bool:
 
         print("✓ Server is listening, connecting via MCP HTTP client...")
 
-        async with streamable_http_client(url) as (read, write, _):
+        async with streamable_http_client(url) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 print("✓ MCP session initialised")

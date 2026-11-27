@@ -390,7 +390,7 @@ async def fetch_live_descriptions(mcp_url: str, tool_names: set[str]) -> dict[st
     if not tool_names:
         return {}
 
-    async with streamable_http_client(mcp_url) as (read, write, _):
+    async with streamable_http_client(mcp_url) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
             result = await session.list_tools()

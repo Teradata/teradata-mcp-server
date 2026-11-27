@@ -225,7 +225,7 @@ async def _run_agent_turns_async(
 ) -> list[TurnResult]:
     """Run a scripted multi-turn conversation in one MCP session."""
     overrides = _load_description_overrides()
-    async with streamable_http_client(mcp_url) as (read, write, _):
+    async with streamable_http_client(mcp_url) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
             tools_response = await session.list_tools()
@@ -284,7 +284,7 @@ async def _run_agent_async(
     max_steps: int,
 ) -> AgentResult:
     overrides = _load_description_overrides()
-    async with streamable_http_client(mcp_url) as (read, write, _):
+    async with streamable_http_client(mcp_url) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
             tools_response = await session.list_tools()

@@ -28,7 +28,7 @@ DEFAULT_MODULES = {"base"}
 
 
 async def fetch_tools(mcp_url: str) -> list[dict]:
-    async with streamable_http_client(mcp_url) as (read, write, _):
+    async with streamable_http_client(mcp_url) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
             result = await session.list_tools()
