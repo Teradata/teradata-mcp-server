@@ -1,1 +1,74 @@
+version: 2
 
+updates:
+  # Main MCP server
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+    open-pull-requests-limit: 3
+
+    cooldown:
+      default-days: 7
+
+    groups:
+      runtime-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+      routine-updates:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Evaluation suite
+  - package-ecosystem: "uv"
+    directory: "/tests/eval_test"
+    schedule:
+      interval: "weekly"
+
+    open-pull-requests-limit: 2
+
+    cooldown:
+      default-days: 7
+
+    groups:
+      eval-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+      eval-updates:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # CI/CD dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+
+    groups:
+      actions-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+      actions-updates:
+        patterns:
+          - "*"
+
+  # Docker base images
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "monthly"
