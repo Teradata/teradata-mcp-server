@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'win32'",
@@ -5020,7 +5020,7 @@ wheels = [
 
 [[package]]
 name = "teradataml"
-version = "20.0.0.11"
+version = "20.0.0.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
@@ -5038,7 +5038,7 @@ dependencies = [
     { name = "teradatasqlalchemy" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1c/e2/12ccea11c04a40e64c5bc6554349cd90a27249c2053ffa7ff08b7954d333/teradataml-20.0.0.11-py3-none-any.whl", hash = "sha256:f13631294b6ca044b7eea8fb0feb394c2c78efd7b59a2e31d71d87fb3c44a986", size = 11089129, upload-time = "2026-06-12T09:17:44.149Z" },
+    { url = "https://files.pythonhosted.org/packages/46/79/5e4d0abe3ab12b7d8e47c1b4ef700338534ea5a8592036c38a065d54def4/teradataml-20.0.0.12-py3-none-any.whl", hash = "sha256:414e518b9cad3a87618627187e5dbc7d7c0175ef7c08c3f24a2d2f6c6ad6d1e6", size = 9303637, upload-time = "2026-10-05T05:53:21.091Z" },
 ]
 
 [[package]]
