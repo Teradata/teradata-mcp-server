@@ -1,5 +1,5 @@
 # ┌────────────── Build stage ──────────────┐
-FROM --platform=linux/amd64 python:3.13-slim AS builder
+FROM --platform=linux/amd64 python:3.15-slim AS builder
 WORKDIR /app
 
 # Build arguments for optional modules
@@ -42,7 +42,7 @@ RUN if [ "$ENABLE_FS_MODULE" != "true" ]; then rm -rf /app/src/teradata_mcp_serv
 # └──────────── End build stage ────────────┘
 
 # ┌───────────── Runtime stage ─────────────┐
-FROM --platform=linux/amd64 python:3.13-slim
+FROM --platform=linux/amd64 python:3.15-slim
 WORKDIR /app
 
 # Create the user early
