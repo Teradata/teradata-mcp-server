@@ -622,7 +622,7 @@ def create_mcp_app(settings: Settings):
             logger.error(
                 f"Error in execute_db_tool: {e}", exc_info=True, extra={"session_info": {"tool_name": tool_name}}
             )
-            raise ToolError(str(e)) from None
+            raise ToolError("Database operation failed") from None
 
     def make_tool_wrapper(func):
         """Create an MCP-facing wrapper for a handle_* function.

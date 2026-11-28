@@ -126,7 +126,7 @@ jobs:
       - run: uv lock --check && uv sync --locked --extra dev
       - run: uv run --locked python tests/integration/middleware_transport_tests.py
       - run: uv run --locked python tests/integration/smoke_http.py --server-cmd "uv run --locked teradata-mcp-server"
-      - run: uv run --locked pytest tests/integration/test_guard_mode.py tests/integration/test_set_state_sessionless.py
+      - run: uv run --locked pytest tests/integration/test_guard_mode.py tests/integration/test_set_state_sessionless.py tests/integration/test_runner_errors.py
       - run: uv build
 
   eval-offline:
