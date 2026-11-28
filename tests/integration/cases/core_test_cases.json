@@ -24,7 +24,8 @@
         "parameters": {
           "sql": "SELECT * FROM nonexistent_table_xyz_mask_test_12345"
         },
-        "expect_error": true
+        "expect_error": true,
+        "expect_error_excludes": ["nonexistent_table_xyz_mask_test_12345", "teradatasql", "SQLState"]
       },
       {
         "name": "persist_result_as_volatile_table",

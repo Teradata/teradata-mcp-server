@@ -27,6 +27,7 @@ _DEFAULT_CASES_FILE = str(_INTEGRATION_DIR / "cases" / "core_test_cases.json")
 from mcp import types
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
+from mcp.shared.exceptions import MCPError
 from mcp.client.streamable_http import streamable_http_client
 
 
@@ -404,18 +405,7 @@ class MCPTestRunner:
                     expect_error = test_case.get("expect_error", False)
                     if expect_error:
                         if is_error_response:
-                            print(f"PASS ({duration:.2f}s)")
-                            return {
-                                "tool": tool_name,
-                                "test": test_case['name'],
-                                "status": "PASS",
-                                "duration": duration,
-                                "response_length": len(response_text),
-                                "error": None,
-                                "response_status": "error",
-                                "full_response": response_text,
-                                "has_warning": False,
-                            }
+                            return self._expected_error_result(tool_name, test_case, response_text, duration)
                         else:
                             print(f"FAIL (expected error but got success) ({duration:.2f}s)")
                             return {
@@ -539,6 +529,15 @@ class MCPTestRunner:
                     "error": "No content in response"
                 }
 
+        except MCPError as e:
+            duration = time.time() - start_time
+            if test_case.get("expect_error", False):
+                return self._expected_error_result(tool_name, test_case, str(e), duration)
+            print(f"FAIL (protocol error) ({duration:.2f}s)")
+            return {
+                "tool": tool_name, "test": test_case['name'], "status": "FAIL",
+                "duration": duration, "error": str(e), "full_response": str(e),
+            }
         except Exception as e:
             duration = time.time() - start_time
             print(f"FAIL (exception) ({duration:.2f}s)")
@@ -551,6 +550,18 @@ class MCPTestRunner:
                 "error": str(e),
                 "full_response": str(e)
             }
+
+    def _expected_error_result(self, tool_name: str, test_case: dict, message: str, duration: float) -> dict:
+        """Accept error results or protocol errors only if excluded details are masked."""
+        leaked = [value for value in test_case.get("expect_error_excludes", []) if value.lower() in message.lower()]
+        status = "FAIL" if leaked else "PASS"
+        print(f"{status} ({duration:.2f}s)")
+        return {
+            "tool": tool_name, "test": test_case['name'], "status": status,
+            "duration": duration, "response_length": len(message),
+            "error": "Error response exposed excluded details" if leaked else None,
+            "response_status": "error", "full_response": message, "has_warning": False,
+        }
 
     async def run_all_tests(self):
         """Run all test cases for available tools."""
@@ -741,6 +752,9 @@ async def main():
     finally:
         await runner.cleanup()
         await runner.run_scripts('post_test')
+
+    if not runner.results or any(result["status"] != "PASS" for result in runner.results):
+        sys.exit(1)
 
 
 if __name__ == "__main__":

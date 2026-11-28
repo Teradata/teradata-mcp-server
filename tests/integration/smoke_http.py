@@ -45,7 +45,7 @@ def _find_free_port() -> int:
 
 async def run(server_cmd: str, ping_interval: int, verbose: bool) -> bool:
     from mcp.client.session import ClientSession
-    from mcp.client.streamable_http import streamablehttp_client
+    from mcp.client.streamable_http import streamable_http_client
 
     host = "127.0.0.1"
     port = _find_free_port()
@@ -91,7 +91,7 @@ async def run(server_cmd: str, ping_interval: int, verbose: bool) -> bool:
 
         print("✓ Server is listening, connecting via MCP HTTP client...")
 
-        async with streamablehttp_client(url) as (read, write, _):
+        async with streamable_http_client(url) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 print("✓ MCP session initialised")

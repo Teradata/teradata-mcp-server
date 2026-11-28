@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -14,50 +17,62 @@ jobs:
   lint:
     name: Lint (Ruff)
     runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: "3.11"
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
         with:
           enable-cache: true
-      - uses: actions/setup-python@v5
+          version: "0.13.10"
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.11"
-      - run: uv sync --frozen --extra dev
-      - run: uv run ruff check src/
-      - run: uv run ruff format --check src/
+      - run: uv lock --check
+      - run: uv sync --locked --extra dev
+      - run: uv run --locked ruff check src/
+      - run: uv run --locked ruff format --check src/
 
   typecheck:
     name: Type Check (Mypy)
     runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: "3.11"
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
         with:
           enable-cache: true
-      - uses: actions/setup-python@v5
+          version: "0.13.10"
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.11"
-      - run: uv sync --frozen --extra dev
-      - run: uv run mypy src/
+      - run: uv lock --check
+      - run: uv sync --locked --extra dev
+      - run: uv run --locked mypy src/
 
   test-stdio:
     name: Integration Tests (stdio)
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+    env:
+      UV_PYTHON: "3.11"
+    if: ${{ github.event_name == 'push' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
         with:
           enable-cache: true
-      - uses: actions/setup-python@v5
+          version: "0.13.10"
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.11"
-      - run: uv sync --frozen
+      - run: uv lock --check
+      - run: uv sync --locked
       - name: Run stdio integration tests
         if: ${{ env.DATABASE_URI != '' }}
         env:
           DATABASE_URI: ${{ secrets.DATABASE_URI }}
-        run: uv run python tests/integration/run_mcp_tests.py "uv run teradata-mcp-server"
+        run: uv run --locked python tests/integration/run_mcp_tests.py "uv run --locked teradata-mcp-server"
       - name: Warn if DATABASE_URI not configured
         if: ${{ env.DATABASE_URI == '' }}
         env:
@@ -67,23 +82,68 @@ jobs:
   test-http:
     name: Integration Tests (streamable-http)
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+    env:
+      UV_PYTHON: "3.11"
+    if: ${{ github.event_name == 'push' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
         with:
           enable-cache: true
-      - uses: actions/setup-python@v5
+          version: "0.13.10"
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.11"
-      - run: uv sync --frozen
+      - run: uv lock --check
+      - run: uv sync --locked
       - name: Run HTTP integration tests
         if: ${{ env.DATABASE_URI != '' }}
         env:
           DATABASE_URI: ${{ secrets.DATABASE_URI }}
-        run: uv run python tests/integration/run_mcp_tests.py "uv run teradata-mcp-server" --transport streamable-http
+        run: uv run --locked python tests/integration/run_mcp_tests.py "uv run --locked teradata-mcp-server" --transport streamable-http
       - name: Warn if DATABASE_URI not configured
         if: ${{ env.DATABASE_URI == '' }}
         env:
           DATABASE_URI: ${{ secrets.DATABASE_URI }}
         run: echo "::warning::DATABASE_URI secret is not configured — HTTP integration tests were skipped. See .github/CI.md for setup instructions."
+
+  offline-tests:
+    name: Offline tests and wheel
+    runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: ${{ matrix.python }}
+    strategy:
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
+        with:
+          version: "0.13.10"
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: ${{ matrix.python }}
+      - run: uv lock --check && uv sync --locked --extra dev
+      - run: uv run --locked python tests/integration/middleware_transport_tests.py
+      - run: uv run --locked python tests/integration/smoke_http.py --server-cmd "uv run --locked teradata-mcp-server"
+      - run: uv run --locked pytest tests/integration/test_guard_mode.py tests/integration/test_set_state_sessionless.py tests/integration/test_runner_errors.py
+      - run: uv build
+
+  eval-offline:
+    name: Evaluation lock and offline tests
+    runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: "3.11"
+    defaults:
+      run:
+        working-directory: tests/eval_test
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
+        with:
+          version: "0.13.10"
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+      - run: uv lock --check && uv sync --locked
+      - run: uv run --locked pytest tests/test_checks.py tests/test_multi_turn.py tests/test_report.py tests/test_suggest_overrides.py tests/test_description_overrides.py

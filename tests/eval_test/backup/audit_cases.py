@@ -173,9 +173,9 @@ def audit_live_tool_gaps(
 
 async def fetch_tools_by_module(mcp_url: str) -> dict[str, set[str]]:
     from mcp import ClientSession
-    from mcp.client.streamable_http import streamablehttp_client
+    from mcp.client.streamable_http import streamable_http_client
 
-    async with streamablehttp_client(mcp_url) as (read, write, _):
+    async with streamable_http_client(mcp_url) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
             result = await session.list_tools()
